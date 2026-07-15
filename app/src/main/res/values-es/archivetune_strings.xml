@@ -204,9 +204,7 @@
     <string name="restore_step_stopping_playback">Detener la reproducción</string>
     <string name="restore_step_restoring_settings">Restaurar ajustes</string>
     <string name="restore_step_restoring_file">Restaurando %1$s</string>
-    <string name="restore_step_restarting">Reiniciar la aplicación</string>
-    <string name="discord">Discord</string>
-    <string name="music_recognition_tap_to_listen">Toca para escuchar</string>
+    <string name="restore_step_restarting">Reiniciar la aplicación</string>    <string name="music_recognition_tap_to_listen">Toca para escuchar</string>
     <string name="music_recognition_listening">Escuchando…</string>
     <string name="music_recognition_processing">Procesando…</string>
     <string name="music_recognition_listen_again">Volver a escuchar</string>
@@ -476,7 +474,7 @@
     <string name="storage_folder_selected_restart">Carpeta de almacenamiento guardada. La aplicación se reiniciará en 3 segundos.</string>
     <string name="storage_folder_invalid">Seleccione una carpeta válida.</string>
     <string name="storage_folder_unsupported">Esta carpeta no puede ser utilizada por la caché de medios basada en archivos.</string>
-    <string name="storage_folder_not_writable">ArchiveTune no puede escribir archivos de caché en esta carpeta.</string>
+    <string name="storage_folder_not_writable">Sekai Tune no puede escribir archivos de caché en esta carpeta.</string>
     <string name="storage_cache_cleared">Caché vaciada.</string>
     <string name="storage_cache_clear_failed">No se pudo borrar la caché. Compruebe el acceso a la tarjeta SD.</string>
     <string name="storage_size_ratio">%1$s / %2$s</string>
@@ -537,20 +535,12 @@
     <string name="ai_model_loading">Cargando los modelos disponibles…</string>
     <string name="ai_model_fetch_failed">No se pudieron obtener los modelos disponibles.</string>
     <string name="ai_fetch_models">Obtener modelos</string>
-    <string name="about_lead_developer">Desarrollador principal</string>
-    <string name="about_archive_tune_team">Equipo</string>
-    <string name="about_respecter">Cumplir</string>
-    <string name="about_contributors">Colaboradores</string>
-    <string name="about_position_lead_dev">¿Eh?</string>
-    <string name="about_position_mo_agamy">Estructura básica | Metrolist</string>
-    <string name="about_position_zion_huang">Creador de InnerTune · Fundador de Metrolist, ArchiveTune y otras bifurcaciones</string>
-    <string name="about_content_desc_github">GitHub</string>
-    <string name="about_content_desc_website">Página web</string>
-    <string name="about_content_desc_discord">Discord</string>
-    <string name="about_content_desc_telegram">Telegram</string>
-    <string name="about_content_desc_donate">Donar</string>
-    <string name="aod_customize_sample_title">Midnight Archive</string>
-    <string name="player_stream_client_archivetune_extractor_desc">Utiliza el extractor del backend ArchiveTune para las transmisiones de reproducción. Se recomienda seleccionar «Audio de alta calidad automático».</string>
-    <string name="player_stream_client_archivetune_extractor">Extractor de ArchiveTune</string>
+    <string name="about_lead_developer">Desarrollador principal</string>    <string name="about_respecter">Cumplir</string>
+    <string name="about_contributors">Colaboradores</string>    <string name="about_content_desc_github">GitHub</string>    <string name="aod_customize_sample_title">Midnight Archive</string>
+    <string name="player_stream_client_archivetune_extractor_desc">Utiliza el extractor del backend Sekai Tune para las transmisiones de reproducción. Se recomienda seleccionar «Audio de alta calidad automático».</string>
+    <string name="player_stream_client_archivetune_extractor">Extractor de Sekai Tune</string>
     <string name="unblock_artist">Desbloquear artista</string>
 </resources>
+
+
+

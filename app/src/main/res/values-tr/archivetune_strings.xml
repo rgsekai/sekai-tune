@@ -95,9 +95,7 @@
     <string name="lyrics_text_size">Şarkı sözü metin boyutu</string>
     <string name="resume_autoscroll">Otomatik Kaydırmayı Devam Ettir</string>
     <string name="lyrics_romanize_japanese">Japonca şarkı sözlerini romanlaştır</string>
-    <string name="lyrics_romanize_korean">Korece şarkı sözlerini romanlaştırın</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">Token ile giriş yap</string>
+    <string name="lyrics_romanize_korean">Korece şarkı sözlerini romanlaştırın</string>    <string name="advanced_login">Token ile giriş yap</string>
     <string name="token_hidden">Jeton göstermek için dokunun</string>
     <string name="token_shown">Kopyalamak veya düzenlemek için tekrar dokunun</string>
     <string name="token_adv_login_description">Bu GELİŞMİŞ bir giriş yöntemidir. Web portalına alternatif olarak, giriş kartınızı doğrudan buraya girebilir veya güncelleyebilirsiniz. Örneğin bu, birden fazla cihazda oturum açmayı hızlandırabilir. Uygulamanın ayrıştıramadığı geçersiz simge biçimlerinin kabul edilmeyeceğini lütfen unutmayın</string>

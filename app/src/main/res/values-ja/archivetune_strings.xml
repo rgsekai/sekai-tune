@@ -283,9 +283,7 @@
     <string name="lyrics_romanize_other_languages">その他の非ラテン文字歌詞をローマ字化</string>
     <string name="quick_picks_display_mode">クイックピック表示モード</string>
     <string name="quick_picks_display_mode_card">カード</string>
-    <string name="quick_picks_display_mode_list">リスト</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">トークンでログイン</string>
+    <string name="quick_picks_display_mode_list">リスト</string>    <string name="advanced_login">トークンでログイン</string>
     <string name="token_hidden">タップしてトークンを表示</string>
     <string name="token_shown">もう一度タップしてコピーまたは編集</string>
     <string name="token_adv_login_description">これは上級者向けのログイン方法。Webポータルの代わりに、ここでログイントークンを直接入力または更新できる。例えば複数端末でのログインを高速化できる。アプリが解析できない無効なトークン形式は受け付けられない。</string>
@@ -324,14 +322,14 @@
     <string name="storage_folder_selected_restart">保存フォルダを保存した。アプリは3秒後に再起動する。</string>
     <string name="storage_folder_invalid">有効なフォルダを選んでね。</string>
     <string name="storage_folder_unsupported">このフォルダはファイルベースのメディアキャッシュに使用できない。</string>
-    <string name="storage_folder_not_writable">ArchiveTuneはこのフォルダにキャッシュファイルを書き込めない。</string>
+    <string name="storage_folder_not_writable">Sekai Tuneはこのフォルダにキャッシュファイルを書き込めない。</string>
     <string name="storage_cache_cleared">キャッシュをクリアした。</string>
     <string name="storage_cache_clear_failed">キャッシュをクリアできなかった。SDカードアクセスを確認してね。</string>
     <string name="storage_clear_song_cache_progress">曲キャッシュをクリア中...%1$d%%</string>
     <string name="storage_clear_downloads_progress">ダウンロードをクリア中...%1$d%%</string>
     <string name="storage_clear_image_cache_progress">画像キャッシュをクリア中...%1$d%%</string>
     <string name="storage_clear_canvas_cache_progress">Canvasキャッシュをクリア中...%1$d%%</string>
-    <string name="storage_cache_clear_warning">キャッシュファイルの削除中はArchiveTuneを開いたままにしてね。</string>
+    <string name="storage_cache_clear_warning">キャッシュファイルの削除中はSekai Tuneを開いたままにしてね。</string>
     <string name="storage_size_ratio">%1$s / %2$s</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <string name="clear_song_cache_dialog">  キャッシュ済みの曲をすべてクリアする？</string>
@@ -399,8 +397,8 @@
     <string name="player_stream_client_android_vr_desc">署名復号なしで直接ストリーミングし、最高速度を提供。ほとんどのユーザーに適している。</string>
     <string name="player_stream_client_web_remix">Web Remix</string>
     <string name="player_stream_client_web_remix_desc">速度と引き換えに拡張フォーマットをサポート。JavaScript署名復号により起動に約5〜10秒の遅延が発生。</string>
-    <string name="player_stream_client_archivetune_extractor">ArchiveTune Extractor</string>
-    <string name="player_stream_client_archivetune_extractor_desc">再生ストリームにArchiveTuneバックエンド抽出器を使用。Auto High Quality Audioを推奨。</string>
+    <string name="player_stream_client_archivetune_extractor">Sekai Tune Extractor</string>
+    <string name="player_stream_client_archivetune_extractor_desc">再生ストリームにSekai Tuneバックエンド抽出器を使用。Auto High Quality Audioを推奨。</string>
     <string name="settings_section_player_content">プレイヤーとコンテンツ</string>
     <string name="settings_appearance_subtitle">テーマ、レイアウト、ビジュアルスタイル</string>
     <string name="settings_playback_title">再生</string>
@@ -557,21 +555,10 @@
     <string name="ai_api_connected">API接続済み</string>
     <string name="ai_api_test_failed">APIテストに失敗</string>
     <string name="ai_translation_menu">AI翻訳</string>
-    <string name="about_lead_developer">リード開発者</string>
-    <string name="about_archive_tune_team">チーム</string>
-    <string name="about_respecter">リスペクター</string>
+    <string name="about_lead_developer">リード開発者</string>    <string name="about_respecter">リスペクター</string>
     <string name="about_contributors">貢献者</string>
     <string name="about_contributor_translation">翻訳貢献者</string>
     <string name="about_license">ライセンス</string>
-    <string name="about_license_unknown">不明なライセンス</string>
-    <string name="about_position_lead_dev">え？</string>
-    <string name="about_position_developers">開発者 | チーム</string>
-    <string name="about_position_yuki">見た目担当 😂 | 管理者</string>
-    <string name="about_position_mo_agamy">ベースフレームワーク | Metrolist</string>
-    <string name="about_position_zion_huang">InnerTuneの作成者 · Metrolist、ArchiveTune、その他フォークの基盤</string>
-    <string name="about_content_desc_github">GitHub</string>
-    <string name="about_content_desc_website">ウェブサイト</string>
-    <string name="about_content_desc_discord">Discord</string>
-    <string name="about_content_desc_telegram">Telegram</string>
-    <string name="about_content_desc_donate">寄付</string>
-</resources>
+    <string name="about_license_unknown">不明なライセンス</string>    <string name="about_content_desc_github">GitHub</string></resources>
+
+

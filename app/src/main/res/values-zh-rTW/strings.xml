@@ -61,7 +61,7 @@
     <string name="library_top_mixes_refresh">重新整理</string>
     <string name="library_top_mixes_configure_ai">配置 AI 功能</string>
     <string name="library_top_mixes_ai_not_configured_title">配置 AI 以產生合輯</string>
-    <string name="library_top_mixes_ai_not_configured_desc">在 ArchiveTune 能夠產生個人化精選混音之前，需要先進行 AI 整合。</string>
+    <string name="library_top_mixes_ai_not_configured_desc">在 Sekai Tune 能夠產生個人化精選混音之前，需要先進行 AI 整合。</string>
     <string name="library_top_mixes_no_recent_history_title">暫無近期的收聽合輯</string>
     <string name="library_top_mixes_no_recent_history">聆聽更多歌曲後刷新頁面，即可根據您的近期收聽記錄產生 AI 專屬合輯。</string>
     <string name="library_top_mixes_no_valid_mixes">AI 未能從您的近期記錄中返回任何可播放的合輯。</string>
@@ -121,7 +121,7 @@
     <string name="radio">電台</string>
     <string name="cast">投放</string>
     <string name="cast_devices">投放裝置</string>
-    <string name="cast_sheet_subtitle">選擇 ArchiveTune 的播放裝置</string>
+    <string name="cast_sheet_subtitle">選擇 Sekai Tune 的播放裝置</string>
     <string name="cast_available_devices">可用裝置</string>
     <string name="cast_searching_devices">正在搜尋裝置</string>
     <string name="cast_no_devices">未找到可用的裝置</string>
@@ -140,7 +140,7 @@
     <string name="play">播放</string>
     <string name="widget_pause">暫停</string>
     <string name="widget_previous">上一首</string>
-    <string name="widget_tap_to_open">點擊開啟 ArchiveTune</string>
+    <string name="widget_tap_to_open">點擊開啟 Sekai Tune</string>
     <string name="widget_insights_title">聆聽數據</string>
     <string name="widget_recommendations">建議</string>
     <string name="widget_listening_time_empty">沒有播放曲目</string>
@@ -407,7 +407,7 @@
     <string name="contrast">對比</string>
     <string name="brightness">亮度</string>
     <string name="custom_value">自訂值</string>
-    <string name="archivetune_canvas">ArchiveTune 畫布</string>
+    <string name="archivetune_canvas">Sekai Tune 畫布</string>
     <string name="archivetune_canvas_desc">播放時為專輯封面加入動畫效果（由 BetterLyrics 提供支援）</string>
     <string name="player_background_style_v8_v9_desc">V8 和 V9 播放器樣式不支援此功能</string>
     <string name="show_button1_description">切換 Discord Rich Presence 中按鈕 1 的可見性</string>
@@ -448,9 +448,9 @@
     <string name="login">登入</string>
     <string name="not_logged_in">未登入</string>
     <string name="playback_confirmation_required">播放前需確認</string>
-    <string name="playback_requires_youtube_music_confirmation">請確認 YouTube Music 正在播放，然後返回 ArchiveTune。</string>
+    <string name="playback_requires_youtube_music_confirmation">請確認 YouTube Music 正在播放，然後返回 Sekai Tune。</string>
     <string name="playback_login_refresh_required">刷新 YouTube Music 登入狀態</string>
-    <string name="playback_requires_youtube_music_login_refresh">刷新您的 YouTube Music 登入狀態，然後返回 ArchiveTune。</string>
+    <string name="playback_requires_youtube_music_login_refresh">刷新您的 YouTube Music 登入狀態，然後返回 Sekai Tune。</string>
     <string name="could_not_open_youtube_music">無法開啟 YouTube Music</string>
     <string name="playback_error_code">程式碼</string>
     <string name="playback_error_http">HTTP</string>
@@ -609,12 +609,12 @@
     <string name="restore_failed">備份還原失敗</string>
     <string name="discord_integration">Discord 集成</string>
     <string name="account_integrations_summary">Discord, Last.fm, Libre.fm, ListenBrainz</string>
-    <string name="discord_login_description">透過 OAuth 連接您的 Discord 帳戶，以便 ArchiveTune 發布「豐富狀態」（Rich Presence）。</string>
+    <string name="discord_login_description">透過 OAuth 連接您的 Discord 帳戶，以便 Sekai Tune 發布「豐富狀態」（Rich Presence）。</string>
     <string name="discord_open_authorization">打開 Discord 授權</string>
     <string name="discord_waiting_for_authorization">正在等待 Discord 授權…</string>
     <string name="discord_authorization_success">Discord 帳戶連結成功</string>
     <string name="discord_authorization_failed">Discord 授權失敗</string>
-    <string name="discord_account_ready">ArchiveTune 準備好發布您目前收聽活動的「豐富狀態」（Rich Presence）了。</string>
+    <string name="discord_account_ready">Sekai Tune 準備好發布您目前收聽活動的「豐富狀態」（Rich Presence）了。</string>
     <string name="discord_reauthorize_required_title">Discord 令牌已過期</string>
     <string name="discord_reauthorize_required_description">在您重新授權 Discord 之前，無法顯示「豐富狀態」（Rich Presence）。</string>
     <string name="discord_reauthorize_action">重新授權</string>
@@ -711,9 +711,7 @@
     <string name="context_info">上下文（以逗號分隔）</string>
     <string name="target_language">目標語言</string>
     <string name="close_dialog">關閉</string>
-    <string name="support_development_title">支持開發者</string>
-    <string name="support_development_message">嗨！我是 ArchiveTune 的開發者 rukamori。如果 ArchiveTune 已經成為你日常聆聽體驗的一部分，歡迎透過捐款或在 GitHub 上為專案點讚（Star）來支持它的持續發展。感謝你對這款應用程式背後工作的支持。</string>
-    <string name="support_development_donate">捐贈以支持開發</string>
+    <string name="support_development_title">支持開發者</string>    <string name="support_development_donate">捐贈以支持開發</string>
     <string name="support_development_star">在 GitHub 上給個星</string>
     <string name="later">以後再說</string>
     <string name="new_update_available">有新更新可用</string>
@@ -797,7 +795,7 @@
     <string name="update_channel_desc">在穩定版本和開發版本之間進行選擇。</string>
     <string name="channel_stable">穩定版本</string>
     <string name="recent_commits">近期提交</string>
-    <string name="updates_channel_warning_intro">ArchiveTune 為建置版本提供了兩個下載管道：</string>
+    <string name="updates_channel_warning_intro">Sekai Tune 為建置版本提供了兩個下載管道：</string>
     <string name="updates_channel_warning_stable_title">穩定版本</string>
     <string name="updates_channel_warning_stable_source">透過官方 GitHub Releases 分發。</string>
     <string name="updates_channel_warning_stable_desc">這些版本已通過測試，並推薦給大多數用戶使用。</string>
@@ -812,28 +810,28 @@
     <string name="update_notification_channel_name">應用更新</string>
     <string name="update_notification_channel_desc">新應用程式更新通知</string>
     <string name="update_notification_title">有可用更新</string>
-    <string name="update_notification_text">ArchiveTune %s 現已推出</string>
+    <string name="update_notification_text">Sekai Tune %s 現已推出</string>
     <string name="download">下載</string>
     <string name="download_complete">下載完成</string>
-    <string name="permissions_title">讓 ArchiveTune 發揮最佳效能</string>
+    <string name="permissions_title">讓 Sekai Tune 發揮最佳效能</string>
     <string name="permissions_subtitle">我們需要一些權限來可靠地播放和管理您的音樂，您可以隨時在系統設定中變更這些權限。</string>
     <string name="permission_storage_title">儲存權限</string>
     <string name="permission_storage_desc">需要讀取您下載及本地的音訊檔案以進行播放。</string>
     <string name="permission_status_allowed">允許</string>
     <string name="next">繼續</string>
     <string name="allow">允許</string>
-    <string name="onboarding_welcome_title">歡迎使用 ArchiveTune</string>
+    <string name="onboarding_welcome_title">歡迎使用 Sekai Tune</string>
     <string name="onboarding_welcome_subtitle">在開始收聽之前，請先設定播放、本機音樂及更新權限。</string>
     <string name="onboarding_permissions_title">查看權限</string>
     <string name="onboarding_permissions_subtitle">目前僅授予您希望授予的權限，您以後可以繼續並授予更多權限。</string>
     <string name="onboarding_community_title">保持聯繫</string>
-    <string name="onboarding_community_subtitle">專注於開發動態、報告問題或支援 ArchiveTune。</string>
+    <string name="onboarding_community_subtitle">專注於開發動態、報告問題或支援 Sekai Tune。</string>
     <string name="onboarding_finish">開始聆聽</string>
     <string name="onboarding_gms_variant">GMS 版本</string>
     <string name="onboarding_foss_variant">FOSS 版本</string>
     <string name="onboarding_version_label">版本 %1$s</string>
     <string name="onboarding_empty_title">設定不可用</string>
-    <string name="onboarding_empty_subtitle">繼續使用 ArchiveTune。</string>
+    <string name="onboarding_empty_subtitle">繼續使用 Sekai Tune。</string>
     <string name="onboarding_error_generic">無法載入設定程式</string>
     <string name="onboarding_permission_allowed_by_install">已允許 (安裝)</string>
     <string name="onboarding_permission_unavailable">不可用</string>
@@ -844,25 +842,19 @@
     <string name="onboarding_permission_network_title">網路權限</string>
     <string name="onboarding_permission_network_desc">串流音樂、載入封面圖像並查看線上應用程式內容。</string>
     <string name="onboarding_permission_playback_service_title">後台播放權限</string>
-    <string name="onboarding_permission_playback_service_desc">當 ArchiveTune 在背景運作時，確保音樂能穩定持續播放。</string>
+    <string name="onboarding_permission_playback_service_desc">當 Sekai Tune 在背景運作時，確保音樂能穩定持續播放。</string>
     <string name="onboarding_permission_audio_settings_title">音訊設定與震動權限</string>
     <string name="onboarding_permission_audio_settings_desc">調整音訊播放行為，並提供輕微觸感回饋。</string>
     <string name="onboarding_permission_app_installation_title">應用程式安裝權限</string>
-    <string name="onboarding_permission_app_installation_desc">安裝從 ArchiveTune 下載的 APK 更新。</string>
+    <string name="onboarding_permission_app_installation_desc">安裝從 Sekai Tune 下載的 APK 更新。</string>
     <string name="onboarding_permission_bluetooth_scan_title">藍牙掃描權限</string>
-    <string name="onboarding_permission_bluetooth_scan_desc">尋找 Cast 和附近的播放裝置。</string>
-    <string name="onboarding_community_github_desc">給倉庫星星並關注發布動態。</string>
-    <string name="onboarding_community_discord_title">加入 Discord</string>
-    <string name="onboarding_community_telegram_title">加入 Telegram</string>
-    <string name="onboarding_community_telegram_desc">與社區交流並獲取最新動態。</string>
-    <string name="onboarding_community_donate_desc">支援持續開發。</string>
-    <string name="you_might_like">您可能喜歡</string>
+    <string name="onboarding_permission_bluetooth_scan_desc">尋找 Cast 和附近的播放裝置。</string>    <string name="you_might_like">您可能喜歡</string>
     <string name="refresh_suggestions">刷新建議</string>
     <string name="you_might_like_source">播放清單推薦來源</string>
     <string name="playlist_suggestion_source_title">播放清單標題</string>
     <string name="playlist_suggestion_source_content">播放清單內容</string>
     <string name="playlist_suggestion_source_both">播放清單標題與內容</string>
-    <string name="music_together">ArchiveTune 音樂共賞</string>
+    <string name="music_together">Sekai Tune 音樂共賞</string>
     <string name="together_display_name">顯示名稱</string>
     <string name="together_display_name_placeholder">您的姓名</string>
     <string name="together_port">連接埠</string>
@@ -935,10 +927,10 @@
     <string name="together_activity_error">錯誤：%1$s</string>
     <string name="got_it">了解</string>
     <string name="together_dont_show_again">不要再次顯示</string>
-    <string name="together_welcome_title">歡迎來到 ArchiveTune 音樂共賞</string>
+    <string name="together_welcome_title">歡迎來到 Sekai Tune 音樂共賞</string>
     <string name="together_welcome_body">音樂共賞讓多台裝置能同步播放與管理播放清單，共享即時的音樂體驗。</string>
     <string name="together_welcome_host_title">建立房間</string>
-    <string name="together_welcome_host_body">點擊\"建立房間\"，然後分享會話連結。主持期間，請保持 ArchiveTune 在後台運行。</string>
+    <string name="together_welcome_host_body">點擊\"建立房間\"，然後分享會話連結。主持期間，請保持 Sekai Tune 在後台運行。</string>
     <string name="together_welcome_join_title">從其他設備加入</string>
     <string name="together_welcome_join_body">打開分享鏈接，或輸入代碼並點擊\"加入\"。您的播放隊列和播放狀態將與主持人保持同步。</string>
     <string name="together_welcome_permissions_title">權限與安全</string>
@@ -959,7 +951,7 @@
     <string name="token_copied">憑證已複製到剪貼簿</string>
     <string name="extracting_from_url">從 URL 提取憑證</string>
     <string name="po_token_account_notice_title">使用相同帳戶</string>
-    <string name="po_token_account_notice_body">在產生 PO 憑證之前，請使用您已在 ArchiveTune 中用於 YouTube Music 的相同 Google 帳戶在此處登入。</string>
+    <string name="po_token_account_notice_body">在產生 PO 憑證之前，請使用您已在 Sekai Tune 中用於 YouTube Music 的相同 Google 帳戶在此處登入。</string>
     <string name="po_token_account_notice_same_account">如果此 WebView 使用了不同的帳戶，則產生的憑證將無法正常使用。</string>
     <string name="po_token_account_notice_mismatch">使用對應的帳號完成登入流程，然後開啟\"https://youtube.com/account\"頁面並產生令牌。</string>
     <string name="saved_accounts">已儲存的帳戶</string>
@@ -978,3 +970,5 @@
     <string name="no_hidden_playlists">沒有隱藏的播放清單</string>
     <string name="unhide">取消隱藏</string>
 </resources>
+
+

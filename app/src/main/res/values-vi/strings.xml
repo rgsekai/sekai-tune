@@ -326,7 +326,7 @@
     <string name="discord_activity_type">Loại hoạt động</string>
     <string name="dark_theme_follow_system">Theo hệ thống</string>
     <string name="pure_black">Đen thuần</string>
-    <string name="archivetune_canvas">ArchiveTune Canvas</string>
+    <string name="archivetune_canvas">Sekai Tune Canvas</string>
     <string name="archivetune_canvas_desc">Tạo hiệu ứng động cho artwork album khi phát (Được hỗ trợ bởi BetterLyrics)</string>
     <string name="disable_blur">Tắt hiệu ứng làm mờ</string>
     <string name="disable_blur_desc">Tắt hiệu ứng làm mờ trong toàn bộ ứng dụng</string>
@@ -557,10 +557,10 @@
     <string name="update_notification_channel_name">Cập nhật Ứng dụng</string>
     <string name="update_notification_channel_desc">Thông báo cho các cập nhật ứng dụng mới</string>
     <string name="update_notification_title">Cập nhật Có sẵn</string>
-    <string name="update_notification_text">ArchiveTune %s hiện đã có sẵn</string>
+    <string name="update_notification_text">Sekai Tune %s hiện đã có sẵn</string>
     <string name="download">Tải xuống</string>
     <string name="download_complete">Tải xuống hoàn tất</string>
-    <string name="permissions_title">Cho phép ArchiveTune hoạt động tốt nhất</string>
+    <string name="permissions_title">Cho phép Sekai Tune hoạt động tốt nhất</string>
     <string name="permissions_subtitle">Chúng tôi sử dụng một số quyền để phát và quản lý nhạc của bạn một cách đáng tin cậy. Bạn có thể thay đổi những quyền này bất cứ lúc nào trong cài đặt hệ thống.</string>
     <string name="permission_storage_title">Truy cập lưu trữ</string>
     <string name="permission_storage_desc">Cần thiết để đọc các file âm thanh đã tải xuống và cục bộ của bạn để phát nhạc.</string>
@@ -597,7 +597,7 @@
     <string name="share_logs">Chia sẻ nhật ký</string>
     <string name="you_might_like">Có thể bạn sẽ thích</string>
     <string name="refresh_suggestions">Làm mới gợi ý</string>
-    <string name="music_together">ArchiveTune Music Together</string>
+    <string name="music_together">Sekai Tune Music Together</string>
     <string name="together_display_name">Tên hiển thị</string>
     <string name="together_display_name_placeholder">Tên của bạn</string>
     <string name="together_port">Cổng phiên</string>
@@ -642,10 +642,10 @@
     <string name="together_error_state">Lỗi</string>
     <string name="got_it">Hiểu rồi</string>
     <string name="together_dont_show_again">Không hiển thị lại nữa</string>
-    <string name="together_welcome_title">Chào mừng đến với ArchiveTune Music Together</string>
+    <string name="together_welcome_title">Chào mừng đến với Sekai Tune Music Together</string>
     <string name="together_welcome_body">Music Together cho phép nhiều thiết bị chia sẻ một phiên trực tiếp với Queue đồng bộ và phát nhạc.</string>
     <string name="together_welcome_host_title">Tổ chức một phiên</string>
-    <string name="together_welcome_host_body">Nhấn Bắt đầu phiên, sau đó chia sẻ liên kết phiên. Giữ ArchiveTune mở trong nền trong khi tổ chức.</string>
+    <string name="together_welcome_host_body">Nhấn Bắt đầu phiên, sau đó chia sẻ liên kết phiên. Giữ Sekai Tune mở trong nền trong khi tổ chức.</string>
     <string name="together_welcome_join_title">Tham gia từ thiết bị khác</string>
     <string name="together_welcome_join_body">Mở liên kết được chia sẻ, hoặc nhập mã và nhấn Tham gia. Hàng đợi và phát nhạc của bạn sẽ theo người tổ chức.</string>
     <string name="together_welcome_permissions_title">Quyền và an toàn</string>
@@ -670,9 +670,9 @@
     <string name="slider_style_circular">Circular</string>
     <string name="slider_style_simple">Đơn giản</string>
     <string name="playback_confirmation_required">Cần xác nhận phát lại</string>
-    <string name="playback_requires_youtube_music_confirmation">Xác nhận phát lại trong YouTube Music, sau đó quay lại ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_confirmation">Xác nhận phát lại trong YouTube Music, sau đó quay lại Sekai Tune.</string>
     <string name="playback_login_refresh_required">Làm mới đăng nhập YouTube Music</string>
-    <string name="playback_requires_youtube_music_login_refresh">Làm mới trang đăng nhập YouTube Music của bạn, sau đó quay lại ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_login_refresh">Làm mới trang đăng nhập YouTube Music của bạn, sau đó quay lại Sekai Tune.</string>
     <string name="pause_on_device_mute">Tạm dừng khi âm lượng thiết bị bằng 0</string>
     <string name="pause_on_device_mute_desc">Tự động tạm dừng nhạc khi tắt tiếng và tiếp tục phát khi bật tiếng trở lại</string>
     <string name="wakelock">Giữ cho CPU luôn hoạt động trong suốt quá trình phát lại</string>
@@ -703,7 +703,7 @@
     <string name="token_copied">Mã token đã được sao chép vào clipboard</string>
     <string name="extracting_from_url">Trích xuất token từ URL</string>
     <string name="po_token_account_notice_title">Sử dụng cùng tài khoản</string>
-    <string name="po_token_account_notice_body">Đăng nhập vào đây bằng chính tài khoản Google mà bạn đã sử dụng cho YouTube Music trong ArchiveTune trước khi tạo mã thông báo PO.</string>
+    <string name="po_token_account_notice_body">Đăng nhập vào đây bằng chính tài khoản Google mà bạn đã sử dụng cho YouTube Music trong Sekai Tune trước khi tạo mã thông báo PO.</string>
     <string name="po_token_account_notice_same_account">Nếu WebView này sử dụng một tài khoản khác, mã thông báo được tạo sẽ không hoạt động chính xác.</string>
     <string name="po_token_account_notice_mismatch">Sử dụng tài khoản phù hợp, hoàn tất quy trình đăng nhập, sau đó mở youtube.com/account và tạo mã thông báo từ trang đó.</string>
     <string name="sort_order_ascending">Tăng dần</string>
@@ -725,15 +725,13 @@
     <string name="aod_mode">Chế độ AOD</string>
     <string name="aod_mode_exit">Thoát AOD</string>
     <string name="error_malformed_stream">Lỗi nguồn</string>
-    <string name="support_development_title">Hỗ trợ phát triển</string>
-    <string name="support_development_message">Chào mọi người! Tôi là Koiverse, nhà phát triển của ArchiveTune. Nếu ArchiveTune đã trở thành một phần trong danh sách nghe nhạc hàng ngày của bạn, bạn có thể giúp dự án tiếp tục phát triển bằng cách quyên góp hoặc đánh dấu sao trên GitHub. Cảm ơn vì đã ủng hộ công sức của chúng tôi trong việc phát triển ứng dụng.</string>
-    <string name="support_development_donate">Quyên góp để hỗ trợ phát triển</string>
+    <string name="support_development_title">Hỗ trợ phát triển</string>    <string name="support_development_donate">Quyên góp để hỗ trợ phát triển</string>
     <string name="support_development_star">Sao trên GitHub</string>
     <string name="later">Để sau</string>
     <string name="album_name">Tên album</string>
     <string name="app_icon">Biểu tượng ứng dụng</string>
     <string name="could_not_open_youtube_music">Không thể mở YouTube Music</string>
-    <string name="discord_account_ready">ArchiveTune đã sẵn sàng để xuất bản Rich Presence cho phiên nghe nhạc của bạn.</string>
+    <string name="discord_account_ready">Sekai Tune đã sẵn sàng để xuất bản Rich Presence cho phiên nghe nhạc của bạn.</string>
     <string name="discord_activity_content">Nội dung Hoạt động</string>
     <string name="discord_activity_type_competing_label">Đang cạnh tranh</string>
     <string name="discord_activity_type_listening_label">Đang nghe</string>
@@ -745,7 +743,7 @@
     <string name="discord_connection_settings">Kết nối</string>
     <string name="discord_image_album_artwork">Ảnh bìa album</string>
     <string name="discord_image_artist_artwork">Ảnh nghệ sĩ</string>
-    <string name="discord_login_description">Kết nối tài khoản Discord của bạn với OAuth để ArchiveTune có thể xuất bản Rich Presence.</string>
+    <string name="discord_login_description">Kết nối tài khoản Discord của bạn với OAuth để Sekai Tune có thể xuất bản Rich Presence.</string>
     <string name="discord_open_authorization">Mở ủy quyền Discord</string>
     <string name="discord_platform_android">Android</string>
     <string name="discord_platform_desktop">Desktop</string>
@@ -804,7 +802,7 @@
     <string name="visit_website">Truy cập trang web</string>
     <string name="widget_pause">Tạm dừng</string>
     <string name="widget_previous">Bài trước</string>
-    <string name="widget_tap_to_open">Nhấn để mở ArchiveTune</string>
+    <string name="widget_tap_to_open">Nhấn để mở Sekai Tune</string>
     <string name="album_backdrop">Mờ nền</string>
     <string name="album_backdrop_desc">Hiển thị ảnh nghệ thuật dưới dạng nền mờ trên trình phát</string>
     <string name="backdrop_blur_amount">Mức độ mờ nền</string>
@@ -848,7 +846,7 @@
     <string name="library_top_mixes_refresh">Làm mới mix</string>
     <string name="library_top_mixes_configure_ai">Cấu hình AI</string>
     <string name="library_top_mixes_ai_not_configured_title">Cấu hình AI để tạo mix</string>
-    <string name="library_top_mixes_ai_not_configured_desc">Cần tích hợp AI trước khi ArchiveTune có thể tạo mix cá nhân.</string>
+    <string name="library_top_mixes_ai_not_configured_desc">Cần tích hợp AI trước khi Sekai Tune có thể tạo mix cá nhân.</string>
     <string name="library_top_mixes_no_recent_history_title">Chưa có mix nghe gần đây</string>
     <string name="library_top_mixes_no_recent_history">Hãy nghe thêm bài hát, sau đó làm mới để tạo AI mix từ lịch sử gần đây của bạn.</string>
     <string name="library_top_mixes_no_valid_mixes">AI không trả về mix nào khả thi từ lịch sử gần đây của bạn.</string>
@@ -915,18 +913,18 @@
     <string name="lastfm_login_api_key_suspended">Khóa API đã bị đình chỉ.</string>
     <string name="lastfm_login_network_error">Lỗi mạng. Kiểm tra kết nối của bạn.</string>
     <string name="lastfm_login_failed">Đăng nhập thất bại. Thử lại.</string>
-    <string name="storage_cache_clear_warning">Giữ ArchiveTune mở trong khi các tệp cache đang được xóa.</string>
+    <string name="storage_cache_clear_warning">Giữ Sekai Tune mở trong khi các tệp cache đang được xóa.</string>
     <string name="storage_clear_song_cache_progress">Đang xóa cache bài hát...%1$d%%</string>
     <string name="storage_clear_downloads_progress">Đang xóa tải xuống...%1$d%%</string>
     <string name="storage_clear_image_cache_progress">Đang xóa cache hình ảnh...%1$d%%</string>
     <string name="storage_clear_canvas_cache_progress">Đang xóa cache canvas...%1$d%%</string>
-    <string name="updates_channel_warning_intro">ArchiveTune cung cấp hai kênh tải xuống cho các bản dựng:</string>
+    <string name="updates_channel_warning_intro">Sekai Tune cung cấp hai kênh tải xuống cho các bản dựng:</string>
     <string name="updates_channel_warning_stable_title">Bản dựng ổn định</string>
     <string name="updates_channel_warning_stable_source">Được phân phối qua GitHub Releases chính thức.</string>
     <string name="updates_channel_warning_stable_desc">Các phiên bản này đã được kiểm tra và khuyên dùng cho hầu hết người dùng.</string>
     <string name="cast">Truyền</string>
     <string name="cast_devices">Thiết bị Cast</string>
-    <string name="cast_sheet_subtitle">Chọn nơi ArchiveTune phát</string>
+    <string name="cast_sheet_subtitle">Chọn nơi Sekai Tune phát</string>
     <string name="cast_available_devices">Thiết bị khả dụng</string>
     <string name="cast_searching_devices">Đang tìm kiếm thiết bị</string>
     <string name="cast_no_devices">Không tìm thấy thiết bị Cast</string>
@@ -949,18 +947,18 @@
     <string name="widget_no_recent_songs">Chưa có bài hát gần đây</string>
     <string name="widget_no_genres">Chưa có thể loại</string>
     <string name="widget_no_recommendations">Chưa có đề xuất</string>
-    <string name="onboarding_welcome_title">Chào mừng đến với ArchiveTune</string>
+    <string name="onboarding_welcome_title">Chào mừng đến với Sekai Tune</string>
     <string name="onboarding_welcome_subtitle">Thiết lập phát nhạc, nhạc cục bộ và cập nhật quyền trước khi bắt đầu nghe.</string>
     <string name="onboarding_permissions_title">Xem lại quyền</string>
     <string name="onboarding_permissions_subtitle">Chỉ cấp những gì bạn muốn ngay bây giờ. Bạn có thể cấp quyền sau.</string>
     <string name="onboarding_community_title">Giữ kết nối</string>
-    <string name="onboarding_community_subtitle">Theo dõi phát triển, báo lỗi hoặc hỗ trợ ArchiveTune.</string>
+    <string name="onboarding_community_subtitle">Theo dõi phát triển, báo lỗi hoặc hỗ trợ Sekai Tune.</string>
     <string name="onboarding_finish">Bắt đầu nghe</string>
     <string name="onboarding_gms_variant">Bản GMS</string>
     <string name="onboarding_foss_variant">Bản FOSS</string>
     <string name="onboarding_version_label">Phiên bản %1$s</string>
     <string name="onboarding_empty_title">Không khả dụng thiết lập</string>
-    <string name="onboarding_empty_subtitle">Tiếp tục tới ArchiveTune.</string>
+    <string name="onboarding_empty_subtitle">Tiếp tục tới Sekai Tune.</string>
     <string name="onboarding_error_generic">Không thể tải thiết lập</string>
     <string name="onboarding_permission_allowed_by_install">Đã cho phép qua cài đặt</string>
     <string name="onboarding_permission_unavailable">Không khả dụng</string>
@@ -971,16 +969,12 @@
     <string name="onboarding_permission_network_title">Truy cập mạng</string>
     <string name="onboarding_permission_network_desc">Phát nhạc trực tuyến, tải ảnh bìa và kiểm tra nội dung trực tuyến.</string>
     <string name="onboarding_permission_playback_service_title">Phát nền</string>
-    <string name="onboarding_permission_playback_service_desc">Giữ nhạc phát ổn định khi ArchiveTune ở nền.</string>
+    <string name="onboarding_permission_playback_service_desc">Giữ nhạc phát ổn định khi Sekai Tune ở nền.</string>
     <string name="onboarding_permission_audio_settings_title">Cài đặt âm thanh và rung</string>
     <string name="onboarding_permission_audio_settings_desc">Điều chỉnh hành vi âm thanh phát lại và cung cấp phản hồi xúc giác nhẹ.</string>
     <string name="onboarding_permission_app_installation_title">Cài đặt ứng dụng</string>
-    <string name="onboarding_permission_app_installation_desc">Cài đặt bản cập nhật APK đã tải từ ArchiveTune.</string>
+    <string name="onboarding_permission_app_installation_desc">Cài đặt bản cập nhật APK đã tải từ Sekai Tune.</string>
     <string name="onboarding_permission_bluetooth_scan_title">Quét Bluetooth</string>
-    <string name="onboarding_permission_bluetooth_scan_desc">Khám phá thiết bị Cast và phát lại gần đó.</string>
-    <string name="onboarding_community_github_desc">Đánh dấu sao kho lưu trữ và theo dõi các bản phát hành.</string>
-    <string name="onboarding_community_discord_title">Tham gia Discord</string>
-    <string name="onboarding_community_telegram_title">Tham gia Telegram</string>
-    <string name="onboarding_community_telegram_desc">Trò chuyện với cộng đồng và nhận cập nhật.</string>
-    <string name="onboarding_community_donate_desc">Hỗ trợ phát triển liên tục.</string>
-</resources>
+    <string name="onboarding_permission_bluetooth_scan_desc">Khám phá thiết bị Cast và phát lại gần đó.</string></resources>
+
+

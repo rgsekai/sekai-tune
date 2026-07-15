@@ -256,9 +256,7 @@
     <string name="lyrics_romanize_other_languages">Romanisasikan lirik non-latin lainnya</string>
     <string name="quick_picks_display_mode">Mode tampilan Pilihan Cepat</string>
     <string name="quick_picks_display_mode_card">Kartu</string>
-    <string name="quick_picks_display_mode_list">Daftar</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">Masuk dengan token</string>
+    <string name="quick_picks_display_mode_list">Daftar</string>    <string name="advanced_login">Masuk dengan token</string>
     <string name="token_hidden">Ketuk untuk menampilkan token</string>
     <string name="token_shown">Ketuk lagi untuk menyalin atau mengedit</string>
     <string name="token_adv_login_description">Ini adalah metode login LANJUTAN. Sebagai alternatif dari portal web, Anda dapat langsung memasukkan atau memperbarui token login Anda di sini. Misalnya, ini dapat mempercepat login di beberapa perangkat. Harap dicatat bahwa format token tidak valid apa pun yang gagal diurai oleh aplikasi tidak akan diterima</string>
@@ -484,6 +482,6 @@
     <string name="ai_model_no_results">Tidak ada model yang cocok dengan pencarian Anda</string>
     <string name="ai_api_connected">API terhubung</string>
     <string name="ai_api_test_failed">Uji API gagal</string>
-    <string name="ai_translation_menu">Terjemahan AI</string>
-    <string name="about_content_desc_donate">Donasi</string>
-</resources>
+    <string name="ai_translation_menu">Terjemahan AI</string></resources>
+
+

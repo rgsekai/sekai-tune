@@ -97,9 +97,7 @@
     <string name="lyrics_text_size">Dimensioni del testo del brano</string>
     <string name="resume_autoscroll">Riprendi lo scorrimento automatico</string>
     <string name="lyrics_romanize_japanese">Converti in alfabeto latino i testi giapponesi</string>
-    <string name="lyrics_romanize_korean">Converti in alfabeto latino i testi coreani</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">Accedi tramite token</string>
+    <string name="lyrics_romanize_korean">Converti in alfabeto latino i testi coreani</string>    <string name="advanced_login">Accedi tramite token</string>
     <string name="token_hidden">Tocca per mostrare il token</string>
     <string name="token_shown">Tocca di nuovo per copiare o modificare</string>
     <string name="token_adv_login_description">Questo è un metodo di accesso AVANZATO. In alternativa al portale web, puoi inserire o aggiornare direttamente il tuo token di accesso qui. Ciò può ad esempio velocizzare l\'accesso su più dispositivi. Tieni presente che eventuali formati di token non validi che l\'app non riesce ad analizzare non saranno accettati</string>
@@ -287,3 +285,4 @@
     <string name="stats_unique_songs">Canzoni che potrebbero piacerti</string>
     <string name="stats_unique_artists">Artisti che potrebbero piacerti</string>
 </resources>
+

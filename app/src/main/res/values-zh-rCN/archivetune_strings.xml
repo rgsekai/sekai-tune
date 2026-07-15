@@ -181,9 +181,7 @@
         <item quantity="other">%d 倍</item>
     </plurals>
     <string name="seek_forward_dynamic">快进 %1$d 秒</string>
-    <string name="seek_backward_dynamic">快退 %1$d 秒</string>
-    <string name="discord">Discord</string>
-    <string name="audio_quality_max">最高（Beta）</string>
+    <string name="seek_backward_dynamic">快退 %1$d 秒</string>    <string name="audio_quality_max">最高（Beta）</string>
     <string name="percentage_format">%d%%</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <plurals name="seconds">

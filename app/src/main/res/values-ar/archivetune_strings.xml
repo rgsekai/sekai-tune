@@ -103,9 +103,7 @@
     <string name="lyrics_text_size">حجم نص كلمات الأغنية</string>
     <string name="resume_autoscroll">استئناف التمرير التلقائي</string>
     <string name="lyrics_romanize_japanese">كتابة كلمات الأغاني اليابانية بالحروف اللاتينية</string>
-    <string name="lyrics_romanize_korean">كلمات الأغاني الكورية بالحروف اللاتينية</string>
-    <string name="discord">ديسكورد</string>
-    <string name="advanced_login">تسجيل الدخول باستخدام الرمز المميز</string>
+    <string name="lyrics_romanize_korean">كلمات الأغاني الكورية بالحروف اللاتينية</string>    <string name="advanced_login">تسجيل الدخول باستخدام الرمز المميز</string>
     <string name="token_hidden">اضغط لعرض ال Token</string>
     <string name="token_shown">اضغط مرة أخرى للنسخ أو التعديل</string>
     <string name="token_adv_login_description">هذه طريقة تسجيل دخول متقدمة. كبديل للبوابة الإلكترونية، يمكنك إدخال أو تحديث رمز تسجيل الدخول الخاص بك هنا مباشرة. على سبيل المثال، يمكن أن يسرع ذلك عملية تسجيل الدخول على أجهزة متعددة. يرجى ملاحظة أن أي صيغة رمز غير صالحة لا يستطيع التطبيق تحليلها لن يتم قبولها</string>
@@ -223,3 +221,4 @@
     <string name="music_recognition_permission_action">سماح</string>
     <string name="music_recognition_error">حدث شيء خاطئ</string>
 </resources>
+

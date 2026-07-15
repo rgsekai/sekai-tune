@@ -486,7 +486,7 @@
     <string name="sort_order_descending">Absteigend</string>
     <string name="no_matching_playlists">Keine übereinstimmende Playlist</string>
     <string name="error_malformed_stream">Quellenfehler</string>
-    <string name="archivetune_canvas">ArchiveTune Canvas</string>
+    <string name="archivetune_canvas">Sekai Tune Canvas</string>
     <string name="archivetune_canvas_desc">Albumcover animieren während des Abpielens (Unterstützt von BetterLyrics)</string>
     <string name="player_background_style_v8_v9_desc">Nicht verfügbar mit V8 und V9 Player-Stil</string>
     <string name="disable_animations">Animationen deaktivieren</string>
@@ -526,7 +526,7 @@
     <string name="library_top_mixes_loading">Bereite deine KI-Mixe vor…</string>
     <string name="widget_pause">Pause</string>
     <string name="widget_previous">Vorheriger</string>
-    <string name="widget_tap_to_open">Tippe um ArchiveTune zu öffnen</string>
+    <string name="widget_tap_to_open">Tippe um Sekai Tune zu öffnen</string>
     <string name="removed_n_songs_from_queue">%d Songs aus der Warteschlange entfernt</string>
     <string name="aod_mode">AOD-Modus</string>
     <string name="aod_mode_exit">AOD verlassen</string>
@@ -542,9 +542,9 @@
     <string name="lyrics_animation_style_v2_only">Nur verfügbar in V2 Songtextmodus</string>
     <string name="lyrics_line_spacing">Songtext Zeilenabstand</string>
     <string name="playback_confirmation_required">Wiedergabebestätigung erforderlich</string>
-    <string name="playback_requires_youtube_music_confirmation">Wiedergabe in YouTube Music bestätigten, dann zu ArchiveTune zurückkehren.</string>
+    <string name="playback_requires_youtube_music_confirmation">Wiedergabe in YouTube Music bestätigten, dann zu Sekai Tune zurückkehren.</string>
     <string name="playback_login_refresh_required">Erneuere YouTube Music Anmeldung</string>
-    <string name="playback_requires_youtube_music_login_refresh">Erneuere YouTube Music Anmeldung, dann zu ArchiveTune zurückkehren.</string>
+    <string name="playback_requires_youtube_music_login_refresh">Erneuere YouTube Music Anmeldung, dann zu Sekai Tune zurückkehren.</string>
     <string name="could_not_open_youtube_music">Konnte YouTube Music nicht öffnen</string>
     <string name="internet">Internet</string>
     <string name="internet_warning_title">Sicherheits- und Nutzungswarnung</string>
@@ -607,7 +607,7 @@
     <string name="romanization">Romanisierung</string>
     <string name="hide_video">Verstecke Musikvideos</string>
     <string name="restore_success">Sicherung erfolgreich wiederhergestellt</string>
-    <string name="discord_login_description">Verbinde dein Discord-Konto über OAuth, damit ArchiveTune Rich Presence über das offizielle Social SDK von Discord veröffentlichen kann.</string>
+    <string name="discord_login_description">Verbinde dein Discord-Konto über OAuth, damit Sekai Tune Rich Presence über das offizielle Social SDK von Discord veröffentlichen kann.</string>
     <string name="discord_open_authorization">Öffne Discord Autorisierung</string>
     <string name="discord_waiting_for_authorization">Warte auf Discord Autorisierung…</string>
     <string name="discord_authorization_success">Discord Konto verbunden</string>
@@ -633,9 +633,7 @@
     <string name="discord_platform_ps5">PS5</string>
     <string name="discord_activity_type_playing_label">Spielt</string>
     <string name="discord_activity_type_streaming_label">Streamt</string>
-    <string name="support_development_title">Entwicklung unterstützen</string>
-    <string name="support_development_message">Hallo! Ich bin Koiverse, der Entwickler von ArchiveTune. Wenn ArchiveTune einen festen Platz in deinem Musikalltag gefunden hat, kannst du dazu beitragen, dass es weiterentwickelt wird, indem du spendest oder das Projekt auf GitHub mit einem Stern markierst. Vielen Dank für deine Unterstützung der Arbeit hinter der App.</string>
-    <string name="support_development_donate">Spende, um die Entwicklung zu unterstützen</string>
+    <string name="support_development_title">Entwicklung unterstützen</string>    <string name="support_development_donate">Spende, um die Entwicklung zu unterstützen</string>
     <string name="support_development_star">Stern auf GitHub geben</string>
     <string name="later">Später</string>
     <string name="status_active">AKTIV</string>
@@ -674,9 +672,9 @@
     <string name="update_notification_channel_name">Appupdates</string>
     <string name="update_notification_channel_desc">Benachrichtigungen bei neuen App-Updates</string>
     <string name="update_notification_title">Update verfügbar</string>
-    <string name="update_notification_text">ArchiveTune %s ist jetzt verfügbar</string>
+    <string name="update_notification_text">Sekai Tune %s ist jetzt verfügbar</string>
     <string name="download">Herunterladen</string>
-    <string name="permissions_title">Erlaube ArchiveTune am Besten zu funktionieren</string>
+    <string name="permissions_title">Erlaube Sekai Tune am Besten zu funktionieren</string>
     <string name="permissions_subtitle">Wir verwenden einige Berechtigungen um deine Musik zuverlässig zu spielen und verwalten. Diese kannst du jederzeit in den Systemeinstellungen verändern.</string>
     <string name="permission_storage_title">Speicherzugriff</string>
     <string name="permission_storage_desc">Benötigt um deine heruntergeladene und lokale Audiodateien wiederzugeben.</string>
@@ -746,3 +744,4 @@
     <string name="saved_accounts">Gespeicherte Konten</string>
     <string name="save_current_account">Aktuelles Konto speichern</string>
 </resources>
+

@@ -81,9 +81,7 @@
     <string name="lyrics_text_size">Taille du texte des paroles</string>
     <string name="resume_autoscroll">Reprise du défilement automatique</string>
     <string name="lyrics_romanize_japanese">Romaniser les paroles japonaises</string>
-    <string name="lyrics_romanize_korean">Romaniser les paroles coréennes</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">Connexion avec un jeton</string>
+    <string name="lyrics_romanize_korean">Romaniser les paroles coréennes</string>    <string name="advanced_login">Connexion avec un jeton</string>
     <string name="token_hidden">Cliquer pour afficher le jeton</string>
     <string name="token_shown">Cliquer encore pour copier ou éditer</string>
     <string name="token_adv_login_description">Il s\'agit d\'une méthode de connexion avancée. En alternative au portail web, vous pouvez saisir ou mettre à jour directement votre jeton de connexion ici. Cela peut, par exemple, accélérer la connexion sur plusieurs appareils. Veuillez noter que tout jeton invalide que l\'application ne parvient pas à analyser sera refusé.</string>
@@ -344,16 +342,10 @@
     <string name="lyrics_share_style_frosted_dark">Noir givré</string>
     <string name="local_songs_scan_included_folders_desc">Analyser uniquement les morceaux stockés dans des dossiers dont le chemin d\'accès correspond à l\'un de ces chemins.</string>
     <string name="android_auto_sort_option_format">%1$s - %2$s</string>
-    <string name="monthly_listeners">Auditeurs mensuels</string>
-    <string name="about_position_zion_huang">Créateur d\'InnerTune · À l\'origine de Metrolist, d\'ArchiveTune et d\'autres dérivés</string>
-    <string name="aod_customize_subtitle">Forme, mise en page, commandes et style général</string>
+    <string name="monthly_listeners">Auditeurs mensuels</string>    <string name="aod_customize_subtitle">Forme, mise en page, commandes et style général</string>
     <string name="ai_provider">Fournisseur d\'IA</string>
     <string name="aod_shape_circle">Cercle</string>
-    <string name="aod_customize_visibility">Visibilité</string>
-    <string name="about_position_mo_agamy">Cadre de base | Metrolist</string>
-    <string name="aod_background_tonal_edge">Contraste de tons</string>
-    <string name="about_content_desc_donate">Faire un don</string>
-    <string name="aod_customize_sample_duration">3:48</string>
+    <string name="aod_customize_visibility">Visibilité</string>    <string name="aod_background_tonal_edge">Contraste de tons</string>    <string name="aod_customize_sample_duration">3:48</string>
     <string name="aod_customize_accent_style">Style d\'accent</string>
     <string name="ai_api_key_configured">Configuré</string>
     <string name="ai_api_connected">Connecté via l\'API</string>
@@ -365,9 +357,7 @@
     <string name="aod_accent_theme">Thème</string>
     <string name="lyrics_share_style_deep_blur">Flou profond</string>
     <string name="aod_shape_pentagon">Pentagone</string>
-    <string name="news_no_results_title">Aucun article correspondant</string>
-    <string name="about_archive_tune_team">L\'équipe</string>
-    <string name="storage_migration_cache_progress">Transfert du cache... %1$d%%</string>
+    <string name="news_no_results_title">Aucun article correspondant</string>    <string name="storage_migration_cache_progress">Transfert du cache... %1$d%%</string>
     <string name="ai_api_testing">Test de connexion…</string>
     <string name="aod_customize_horizontal_padding">Remplissage horizontal</string>
     <string name="local_songs_scan_included_folders_empty">Tous les dossiers sont inclus.</string>
@@ -421,9 +411,7 @@
     <string name="aod_shape_square">Carré</string>
     <string name="aod_shape_heart">Cœur</string>
     <string name="year_in_music_plays_label">Nombre total de lectures</string>
-    <string name="aod_position_top">En haut</string>
-    <string name="about_content_desc_telegram">Telegram</string>
-    <string name="ai_provider_none">Aucun (désactivé)</string>
+    <string name="aod_position_top">En haut</string>    <string name="ai_provider_none">Aucun (désactivé)</string>
     <string name="news_error_title">Impossible de charger les actualités</string>
     <string name="android_auto_suggested_songs">Suggestions de titres</string>
     <string name="ai_custom_endpoint">Point de terminaison personnalisé</string>
@@ -433,9 +421,7 @@
     <string name="aod_customize_show_controls">Afficher les commandes</string>
     <string name="news_error_desc">Vérifiez votre connexion Internet et réessayez.</string>
     <string name="spotify_not_connected">Spotify n\'est pas connecté</string>
-    <string name="settings_developer_options_subtitle">Fonctionnalités expérimentales et débogage</string>
-    <string name="about_position_lead_dev">Hein ?</string>
-    <string name="aod_customize_controls">Commandes</string>
+    <string name="settings_developer_options_subtitle">Fonctionnalités expérimentales et débogage</string>    <string name="aod_customize_controls">Commandes</string>
     <string name="storage_cache_cleared">Le cache a été vidé.</string>
     <string name="no_releases_found">Aucune publication trouvée</string>
     <string name="storage_location_internal">Mémoire interne</string>
@@ -465,9 +451,7 @@
     <string name="storage_location_sheet_title">Lieu de stockage</string>
     <string name="music_recognition_history_empty_title">Aucun titre n\'a encore été reconnu</string>
     <string name="year_in_music_ranked_albums">Les albums que vous avez réécoutés</string>
-    <string name="ai_api_status_unknown">Non testé</string>
-    <string name="about_content_desc_website">Site web</string>
-    <string name="new_releases">Nouveautés</string>
+    <string name="ai_api_status_unknown">Non testé</string>    <string name="new_releases">Nouveautés</string>
     <string name="aod_customize_background_style">Style d\'arrière-plan</string>
     <string name="news_author_on_date">%1$s · %2$s</string>
     <string name="year_in_music_recap">Récapitulatif Musical</string>
@@ -478,9 +462,7 @@
     <string name="player_design_v9">Contenu étendu</string>
     <string name="aod_customize_show_time_labels">Afficher les horaires</string>
     <string name="aod_customize_sample_title">Archives de Minuit</string>
-    <string name="aod_shape_cookie_6">Cookie 6</string>
-    <string name="about_content_desc_discord">Discord</string>
-    <string name="lyrics_share_style_frosted_light">Lumière tamisée</string>
+    <string name="aod_shape_cookie_6">Cookie 6</string>    <string name="lyrics_share_style_frosted_light">Lumière tamisée</string>
     <string name="aod_shape_triangle">Triangle</string>
     <string name="settings_content_subtitle">Langue, pays et paramètres de recommandation par défaut</string>
     <string name="ai_fetch_models">Récupérer les modèles</string>
@@ -518,7 +500,7 @@
     <string name="year_in_music_empty_subtitle">Écoutez davantage de musique pendant %d et votre récapitulatif s\'affichera ici.</string>
     <string name="storage_location_free">%s libre</string>
     <string name="aod_customize_show_artist">Afficher l\'artiste</string>
-    <string name="storage_folder_not_writable">ArchiveTune ne peut pas enregistrer de fichiers de cache dans ce dossier.</string>
+    <string name="storage_folder_not_writable">Sekai Tune ne peut pas enregistrer de fichiers de cache dans ce dossier.</string>
     <string name="ai_api_status_failed">L\'API a échoué. Veuillez réessayer après avoir mis à jour les paramètres.</string>
     <string name="storage_folder_unsupported">Ce dossier ne peut pas être utilisé par le cache multimédia basé sur des fichiers.</string>
     <string name="force_sync_on_switch_account">Forcer la synchronisation sur le compte Switch</string>
@@ -556,14 +538,11 @@
     <string name="restore_file_not_found">Impossible d\'ouvrir le fichier sélectionné.</string>
     <string name="restore_select_backup">Sélectionnez un fichier de sauvegarde à restaurer.</string>
     <string name="about_license">LICENCE</string>
-    <string name="about_license_unknown">Licence inconnue</string>
-    <string name="about_position_developers">Développeur | Équipe</string>
-    <string name="about_position_yuki">Juste pour le plaisir 😂 | Administrateur</string>
-    <string name="storage_clear_song_cache_progress">Effacement du cache des titres... %1$d %%</string>
+    <string name="about_license_unknown">Licence inconnue</string>    <string name="storage_clear_song_cache_progress">Effacement du cache des titres... %1$d %%</string>
     <string name="storage_clear_downloads_progress">Suppression des téléchargements... %1$d %%</string>
     <string name="storage_clear_image_cache_progress">Effacement du cache d\'images... %1$d %%</string>
     <string name="storage_clear_canvas_cache_progress">Effacement du cache du canevas... %1$d %%</string>
-    <string name="storage_cache_clear_warning">Laissez ArchiveTune ouvert pendant la suppression des fichiers de cache.</string>
+    <string name="storage_cache_clear_warning">Laissez Sekai Tune ouvert pendant la suppression des fichiers de cache.</string>
     <string name="history_duration_desc">Durée minimale d\'écoute pour qu\'un morceau soit considéré comme écouté</string>
     <string name="history_duration_seconds">%1$s s</string>
     <string name="top_albums">Meilleurs Albums</string>
@@ -576,6 +555,9 @@
     <string name="theme_creator_title">Créateur de thèmes</string>
     <string name="block_artist">Bloquer l\'artiste</string>
     <string name="unblock_artist">Débloquer l\'artiste</string>
-    <string name="player_stream_client_archivetune_extractor">Extracteur ArchiveTune</string>
-    <string name="player_stream_client_archivetune_extractor_desc">Utilise l\'extracteur ArchiveTune pour les flux de lecture. Privilégie l\'audio haute qualité automatique.</string>
+    <string name="player_stream_client_archivetune_extractor">Extracteur Sekai Tune</string>
+    <string name="player_stream_client_archivetune_extractor_desc">Utilise l\'extracteur Sekai Tune pour les flux de lecture. Privilégie l\'audio haute qualité automatique.</string>
 </resources>
+
+
+

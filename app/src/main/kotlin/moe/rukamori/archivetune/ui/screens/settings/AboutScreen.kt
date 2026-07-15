@@ -785,38 +785,6 @@ private fun AboutSuccessContent(
             }
         }
 
-        item(key = "lead_developer", contentType = "about_lead_developer") {
-            AboutContentContainer {
-                LeadDeveloperSection(
-                    member = model.leadDeveloper,
-                    onOpenUri = onOpenUri,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        item(key = "team", contentType = "about_team_section") {
-            AboutContentContainer {
-                TeamMemberSection(
-                    title = stringResource(R.string.about_archive_tune_team),
-                    members = model.collaborators,
-                    onOpenUri = onOpenUri,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        item(key = "respecters", contentType = "about_team_section") {
-            AboutContentContainer {
-                TeamMemberSection(
-                    title = stringResource(R.string.about_respecter),
-                    members = model.respecters,
-                    onOpenUri = onOpenUri,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
         item(key = "contributors", contentType = "about_contributors") {
             AboutContentContainer {
                 ContributorsSection(

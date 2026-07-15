@@ -61,30 +61,9 @@ fun StarDialog(
                 style = MaterialTheme.typography.headlineSmall,
             )
 
-            Text(
-                text = stringResource(R.string.support_development_message),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Button(
-                onClick = {
-                    uriHandler.openUri("https://koiiverse.cloud/donate")
-                    onSupport()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.coffee),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.size(8.dp))
-                Text(text = stringResource(R.string.support_development_donate))
-            }
-
             FilledTonalButton(
                 onClick = {
-                    uriHandler.openUri("https://github.com/rukamori/ArchiveTune")
+                    uriHandler.openUri("https://github.com/rgsekai/sekai-tune")
                     onSupport()
                 },
                 modifier = Modifier.fillMaxWidth(),

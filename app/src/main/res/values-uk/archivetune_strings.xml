@@ -123,9 +123,7 @@
     <string name="lyrics_text_size">Розмір тексту пісні</string>
     <string name="resume_autoscroll">Поновити автоматичну прокрутку</string>
     <string name="lyrics_romanize_japanese">Транслітерація текстів пісень японською</string>
-    <string name="lyrics_romanize_korean">Транслітерація текстів пісень корейською</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">Увійти за допомогою токена</string>
+    <string name="lyrics_romanize_korean">Транслітерація текстів пісень корейською</string>    <string name="advanced_login">Увійти за допомогою токена</string>
     <string name="token_hidden">Натисніть, щоб відобразити токен</string>
     <string name="token_shown">Натисніть ще раз, щоб скопіювати або редагувати</string>
     <string name="token_adv_login_description">Це розширений спосіб входу в систему. На відміну від веб-порталу, тут Ви можете безпосередньо ввести або оновити свій токен входу. Наприклад, це може пришвидшити вхід у систему на кількох пристроях. Зверніть увагу, що токени з неправильним форматом, які додаток не зможе розпізнати, не будуть прийняті</string>

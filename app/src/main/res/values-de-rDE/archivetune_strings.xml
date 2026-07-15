@@ -78,9 +78,7 @@
     <string name="lyrics_click_change">Liedtext per Klick ändern</string>
     <string name="lyrics_auto_scroll">Songtexte automatisch scrollen</string>
     <string name="lyrics_romanize_japanese">Japanische Texte romanisieren</string>
-    <string name="lyrics_romanize_korean">Romanisieren Sie koreanische Texte</string>
-    <string name="discord">Zwietracht</string>
-    <string name="advanced_login">Mit Token anmelden</string>
+    <string name="lyrics_romanize_korean">Romanisieren Sie koreanische Texte</string>    <string name="advanced_login">Mit Token anmelden</string>
     <string name="token_hidden">Tippen Sie, um das Token anzuzeigen</string>
     <string name="token_shown">Tippen Sie erneut, um zu kopieren oder zu bearbeiten</string>
     <string name="token_adv_login_description">Dies ist eine ERWEITERTE Anmeldemethode. Alternativ zum Webportal können Sie Ihr Login-Token hier direkt eingeben oder aktualisieren. Dies kann beispielsweise die Anmeldung auf mehreren Geräten beschleunigen. Bitte beachten Sie, dass ungültige Tokenformate, die die App nicht analysieren kann, nicht akzeptiert werden</string>
@@ -471,3 +469,4 @@
     <string name="ai_api_test_failed">API-Test fehlgeschlagen</string>
     <string name="ai_translation_menu">KI-Übersetzung</string>
 </resources>
+

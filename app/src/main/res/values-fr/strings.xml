@@ -434,7 +434,7 @@
     <string name="update_notification_channel_name">Mises à jour de l\'application</string>
     <string name="update_notification_channel_desc">Notifications pour les nouvelles mises à jour de l\'application</string>
     <string name="update_notification_title">Mise à jour disponible</string>
-    <string name="update_notification_text">ArchiveTune %s est désormais disponible</string>
+    <string name="update_notification_text">Sekai Tune %s est désormais disponible</string>
     <string name="download">Télécharger</string>
     <string name="added_to_playlist">Ajouté à %s</string>
     <string name="added_n_songs_to_playlist">Ajout de %1$d titres à %2$s</string>
@@ -442,7 +442,7 @@
     <string name="added_n_songs_to_n_playlists">Ajout de %1$d titres à %2$d playlists</string>
     <string name="smart_trimmer">Smart Trimmer</string>
     <string name="smart_trimmer_description">Smart Trimmer gère de manière dynamique le cache d\'images et le cache des titres, en supprimant les anciennes entrées afin d\'économiser de l\'espace disque.</string>
-    <string name="permissions_title">Permettre à ArchiveTune de fonctionner de manière optimale</string>
+    <string name="permissions_title">Permettre à Sekai Tune de fonctionner de manière optimale</string>
     <string name="permissions_subtitle">Nous utilisons quelques autorisations pour lire et gérer votre musique de manière fiable. Vous pouvez les modifier à tout moment dans les paramètres système.</string>
     <string name="permission_storage_title">Accès au stockage</string>
     <string name="permission_storage_desc">Nécessaire pour lire vos fichiers audio téléchargés et locaux en vue de leur lecture.</string>
@@ -500,7 +500,7 @@
     <string name="pitch_mode_multiplier_short">x</string>
     <string name="archivetune_canvas_desc">Animer les pochettes d\'album pendant la lecture (technologie BetterLyrics)</string>
     <string name="restore_success">Sauvegarde restaurée avec succès</string>
-    <string name="archivetune_canvas">ArchiveTune Canvas</string>
+    <string name="archivetune_canvas">Sekai Tune Canvas</string>
     <string name="change_playlist_cover">Changer la couverture de la playlist</string>
     <string name="together_participants">Participants</string>
     <string name="together_connected_count">%1$d connectés</string>
@@ -525,7 +525,7 @@
     <string name="no_releases">Aucune version disponible</string>
     <string name="you_might_like">Vous pourriez aimer</string>
     <string name="refresh_suggestions">Actualiser les suggestions</string>
-    <string name="music_together">ArchiveTune Music Together</string>
+    <string name="music_together">Sekai Tune Music Together</string>
     <string name="together_display_name">Nom d\'affichage</string>
     <string name="together_display_name_placeholder">Votre nom</string>
     <string name="together_port">Port de session</string>
@@ -571,10 +571,10 @@
     <string name="together_error_state">Erreur</string>
     <string name="got_it">Compris</string>
     <string name="together_dont_show_again">Ne plus afficher ce message</string>
-    <string name="together_welcome_title">Bienvenue sur ArchiveTune Music Together</string>
+    <string name="together_welcome_title">Bienvenue sur Sekai Tune Music Together</string>
     <string name="together_welcome_body">Music Together permet à plusieurs appareils de partager une session en direct avec une file d\'attente et une lecture synchronisées.</string>
     <string name="together_welcome_host_title">Organiser une session</string>
-    <string name="together_welcome_host_body">Appuyez sur « Démarrer la session », puis partagez le lien de la session. Laissez ArchiveTune ouvert en arrière-plan pendant l\'hébergement.</string>
+    <string name="together_welcome_host_body">Appuyez sur « Démarrer la session », puis partagez le lien de la session. Laissez Sekai Tune ouvert en arrière-plan pendant l\'hébergement.</string>
     <string name="together_welcome_join_title">Se connecter depuis un autre appareil</string>
     <string name="together_welcome_join_body">Ouvrez le lien partagé ou saisissez le code et appuyez sur Rejoindre. Votre file d\'attente et la lecture suivront celle de l\'hôte.</string>
     <string name="together_welcome_permissions_title">Autorisations et sécurité</string>
@@ -617,9 +617,9 @@
     <string name="blur_intensity">Intensité du flou</string>
     <string name="blur_intensity_value">%1$d dp</string>
     <string name="playback_confirmation_required">Confirmation de lecture requise</string>
-    <string name="playback_requires_youtube_music_confirmation">Confirmez la lecture dans YouTube Music, puis retournez dans ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_confirmation">Confirmez la lecture dans YouTube Music, puis retournez dans Sekai Tune.</string>
     <string name="playback_login_refresh_required">Actualiser la connexion à YouTube Music</string>
-    <string name="playback_requires_youtube_music_login_refresh">Actualisez votre connexion YouTube Music, puis retournez sur ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_login_refresh">Actualisez votre connexion YouTube Music, puis retournez sur Sekai Tune.</string>
     <string name="wakelock">Maintenir le processeur actif pendant la lecture</string>
     <string name="wakelock_desc">Empêche le système d\'interrompre la lecture musicale en maintenant un verrou de réveil du processeur</string>
     <string name="external_downloader">Téléchargeur Externe</string>
@@ -631,7 +631,7 @@
     <string name="external_downloader_not_configured">Aucun téléchargeur externe n\'est configuré. Configurez-en un dans Paramètres → Lecteur.</string>
     <string name="open_youtube_music">Ouvrir YouTube Music</string>
     <string name="po_token_account_notice_title">Utiliser le même compte</string>
-    <string name="po_token_account_notice_body">Connectez-vous ici avec le même compte Google que celui que vous utilisez déjà pour YouTube Music dans ArchiveTune avant de générer un jeton PO.</string>
+    <string name="po_token_account_notice_body">Connectez-vous ici avec le même compte Google que celui que vous utilisez déjà pour YouTube Music dans Sekai Tune avant de générer un jeton PO.</string>
     <string name="po_token_account_notice_same_account">Si cette WebView utilise un autre compte, le jeton généré ne fonctionnera pas correctement.</string>
     <string name="po_token_account_notice_mismatch">Utilisez le compte correspondant, terminez la procédure de connexion, puis ouvrez youtube.com/account et générez le jeton à partir de cette page.</string>
     <string name="sort_order_ascending">Croissant</string>
@@ -680,9 +680,7 @@
     <string name="aod_mode">Mode AOD</string>
     <string name="aod_mode_exit">Quitter AOD</string>
     <string name="error_malformed_stream">Erreur source</string>
-    <string name="support_development_title">Soutenir le développement</string>
-    <string name="support_development_message">Salut ! Je m\'appelle Koiverse, je suis le développeur d\'ArchiveTune. Si ArchiveTune fait désormais partie de vos habitudes d\'écoute quotidiennes, vous pouvez contribuer à son développement en faisant un don ou en ajoutant le projet à vos favoris sur GitHub. Merci de soutenir le travail qui se cache derrière cette application.</string>
-    <string name="support_development_donate">Faites un don pour soutenir le développement</string>
+    <string name="support_development_title">Soutenir le développement</string>    <string name="support_development_donate">Faites un don pour soutenir le développement</string>
     <string name="support_development_star">Ajouter à vos favoris sur GitHub</string>
     <string name="later">Plus tard</string>
     <string name="album_backdrop">Flou d’arrière-plan</string>
@@ -727,7 +725,7 @@
     <string name="year_sort">Année</string>
     <string name="discord_activity_type_watching_label">Regarder</string>
     <string name="newest_first">Du plus récent au plus ancien</string>
-    <string name="discord_account_ready">ArchiveTune est prêt à publier Rich Presence pour votre séance d\'écoute.</string>
+    <string name="discord_account_ready">Sekai Tune est prêt à publier Rich Presence pour votre séance d\'écoute.</string>
     <string name="discord_connection_settings">Connexion</string>
     <string name="no_saved_accounts">Aucun compte enregistré pour l\'instant</string>
     <string name="recent_requests">Demandes récentes</string>
@@ -753,7 +751,7 @@
     <string name="display">Affichage</string>
     <string name="youtube_synced">Synchronisé avec YouTube</string>
     <string name="your_collection">Votre Collection</string>
-    <string name="discord_login_description">Connectez votre compte Discord via OAuth afin qu\'ArchiveTune puisse publier des informations de présence enrichies.</string>
+    <string name="discord_login_description">Connectez votre compte Discord via OAuth afin qu\'Sekai Tune puisse publier des informations de présence enrichies.</string>
     <string name="personal_label">Personnel</string>
     <string name="lyrics_animation_style_v2_only">Disponible uniquement en mode paroles V2</string>
     <string name="discord_platform_ios">iOS</string>
@@ -791,7 +789,7 @@
     <string name="discord_platform_embedded">Intégré</string>
     <string name="lyrics_mode_v2">V2 Legacy</string>
     <string name="saved_accounts">Comptes enregistrés</string>
-    <string name="widget_tap_to_open">Appuyez pour ouvrir ArchiveTune</string>
+    <string name="widget_tap_to_open">Appuyez pour ouvrir Sekai Tune</string>
     <string name="discord_refresh_failed">Échec de l\'actualisation de la présence sur Discord</string>
     <string name="top_artist_badge">MEILLEUR ARTISTE</string>
     <string name="youtube_channels">Chaînes YouTube</string>
@@ -839,14 +837,14 @@
     <string name="library_top_mixes_refresh">Actualiser les mixages</string>
     <string name="library_top_mixes_configure_ai">Configurer l\'IA</string>
     <string name="library_top_mixes_ai_not_configured_title">Configurer l\'IA pour créer des mixages</string>
-    <string name="library_top_mixes_ai_not_configured_desc">L\'intégration de l\'IA est nécessaire pour qu\'ArchiveTune puisse créer des sélections personnalisées.</string>
+    <string name="library_top_mixes_ai_not_configured_desc">L\'intégration de l\'IA est nécessaire pour qu\'Sekai Tune puisse créer des sélections personnalisées.</string>
     <string name="library_top_mixes_no_recent_history_title">Pas encore de compilation récente</string>
     <string name="library_top_mixes_no_recent_history">Écoutez d\'autres morceaux, puis actualisez la page pour créer des playlists générées par l\'IA à partir de votre historique récent.</string>
     <string name="library_top_mixes_no_valid_mixes">L\'IA n\'a trouvé aucun mix écoutable dans votre historique récent.</string>
     <string name="library_top_mixes_failed">Échec de la création des meilleurs mixages</string>
     <string name="cast">Cast</string>
     <string name="cast_devices">Appareils de diffusion</string>
-    <string name="cast_sheet_subtitle">Choisissez où ArchiveTune est diffusé</string>
+    <string name="cast_sheet_subtitle">Choisissez où Sekai Tune est diffusé</string>
     <string name="cast_available_devices">Appareils disponibles</string>
     <string name="cast_searching_devices">Recherche d\'appareils</string>
     <string name="cast_no_devices">Aucun appareil Cast n\'a été détecté</string>
@@ -904,7 +902,7 @@
     <string name="lastfm_endpoint_invalid">Saisissez un point de terminaison HTTP ou HTTPS valide.</string>
     <string name="lastfm_service_not_configured">Configurez le service de scrobbling avant de vous connecter.</string>
     <string name="onboarding_empty_title">Configuration indisponible</string>
-    <string name="onboarding_empty_subtitle">Continuez vers ArchiveTune.</string>
+    <string name="onboarding_empty_subtitle">Continuez vers Sekai Tune.</string>
     <string name="onboarding_error_generic">Impossible de charger le programme d\'installation</string>
     <string name="onboarding_permission_allowed_by_install">Autorisé par l\'installation</string>
     <string name="lyrics_search_result_stats">%1$d lignes, %2$d caractères</string>
@@ -930,7 +928,7 @@
     <string name="lastfm_login_api_key_suspended">Clé API suspendue.</string>
     <string name="lastfm_login_network_error">Erreur réseau. Vérifiez votre connexion.</string>
     <string name="lastfm_login_failed">Échec de la connexion. Veuillez réessayer.</string>
-    <string name="updates_channel_warning_intro">ArchiveTune propose deux canaux de téléchargement pour les versions :</string>
+    <string name="updates_channel_warning_intro">Sekai Tune propose deux canaux de téléchargement pour les versions :</string>
     <string name="updates_channel_warning_stable_title">Versions stables</string>
     <string name="updates_channel_warning_stable_source">Distribué via les versions officielles de GitHub.</string>
     <string name="updates_channel_warning_stable_desc">Ces versions ont été testées et sont recommandées pour la plupart des utilisateurs.</string>
@@ -941,7 +939,7 @@
     <string name="onboarding_permission_network_title">Accès au réseau</string>
     <string name="onboarding_permission_network_desc">Écoutez de la musique en streaming, téléchargez des pochettes d\'album et consultez le contenu des applications en ligne.</string>
     <string name="onboarding_permission_playback_service_title">Lecture en arrière-plan</string>
-    <string name="onboarding_permission_playback_service_desc">Assure la lecture continue de la musique même lorsque ArchiveTune fonctionne en arrière-plan.</string>
+    <string name="onboarding_permission_playback_service_desc">Assure la lecture continue de la musique même lorsque Sekai Tune fonctionne en arrière-plan.</string>
     <string name="onboarding_permission_audio_settings_title">Paramètres audio et vibrations</string>
     <string name="onboarding_permission_audio_settings_desc">Régler le comportement de la lecture audio et fournir un retour tactile léger.</string>
     <string name="together_participants_empty">Aucun participant pour l\'instant</string>
@@ -956,25 +954,19 @@
     <string name="together_activity_host_transferred">L\'hôte a été transféré vers %1$s</string>
     <string name="unhide">Afficher</string>
     <string name="download_complete">Téléchargement complet</string>
-    <string name="onboarding_welcome_title">Bienvenue sur ArchiveTune</string>
+    <string name="onboarding_welcome_title">Bienvenue sur Sekai Tune</string>
     <string name="onboarding_welcome_subtitle">Configurez la lecture, la musique locale et les autorisations de mise à jour avant de commencer à écouter.</string>
     <string name="onboarding_permissions_title">Vérifier les autorisations</string>
     <string name="onboarding_permissions_subtitle">N\'accordez que les autorisations dont vous avez besoin pour l\'instant. Vous pourrez toujours en accorder d\'autres ultérieurement.</string>
     <string name="onboarding_community_title">Restez connecté</string>
-    <string name="onboarding_community_subtitle">Suivez l\'évolution du projet, signalez des problèmes ou soutenez ArchiveTune.</string>
+    <string name="onboarding_community_subtitle">Suivez l\'évolution du projet, signalez des problèmes ou soutenez Sekai Tune.</string>
     <string name="onboarding_finish">Commencez à écouter</string>
     <string name="onboarding_gms_variant">Édition GMS</string>
     <string name="onboarding_foss_variant">Édition FOSS</string>
     <string name="onboarding_permission_app_installation_title">Installation de l\'application</string>
-    <string name="onboarding_permission_app_installation_desc">Installez les mises à jour APK téléchargées depuis ArchiveTune.</string>
+    <string name="onboarding_permission_app_installation_desc">Installez les mises à jour APK téléchargées depuis Sekai Tune.</string>
     <string name="onboarding_permission_bluetooth_scan_title">Recherche de Bluetooth</string>
-    <string name="onboarding_permission_bluetooth_scan_desc">Découvrez les appareils de diffusion et les appareils de lecture à proximité.</string>
-    <string name="onboarding_community_github_desc">Ajoutez le dépôt à vos favoris et suivez ses versions.</string>
-    <string name="onboarding_community_discord_title">Rejoindre Discord</string>
-    <string name="onboarding_community_telegram_title">Rejoindre Telegram</string>
-    <string name="onboarding_community_telegram_desc">Discutez avec la communauté et restez informé des dernières actualités.</string>
-    <string name="onboarding_community_donate_desc">Soutenez le développement continu.</string>
-    <string name="unsaved_account_dialog_text">Votre compte actuel n\'a pas encore été enregistré. Souhaitez-vous l\'enregistrer avant d\'ajouter un autre compte ?</string>
+    <string name="onboarding_permission_bluetooth_scan_desc">Découvrez les appareils de diffusion et les appareils de lecture à proximité.</string>    <string name="unsaved_account_dialog_text">Votre compte actuel n\'a pas encore été enregistré. Souhaitez-vous l\'enregistrer avant d\'ajouter un autre compte ?</string>
     <string name="unsaved_account_dialog_cancel">Annuler la connexion</string>
     <string name="unsaved_account_dialog_save_yes">Oui, enregistrer le compte actuel</string>
     <string name="hidden_playlists">Playlists masquées</string>
@@ -1004,7 +996,7 @@
     <string name="app_icon_available">Icônes disponibles</string>
     <string name="app_icon_builtin">Intégré</string>
     <string name="app_icon_community">Icône de la communauté</string>
-    <string name="app_icon_builtin_description">Icône ArchiveTune originale</string>
+    <string name="app_icon_builtin_description">Icône Sekai Tune originale</string>
     <string name="app_icon_identifier">ID %1$s</string>
     <string name="app_icon_community_notice">Les icônes de la communauté sont créées par les utilisateurs et peuvent évoluer au fil du temps.</string>
     <plurals name="app_icon_count">
@@ -1016,3 +1008,5 @@
     <string name="app_icon_load_failed">Impossible de charger les icônes des applications</string>
     <string name="app_icon_change_failed">Impossible de modifier l\'icône de l\'application</string>
 </resources>
+
+

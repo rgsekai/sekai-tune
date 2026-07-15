@@ -284,9 +284,7 @@
     <string name="lyrics_romanize_other_languages">Romanizar outras letras não latinas</string>
     <string name="quick_picks_display_mode">Modo de exibição das escolhas rápidas</string>
     <string name="quick_picks_display_mode_card">Cartão</string>
-    <string name="quick_picks_display_mode_list">Lista</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">Login com token</string>
+    <string name="quick_picks_display_mode_list">Lista</string>    <string name="advanced_login">Login com token</string>
     <string name="token_hidden">Toque para mostrar o token</string>
     <string name="token_shown">Toque novamente para copiar ou editar</string>
     <string name="token_adv_login_description">Este é um método de login AVANÇADO. Como alternativa ao portal web, você pode inserir ou atualizar diretamente seu token de login aqui. Por exemplo, isso pode acelerar o login em vários dispositivos. Observe que formatos de token inválidos que o app não conseguir interpretar não serão aceitos</string>
@@ -325,14 +323,14 @@
     <string name="storage_folder_selected_restart">Pasta de armazenamento salva. O app será reiniciado em 3 segundos.</string>
     <string name="storage_folder_invalid">Selecione uma pasta válida.</string>
     <string name="storage_folder_unsupported">Esta pasta não pode ser usada pelo cache de mídia baseado em arquivos.</string>
-    <string name="storage_folder_not_writable">O ArchiveTune não pode gravar arquivos de cache nesta pasta.</string>
+    <string name="storage_folder_not_writable">O Sekai Tune não pode gravar arquivos de cache nesta pasta.</string>
     <string name="storage_cache_cleared">Cache limpo.</string>
     <string name="storage_cache_clear_failed">Não foi possível limpar o cache. Verifique o acesso ao cartão SD.</string>
     <string name="storage_clear_song_cache_progress">Limpando cache de músicas...%1$d%%</string>
     <string name="storage_clear_downloads_progress">Limpando downloads...%1$d%%</string>
     <string name="storage_clear_image_cache_progress">Limpando cache de imagens...%1$d%%</string>
     <string name="storage_clear_canvas_cache_progress">Limpando cache de canvas...%1$d%%</string>
-    <string name="storage_cache_clear_warning">Mantenha o ArchiveTune aberto enquanto os arquivos de cache são removidos.</string>
+    <string name="storage_cache_clear_warning">Mantenha o Sekai Tune aberto enquanto os arquivos de cache são removidos.</string>
     <string name="storage_size_ratio">%1$s / %2$s</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <string name="clear_song_cache_dialog">  Tem certeza de que deseja limpar todas as músicas em cache?</string>
@@ -557,21 +555,10 @@
     <string name="ai_api_connected">API conectada</string>
     <string name="ai_api_test_failed">Falha no teste da API</string>
     <string name="ai_translation_menu">Tradução por IA</string>
-    <string name="about_lead_developer">Desenvolvedor principal</string>
-    <string name="about_archive_tune_team">Equipe</string>
-    <string name="about_respecter">Respeito</string>
+    <string name="about_lead_developer">Desenvolvedor principal</string>    <string name="about_respecter">Respeito</string>
     <string name="about_contributors">Contribuidores</string>
     <string name="about_contributor_translation">Contribuidores da Tradução</string>
     <string name="about_license">LICENÇA</string>
-    <string name="about_license_unknown">Licença desconhecida</string>
-    <string name="about_position_lead_dev">Eh?</string>
-    <string name="about_position_developers">Desenvolvedor | Equipe</string>
-    <string name="about_position_yuki">Só para mostrar 😂 | Admin</string>
-    <string name="about_position_mo_agamy">Framework base | Metrolist</string>
-    <string name="about_position_zion_huang">Criador do InnerTune · Fundação do Metrolist, ArchiveTune e outros forks</string>
-    <string name="about_content_desc_github">GitHub</string>
-    <string name="about_content_desc_website">Site</string>
-    <string name="about_content_desc_discord">Discord</string>
-    <string name="about_content_desc_telegram">Telegram</string>
-    <string name="about_content_desc_donate">Doar</string>
-</resources>
+    <string name="about_license_unknown">Licença desconhecida</string>    <string name="about_content_desc_github">GitHub</string></resources>
+
+

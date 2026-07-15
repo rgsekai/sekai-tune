@@ -192,7 +192,7 @@
     <string name="disable_animations">השבתת הנפשות</string>
     <string name="palette_cyberpunk">סייברפאנק</string>
     <string name="added_n_songs_to_n_playlists">נוספו %1$d שירים ל%2$d פלייליסטים</string>
-    <string name="playback_requires_youtube_music_confirmation">אשר את ההפעלה ב- YouTube Music, ולאחר מכן חזור אל ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_confirmation">אשר את ההפעלה ב- YouTube Music, ולאחר מכן חזור אל Sekai Tune.</string>
     <string name="proxy_connection_failed">חיבור הפרוקסי נכשל: %s</string>
     <string name="font_preference_default">ברירת מחדל</string>
     <string name="unknown">לא ידוע</string>
@@ -345,7 +345,7 @@
     <string name="stream_bypass_proxy_desc">השתמש בכתובת ה-IP הישירה שלך להשמעת הזרם כדי למנוע אי-התאמה בכתובות ה-IP</string>
     <string name="external_downloader_not_installed">אפליקציית הורדה חיצונית לא מותקנת</string>
     <string name="sort_by_most_played">הכי מושמע</string>
-    <string name="archivetune_canvas">קנבס ArchiveTune</string>
+    <string name="archivetune_canvas">קנבס Sekai Tune</string>
     <string name="slider_style_wavy">גלי</string>
     <string name="more">עוד</string>
     <string name="pause_on_device_mute">השהה כאשר עוצמת הקול של המכשיר היא 0</string>
@@ -366,7 +366,7 @@
         <item quantity="other">%d שירים</item>
     </plurals>
     <string name="duplicates">כפילויות</string>
-    <string name="widget_tap_to_open">לחץ כדי לפתוח את ArchiveTune</string>
+    <string name="widget_tap_to_open">לחץ כדי לפתוח את Sekai Tune</string>
     <string name="queue_autoplaying_similar">הפעלה אוטומטית של מוזיקה דומה</string>
     <string name="eq_waiting_for_audio_session">ממתין לסשן שמע</string>
     <string name="shuffle">ערבוב</string>
@@ -505,7 +505,7 @@
     <string name="palette_candy">סוכריה</string>
     <string name="eq_import_success">%1$d פרופילים מיובאים</string>
     <string name="error_unknown">שגיאה לא ידועה</string>
-    <string name="playback_requires_youtube_music_login_refresh">רענן את פרטי ההתחברות שלך ל- YouTube Music, ולאחר מכן חזור אל ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_login_refresh">רענן את פרטי ההתחברות שלך ל- YouTube Music, ולאחר מכן חזור אל Sekai Tune.</string>
     <string name="removed_n_songs_from_queue">הוסרו \'\'%d\'\' שירים מהתור</string>
     <string name="remove_from_playlist">הסר מהפלייליסט</string>
     <string name="font_preference_system">מערכת</string>
@@ -526,7 +526,7 @@
     <string name="library_top_mixes_refresh">רענון מיקסים</string>
     <string name="library_top_mixes_configure_ai">הגדרת בינה מלאכותית</string>
     <string name="library_top_mixes_ai_not_configured_title">הגדרת בינה מלאכותית ליצירת מיקסים</string>
-    <string name="library_top_mixes_ai_not_configured_desc">נדרש שילוב של בינה מלאכותית לפני ש-ArchiveTune יוכל לבנות מיקסים מובילים אישיים.</string>
+    <string name="library_top_mixes_ai_not_configured_desc">נדרש שילוב של בינה מלאכותית לפני ש-Sekai Tune יוכל לבנות מיקסים מובילים אישיים.</string>
     <string name="library_top_mixes_no_recent_history_title">עדיין אין מיקס האזנה אחרון</string>
     <string name="library_top_mixes_no_recent_history">האזינו לשירים נוספים, ולאחר מכן רעננו כדי ליצור מיקסי AI מההיסטוריה האחרונה שלכם.</string>
     <string name="library_top_mixes_no_valid_mixes">הבינה המלאכותית לא החזירה מיקסים ניתנים להפעלה מההיסטוריה האחרונה שלך.</string>
@@ -584,12 +584,12 @@
     <string name="restore_failed">שחזור הגיבוי נכשל</string>
     <string name="discord_integration">חיבור עם דיסקורד</string>
     <string name="account_integrations_summary">דיסקורד, Last.fm, Libre.fm, ListenBrainz</string>
-    <string name="discord_login_description">חבר את חשבון הדיסקורד שלך עם OAuth כדי ש-ArchiveTune יוכל לפרסם את Rich Presence.</string>
+    <string name="discord_login_description">חבר את חשבון הדיסקורד שלך עם OAuth כדי ש-Sekai Tune יוכל לפרסם את Rich Presence.</string>
     <string name="discord_open_authorization">הרשאת פתיחת דיסקורד</string>
     <string name="discord_waiting_for_authorization">מחכה לאישור דיסקורד...</string>
     <string name="discord_authorization_success">חשבון דיסקורד מחובר</string>
     <string name="discord_authorization_failed">אישור דיסקורד נכשל</string>
-    <string name="discord_account_ready">ArchiveTune מוכן לפרסם את Rich Presence עבור סשן ההאזנה שלכם.</string>
+    <string name="discord_account_ready">Sekai Tune מוכן לפרסם את Rich Presence עבור סשן ההאזנה שלכם.</string>
     <string name="discord_connection_settings">חיבור</string>
     <string name="discord_activity_content">תוכן הפעילות</string>
     <string name="discord_refresh_success">נוכחות בדיסקורד רועננה</string>
@@ -683,9 +683,7 @@
     <string name="context_info">הקשרים (מופרדים בפסיקים)</string>
     <string name="target_language">שפת היעד</string>
     <string name="close_dialog">סגירה</string>
-    <string name="support_development_title">תמיכה בפיתוח</string>
-    <string name="support_development_message">אהלן! אני קויברס, המפתח של ArchiveTune. אם אתם מוצאים שימוש יום-יומי ב-ArchiveTune , אתם יכולים לעזור לנו להמשיך להתקדם על ידי תרומה או סימון הפרויקט ב-GitHub. תודה על התמיכה בעבודה שמאחורי האפליקציה.</string>
-    <string name="support_development_donate">תרמו לתמיכה בפיתוח</string>
+    <string name="support_development_title">תמיכה בפיתוח</string>    <string name="support_development_donate">תרמו לתמיכה בפיתוח</string>
     <string name="support_development_star">דרגו ב-GitHub</string>
     <string name="later">מאוחר יותר</string>
     <string name="new_update_available">עדכון חדש זמין</string>
@@ -780,9 +778,9 @@
     <string name="update_notification_channel_name">עדכוני אפליקציה</string>
     <string name="update_notification_channel_desc">התראות על עדכוני אפליקציה חדשים</string>
     <string name="update_notification_title">עדכון זמין</string>
-    <string name="update_notification_text">ArchiveTune %s זמין כעת</string>
+    <string name="update_notification_text">Sekai Tune %s זמין כעת</string>
     <string name="download">הורדה</string>
-    <string name="permissions_title">אפשר ל-ArchiveTune לפעול בצורה הטובה ביותר</string>
+    <string name="permissions_title">אפשר ל-Sekai Tune לפעול בצורה הטובה ביותר</string>
     <string name="permissions_subtitle">אנו משתמשים במספר הרשאות כדי להשמיע ולנהל את המוזיקה שלך בצורה אמינה. ניתן לשנות אותן בכל עת בהגדרות המערכת.</string>
     <string name="permission_storage_title">גישה לאחסון</string>
     <string name="permission_storage_desc">נדרש לקריאת קבצי אודיו שהורדת ומקומיים לצורך השמעה.</string>
@@ -795,7 +793,7 @@
     <string name="playlist_suggestion_source_title">כותרת הפלייליסט</string>
     <string name="playlist_suggestion_source_content">תוכן הפלייליסט</string>
     <string name="playlist_suggestion_source_both">שם ותוכן הפלייליסט</string>
-    <string name="music_together">ArchiveTune ביחד</string>
+    <string name="music_together">Sekai Tune ביחד</string>
     <string name="together_display_name">שם תצוגה</string>
     <string name="together_display_name_placeholder">השם שלך</string>
     <string name="together_port">פורט סשן</string>
@@ -842,10 +840,10 @@
     <string name="together_error_state">שגיאה</string>
     <string name="got_it">הבנתי</string>
     <string name="together_dont_show_again">אל תציג את זה שוב</string>
-    <string name="together_welcome_title">ברוכים הבאים ל-ArchiveTune ביחד</string>
+    <string name="together_welcome_title">ברוכים הבאים ל-Sekai Tune ביחד</string>
     <string name="together_welcome_body">Music Together מאפשר למספר מכשירים לשתף סשן חי עם תור מסונכרן והשמעה.</string>
     <string name="together_welcome_host_title">אירוח סשן</string>
-    <string name="together_welcome_host_body">הקישו על התחל סשן, לאחר מכן שתפו את קישור הסשן. השאירו את ArchiveTune פתוח ברקע בזמן האירוח.</string>
+    <string name="together_welcome_host_body">הקישו על התחל סשן, לאחר מכן שתפו את קישור הסשן. השאירו את Sekai Tune פתוח ברקע בזמן האירוח.</string>
     <string name="together_welcome_join_title">הצטרפות ממכשיר אחר</string>
     <string name="together_welcome_join_body">פתחו את הקישור המשותף, או הזינו את הקוד והקישו על הצטרף. התור וההשמעה שלכם יעקבו אחר המארח.</string>
     <string name="together_welcome_permissions_title">הרשאות ובטיחות</string>
@@ -866,7 +864,7 @@
     <string name="token_copied">הטוקן הועתק ללוח</string>
     <string name="extracting_from_url">חילוץ טוקנים מכתובת URL</string>
     <string name="po_token_account_notice_title">השתמש באותו חשבון</string>
-    <string name="po_token_account_notice_body">היכנס כאן עם אותו חשבון גוגל שבו אתה כבר משתמש עבור YouTube Music בתוך ArchiveTune לפני יצירת טוקן PO.</string>
+    <string name="po_token_account_notice_body">היכנס כאן עם אותו חשבון גוגל שבו אתה כבר משתמש עבור YouTube Music בתוך Sekai Tune לפני יצירת טוקן PO.</string>
     <string name="po_token_account_notice_same_account">אם תצוגת WebView זו משתמשת בחשבון אחר, הטוקן שנוצר לא יפעל כהלכה.</string>
     <string name="po_token_account_notice_mismatch">השתמש בחשבון התואם, סיימו את תהליך הכניסה, לאחר מכן פתחו את youtube.com/account וצרו את הטוקן מאותו דף.</string>
     <string name="saved_accounts">חשבונות שמורים</string>
@@ -881,7 +879,7 @@
     <string name="unsaved_account_dialog_save_yes">כן, שמור את החשבון הנוכחי</string>
     <string name="cast">שידור</string>
     <string name="cast_devices">מכשירים לשידור</string>
-    <string name="cast_sheet_subtitle">בחר היכן יושמע ArchiveTune</string>
+    <string name="cast_sheet_subtitle">בחר היכן יושמע Sekai Tune</string>
     <string name="cast_available_devices">מכשירים זמינים</string>
     <string name="cast_searching_devices">מחפש מכשירים</string>
     <string name="cast_no_devices">לא נמצאו מכשירים לשידור</string>
@@ -926,23 +924,23 @@
     <string name="discord_reauthorize_required_title">סשן Discord פג תוקפו</string>
     <string name="discord_reauthorize_required_description">לא ניתן להציג את Rich Presence עד שתאשר שוב את Discord.</string>
     <string name="discord_reauthorize_action">הרשאה מחדש</string>
-    <string name="updates_channel_warning_intro">ArchiveTune מספקת שני ערוצי הורדה עבור גרסאות הפצה:</string>
+    <string name="updates_channel_warning_intro">Sekai Tune מספקת שני ערוצי הורדה עבור גרסאות הפצה:</string>
     <string name="updates_channel_warning_stable_title">גרסאות הפצה יציבות</string>
     <string name="updates_channel_warning_stable_source">מופץ דרך גרסאות GitHub רשמיות.</string>
     <string name="updates_channel_warning_stable_desc">גרסאות אלו נבדקו ומומלצות עבור רוב המשתמשים.</string>
     <string name="download_complete">ההורדה הושלמה</string>
-    <string name="onboarding_welcome_title">ברוכים הבאים ל- ArchiveTune</string>
+    <string name="onboarding_welcome_title">ברוכים הבאים ל- Sekai Tune</string>
     <string name="onboarding_welcome_subtitle">הגדר השמעה, מוזיקה מקומית ועדכון הרשאות לפני שתתחיל להאזין.</string>
     <string name="onboarding_permissions_title">בדיקת הרשאות</string>
     <string name="onboarding_permissions_subtitle">הענק רק את מה שאתה רוצה כעת. תוכל להמשיך ולאפשר הרשאות מאוחר יותר.</string>
     <string name="onboarding_community_title">הישארו מחוברים</string>
-    <string name="onboarding_community_subtitle">עקבו אחר הפיתוח, דווחו על בעיות או תמכו ב-ArchiveTune.</string>
+    <string name="onboarding_community_subtitle">עקבו אחר הפיתוח, דווחו על בעיות או תמכו ב-Sekai Tune.</string>
     <string name="onboarding_finish">התחל להאזין</string>
     <string name="onboarding_gms_variant">מהדורת GMS</string>
     <string name="onboarding_foss_variant">מהדורת FOSS</string>
     <string name="onboarding_version_label">גרסה %1$s</string>
     <string name="onboarding_empty_title">הגדרה לא זמינה</string>
-    <string name="onboarding_empty_subtitle">המשך ל-ArchiveTune.</string>
+    <string name="onboarding_empty_subtitle">המשך ל-Sekai Tune.</string>
     <string name="onboarding_error_generic">לא ניתן היה לטעון את ההגדרות</string>
     <string name="onboarding_permission_allowed_by_install">מורשה על ידי התקנה</string>
     <string name="onboarding_permission_unavailable">לא זמין</string>
@@ -953,19 +951,13 @@
     <string name="onboarding_permission_network_title">גישה לרשת</string>
     <string name="onboarding_permission_network_desc">הזרמת מוזיקה, טעינת גרפיקה ובדיקת תוכן אפליקציה מקוונת.</string>
     <string name="onboarding_permission_playback_service_title">השמעה ברקע</string>
-    <string name="onboarding_permission_playback_service_desc">שמרו על השמעת מוזיקה בצורה אמינה כאשר ArchiveTune פועל ברקע.</string>
+    <string name="onboarding_permission_playback_service_desc">שמרו על השמעת מוזיקה בצורה אמינה כאשר Sekai Tune פועל ברקע.</string>
     <string name="onboarding_permission_audio_settings_title">הגדרות שמע ורטט</string>
     <string name="onboarding_permission_audio_settings_desc">התאם את התנהגות השמעה ומתן משוב מגע קל.</string>
     <string name="onboarding_permission_app_installation_title">התקנת אפליקציה</string>
-    <string name="onboarding_permission_app_installation_desc">התקן עדכוני APK שהורדת מ-ArchiveTune.</string>
+    <string name="onboarding_permission_app_installation_desc">התקן עדכוני APK שהורדת מ-Sekai Tune.</string>
     <string name="onboarding_permission_bluetooth_scan_title">סריקת Bluetooth</string>
-    <string name="onboarding_permission_bluetooth_scan_desc">גלה שידור ומכשירי הפעלה בקרבת מקום.</string>
-    <string name="onboarding_community_github_desc">סמנו את המאגר בכוכב ועקוב אחר גרסאות.</string>
-    <string name="onboarding_community_discord_title">הצטרף ל-Discord</string>
-    <string name="onboarding_community_telegram_title">הצטרף לטלגרם</string>
-    <string name="onboarding_community_telegram_desc">שוחחו בצ\'אט עם הקהילה וקבלו עדכונים.</string>
-    <string name="onboarding_community_donate_desc">תמיכה בפיתוח מתמשך.</string>
-    <string name="together_current_playback">השמעה נוכחית</string>
+    <string name="onboarding_permission_bluetooth_scan_desc">גלה שידור ומכשירי הפעלה בקרבת מקום.</string>    <string name="together_current_playback">השמעה נוכחית</string>
     <string name="together_playback_empty">שום דבר לא מתנגן</string>
     <string name="together_playback_playing">מנגן</string>
     <string name="together_playback_paused">מושהה</string>
@@ -996,3 +988,5 @@
     <string name="no_hidden_playlists">אין פלייליסטים מוסתרים</string>
     <string name="unhide">ביטול הסתרה</string>
 </resources>
+
+

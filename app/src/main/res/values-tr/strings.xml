@@ -456,9 +456,9 @@
     <string name="update_notification_channel_name">Uygulama Güncellemeleri</string>
     <string name="update_notification_channel_desc">Yeni uygulama güncellemeleri için bildirimler</string>
     <string name="update_notification_title">Güncelleme Mevcut</string>
-    <string name="update_notification_text">ArchiveTune %s artık mevcut</string>
+    <string name="update_notification_text">Sekai Tune %s artık mevcut</string>
     <string name="download">İndir</string>
-    <string name="permissions_title">ArchiveTune\'un en iyi şekilde çalışmasına izin verin</string>
+    <string name="permissions_title">Sekai Tune\'un en iyi şekilde çalışmasına izin verin</string>
     <string name="permissions_subtitle">Müziğinizi güvenilir bir şekilde oynatmak ve yönetmek için birkaç izin kullanıyoruz. Bunları istediğiniz zaman sistem ayarlarından değiştirebilirsiniz.</string>
     <string name="permission_storage_title">Depolama erişimi</string>
     <string name="permission_storage_desc">İndirdiğiniz ve yerel ses dosyalarınızı oynatmak üzere okumak için gereklidir.</string>
@@ -496,7 +496,7 @@
     <string name="library_top_mixes_refresh">Mix\'leri yenile</string>
     <string name="library_top_mixes_configure_ai">YZ\'yi Yapılandır</string>
     <string name="library_top_mixes_ai_not_configured_title">Mix oluşturmak için YZ\'yi yapılandır</string>
-    <string name="library_top_mixes_ai_not_configured_desc">ArchiveTune\'un kişisel mix oluşturabilmesi için YZ yapılandırması gereklidir.</string>
+    <string name="library_top_mixes_ai_not_configured_desc">Sekai Tune\'un kişisel mix oluşturabilmesi için YZ yapılandırması gereklidir.</string>
     <string name="library_top_mixes_no_recent_history_title">Henüz yakın zamanda dinlenenler mix\'i oluşturulmamış</string>
     <string name="together_welcome_join_title">Başka bir cihazdan katıl</string>
     <string name="together_welcome_join_body">Paylaşılan bağlantıyı açın veya kodu girip Katıl\'a basın. Oynatma sıranız ve playback ana cihazı takip edecek.</string>

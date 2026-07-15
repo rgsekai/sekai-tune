@@ -97,9 +97,7 @@
     <string name="lyrics_text_size">Размер текста песни</string>
     <string name="resume_autoscroll">Продолжить авто-прокрут</string>
     <string name="lyrics_romanize_japanese">Романизация японских слов</string>
-    <string name="lyrics_romanize_korean">Романизация корейских слов</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">Войти с помощью токена</string>
+    <string name="lyrics_romanize_korean">Романизация корейских слов</string>    <string name="advanced_login">Войти с помощью токена</string>
     <string name="token_hidden">Нажмите, чтобы показать токен</string>
     <string name="token_shown">Нажмите ещё раз, чтобы скопировать или изменить</string>
     <string name="token_adv_login_description">Это РАСШИРЕННЫЙ метод входа. В качестве альтернативы веб-порталу вы можете напрямую ввести или обновить свой токен для входа здесь. Например, это может ускорить вход в систему на нескольких устройствах. Обратите внимание, что недействительные форматы токенов, которые приложение не может проанализировать, не будут приняты</string>
@@ -283,16 +281,7 @@
     <string name="dont_show">Не показывать</string>
     <string name="audio_crossfade_seconds">%1$s сек</string>
     <string name="crossfade_gapless_title">Кроссфейд без пробелов</string>
-    <string name="crossfade_gapless_description">Затухание и появление без перекрываний звука.</string>
-    <string name="about_position_yuki">Чисто для показа 😂 | Админ</string>
-    <string name="about_position_mo_agamy">Базовая структура | Metrolist</string>
-    <string name="about_position_zion_huang">Создатель InnerTune · Основатель проектов Metrolist, ArchiveTune и других форков</string>
-    <string name="about_content_desc_github">GitHub</string>
-    <string name="about_content_desc_website">Веб-сайт</string>
-    <string name="about_content_desc_discord">Discord</string>
-    <string name="about_content_desc_telegram">Телеграм</string>
-    <string name="about_content_desc_donate">Пожертвование</string>
-    <string name="suggestions">Предложения</string>
+    <string name="crossfade_gapless_description">Затухание и появление без перекрываний звука.</string>    <string name="about_content_desc_github">GitHub</string>    <string name="suggestions">Предложения</string>
     <string name="music_recognition_history">История распознования</string>
     <string name="music_recognition_history_search">Искать опознанные песни</string>
     <string name="music_recognition_history_empty_title">Пока нет опознанных песен</string>
@@ -329,3 +318,6 @@
     <string name="aod_customize_subtitle">Форма, компоновка, элементы управления и стилизация интерфейса</string>
     <string name="aod_customize_entry_desc">Настройка always-on экрана проигрывателя</string>
 </resources>
+
+
+

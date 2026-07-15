@@ -89,7 +89,7 @@
     <string name="update_notification_channel_desc">新应用更新通知</string>
     <string name="update_notification_title">更新可用</string>
     <string name="download">下载</string>
-    <string name="permissions_title">让ArchiveTune发挥最佳作用</string>
+    <string name="permissions_title">让Sekai Tune发挥最佳作用</string>
     <string name="permissions_subtitle">我们使用一些权限来可靠地播放和管理您的音乐，你可以随时在系统设置中更改这些</string>
     <string name="permission_storage_title">存储访问</string>
     <string name="permission_storage_desc">播放时必须读取下载的和本地音频文件</string>
@@ -279,7 +279,7 @@
     <string name="latest_version_format">最新消息：%s</string>
     <string name="enable_update_notification">启用更新通知</string>
     <string name="recent_commits">近期提交</string>
-    <string name="update_notification_text">ArchiveTune%s现已发布</string>
+    <string name="update_notification_text">Sekai Tune%s现已发布</string>
     <string name="permission_status_allowed">允许</string>
     <string name="next">下一个</string>
     <string name="delete_playlist_confirm">你真的想删除播放列表”%s\"吗?</string>
@@ -382,7 +382,7 @@
     <string name="blur">模糊</string>
     <string name="contrast">对比</string>
     <string name="brightness">亮度</string>
-    <string name="archivetune_canvas">ArchiveTune画布</string>
+    <string name="archivetune_canvas">Sekai Tune画布</string>
     <string name="archivetune_canvas_desc">播放时动画化专辑封面（由BetterLyrics提供）</string>
     <string name="show_button1_description">在Discord Rich Presence中切换按钮1的可见性</string>
     <string name="show_button2_description">在Discord Rich Presence中切换按钮2的可见性</string>
@@ -522,7 +522,7 @@
     <string name="no_releases">未发现任何发布</string>
     <string name="you_might_like">猜你喜欢</string>
     <string name="refresh_suggestions">刷新建议</string>
-    <string name="music_together">ArchiveTune 音乐共赏</string>
+    <string name="music_together">Sekai Tune 音乐共赏</string>
     <string name="together_display_name">昵称</string>
     <string name="together_display_name_placeholder">你的名字</string>
     <string name="together_port">会话端口</string>
@@ -568,10 +568,10 @@
     <string name="together_error_state">错误</string>
     <string name="got_it">我知道了</string>
     <string name="together_dont_show_again">不再显示</string>
-    <string name="together_welcome_title">欢迎来到 ArchiveTune 一起听</string>
+    <string name="together_welcome_title">欢迎来到 Sekai Tune 一起听</string>
     <string name="together_welcome_body">通过一起听，多台设备可以一起同步听歌。由一人发起房间并分享链接，其他人连接同一个 Wi‑Fi 即可加入，实时同步播放列表和进度</string>
     <string name="together_welcome_host_title">创建房间</string>
-    <string name="together_welcome_host_body">点击“开启会话”，随后分享会话链接。主持期间，请保持 ArchiveTune 在后台运行</string>
+    <string name="together_welcome_host_body">点击“开启会话”，随后分享会话链接。主持期间，请保持 Sekai Tune 在后台运行</string>
     <string name="together_welcome_join_title">从另一台设备加入</string>
     <string name="together_welcome_join_body">打开分享链接，或将其粘贴至此处并点击“加入”。您的播放队列与进度将随主持人同步</string>
     <string name="together_welcome_permissions_title">权限与隐私安全</string>

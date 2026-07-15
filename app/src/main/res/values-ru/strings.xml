@@ -292,7 +292,7 @@
     <string name="contrast">Контраст</string>
     <string name="brightness">Яркость</string>
     <string name="custom_value">Пользовательское</string>
-    <string name="archivetune_canvas">ArchiveTune Canvas</string>
+    <string name="archivetune_canvas">Sekai Tune Canvas</string>
     <string name="archivetune_canvas_desc">Анимировать обложку альбома при воспроизведении (С помощью BetterLyrics)</string>
     <string name="show_button1_description">Включить видимость кнопки 1 в Discord Rich Presence</string>
     <string name="show_button2_description">Включить видимость кнопки 2 в Discord Rich Presence</string>
@@ -523,9 +523,9 @@
     <string name="update_notification_channel_name">Обновления приложения</string>
     <string name="update_notification_channel_desc">Уведомления для новых обновлений приложения</string>
     <string name="update_notification_title">Доступно обновление</string>
-    <string name="update_notification_text">ArchiveTune %s теперь доступен</string>
+    <string name="update_notification_text">Sekai Tune %s теперь доступен</string>
     <string name="download">Загрузить</string>
-    <string name="permissions_title">Разрешите ArchiveTune работать лучше</string>
+    <string name="permissions_title">Разрешите Sekai Tune работать лучше</string>
     <string name="permissions_subtitle">Мы используем несколько разрешений чтобы надёжно воспроизводить и управлять вашей музыкой. Вы всегда можете изменить их в системных настройках.</string>
     <string name="permission_storage_title">Доступ к хранилищу</string>
     <string name="permission_storage_desc">Необходим чтобы читать ваши загруженные и локальные аудиофайлы для воспроизведения.</string>
@@ -534,7 +534,7 @@
     <string name="allow">Разрешить</string>
     <string name="you_might_like">Вам может понравиться</string>
     <string name="refresh_suggestions">Обновить предложения</string>
-    <string name="music_together">ArchiveTune Music Together</string>
+    <string name="music_together">Sekai Tune Music Together</string>
     <string name="together_display_name">Отображаемое имя</string>
     <string name="together_display_name_placeholder">Ваше имя</string>
     <string name="together_port">Порт сессии</string>
@@ -581,10 +581,10 @@
     <string name="together_error_state">Ошибка</string>
     <string name="got_it">Ясно</string>
     <string name="together_dont_show_again">Не показывать снова</string>
-    <string name="together_welcome_title">Добро пожаловать в ArchiveTune Music Together</string>
+    <string name="together_welcome_title">Добро пожаловать в Sekai Tune Music Together</string>
     <string name="together_welcome_body">Music Together позволяет нескольким устройствам делить сессию в реальном времени с синхронизированными очередью и воспроизведением.</string>
     <string name="together_welcome_host_title">Захостить сессию</string>
-    <string name="together_welcome_host_body">Нажмите Начать сессию, потом поделитесь ссылкой сессии. Держите ArchiveTune открытым в фоне во время хостинга.</string>
+    <string name="together_welcome_host_body">Нажмите Начать сессию, потом поделитесь ссылкой сессии. Держите Sekai Tune открытым в фоне во время хостинга.</string>
     <string name="together_welcome_join_title">Присоединиться с другого устройства</string>
     <string name="together_welcome_join_body">Откройте ссылку с которой вами поделились, или введите код и нажмите Присоединиться. Ваши очередь и воспроизведение будут следовать хосту.</string>
     <string name="together_welcome_permissions_title">Разрешения и безопасность</string>
@@ -633,9 +633,9 @@
     <string name="blur_intensity">Сила размытия</string>
     <string name="blur_intensity_value">%1$d dp</string>
     <string name="playback_confirmation_required">Необходимо подтверждение воспроизведения</string>
-    <string name="playback_requires_youtube_music_confirmation">Подтвердите воспроизведение в YouTube Music, потом вернитесь в ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_confirmation">Подтвердите воспроизведение в YouTube Music, потом вернитесь в Sekai Tune.</string>
     <string name="playback_login_refresh_required">Обновить вход в YouTube Music</string>
-    <string name="playback_requires_youtube_music_login_refresh">Обновите ваш вход в YouTube Music, потом вернитесь в ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_login_refresh">Обновите ваш вход в YouTube Music, потом вернитесь в Sekai Tune.</string>
     <string name="internet">Интернет</string>
     <string name="internet_warning_title">Предупреждение об безопасности и использовании</string>
     <string name="internet_warning_doh">DNS через HTTPS работает только в том случае, если в вашей стране заблокирован YouTube. Если YouTube активно блокирует ваш регион, рассмотрите возможность использования прокси-сервера или VPN.</string>
@@ -676,7 +676,7 @@
     <string name="playlist_suggestion_source_content">Контент плейлиста</string>
     <string name="playlist_suggestion_source_both">Название плейлиста и контент</string>
     <string name="po_token_account_notice_title">Использовать тот же аккаунт</string>
-    <string name="po_token_account_notice_body">Войдите тут с тем же аккаунтом Google который вы использовали для входа в YouTube Music в ArchiveTune перед генерацией PO токена.</string>
+    <string name="po_token_account_notice_body">Войдите тут с тем же аккаунтом Google который вы использовали для входа в YouTube Music в Sekai Tune перед генерацией PO токена.</string>
     <string name="po_token_account_notice_same_account">Если этот WebView использует другой аккаунт, сгенерированный токен не будет нормально работать.</string>
     <string name="po_token_account_notice_mismatch">Используйте подходящий аккаунт, завершите вход, потом откройте youtube.com/account и сгенерируйте токен с этой страницы.</string>
     <string name="album_backdrop">Размытие фона</string>

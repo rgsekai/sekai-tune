@@ -183,9 +183,7 @@
     <string name="lyrics_romanize_other_languages">기타 비라틴어 가사 로마자 표기</string>
     <string name="quick_picks_display_mode">빠른 선곡 표시 모드</string>
     <string name="quick_picks_display_mode_card">카드</string>
-    <string name="quick_picks_display_mode_list">목록</string>
-    <string name="discord">Discord</string>
-    <string name="advanced_login">고급 로그인 (토큰)</string>
+    <string name="quick_picks_display_mode_list">목록</string>    <string name="advanced_login">고급 로그인 (토큰)</string>
     <string name="token_hidden">탭하여 토큰 보기</string>
     <string name="token_shown">다시 탭하여 복사/편집</string>
     <string name="token_adv_login_description">이 방식은 고급 로그인 수단입니다. 웹 페이지 대신 로그인 토큰을 직접 입력하거나 업데이트하여 여러 기기에서 로그인 속도를 높일 수 있습니다. 유효하지 않은 토큰 형식은 허용되지 않습니다.</string>
@@ -396,15 +394,9 @@
     <string name="aod_customize_control_size">컨트롤 크기</string>
     <string name="lyrics_share_style_frosted_dark">프로스테드 다크</string>
     <string name="local_songs_scan_included_folders_desc">지정한 특정 폴더 경로 아래에 있는 음원 파일들만 스캔합니다.</string>
-    <string name="android_auto_sort_option_format">%1$s - %2$s</string>
-    <string name="about_position_zion_huang">InnerTune 원작 개발자 · Metrolist, ArchiveTune 및 기타 포크 버전의 핵심 토대 구축</string>
-    <string name="aod_customize_subtitle">모양, 레이아웃, 컨트롤 및 앰비언트 스타일 설정</string>
+    <string name="android_auto_sort_option_format">%1$s - %2$s</string>    <string name="aod_customize_subtitle">모양, 레이아웃, 컨트롤 및 앰비언트 스타일 설정</string>
     <string name="aod_shape_circle">원형</string>
-    <string name="aod_customize_visibility">표시 설정</string>
-    <string name="about_position_mo_agamy">기초 프레임워크 설계 | Metrolist</string>
-    <string name="aod_background_tonal_edge">톤 엣지</string>
-    <string name="about_content_desc_donate">후원</string>
-    <string name="aod_customize_sample_duration">3:48</string>
+    <string name="aod_customize_visibility">표시 설정</string>    <string name="aod_background_tonal_edge">톤 엣지</string>    <string name="aod_customize_sample_duration">3:48</string>
     <string name="aod_customize_accent_style">강조 색상 스타일</string>
     <string name="music_recognition_history_search">인식된 곡 검색</string>
     <string name="year_in_music_top_pick">가장 즐겨 들은 음악</string>
@@ -413,9 +405,7 @@
     <string name="aod_shape_flower">꽃 모양</string>
     <string name="aod_accent_theme">테마 색상</string>
     <string name="lyrics_share_style_deep_blur">딥 블러</string>
-    <string name="aod_shape_pentagon">오각형</string>
-    <string name="about_archive_tune_team">ArchiveTune 팀</string>
-    <string name="storage_migration_cache_progress">캐시 이동 중… %1$d%%</string>
+    <string name="aod_shape_pentagon">오각형</string>    <string name="storage_migration_cache_progress">캐시 이동 중… %1$d%%</string>
     <string name="aod_customize_horizontal_padding">가로 여백</string>
     <string name="local_songs_scan_included_folders_empty">모든 폴더가 포함됩니다.</string>
     <string name="aod_position_bottom">하단</string>
@@ -454,15 +444,11 @@
     <string name="aod_shape_square">정사각형</string>
     <string name="aod_shape_heart">하트</string>
     <string name="year_in_music_plays_label">총 재생 횟수</string>
-    <string name="aod_position_top">상단</string>
-    <string name="about_content_desc_telegram">Telegram</string>
-    <string name="android_auto_suggested_songs">추천 곡 목록</string>
+    <string name="aod_position_top">상단</string>    <string name="android_auto_suggested_songs">추천 곡 목록</string>
     <string name="music_recognition_history_no_results_title">일치하는 인식 기록이 없습니다.</string>
     <string name="year_in_music_totals_title">당신이 채워온 음악 속 일상</string>
     <string name="aod_customize_show_controls">컨트롤 버튼 표시</string>
-    <string name="spotify_not_connected">Spotify가 연결되지 않았습니다.</string>
-    <string name="about_position_lead_dev">네?</string>
-    <string name="aod_customize_controls">재생 컨트롤</string>
+    <string name="spotify_not_connected">Spotify가 연결되지 않았습니다.</string>    <string name="aod_customize_controls">재생 컨트롤</string>
     <string name="storage_cache_cleared">캐시가 비워졌습니다.</string>
     <string name="storage_location_internal">내부 저장소</string>
     <string name="aod_shape_clover_4">클로버</string>
@@ -485,17 +471,13 @@
     <string name="playlist_sync_failed">재생목록 동기화 실패: %1$s</string>
     <string name="storage_location_sheet_title">저장 위치</string>
     <string name="music_recognition_history_empty_title">인식된 곡이 아직 없습니다.</string>
-    <string name="year_in_music_ranked_albums">자주 찾은 앨범</string>
-    <string name="about_content_desc_website">웹사이트</string>
-    <string name="aod_customize_background_style">배경 스타일</string>
+    <string name="year_in_music_ranked_albums">자주 찾은 앨범</string>    <string name="aod_customize_background_style">배경 스타일</string>
     <string name="year_in_music_recap">Recap</string>
     <string name="about_content_desc_github">GitHub</string>
     <string name="player_design_v9">머티리얼 익스텐디드</string>
     <string name="aod_customize_show_time_labels">시간 정보 표시</string>
     <string name="aod_customize_sample_title">Midnight Archive</string>
-    <string name="aod_shape_cookie_6">쿠키 6</string>
-    <string name="about_content_desc_discord">Discord</string>
-    <string name="lyrics_share_style_frosted_light">프로스테드 라이트</string>
+    <string name="aod_shape_cookie_6">쿠키 6</string>    <string name="lyrics_share_style_frosted_light">프로스테드 라이트</string>
     <string name="aod_shape_triangle">삼각형</string>
     <string name="aod_customize_entry_desc">Always On Display 재생 화면을 취향에 맞게 설정합니다.</string>
     <string name="year_in_music_intro_hero">드디어 공개합니다! 당신만의 올해의 음악</string>
@@ -519,7 +501,7 @@
     <string name="year_in_music_empty_subtitle">%d년에 음악을 더 많이 감상하시면 연말 요약이 여기에 나타납니다.</string>
     <string name="storage_location_free">%s 여유 공간 있음</string>
     <string name="aod_customize_show_artist">아티스트 표시</string>
-    <string name="storage_folder_not_writable">ArchiveTune이 이 폴더에 캐시 파일을 저장할 수 없습니다. 쓰기 권한을 확인해 주세요.</string>
+    <string name="storage_folder_not_writable">Sekai Tune이 이 폴더에 캐시 파일을 저장할 수 없습니다. 쓰기 권한을 확인해 주세요.</string>
     <string name="storage_folder_unsupported">이 폴더는 파일 기반 음악 캐시에 사용할 수 없습니다.</string>
     <string name="aod_customize_sample_elapsed">1:24</string>
     <string name="mini_player_background_style">미니 플레이어 배경 스타일</string>
@@ -563,7 +545,7 @@
     <string name="restore_select_backup">복원할 백업 파일 선택</string>
     <string name="about_contributor_translation">번역 기여자</string>
     <string name="about_license">오픈소스 라이선스</string>
-    <string name="about_license_unknown">알 수 없는 라이선스</string>
-    <string name="about_position_developers">개발자</string>
-    <string name="about_position_yuki">공동 개발자</string>
-</resources>
+    <string name="about_license_unknown">알 수 없는 라이선스</string></resources>
+
+
+
