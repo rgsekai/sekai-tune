@@ -19,6 +19,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -35,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
@@ -463,10 +465,16 @@ fun AppearanceSettings(navController: NavController) {
 
                 item {
                     PreferenceEntry(
-                        title = { Text(stringResource(R.string.app_icon)) },
-                        description = stringResource(R.string.app_icon_description),
-                        icon = { Icon(painterResource(R.drawable.app_icon_small), null) },
-                        onClick = { navController.navigate("settings/appearance/icon") },
+                        title = { Text("App icon") },
+                        description = "Choose the launcher icon",
+                        icon = {
+                            Image(
+                                painter = painterResource(id = R.drawable.sekai_tune),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp).clip(CircleShape)
+                            )
+                        },
+                        onClick = { navController.navigate(route = "settings/appearance/icon") }
                     )
                 }
 

@@ -119,7 +119,7 @@ class AppIconRepository
                         name = null,
                         author = null,
                         githubAuthorUrl = null,
-                        previewDrawableResId = R.drawable.app_icon_small,
+                        previewDrawableResId = R.drawable.sekai_tune,
                         aliasClassName = "${context.packageName}.launcher.DefaultIconAlias",
                         isDefault = true,
                     ),
