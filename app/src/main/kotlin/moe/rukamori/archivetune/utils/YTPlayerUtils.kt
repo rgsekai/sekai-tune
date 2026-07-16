@@ -362,8 +362,11 @@ object YTPlayerUtils {
         authState: PlaybackAuthState,
     ): YouTubeClient =
         when (preferredStreamClient) {
+            PlayerStreamClient.ANDROID_VR -> {
+                YouTubeClient.ANDROID_VR_1_43_32
+            }
             PlayerStreamClient.WEB_REMIX -> {
-                WEB_REMIX
+                YouTubeClient.WEB_REMIX
             }
 
             PlayerStreamClient.ARCHIVETUNE_EXTRACTOR -> {
@@ -443,7 +446,7 @@ object YTPlayerUtils {
         playlistId: String? = null,
         audioQuality: AudioQuality,
         connectivityManager: ConnectivityManager,
-        preferredStreamClient: PlayerStreamClient = PlayerStreamClient.WEB_REMIX,
+        preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
         // if provided, this preference overrides ConnectivityManager.isActiveNetworkMetered
         networkMetered: Boolean? = null,
     ): Result<PlaybackData> {
