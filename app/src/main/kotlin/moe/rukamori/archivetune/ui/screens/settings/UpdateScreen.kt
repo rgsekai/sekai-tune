@@ -650,6 +650,7 @@ fun UpdateScreen(
                         append(context.getString(R.string.channel_canary))
                     }
                     UpdateChannel.STABLE -> append(context.getString(R.string.app_name))
+
                 }
                 append(' ')
                 append(updateSheetVersion ?: "?")
@@ -1008,40 +1009,6 @@ private fun UpdateControlsPanel(
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-
-            ListItem(
-                headlineContent = {
-                    Text(text = stringResource(R.string.update_channel))
-                },
-                supportingContent = {
-                    Text(text = stringResource(R.string.update_channel_desc))
-                },
-                leadingContent = {
-                    FeatureIcon(
-                        iconRes = R.drawable.tune,
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    )
-                },
-                trailingContent = {
-                    Text(
-                        text =
-                            when (updateChannel) {
-                                UpdateChannel.STABLE -> stringResource(R.string.channel_stable)
-                                UpdateChannel.CANARY -> stringResource(R.string.channel_canary)
-                            },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
-
             SingleChoiceSegmentedButtonRow(
                 modifier =
                     Modifier
@@ -1051,24 +1018,15 @@ private fun UpdateControlsPanel(
                 SegmentedButton(
                     selected = updateChannel == UpdateChannel.STABLE,
                     onClick = onStableSelected,
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 1),
                     icon = {},
                 ) {
                     Text(text = stringResource(R.string.channel_stable))
                 }
-                SegmentedButton(
-                    selected = updateChannel == UpdateChannel.CANARY,
-                    onClick = onCanarySelected,
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    icon = {},
-                ) {
-                    Text(text = stringResource(R.string.channel_canary))
                 }
             }
         }
     }
-}
-
 @Composable
 private fun CommitHistorySection(
     commits: List<GitCommit>,
