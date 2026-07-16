@@ -431,12 +431,6 @@ class AboutViewModel
                             labelResId = R.string.about_content_desc_github,
                             url = "https://github.com/rgsekai/sekai-tune",
                         ),
-                        AboutLinkUiModel(
-                            id = "privacy_policy",
-                            iconResId = R.drawable.lock,
-                            labelResId = R.string.privacy,
-                            url = "https://archivetune.koiiverse.cloud/privacy",
-                        ),
                     ),
                 leadDeveloper =
                     TeamMember(
