@@ -313,11 +313,6 @@ fun NewsScreen(
                                 key = "news_header",
                                 contentType = "news_header",
                             ) {
-                                NewsListHeader(
-                                    itemCount = state.items.size,
-                                    isSearching = searchQuery.isNotBlank(),
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
                             }
 
                             itemsIndexed(
@@ -347,66 +342,6 @@ fun NewsScreen(
     }
 }
 
-@Composable
-private fun NewsListHeader(
-    itemCount: Int,
-    isSearching: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        tonalElevation = 3.dp,
-        modifier = modifier,
-    ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(52.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(R.drawable.newspaper),
-                        contentDescription = null,
-                        modifier = Modifier.size(26.dp),
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text =
-                        stringResource(
-                            if (isSearching) {
-                                R.string.news_search_results_title
-                            } else {
-                                R.string.news_tooltip_title
-                            },
-                        ),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = pluralStringResource(R.plurals.news_article_count, itemCount, itemCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun NewsCard(

@@ -1705,43 +1705,6 @@ class MainActivity : ComponentActivity() {
                                                             contentDescription = stringResource(R.string.history),
                                                         )
                                                     }
-                                                    TooltipBox(
-                                                        positionProvider =
-                                                            if (hasUnreadNews) {
-                                                                TooltipDefaults.rememberRichTooltipPositionProvider()
-                                                            } else {
-                                                                TooltipDefaults.rememberPlainTooltipPositionProvider()
-                                                            },
-                                                        tooltip = {
-                                                            if (hasUnreadNews) {
-                                                                RichTooltip(
-                                                                    title = { Text(stringResource(R.string.news_tooltip_title)) },
-                                                                ) {
-                                                                    Text(stringResource(R.string.news_tooltip_body))
-                                                                }
-                                                            } else {
-                                                                PlainTooltip {
-                                                                    Text(stringResource(R.string.news))
-                                                                }
-                                                            }
-                                                        },
-                                                        state = rememberTooltipState(),
-                                                    ) {
-                                                        TranslucentTopAppBarIconButton(
-                                                            onClick = { navController.navigate("news") },
-                                                        ) {
-                                                            BadgedBox(badge = {
-                                                                if (hasUnreadNews) {
-                                                                    Badge()
-                                                                }
-                                                            }) {
-                                                                Icon(
-                                                                    painter = painterResource(R.drawable.newspaper),
-                                                                    contentDescription = stringResource(R.string.news),
-                                                                )
-                                                            }
-                                                        }
-                                                    }
                                                     TranslucentTopAppBarIconButton(
                                                         onClick = { navController.navigate("new_release") },
                                                     ) {
