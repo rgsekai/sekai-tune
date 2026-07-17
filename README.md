@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="sekai_logo.svg" width="168" height="168">
+  <img src="./sekai_logo.svg" width="168" height="168">
 
   <h1 align="center">Sekai Tune</h1>
 
@@ -171,7 +171,7 @@
 
 ### Open-Source Acknowledgments
 
-ArchiveTune is made possible by the work of many open-source projects and communities:
+SekaiTune is made possible by the work of many open-source projects and communities:
 
 - **Metrolist** by [Mostafa Alagamy](https://github.com/mostafaalagamy/Metrolist) for the base framework.
 - **SimpMusic** by [maxrave-dev](https://github.com/maxrave-dev/SimpMusic) for the lyrics API provider.
@@ -184,16 +184,9 @@ ArchiveTune is made possible by the work of many open-source projects and commun
 
 ## ⚖️ Legal Disclaimer
 
-ArchiveTune is an independent third-party client.
+SekaiTune is an independent third-party client.
 - Not affiliated with Google LLC or YouTube.
 - Does not bypass YouTube's technical protections.
 - Users are encouraged to support artists by purchasing music via official channels.
 
 ---
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/rukamori/ArchiveTune/refs/heads/dev/fastlane/metadata/android/en-US/images/ArchiveTuneFull.png" alt="ArchiveTune Banner" style="width: 100%; max-width: 500px;">
-  <p><b>If ArchiveTune elevated your music experience, please consider giving us a ⭐</b></p>
-  <br />
-  <img src="https://raw.githubusercontent.com/rukamori/ArchiveTune/refs/heads/dev/assets/badge_part.png" alt="ArchiveTune Banner" style="width: 180px">
-</div>
