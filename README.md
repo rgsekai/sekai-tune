@@ -4,35 +4,12 @@
 
   <h1 align="center">Sekai Tune</h1>
 
-  <p align="center">
-    <a href="README.md">
-      <img src="https://img.shields.io/badge/🇺🇸%20English-6366f1?style=for-the-badge&labelColor=1e1e2e" />
-    </a>
-    <a href="README_JA.md">
-      <img src="https://img.shields.io/badge/🇯🇵%20日本語-6366f1?style=for-the-badge&labelColor=1e1e2e" />
-    </a>
-  </p>
 
   <p align="center">
     <strong>Redefining the YouTube Music Experience on Android.</strong>
     <br />
     <em>It’s high-performance, privacy-focused, and packed with features for people who really care about their experience.</em>
   </p>
-
-  <p align="center">
-    <a href="https://archivetune.koiiverse.cloud"><b>Official Website</b></a> •
-    <a href="#features"><b>Features</b></a> •
-    <a href="https://archivetune.koiiverse.cloud/privacy"><b>Privacy</b></a> •
-    <a href="#download-now"><b>Download</b></a> •
-    <a href="#screenshots"><b>Screenshots</b></a> •
-    <a href="https://github.com/rukamori/ArchiveTune/issues/new/choose"><b>Support</b></a>
-  </p>
-  
-  <br />
-
-  <a href="https://trendshift.io/repositories/17521" target="_blank">
-    <img src="https://trendshift.io/api/badge/repositories/17521" alt="ArchiveTune | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-  </a>
 </div>
 
 ## Recent Changes & Features
