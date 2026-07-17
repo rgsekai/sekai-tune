@@ -50,6 +50,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
         val lastfmApiKey =
             localProperties.getProperty("LASTFM_API_KEY")
                 ?: System.getenv("LASTFM_API_KEY")
