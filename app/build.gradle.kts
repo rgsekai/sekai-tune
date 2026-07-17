@@ -37,11 +37,11 @@ val hasReleaseSigningConfig =
         releaseKeyPassword != null
 
 android {
-    namespace = "moe.rukamori.archivetune"
+    namespace = "moe.rgsekai.sekaitune"
     compileSdk = 37
 
     defaultConfig {
-    applicationId = "moe.rukamori.archivetune"
+    applicationId = "moe.rgsekai.sekaitune"
         minSdk = 26
         targetSdk = 37
         versionCode = 138
@@ -297,8 +297,6 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
-    implementation(libs.apache.lang3)
-
     implementation(libs.hilt)
     implementation(libs.re2j)
     annotationProcessor(libs.kotlin.metadata.jvm)
@@ -355,7 +353,7 @@ androidComponents {
                 metadataFile.set(rootProject.layout.projectDirectory.file("IconPack/metadata.json"))
                 svgDirectory.set(rootProject.layout.projectDirectory.dir("IconPack/svg"))
                 applicationId.set(variant.applicationId)
-                targetActivityClassName.set("moe.rukamori.archivetune.MainActivity")
+                targetActivityClassName.set("moe.rgsekai.sekaitune.MainActivity")
                 resourceOutputDirectory.set(
                     layout.buildDirectory.dir("generated/iconPack/${variant.name}/res"),
                 )
@@ -408,3 +406,4 @@ configurations.configureEach {
         "org.jetbrains.kotlin:kotlin-metadata-jvm:${libs.versions.kotlinMetadata.get()}",
     )
 }
+

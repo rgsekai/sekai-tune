@@ -1,11 +1,11 @@
 /*
- * ArchiveTune (2026)
- * © Rukamori — github.com/rukamori
+ * Sekai Tune (2026)
+ * © Sekai Tune - github.com/rgsekai/sekai-tune
  * GPL-3.0 License | Contributors: see git history
  * Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
  */
 
-package moe.rukamori.archivetune.shazamkit
+package moe.rgsekai.sekaitune.shazamkit
 
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
@@ -493,3 +493,7 @@ private fun Int.reverseBits(bitCount: Int): Int {
     }
     return y
 }
+
+
+
+

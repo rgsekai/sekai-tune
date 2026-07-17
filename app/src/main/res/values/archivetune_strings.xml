@@ -619,8 +619,11 @@
     <string name="about_contributors">Contributors</string>
     <string name="about_contributor_translation">Contributor Translation</string>
     <string name="about_license">LICENSE</string>
-    <string name="about_license_unknown">Unknown license</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_archivetune">Sekai Tune is based on the open-source ArchiveTune project</string>
+    <string name="about_license_unknown">Unknown license</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_archivetune">Sekai Tune is based on the open-source Sekai Tune project</string>
 </resources>
+
+
+
 
 
 

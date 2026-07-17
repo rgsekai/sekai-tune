@@ -50,7 +50,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:usesCleartextTraffic="true"
         android:supportsRtl="false"
-        android:theme="@style/Theme.ArchiveTune"
+        android:theme="@style/Theme.SekaiTune"
         tools:targetApi="tiramisu">
         <uses-library
             android:name="org.apache.http.legacy"
@@ -60,7 +60,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.ArchiveTune"
+            android:theme="@style/Theme.SekaiTune"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -78,7 +78,7 @@
 
                 <data
                     android:host="together"
-                    android:scheme="archivetune" />
+                    android:scheme="sekaitune" />
             </intent-filter>
 
             <!-- Youtube filter -->
@@ -177,12 +177,12 @@
             android:name=".musicrecognition.MusicRecognitionTileActionActivity"
             android:excludeFromRecents="true"
             android:exported="false"
-            android:theme="@style/Theme.ArchiveTune.Transparent" />
+            android:theme="@style/Theme.SekaiTune.Transparent" />
 
         <activity
             android:name=".RestoreBackupFileActivity"
             android:exported="true"
-            android:theme="@style/Theme.ArchiveTune"
+            android:theme="@style/Theme.SekaiTune"
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -361,19 +361,19 @@
             android:name=".DebugActivity"
             android:exported="true"
             android:process=":crash"
-            android:theme="@style/Theme.ArchiveTune">
+            android:theme="@style/Theme.SekaiTune">
         </activity>
 
         <activity
             android:name=".ui.screens.settings.PoTokenExtractionActivity"
             android:exported="false"
-            android:theme="@style/Theme.ArchiveTune" />
+            android:theme="@style/Theme.SekaiTune" />
 
         <activity
             android:name=".discord.DiscordOAuthCallbackActivity"
             android:exported="true"
             android:noHistory="true"
-            android:theme="@style/Theme.ArchiveTune">
+            android:theme="@style/Theme.SekaiTune">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -386,3 +386,4 @@
     </application>
 
 </manifest>
+

@@ -28,7 +28,6 @@ composeReorderable = "3.1.0"
 squigglyslider = "1.0.0"
 shimmer = "1.5.0"
 palette = "1.0.0"
-apacheLang3 = "3.20.0"
 brotli = "0.1.2"
 desugaring = "2.1.5"
 junit = "4.13.2"
@@ -92,8 +91,6 @@ mediarouter = { module = "androidx.mediarouter:mediarouter", version = "1.8.1" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
-
-apache-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "apacheLang3" }
 
 hilt = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }

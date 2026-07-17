@@ -10,7 +10,7 @@
             android:name=".musicrecognition.MusicRecognitionCaptureActivity"
             android:excludeFromRecents="true"
             android:exported="false"
-            android:theme="@style/Theme.ArchiveTune.Transparent" />
+            android:theme="@style/Theme.SekaiTune.Transparent" />
 
         <service
             android:name=".musicrecognition.BackgroundMusicRecognitionService"
@@ -20,7 +20,9 @@
 
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
-            android:value="moe.rukamori.archivetune.cast.ArchiveTuneCastOptionsProvider" />
+            android:value="moe.rgsekai.sekaitune.cast.ArchiveTuneCastOptionsProvider" />
     </application>
 
 </manifest>
+
+

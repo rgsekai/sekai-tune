@@ -44,7 +44,7 @@ dependencyResolutionManagement {
 //     id("org.gradle.toolchains.foojay-resolver-convention") version("1.0.0")
 // }
 
-rootProject.name = "ArchiveTune"
+rootProject.name = "Sekai Tune"
 include(":app")
 include(":core")
 include(":lyrics:kugou")

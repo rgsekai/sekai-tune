@@ -1017,6 +1017,60 @@
     <string name="hidden_playlists_description">Playlists hidden from library appear here</string>
     <string name="no_hidden_playlists">No hidden playlists</string>
     <string name="unhide">Unhide</string>
+    <string name="about_content_desc_discord_integration">discord integration</string>
+    <string name="about_content_desc_discord_button_options">discord button options</string>
+    <string name="about_content_desc_discord_activity_button_1_url">discord activity button 1 url</string>
+    <string name="about_content_desc_discord_activity_button1_label">discord activity button1 label</string>
+    <string name="about_content_desc_discord_activity_button1_url">discord activity button1 url</string>
+    <string name="about_content_desc_discord_activity_button_2_url">discord activity button 2 url</string>
+    <string name="about_content_desc_discord_activity_button2_label">discord activity button2 label</string>
+    <string name="about_content_desc_discord_activity_button2_url">discord activity button2 url</string>
+    <string name="about_content_desc_discord_url_source_song">discord url source song</string>
+    <string name="about_content_desc_discord_url_source_artist">discord url source artist</string>
+    <string name="about_content_desc_discord_url_source_album">discord url source album</string>
+    <string name="about_content_desc_discord_url_source_custom">discord url source custom</string>
+    <string name="about_content_desc_discord_authorization_failed">discord authorization failed</string>
+    <string name="about_content_desc_discord_authorization_success">discord authorization success</string>
+    <string name="about_content_desc_discord_refresh_success">discord refresh success</string>
+    <string name="about_content_desc_discord_refresh_failed">discord refresh failed</string>
+    <string name="about_content_desc_discord_connection_settings">discord connection settings</string>
+    <string name="about_content_desc_discord_activity_content">discord activity content</string>
+    <string name="about_content_desc_discord_activity_name">discord activity name</string>
+    <string name="about_content_desc_discord_activity_details">discord activity details</string>
+    <string name="about_content_desc_discord_activity_state">discord activity state</string>
+    <string name="about_content_desc_discord_show_when_paused">discord show when paused</string>
+    <string name="about_content_desc_discord_show_when_paused_desc">discord show when paused desc</string>
+    <string name="about_content_desc_discord_activity_type">discord activity type</string>
+    <string name="about_content_desc_discord_image_options">discord image options</string>
+    <string name="about_content_desc_discord_waiting_for_authorization">discord waiting for authorization</string>
+    <string name="about_content_desc_discord_account_ready">discord account ready</string>
+    <string name="about_content_desc_discord_login_description">discord login description</string>
+    <string name="about_content_desc_discord_open_authorization">discord open authorization</string>
+    <string name="about_content_desc_discord_reauthorize_required_title">discord reauthorize required title</string>
+    <string name="about_content_desc_discord_reauthorize_required_description">discord reauthorize required description</string>
+    <string name="about_content_desc_discord_reauthorize_action">discord reauthorize action</string>
+    <string name="about_content_desc_discord_presence_online">discord presence online</string>
+    <string name="about_content_desc_discord_presence_do_not_disturb">discord presence do not disturb</string>
+    <string name="about_content_desc_discord_presence_idle">discord presence idle</string>
+    <string name="about_content_desc_discord_presence_streaming">discord presence streaming</string>
+    <string name="about_content_desc_discord_platform_desktop">discord platform desktop</string>
+    <string name="about_content_desc_discord_platform_xbox">discord platform xbox</string>
+    <string name="about_content_desc_discord_platform_samsung">discord platform samsung</string>
+    <string name="about_content_desc_discord_platform_ios">discord platform ios</string>
+    <string name="about_content_desc_discord_platform_android">discord platform android</string>
+    <string name="about_content_desc_discord_platform_embedded">discord platform embedded</string>
+    <string name="about_content_desc_discord_platform_ps4">discord platform ps4</string>
+    <string name="about_content_desc_discord_platform_ps5">discord platform ps5</string>
+    <string name="about_content_desc_discord_activity_type_playing_label">discord activity type playing label</string>
+    <string name="about_content_desc_discord_activity_type_streaming_label">discord activity type streaming label</string>
+    <string name="about_content_desc_discord_activity_type_listening_label">discord activity type listening label</string>
+    <string name="about_content_desc_discord_activity_type_watching_label">discord activity type watching label</string>
+    <string name="about_content_desc_discord_activity_type_competing_label">discord activity type competing label</string>
+    <string name="about_content_desc_discord_image_album_artwork">discord image album artwork</string>
+    <string name="about_content_desc_discord_image_artist_artwork">discord image artist artwork</string>
+    <string name="about_content_desc_discord_paused">discord paused</string>
 </resources>
+
+
 
 

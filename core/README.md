@@ -110,7 +110,7 @@ flowchart TB
 ## Package Structure
 
 ```
-moe.rukamori.archivetune.innertube/
+moe.rgsekai.sekaitune.innertube/
 ├── InnerTube.kt              — Core HTTP client
 ├── YouTube.kt                — High-level API singleton (main entry point)
 ├── MusicBackend.kt           — API contract interface
@@ -160,3 +160,4 @@ YouTube.authState = PlaybackAuthState(cookie = "...", visitorData = "...")
 ## License
 
 [GNU General Public License v3.0](LICENSE)
+

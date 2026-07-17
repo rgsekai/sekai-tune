@@ -122,7 +122,7 @@ flowchart TB
 ## Package Structure
 
 ```
-moe.rukamori.archivetune/
+moe.rgsekai.sekaitune/
 ├── kugou/                   # kugou module
 │   └── KuGou.kt             — KuGou API client
 ├── lrclib/                  # lrclib module
@@ -223,3 +223,4 @@ val lyrics = Unison.getLyrics(
 ## License
 
 [GNU General Public License v3.0](LICENSE)
+

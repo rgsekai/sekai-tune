@@ -69,7 +69,7 @@ Create a singleton object that exposes `getLyrics()` and optionally `getAllLyric
 **Simple pattern** (one endpoint, returns lyrics as string):
 
 ```kotlin
-package moe.rukamori.archivetune.yourprovider
+package moe.rgsekai.sekaitune.yourprovider
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -131,10 +131,10 @@ app/src/main/kotlin/moe/rukamori/archivetune/lyrics/YourProvider.kt
 ```
 
 ```kotlin
-package moe.rukamori.archivetune.lyrics
+package moe.rgsekai.sekaitune.lyrics
 
 import android.content.Context
-import moe.rukamori.archivetune.yourprovider.YourProvider
+import moe.rgsekai.sekaitune.yourprovider.YourProvider
 
 object YourProvider : LyricsProvider {
     override val name = "Your Provider"
@@ -205,7 +205,7 @@ Add unit tests under `src/test/kotlin/`. Run them with:
 | Use `object` singleton (not `class`) | Stateless, no injection needed |
 | Return `Result<String>` from `getLyrics()` | Consistent error handling across providers |
 | Name the file after the provider | e.g. `KuGou.kt`, `LrcLib.kt` |
-| Package format: `moe.rukamori.archivetune.<name>` | Matches existing convention |
+| Package format: `moe.rgsekai.sekaitune.<name>` | Matches existing convention |
 | Timeout at 15s for requests | Prevents hanging in the lyrics pipeline |
 | No Android imports | These are JVM libraries |
 
@@ -215,3 +215,4 @@ Add unit tests under `src/test/kotlin/`. Run them with:
 2. Open a pull request using the PR template
 3. The PR will be reviewed and, if accepted, merged into `main`
 4. Once merged, the main ArchiveTune repo's submodule reference will be updated
+

@@ -123,7 +123,7 @@ This appendix maps the main statements above to concrete implementation surfaces
 | Topic | What the code shows | Main files |
 | --- | --- | --- |
 | Permissions and backup behavior | The manifest declares network, media, microphone, Bluetooth, notification, boot, wake-lock, and foreground-service permissions. It also enables backup, cleartext traffic, and audio playback capture. Separate XML files exclude selected caches and internal playback database files from Android backup and device transfer. | `app/src/main/AndroidManifest.xml`, `app/src/main/res/xml/data_extraction_rules.xml`, `app/src/main/res/xml/backup_rules.xml` |
-| Local database contents | The Room schema includes songs, artists, albums, playlists, search history, lyrics, audio format metadata, and playback event records. | `app/schemas/moe.rukamori.archivetune.db.InternalDatabase/9.json` |
+| Local database contents | The Room schema includes songs, artists, albums, playlists, search history, lyrics, audio format metadata, and playback event records. | `app/schemas/moe.rgsekai.sekaitune.db.InternalDatabase/9.json` |
 | Settings and tokens stored locally | DataStore preference keys include UI settings, proxy settings, history toggles, Together values, YouTube session values, account name or email fields, Last.fm session values, ListenBrainz token values, Discord values, and update-cache keys. | `app/src/main/kotlin/moe/archivetuneapp/archivetune/constants/PreferenceKeys.kt` |
 | YouTube signed-in state | The Innertube layer exposes visitor data, data sync ID, cookie, PO token values, proxy state, and login-for-browse behavior as part of the current playback auth state. | `innertube/src/main/kotlin/moe/archivetuneapp/archivetune/innertube/YouTube.kt` |
 | Manual backup export | The backup view model writes app settings plus database files into a ZIP archive chosen by the user. | `app/src/main/kotlin/moe/archivetuneapp/archivetune/viewmodels/BackupRestoreViewModel.kt` |
@@ -140,3 +140,4 @@ The following areas should be documented carefully in the future if the project 
 - Whether all network endpoints used by optional features are always HTTPS in real deployments, since the Android manifest allows cleartext traffic.
 - Whether local app storage is encrypted at rest on all supported devices and configurations.
 - Whether canvas, lyrics, or future service providers apply their own independent retention or profiling practices.
+

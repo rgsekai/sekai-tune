@@ -1,11 +1,11 @@
 /*
- * ArchiveTune (2026)
- * © Rukamori — github.com/rukamori
+ * Sekai Tune (2026)
+ * © Sekai Tune - github.com/rgsekai/sekai-tune
  * GPL-3.0 License | Contributors: see git history
  * Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
  */
 
-package moe.rukamori.archivetune.betterlyrics
+package moe.rgsekai.sekaitune.betterlyrics
 
 import org.w3c.dom.Element
 import org.w3c.dom.Node
@@ -560,3 +560,7 @@ object TTMLParser {
         }
     }
 }
+
+
+
+
