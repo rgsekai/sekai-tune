@@ -397,8 +397,8 @@
     <string name="player_stream_client_android_vr_desc">署名復号なしで直接ストリーミングし、最高速度を提供。ほとんどのユーザーに適している。</string>
     <string name="player_stream_client_web_remix">Web Remix</string>
     <string name="player_stream_client_web_remix_desc">速度と引き換えに拡張フォーマットをサポート。JavaScript署名復号により起動に約5〜10秒の遅延が発生。</string>
-    <string name="player_stream_client_archivetune_extractor">Sekai Tune Extractor</string>
-    <string name="player_stream_client_archivetune_extractor_desc">再生ストリームにSekai Tuneバックエンド抽出器を使用。Auto High Quality Audioを推奨。</string>
+    <string name="player_stream_client_SekaiTune_extractor">Sekai Tune Extractor</string>
+    <string name="player_stream_client_SekaiTune_extractor_desc">再生ストリームにSekai Tuneバックエンド抽出器を使用。Auto High Quality Audioを推奨。</string>
     <string name="settings_section_player_content">プレイヤーとコンテンツ</string>
     <string name="settings_appearance_subtitle">テーマ、レイアウト、ビジュアルスタイル</string>
     <string name="settings_playback_title">再生</string>

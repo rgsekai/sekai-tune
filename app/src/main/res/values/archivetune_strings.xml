@@ -423,9 +423,9 @@
     <string name="player_stream_client_android_vr_desc">Streams directly without signature decryption, providing maximum speed. Suitable for the majority of users.</string>
     <string name="player_stream_client_web_remix">Web Remix</string>
     <string name="player_stream_client_web_remix_desc">Extended format support at the cost of speed. JavaScript signature decryption introduces a ~5–10 second startup delay.</string>
-    <string name="player_stream_client_archivetune_extractor">Sekai Tune Extractor</string>
-    <string name="player_stream_client_archivetune_extractor_desc">Uses the Sekai Tune backend extractor for playback streams. Prefer Auto High Quality Audio.</string>
-    <string name="player_stream_client_archivetune_extractor_login_required">You Must Login Using Google Account and PoToken in Settings to use this</string>
+    <string name="player_stream_client_SekaiTune_extractor">Sekai Tune Extractor</string>
+    <string name="player_stream_client_SekaiTune_extractor_desc">Uses the Sekai Tune backend extractor for playback streams. Prefer Auto High Quality Audio.</string>
+    <string name="player_stream_client_SekaiTune_extractor_login_required">You Must Login Using Google Account and PoToken in Settings to use this</string>
     <string name="settings_section_player_content">Player &amp; Content</string>
     <string name="settings_appearance_subtitle">Themes, layout, and visual styles</string>
     <string name="settings_playback_title">Playback</string>
@@ -619,7 +619,7 @@
     <string name="about_contributors">Contributors</string>
     <string name="about_contributor_translation">Contributor Translation</string>
     <string name="about_license">LICENSE</string>
-    <string name="about_license_unknown">Unknown license</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_archivetune">Sekai Tune is based on the open-source Sekai Tune project</string>
+    <string name="about_license_unknown">Unknown license</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_SekaiTune">Sekai Tune is based on the open-source Sekai Tune project</string>
 </resources>
 
 

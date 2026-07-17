@@ -1,11 +1,11 @@
 name: Bug Report
-description: Report a reproducible ArchiveTune bug
+description: Report a reproducible SekaiTune bug
 labels: [BUG]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for helping improve ArchiveTune.
+        Thank you for helping improve SekaiTune.
 
         Before submitting, verify the bug on the latest nightly build whenever possible. Stable releases may already contain bugs fixed in nightly builds, so stable-only reports need a clear reason and may be closed if they cannot be reproduced on nightly.
 
@@ -15,7 +15,7 @@ body:
       label: Required pre-submission checklist
       description: Reports that skip these checks are difficult to triage and may be closed.
       options:
-        - label: I have tested this bug on the [latest nightly version](https://github.com/rukamori/ArchiveTune/actions).
+        - label: I have tested this bug on the [latest nightly version](https://github.com/rukamori/SekaiTune/actions).
           required: true
         - label: This report describes one specific bug, not multiple unrelated problems.
           required: true
@@ -65,7 +65,7 @@ body:
   - type: input
     id: app-version
     attributes:
-      label: ArchiveTune version
+      label: SekaiTune version
       description: Found in Settings -> About, or from the APK/build artifact name.
       placeholder: "Example: 13.4.0, debug build, or nightly hash abc1234"
     validations:
@@ -113,7 +113,7 @@ body:
       label: Steps to reproduce
       description: Provide exact steps from a clean app state when possible.
       placeholder: |
-        1. Open ArchiveTune.
+        1. Open SekaiTune.
         2. Go to ...
         3. Tap ...
         4. Observe ...

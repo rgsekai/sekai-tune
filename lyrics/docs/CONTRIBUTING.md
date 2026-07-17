@@ -44,7 +44,7 @@ Keep files under 500 lines where possible. Split models into separate files when
 
 ## What not to contribute
 
-- Android-specific code (belongs in the main ArchiveTune repo)
+- Android-specific code (belongs in the main SekaiTune repo)
 - Providers that require authentication tokens hardcoded in the module
 - Changes that introduce cross-module dependencies
 

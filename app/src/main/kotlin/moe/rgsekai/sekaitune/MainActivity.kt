@@ -272,7 +272,7 @@ import moe.rgsekai.sekaitune.ui.screens.search.decodeOnlineSearchQuery
 import moe.rgsekai.sekaitune.ui.screens.search.onlineSearchResultRoute
 import moe.rgsekai.sekaitune.ui.screens.settings.DarkMode
 import moe.rgsekai.sekaitune.ui.screens.settings.NavigationTab
-import moe.rgsekai.sekaitune.ui.theme.ArchiveTuneTheme
+import moe.rgsekai.sekaitune.ui.theme.SekaiTuneTheme
 import moe.rgsekai.sekaitune.ui.theme.ColorSaver
 import moe.rgsekai.sekaitune.ui.theme.DefaultThemeColor
 import moe.rgsekai.sekaitune.ui.theme.extractThemeColor
@@ -782,7 +782,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            ArchiveTuneTheme(
+            SekaiTuneTheme(
                 darkTheme = useDarkTheme,
                 pureBlack = pureBlack,
                 themeColor = themeColor,
@@ -803,7 +803,7 @@ class MainActivity : ComponentActivity() {
 
                 if (shouldShowOnboarding) {
                     OnboardingRoute(viewModel = onboardingViewModel)
-                    return@ArchiveTuneTheme
+                    return@SekaiTuneTheme
                 }
 
                 BoxWithConstraints(

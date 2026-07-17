@@ -179,7 +179,7 @@ def github_request(
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "User-Agent": "ArchiveTune-IconPack",
+            "User-Agent": "SekaiTune-IconPack",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )

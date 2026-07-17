@@ -1,11 +1,11 @@
 <div align="center">
 
-  <h1>ArchiveTune Lyrics</h1>
+  <h1>SekaiTune Lyrics</h1>
 
   <p align="center">
     <strong>Multi-provider lyrics fetching library.</strong>
     <br />
-    <em>Standalone lyrics modules powering <a href="https://github.com/rukamori/ArchiveTune">ArchiveTune</a> — a high-performance, privacy-focused YouTube Music client for Android.</em>
+    <em>Standalone lyrics modules powering <a href="https://github.com/rukamori/SekaiTune">SekaiTune</a> — a high-performance, privacy-focused YouTube Music client for Android.</em>
   </p>
 
   <p align="center">
@@ -16,11 +16,11 @@
     <img src="https://img.shields.io/github/stars/rukamori/lyrics?style=for-the-badge&color=6366f1&labelColor=1e1e2e&logo=github" alt="Stars" />
   </p>
 
-  <a href="https://star-history.com/#rukamori/lyrics&rukamori/ArchiveTune&Date">
+  <a href="https://star-history.com/#rukamori/lyrics&rukamori/SekaiTune&Date">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=rukamori/lyrics,rukamori/ArchiveTune&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=rukamori/lyrics,rukamori/ArchiveTune&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=rukamori/lyrics,rukamori/ArchiveTune&type=Date" width="600" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=rukamori/lyrics,rukamori/SekaiTune&type=Date&theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=rukamori/lyrics,rukamori/SekaiTune&type=Date" />
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=rukamori/lyrics,rukamori/SekaiTune&type=Date" width="600" />
     </picture>
   </a>
 
@@ -28,7 +28,7 @@
 
 ## Overview
 
-This repository contains the standalone lyrics provider modules extracted from [ArchiveTune](https://github.com/rukamori/ArchiveTune). Each module is a self-contained Ktor-based HTTP client for a different lyrics source, designed as pure JVM libraries with no Android dependencies — the same approach as the [core](https://github.com/rukamori/core) submodule.
+This repository contains the standalone lyrics provider modules extracted from [SekaiTune](https://github.com/rukamori/SekaiTune). Each module is a self-contained Ktor-based HTTP client for a different lyrics source, designed as pure JVM libraries with no Android dependencies — the same approach as the [core](https://github.com/rukamori/core) submodule.
 
 ## Modules
 
@@ -52,11 +52,11 @@ This repository contains the standalone lyrics provider modules extracted from [
 
 ## Architecture
 
-The diagram below shows how these lyrics modules integrate into the ArchiveTune app.
+The diagram below shows how these lyrics modules integrate into the SekaiTune app.
 
 ```mermaid
 flowchart TB
-    subgraph Android["ArchiveTune App (Android)"]
+    subgraph Android["SekaiTune App (Android)"]
         UI["Jetpack Compose UI<br/>LyricsScreen, LyricsMenu"]
         VM["LyricsMenuViewModel"]
         LH["LyricsHelper<br/>Orchestrator & Cache"]

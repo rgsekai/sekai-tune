@@ -24,4 +24,4 @@ object, separated by a comma, when submitting multiple icons.
 - [ ] Every submitted file is an SVG.
 - [ ] Every SVG is original work or is licensed for redistribution.
 - [ ] The JSON above is valid and contains one object per submitted SVG.
-- [ ] I grant ArchiveTune permission to distribute these icons as part of the icon pack.
+- [ ] I grant SekaiTune permission to distribute these icons as part of the icon pack.

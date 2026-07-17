@@ -2,7 +2,7 @@
 
 ## KuGou
 
-**File:** `kugou/src/main/kotlin/moe/rukamori/archivetune/kugou/KuGou.kt`
+**File:** `kugou/src/main/kotlin/moe/rukamori/SekaiTune/kugou/KuGou.kt`
 **Object:** `KuGou`
 
 ### Methods
@@ -29,7 +29,7 @@ Lower-level: returns the best `Candidate` without downloading. Useful for inspec
 
 ## LRC Lib
 
-**File:** `lrclib/src/main/kotlin/moe/rukamori/archivetune/lrclib/LrcLib.kt`
+**File:** `lrclib/src/main/kotlin/moe/rukamori/SekaiTune/lrclib/LrcLib.kt`
 **Object:** `LrcLib`
 
 ### Methods
@@ -57,7 +57,7 @@ Quick lookup — returns raw `List<Track>` from the API without ranking.
 
 ## SimpMusic
 
-**File:** `simpmusic/src/main/kotlin/moe/rukamori/archivetune/simpmusic/SimpMusicLyrics.kt`
+**File:** `simpmusic/src/main/kotlin/moe/rukamori/SekaiTune/simpmusic/SimpMusicLyrics.kt`
 **Object:** `SimpMusicLyrics`
 
 ### Methods
@@ -79,7 +79,7 @@ Batch variant — calls callback with each available variant.
 
 ## Paxsenix
 
-**File:** `paxsenix/src/main/kotlin/moe/rukamori/archivetune/paxsenix/PaxsenixLyrics.kt`
+**File:** `paxsenix/src/main/kotlin/moe/rukamori/SekaiTune/paxsenix/PaxsenixLyrics.kt`
 **Object:** `PaxsenixLyrics`
 
 ### Methods
@@ -147,7 +147,7 @@ Parses TTML XML into word-by-word timed entries. Handles CJK characters, transli
 
 ## Unison
 
-**File:** `unison/src/main/kotlin/moe/rukamori/archivetune/unison/Unison.kt`
+**File:** `unison/src/main/kotlin/moe/rukamori/SekaiTune/unison/Unison.kt`
 **Object:** `Unison`
 
 ### Methods

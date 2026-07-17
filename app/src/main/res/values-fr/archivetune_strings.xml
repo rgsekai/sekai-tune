@@ -555,8 +555,8 @@
     <string name="theme_creator_title">Créateur de thèmes</string>
     <string name="block_artist">Bloquer l\'artiste</string>
     <string name="unblock_artist">Débloquer l\'artiste</string>
-    <string name="player_stream_client_archivetune_extractor">Extracteur Sekai Tune</string>
-    <string name="player_stream_client_archivetune_extractor_desc">Utilise l\'extracteur Sekai Tune pour les flux de lecture. Privilégie l\'audio haute qualité automatique.</string>
+    <string name="player_stream_client_SekaiTune_extractor">Extracteur Sekai Tune</string>
+    <string name="player_stream_client_SekaiTune_extractor_desc">Utilise l\'extracteur Sekai Tune pour les flux de lecture. Privilégie l\'audio haute qualité automatique.</string>
 </resources>
 
 

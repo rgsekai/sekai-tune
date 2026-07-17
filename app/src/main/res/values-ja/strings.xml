@@ -433,8 +433,8 @@
     <string name="contrast">コントラスト</string>
     <string name="brightness">明るさ</string>
     <string name="custom_value">カスタム値</string>
-    <string name="archivetune_canvas">Sekai Tune Canvas</string>
-    <string name="archivetune_canvas_desc">再生中にアルバムアートをアニメーション表示（BetterLyrics提供）</string>
+    <string name="SekaiTune_canvas">Sekai Tune Canvas</string>
+    <string name="SekaiTune_canvas_desc">再生中にアルバムアートをアニメーション表示（BetterLyrics提供）</string>
     <string name="player_background_style_v8_v9_desc">V8/V9プレイヤースタイルでは利用不可</string>
     <string name="show_button1_description">Discord Rich Presenceのボタン1の表示を切り替える</string>
     <string name="show_button2_description">Discord Rich Presenceのボタン2の表示を切り替える</string>

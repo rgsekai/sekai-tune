@@ -1,5 +1,5 @@
 name: Feature Request
-description: Share an idea to improve ArchiveTune
+description: Share an idea to improve SekaiTune
 labels: [ENHANCEMENT]
 body:
   - type: checkboxes
@@ -44,7 +44,7 @@ body:
     id: proposed-solution
     attributes:
       label: Proposed Solution
-      description: Describe what you want to happen. How should this feature work in ArchiveTune?
+      description: Describe what you want to happen. How should this feature work in SekaiTune?
       placeholder: Provide a detailed breakdown of the desired behavior or UI changes.
     validations:
       required: true

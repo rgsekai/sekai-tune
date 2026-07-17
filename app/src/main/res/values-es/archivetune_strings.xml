@@ -537,8 +537,8 @@
     <string name="ai_fetch_models">Obtener modelos</string>
     <string name="about_lead_developer">Desarrollador principal</string>    <string name="about_respecter">Cumplir</string>
     <string name="about_contributors">Colaboradores</string>    <string name="about_content_desc_github">GitHub</string>    <string name="aod_customize_sample_title">Midnight Archive</string>
-    <string name="player_stream_client_archivetune_extractor_desc">Utiliza el extractor del backend Sekai Tune para las transmisiones de reproducción. Se recomienda seleccionar «Audio de alta calidad automático».</string>
-    <string name="player_stream_client_archivetune_extractor">Extractor de Sekai Tune</string>
+    <string name="player_stream_client_SekaiTune_extractor_desc">Utiliza el extractor del backend Sekai Tune para las transmisiones de reproducción. Se recomienda seleccionar «Audio de alta calidad automático».</string>
+    <string name="player_stream_client_SekaiTune_extractor">Extractor de Sekai Tune</string>
     <string name="unblock_artist">Desbloquear artista</string>
 </resources>
 

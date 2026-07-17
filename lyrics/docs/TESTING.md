@@ -21,7 +21,7 @@ Run tests for all providers:
 Place tests in `src/test/kotlin/` matching the provider's package:
 
 ```
-kugou/src/test/kotlin/moe/rukamori/archivetune/kugou/
+kugou/src/test/kotlin/moe/rukamori/SekaiTune/kugou/
 └── KuGouTest.kt
 ```
 
@@ -85,4 +85,4 @@ class MyProviderTest {
 
 ### CI
 
-Tests run automatically on every PR via GitHub Actions. The CI configuration mirrors the parent ArchiveTune project's JVM test setup.
+Tests run automatically on every PR via GitHub Actions. The CI configuration mirrors the parent SekaiTune project's JVM test setup.

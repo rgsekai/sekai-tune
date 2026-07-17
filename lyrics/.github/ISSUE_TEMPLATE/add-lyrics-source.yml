@@ -1,5 +1,5 @@
 name: Request New Lyrics Source
-description: Propose a new lyrics provider to be added to ArchiveTune's lyrics module
+description: Propose a new lyrics provider to be added to SekaiTune's lyrics module
 title: "[New Source] "
 labels: ["Source Request"]
 body:
@@ -77,6 +77,6 @@ body:
       options:
         - label: This source provides lyrics (not scrobbling, artwork, or audio recognition)
           required: true
-        - label: I have verified this source is not already available in ArchiveTune
+        - label: I have verified this source is not already available in SekaiTune
           required: true
         - label: This source is legally accessible and I have checked its terms of service

@@ -1,5 +1,5 @@
 name: Request Lyrics Source Removal
-description: Propose removing an existing lyrics provider from ArchiveTune's lyrics module
+description: Propose removing an existing lyrics provider from SekaiTune's lyrics module
 title: "[Remove Source] "
 labels: ["Remove Request"]
 body:
