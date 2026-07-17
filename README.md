@@ -154,9 +154,9 @@ SekaiTune is made possible by the work of many open-source projects and communit
 * **Metrolist** by [Mostafa Alagamy](...) for the base framework.
 * **SimpMusic** by [maxrave-dev](...) for the lyrics API provider.
 * **BetterLyrics** for word-by-word lyrics, unison and artwork provider support.
-- [Material Color Utilities](https://github.com/material-foundation/material-color-utilities)
-- [Read You](https://github.com/Ashinch/ReadYou) and [Seal](https://github.com/JunkFood02/Seal) for UI component inspiration.
-- Translators, beta testers, contributors, and community members who continue to support the project.
+* **[Material Color Utilities](https://github.com/material-foundation/material-color-utilities)**
+* **[Read You](https://github.com/Ashinch/ReadYou) and [Seal](https://github.com/JunkFood02/Seal)** for UI component inspiration.
+* **Translators, beta testers, contributors, and community members who continue to support the project.**
 
 ---
 
