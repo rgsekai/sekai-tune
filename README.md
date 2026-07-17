@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="./sekai_logo.svg" width="168" height="168">
+  <img src="./sekai_logo_clear.svg" width="168" height="168">
 
   <h1 align="center">Sekai Tune</h1>
 
