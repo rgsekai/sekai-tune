@@ -148,7 +148,7 @@
 
 Sekai Tune is made possible by the work of many open-source projects and communities:
 
--* **ArchiveTune** by [rukamori](https://github.com/rukamori/ArchiveTune) for the original codebase and foundation this project is built upon.
+* **ArchiveTune** by [rukamori](https://github.com/rukamori/ArchiveTune) for the original codebase and foundation this project is built upon.
 - **Metrolist** by [Mostafa Alagamy](https://github.com/mostafaalagamy/Metrolist) for the base framework.
 - **SimpMusic** by [maxrave-dev](https://github.com/maxrave-dev/SimpMusic) for the lyrics API provider.
 - [BetterLyrics](https://better-lyrics.boidu.dev/) for word-by-word lyrics, unison and artwork provider support.
