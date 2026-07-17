@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="./sekai_tune.jpg" width="168" height="168">
+  <img src="sekai_tune.jpg" width="200" height="200" style="border-radius: 36px;">
 
   <h1 align="center">Sekai Tune</h1>
 
