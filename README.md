@@ -148,10 +148,12 @@
 
 Sekai Tune is made possible by the work of many open-source projects and communities:
 
+SekaiTune is made possible by the work of many open-source projects and communities:
+
 * **ArchiveTune** by [rukamori](https://github.com/rukamori/ArchiveTune) for the original codebase and foundation this project is built upon.
-- **Metrolist** by [Mostafa Alagamy](https://github.com/mostafaalagamy/Metrolist) for the base framework.
-- **SimpMusic** by [maxrave-dev](https://github.com/maxrave-dev/SimpMusic) for the lyrics API provider.
-- [BetterLyrics](https://better-lyrics.boidu.dev/) for word-by-word lyrics, unison and artwork provider support.
+* **Metrolist** by [Mostafa Alagamy](...) for the base framework.
+* **SimpMusic** by [maxrave-dev](...) for the lyrics API provider.
+* **BetterLyrics** for word-by-word lyrics, unison and artwork provider support.
 - [Material Color Utilities](https://github.com/material-foundation/material-color-utilities)
 - [Read You](https://github.com/Ashinch/ReadYou) and [Seal](https://github.com/JunkFood02/Seal) for UI component inspiration.
 - Translators, beta testers, contributors, and community members who continue to support the project.
