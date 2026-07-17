@@ -3,8 +3,6 @@
   <img src="sekai_tune.svg" width="300" height="300">
 
   <h1 align="center">Sekai Tune</h1>
-
-
   <p align="center">
     <strong>Redefining the YouTube Music Experience on Android.</strong>
     <br />
