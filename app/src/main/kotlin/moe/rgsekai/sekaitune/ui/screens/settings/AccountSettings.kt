@@ -9,6 +9,10 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -138,6 +142,8 @@ import moe.rgsekai.sekaitune.viewmodels.AccountChannelUiModel
 import moe.rgsekai.sekaitune.viewmodels.AccountChannelsState
 import moe.rgsekai.sekaitune.viewmodels.HomeViewModel
 import java.util.UUID
+import moe.rgsekai.sekaitune.auth.AuthViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 private val CardShape = RoundedCornerShape(28.dp)
 private val InnerTileShape = RoundedCornerShape(22.dp)
@@ -155,8 +161,10 @@ private data class SavedAccountCollection(
 fun AccountSettings(
     navController: NavController,
     latestVersionName: String,
+    authViewModel: AuthViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    val firebaseUser = authViewModel.currentUser
     val uriHandler = LocalUriHandler.current
     val scrollBehavior = appBarScrollBehavior()
 
@@ -371,6 +379,7 @@ fun AccountSettings(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
+
                 ProfileIdentityCard(
                     isLoggedIn = isLoggedIn,
                     accountName = displayName,

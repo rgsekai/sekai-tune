@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.aboutlibraries.android)
+
+    // Google Services plugin for Firebase
+    id("com.google.gms.google-services")
 }
 
 val localProperties = Properties()
@@ -152,30 +155,24 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            storeFile = file("persistent-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
-            if (hasReleaseSigningConfig) {
-                storeFile = releaseKeystoreFile
-                storePassword = releaseStorePassword
-                keyAlias = releaseKeyAlias
-                keyPassword = releaseKeyPassword
-            }
+            // ... (Keep all your existing release code here) ...
         }
     }
 
     buildTypes {
         release {
-            if (hasReleaseSigningConfig) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // ... (Keep your release stuff here)
         }
+
         debug {
-            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
             isDebuggable = true
         }
     }
@@ -235,6 +232,13 @@ ksp {
 }
 
 dependencies {
+
+    // Jetpack Credential Manager API
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)

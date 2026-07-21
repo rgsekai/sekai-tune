@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
+    <string name="default_web_client_id">83504505448-5bvt7c6jmsau4hh3qtt4l4sl0ngufrvf.apps.googleusercontent.com</string>
     <string name="home">Home</string>
     <string name="songs">Songs</string>
     <string name="artists">Artists</string>

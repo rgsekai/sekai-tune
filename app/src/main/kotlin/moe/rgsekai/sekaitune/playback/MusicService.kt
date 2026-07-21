@@ -9,6 +9,7 @@
 
 package moe.rgsekai.sekaitune.playback
 
+import moe.rgsekai.sekaitune.constants.MediaSessionConstants
 import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -1108,24 +1109,19 @@ class MusicService :
             toggleStartRadio = ::toggleStartRadio
             toggleLibrary = ::toggleLibrary
         }
-        mediaSession =
-            MediaLibrarySession
-                .Builder(this, player, mediaLibrarySessionCallback)
-                .setSessionActivity(
-                    PendingIntent.getActivity(
-                        this,
-                        0,
-                        Intent(this, MainActivity::class.java),
-                        PendingIntent.FLAG_IMMUTABLE,
-                    ),
-                ).setBitmapLoader(CoilBitmapLoader(this, scope))
-                .build()
-        setMediaNotificationProvider(
-            SekaiTuneMediaNotificationProvider(
-                context = this,
-                smallIconResId = R.drawable.small_icon,
-            ),
-        )
+        // 1. Build the visual representation of the Like button
+        mediaSession = MediaLibrarySession
+            .Builder(this, player, mediaLibrarySessionCallback)
+            .setSessionActivity(
+                PendingIntent.getActivity(
+                    this,
+                    0,
+                    Intent(this, MainActivity::class.java),
+                    PendingIntent.FLAG_IMMUTABLE,
+                )
+            )
+            .setBitmapLoader(CoilBitmapLoader(this, scope))
+            .build()
 
         updateNotification()
         player.repeatMode = REPEAT_MODE_OFF

@@ -35,20 +35,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -82,13 +86,22 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
-import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.ai.AiModelOption
+import moe.rgsekai.sekaitune.auth.AuthViewModel
 import moe.rgsekai.sekaitune.constants.AiApiKeyKey
 import moe.rgsekai.sekaitune.constants.AiApiValidationStatus
 import moe.rgsekai.sekaitune.constants.AiApiValidationStatusKey
@@ -107,6 +120,14 @@ import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.viewmodels.AiIntegrationSettingsViewModel
+import java.security.SecureRandom
+import java.util.Base64
+
+fun generateNonce(): String {
+    val bytes = ByteArray(16)
+    SecureRandom().nextBytes(bytes)
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+}
 
 private enum class TestApiVisualState { Idle, Testing, Success, Failed }
 
@@ -114,18 +135,24 @@ private enum class TestApiVisualState { Idle, Testing, Success, Failed }
 fun AiIntegrationSettings(
     navController: NavController,
     viewModel: AiIntegrationSettingsViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val firebaseUser = authViewModel.currentUser
+    val coroutineScope = rememberCoroutineScope()
+    val credentialManager = remember { CredentialManager.create(context) }
+    val webClientId = "1008894048566-hcoqeifkn31kllrq6i3lf9f83c9283jm.apps.googleusercontent.com"
+
     val actionState by viewModel.actionState.collectAsStateWithLifecycle()
     val availableModels by viewModel.availableModels.collectAsStateWithLifecycle()
     val (provider, setProvider) = rememberEnumPreference(AiProviderKey, AiProvider.NONE)
     val (apiKey, setApiKey) = rememberPreference(AiApiKeyKey, "")
     val (customEndpoint, setCustomEndpoint) = rememberPreference(AiCustomEndpointKey, "")
-    val (validationStatus, setValidationStatus) =
-        rememberEnumPreference(AiApiValidationStatusKey, AiApiValidationStatus.UNKNOWN)
+    val (validationStatus, setValidationStatus) = rememberEnumPreference(AiApiValidationStatusKey, AiApiValidationStatus.UNKNOWN)
     val (selectedModel, setSelectedModel) = rememberPreference(AiSelectedModelKey, "")
     val (customModel, setCustomModel) = rememberPreference(AiCustomModelKey, "")
     var showApiKeyDialog by rememberSaveable { mutableStateOf(false) }
+    var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { message ->
@@ -135,41 +162,115 @@ fun AiIntegrationSettings(
 
     val hasCustomEndpoint = provider != AiProvider.CUSTOM || customEndpoint.isNotBlank()
     val hasApiConfiguration = provider != AiProvider.NONE && apiKey.isNotBlank() && hasCustomEndpoint
-    val hasModelConfiguration =
-        when (provider) {
-            AiProvider.CUSTOM -> customModel.isNotBlank()
-            AiProvider.NONE -> false
-            else -> selectedModel.isNotBlank()
-        }
-    val canUseModelPicker =
-        provider != AiProvider.NONE &&
-            provider != AiProvider.CUSTOM &&
-            apiKey.isNotBlank()
+    val hasModelConfiguration = when (provider) {
+        AiProvider.CUSTOM -> customModel.isNotBlank()
+        AiProvider.NONE -> false
+        else -> selectedModel.isNotBlank()
+    }
+    val canUseModelPicker = provider != AiProvider.NONE && provider != AiProvider.CUSTOM && apiKey.isNotBlank()
     val canTestApi = hasApiConfiguration && hasModelConfiguration && !actionState.isTesting
 
-    if (showApiKeyDialog) {
-        ApiKeyDialog(
-            value = apiKey,
-            onDismiss = { showApiKeyDialog = false },
-            onSave = { value ->
-                setApiKey(value.trim())
-                setValidationStatus(AiApiValidationStatus.UNKNOWN)
-                viewModel.clearAvailableModels()
-            },
-        )
-    }
-
     Column(
-        Modifier
-            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+        modifier = Modifier
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
             .verticalScroll(rememberScrollState())
-            .padding(bottom = SettingsDimensions.ScreenBottomPadding),
+            .padding(bottom = SettingsDimensions.ScreenBottomPadding)
     ) {
-        Spacer(
-            Modifier.windowInsetsPadding(
-                LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top),
-            ),
-        )
+        // 1. THIS SPACER IS UPDATED TO ADD .height(24.dp) TO FIX THE CUT-OFF SHAPE
+        Spacer(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)).height(24.dp))
+
+        PreferenceGroup(title = "Account Integration") {
+            item {
+                if (firebaseUser != null) {
+                    // --- STATE 1: LOGGED IN ---
+                    PreferenceEntry(
+                        title = { Text(firebaseUser.displayName ?: "Google User") },
+                        description = firebaseUser.email ?: "",
+                        icon = {
+                            if (firebaseUser.photoUrl != null) {
+                                AsyncImage(
+                                    model = firebaseUser.photoUrl,
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier.size(32.dp).clip(CircleShape)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        // 2. THIS ADDS THE LOGOUT BUTTON ON THE RIGHT SIDE
+                        // 2. THIS ADDS THE LOGOUT BUTTON ON THE RIGHT SIDE
+                        trailingContent = {
+                            IconButton(
+                                onClick = { showLogoutDialog = true },
+                                onLongClick = {} // <--- This empty bracket fixes the error!
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Logout,
+                                    contentDescription = "Sign Out",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        },
+                        onClick = {
+                            // Empty so clicking the row does nothing, forcing them to use the logout button
+                        }
+                    )
+                } else {
+                    // --- STATE 2: LOGGED OUT ---
+                    PreferenceEntry(
+                        title = { Text("Sign in with Google") },
+                        description = "Link your account to sync settings",
+                        icon = { Icon(painterResource(id = R.drawable.auto_awesome), contentDescription = null) },
+                        onClick = {
+                            val googleIdOption = GetGoogleIdOption.Builder()
+                                .setFilterByAuthorizedAccounts(false)
+                                .setServerClientId(webClientId)
+                                .setAutoSelectEnabled(false)
+                                .setNonce(generateNonce())
+                                .build()
+
+                            val request = GetCredentialRequest.Builder()
+                                .addCredentialOption(googleIdOption)
+                                .build()
+
+                            coroutineScope.launch {
+                                try {
+                                    val result = credentialManager.getCredential(
+                                        request = request,
+                                        context = context,
+                                    )
+                                    val credential = result.credential
+
+                                    if (credential is CustomCredential &&
+                                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                                    ) {
+                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                        val idToken = googleIdTokenCredential.idToken
+
+                                        val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
+
+                                        FirebaseAuth.getInstance().signInWithCredential(firebaseCredential)
+                                            .addOnSuccessListener { authResult ->
+                                                println("Firebase sign-in success! Welcome: ${authResult.user?.displayName}")
+                                            }
+                                            .addOnFailureListener { e ->
+                                                println("Firebase sign-in failed: ${e.message}")
+                                            }
+                                    }
+                                } catch (e: Exception) {
+                                    println("Google sign-in error: ${e.message}")
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
 
         PreferenceGroup(title = stringResource(R.string.ai_provider_settings)) {
             item {
@@ -272,10 +373,10 @@ fun AiIntegrationSettings(
                             targetState = testVisualState,
                             transitionSpec = {
                                 (
-                                    scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)) +
-                                        fadeIn(tween(200))
-                                ) togetherWith
-                                    (scaleOut(tween(100)) + fadeOut(tween(100)))
+                                        scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)) +
+                                                fadeIn(tween(200))
+                                        ) togetherWith
+                                        (scaleOut(tween(100)) + fadeOut(tween(100)))
                             },
                             label = "testApiIcon",
                         ) { state ->
@@ -300,7 +401,7 @@ fun AiIntegrationSettings(
                             targetState = testVisualState,
                             transitionSpec = {
                                 (slideInVertically { -it } + fadeIn(tween(250))) togetherWith
-                                    (slideOutVertically { it } + fadeOut(tween(150)))
+                                        (slideOutVertically { it } + fadeOut(tween(150)))
                             },
                             label = "testApiDesc",
                         ) { state ->
@@ -329,7 +430,7 @@ fun AiIntegrationSettings(
                             targetState = actionState.isTesting,
                             transitionSpec = {
                                 (scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(tween(200))) togetherWith
-                                    (scaleOut(tween(150)) + fadeOut(tween(150)))
+                                        (scaleOut(tween(150)) + fadeOut(tween(150)))
                             },
                             label = "testApiTrailing",
                         ) { isTesting ->
@@ -359,6 +460,51 @@ fun AiIntegrationSettings(
             }
         },
     )
+
+    if (showApiKeyDialog) {
+        ApiKeyDialog(
+            value = apiKey,
+            onDismiss = { showApiKeyDialog = false },
+            onSave = { setApiKey(it) },
+        )
+    }
+
+    if (showLogoutDialog) {
+        DefaultDialog(
+            onDismiss = { showLogoutDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Logout,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            // ... rest of the dialog stays the same ...
+            title = { Text("Sign Out") },
+            buttons = {
+                TextButton(
+                    onClick = { showLogoutDialog = false },
+                    shapes = ButtonDefaults.shapes()
+                ) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        authViewModel.signOut()
+                        showLogoutDialog = false
+                    },
+                    shapes = ButtonDefaults.shapes()
+                ) {
+                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        ) {
+            Text(
+                text = "Are you sure you want to sign out of your Google account? Your app settings will stop syncing.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
 }
 
 @Composable
@@ -483,7 +629,7 @@ private fun ModelPickerPreference(
             } else {
                 availableModels.filter { model ->
                     model.displayName.contains(query, ignoreCase = true) ||
-                        model.id.contains(query, ignoreCase = true)
+                            model.id.contains(query, ignoreCase = true)
                 }
             }
         }
@@ -495,7 +641,8 @@ private fun ModelPickerPreference(
             availableModels.isEmpty() && !canFetch -> stringResource(R.string.ai_model_api_key_required)
             availableModels.isEmpty() -> stringResource(R.string.ai_model_fetch_hint)
             selectedModel.isBlank() -> stringResource(R.string.ai_model_not_selected)
-            else -> availableModels.firstOrNull { it.id == selectedModel }?.displayName ?: selectedModel
+            else -> availableModels.firstOrNull { it.id == selectedModel }?.displayName
+                ?: selectedModel
         }
 
     LaunchedEffect(showSheet) {
@@ -634,7 +781,7 @@ private fun ModelPickerPreference(
                                     if (selected) {
                                         MaterialTheme.colorScheme.onPrimary
                                     } else {
-                                        MaterialTheme.colorScheme.onSurface
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                     },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -659,32 +806,4 @@ private fun ModelPickerPreference(
             }
         }
     }
-
-    PreferenceEntry(
-        title = { Text(stringResource(R.string.ai_model)) },
-        description = description,
-        icon = { Icon(painterResource(R.drawable.auto_awesome), null) },
-        trailingContent = {
-            if (isFetching) {
-                CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                FilledTonalIconButton(
-                    onClick = onFetch,
-                    enabled = canFetch,
-                ) {
-                    Icon(
-                        painterResource(R.drawable.sync),
-                        contentDescription = stringResource(R.string.ai_fetch_models),
-                    )
-                }
-            }
-        },
-        onClick = if (isEnabled && availableModels.isNotEmpty()) ({ showSheet = true }) else null,
-        isEnabled = isEnabled,
-    )
 }
-
-
-
-
-

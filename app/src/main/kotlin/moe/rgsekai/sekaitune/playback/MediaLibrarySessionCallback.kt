@@ -17,6 +17,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.exoplayer.offline.Download
+import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
@@ -135,6 +136,19 @@ class MediaLibrarySessionCallback
             )
         }
 
+    override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
+        super.onPostConnect(session, controller)
+
+        val likeButton = CommandButton.Builder()
+            .setDisplayName("Like")
+            .setSessionCommand(MediaSessionConstants.CommandToggleLike)
+            .setIconResId(R.drawable.baseline_favorite_24)
+            .build()
+
+        // Pass ONLY the like button right now to isolate it.
+        // If it shows up alone, we know the other custom buttons were pushing it out of bounds!
+        session.setMediaButtonPreferences(listOf(likeButton))
+    }
         override fun onPlaybackResumption(
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
