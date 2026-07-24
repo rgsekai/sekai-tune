@@ -694,6 +694,41 @@ fun YouTubeSongMenu(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         )
                     }
+                    HorizontalDivider(
+                        modifier = dividerModifier,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+
+                    ListItem(
+                        headlineContent = { Text("Save to Device") },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.download), // Using your existing download icon
+                                contentDescription = null
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss() // Closes the bottom menu
+                            android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+
+                            // Grab the artist name (Fallback to "Unknown" if it's empty)
+                            val artistName = song.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
+
+                            // Bundle up the song details for the Worker
+                            val inputData = androidx.work.workDataOf(
+                                "SONG_ID" to song.id,
+                                "SONG_TITLE" to song.title,
+                                "SONG_ARTIST" to artistName
+                            )
+
+                            // Trigger your custom AudioDownloadWorker
+                            val workRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
+                                .setInputData(inputData)
+                                .build()
+
+                            androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+                        }
+                    )
                 }
             }
         }

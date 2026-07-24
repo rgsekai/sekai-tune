@@ -351,6 +351,48 @@ fun PlayerMenu(
             },
         )
     }
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+
+    ListItem(
+        headlineContent = { Text("Save to Device") },
+        leadingContent = {
+            Icon(
+                painter = painterResource(id = R.drawable.download),
+                contentDescription = null
+            )
+        },
+        modifier = Modifier.clickable {
+            onDismiss() // Or whatever function closes this player menu
+            android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+
+            // Extract song metadata
+            val songId = mediaMetadata?.id ?: return@clickable
+            val songTitle = mediaMetadata.title ?: "Unknown Title"
+            val songArtist = mediaMetadata.artists ?: "Unknown Artist" // or song.artists.joinToString(", ") { it.name }
+
+            // 1. Get the raw, messy artist string
+            val rawArtist = mediaMetadata.artists.toString() // (Change mediaItem to whatever variable you are using here)
+
+            // 2. Cut out everything except the actual name
+            // The clean Kotlin way to extract names from a list of Artist objects!
+            val safeArtistName = mediaMetadata.artists?.joinToString(", ") { it.name } ?: "Unknown Artist"
+
+            // 3. Pass it to the Worker
+            val inputData = androidx.work.workDataOf(
+                "SONG_ID" to songId.toString(),
+                "SONG_TITLE" to songTitle.toString(),
+                "SONG_ARTIST" to safeArtistName
+            )
+
+            val workRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
+                .setInputData(inputData)
+                .build()
+
+            androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+        }
+    )
 
     val nowPlayingTitle =
         remember(mediaMetadata.title) {
