@@ -158,6 +158,13 @@ fun PlaylistMenu(
 
     val editable: Boolean = playlist.playlist.isEditable == true
 
+    // Fetch strings safely outside the coroutine to satisfy Android Studio's strict rules
+    val syncDisabledStr = stringResource(R.string.sync_disabled)
+    val notLoggedInStr = stringResource(R.string.not_logged_in_youtube)
+    val playlistSyncedStr = stringResource(R.string.playlist_synced)
+    val playlistSyncFailedFormat = stringResource(R.string.playlist_sync_failed)
+    val errorUnknownStr = stringResource(R.string.error_unknown)
+
     fun syncPlaylistToYouTube() {
         coroutineScope.launch(Dispatchers.IO) {
             var lastProgressPercent = -1
@@ -177,9 +184,9 @@ fun PlaylistMenu(
                     }
                 val shouldUpdate =
                     totalSongs <= 0 ||
-                        completedSongs == totalSongs ||
-                        nextProgressPercent != lastProgressPercent ||
-                        completedSongs - lastProgressCompleted >= 25
+                            completedSongs == totalSongs ||
+                            nextProgressPercent != lastProgressPercent ||
+                            completedSongs - lastProgressCompleted >= 25
 
                 if (!shouldUpdate) return
 
@@ -201,13 +208,7 @@ fun PlaylistMenu(
                         Toast
                             .makeText(
                                 context,
-                                context.getString(
-                                    if (context.isUserLoggedIn()) {
-                                        R.string.sync_disabled
-                                    } else {
-                                        R.string.not_logged_in_youtube
-                                    },
-                                ),
+                                if (context.isUserLoggedIn()) syncDisabledStr else notLoggedInStr,
                                 Toast.LENGTH_SHORT,
                             ).show()
                     }
@@ -251,19 +252,26 @@ fun PlaylistMenu(
                     Toast
                         .makeText(
                             context,
-                            context.getString(R.string.playlist_synced),
+                            playlistSyncedStr,
                             Toast.LENGTH_SHORT,
                         ).show()
                     onDismiss()
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to sync playlist ${playlist.playlist.name}")
+
+                // Safely format the error string without needing context.getString
+                val errorDetail = e.localizedMessage?.takeIf(String::isNotBlank)
+                    ?: e.javaClass.simpleName.takeIf(String::isNotBlank)
+                    ?: errorUnknownStr
+                val errorMessage = String.format(playlistSyncFailedFormat, errorDetail)
+
                 withContext(Dispatchers.Main) {
                     syncProgress = null
                     Toast
                         .makeText(
                             context,
-                            context.getString(R.string.playlist_sync_failed, e.syncErrorDetail(context)),
+                            errorMessage,
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -279,8 +287,8 @@ fun PlaylistMenu(
                     Download.STATE_COMPLETED
                 } else if (songs.all {
                         downloads[it.id]?.state == Download.STATE_QUEUED ||
-                            downloads[it.id]?.state == Download.STATE_DOWNLOADING ||
-                            downloads[it.id]?.state == Download.STATE_COMPLETED
+                                downloads[it.id]?.state == Download.STATE_DOWNLOADING ||
+                                downloads[it.id]?.state == Download.STATE_COMPLETED
                     }
                 ) {
                     Download.STATE_DOWNLOADING
@@ -508,8 +516,6 @@ fun PlaylistMenu(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    val configuration = LocalConfiguration.current
-    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
     val dividerModifier = Modifier.padding(start = 56.dp)
     val startRadioText = stringResource(R.string.start_radio)
     val playText = stringResource(R.string.play)
@@ -852,6 +858,66 @@ fun PlaylistMenu(
                             )
                         }
                     }
+
+                    // --- NEW SAVE TO DEVICE BUTTON ---
+                    HorizontalDivider(
+                        modifier = dividerModifier,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+
+                    ListItem(
+                        headlineContent = { Text(text = "Save to Device") },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.download),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss()
+
+                            if (songs.isNotEmpty()) {
+                                val workManager = androidx.work.WorkManager.getInstance(context)
+
+                                // 1. Setup the Engine Update as the absolute start of the chain
+                                val updateRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.UpdateWorker>().build()
+
+                                // Start a unique sequence that appends to any existing downloads safely,
+                                // beginning with the update request!
+                                var continuation = workManager.beginUniqueWork(
+                                    "Playlist_Sequential_Download",
+                                    androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
+                                    updateRequest
+                                )
+
+                                // 2. Loop through ALL songs (starting from index 0) and link them like train cars
+                                for (i in 0 until songs.size) {
+                                    val data = androidx.work.workDataOf(
+                                        "SONG_ID" to songs[i].id,
+                                        "SONG_TITLE" to songs[i].title,
+                                        "SONG_ARTIST" to "Unknown Artist",
+                                        "CURRENT_SONG_NUMBER" to (i + 1),  // i starts at 0, so we add 1
+                                        "TOTAL_SONGS" to songs.size        // The total size of the playlist
+                                    )
+
+                                    val downloadRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
+                                        .setInputData(data)
+                                        .build()
+
+                                    // Append each song to the chain
+                                    continuation = continuation.then(downloadRequest)
+                                }
+
+                                // 3. Submit the entire train to WorkManager in ONE fast operation
+                                continuation.enqueue()
+
+                                // 4. Your original Toast message stays right here!
+                                Toast.makeText(context, "Queued ${songs.size} songs sequentially!", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                    // ---------------------------------
                 }
             }
         }
@@ -999,13 +1065,3 @@ fun PlaylistMenu(
         )
     }
 }
-
-private fun Throwable.syncErrorDetail(context: android.content.Context): String =
-    localizedMessage
-        ?.takeIf(String::isNotBlank)
-        ?: javaClass.simpleName.takeIf(String::isNotBlank)
-        ?: context.getString(R.string.error_unknown)
-
-
-
-

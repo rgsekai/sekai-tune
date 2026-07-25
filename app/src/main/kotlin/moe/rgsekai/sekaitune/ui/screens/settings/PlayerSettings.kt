@@ -7,6 +7,14 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
@@ -350,8 +358,9 @@ fun PlayerSettings(navController: NavController) {
                                         R.string.player_stream_client_SekaiTune_extractor,
                                     )
                                 }
+
                                 PlayerStreamClient.ANDROID_VR -> {
-                                        "Android VR"
+                                    "Android VR"
                                 }
 
                                 else -> {
@@ -364,6 +373,7 @@ fun PlayerSettings(navController: NavController) {
                                 PlayerStreamClient.ANDROID_VR -> {
                                     stringResource(R.string.player_stream_client_android_vr_desc) // Add this!
                                 }
+
                                 PlayerStreamClient.WEB_REMIX -> {
                                     stringResource(R.string.player_stream_client_web_remix_desc)
                                 }
@@ -506,15 +516,15 @@ fun PlayerSettings(navController: NavController) {
                 }
 
                 item(visible = pauseOnDeviceMute) {
-                    val context = LocalContext.current
                     val disabledLabel = stringResource(R.string.device_mute_recovery_volume_disabled)
+                    val percentageFormat = stringResource(R.string.percentage_format)
                     val recoveryVolumeText =
-                        remember(context, disabledLabel) {
+                        remember(percentageFormat, disabledLabel) {
                             { value: Int ->
                                 if (value == 0) {
                                     disabledLabel
                                 } else {
-                                    context.getString(R.string.percentage_format, value)
+                                    String.format(percentageFormat, value)
                                 }
                             }
                         }
@@ -580,6 +590,48 @@ fun PlayerSettings(navController: NavController) {
                         checked = autoSkipNextOnError,
                         onCheckedChange = onAutoSkipNextOnErrorChange,
                     )
+                }
+            }
+            PreferenceGroup(title = "Download Format") {
+                item {
+                    val context = LocalContext.current
+                    val sharedPrefs = remember {
+                        context.getSharedPreferences("sekai_tune_prefs", android.content.Context.MODE_PRIVATE)
+                    }
+                    var selectedFormat by remember {
+                        mutableStateOf(sharedPrefs.getString("audio_format", "mp3") ?: "mp3")
+                    }
+                    val formats = listOf("mp3", "m4a", "flac")
+
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        formats.forEach { format ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedFormat = format
+                                        sharedPrefs.edit().putString("audio_format", format).apply()
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 24.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = (selectedFormat == format),
+                                    onClick = {
+                                        selectedFormat = format
+                                        sharedPrefs.edit().putString("audio_format", format).apply()
+                                    },
+                                )
+                                Text(
+                                    text = format.uppercase(),
+                                    modifier = Modifier.padding(start = 16.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

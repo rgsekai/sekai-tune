@@ -4,6 +4,9 @@
 
     <uses-sdk tools:overrideLibrary="com.mocharealm.accompanist.lyrics.ui" />
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -52,6 +55,11 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.SekaiTune"
         tools:targetApi="tiramisu">
+    <!-- This forces WorkManager to register as a Data Sync foreground service -->
+    <service
+        android:name="androidx.work.impl.foreground.SystemForegroundService"
+        android:foregroundServiceType="dataSync"
+        tools:node="merge" />
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />

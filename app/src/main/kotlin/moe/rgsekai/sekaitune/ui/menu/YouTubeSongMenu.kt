@@ -1,12 +1,10 @@
 /*
- * Sekai Tune (2026)
- * © Sekai Tune - github.com/rgsekai/sekai-tune
- * GPL-3.0 License | Contributors: see git history
- * Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
- */
-
+Sekai Tune (2026)
+© Sekai Tune - github.com/rgsekai/sekai-tune
+GPL-3.0 License | Contributors: see git history
+Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
+*/
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
-
 package moe.rgsekai.sekaitune.ui.menu
 
 import android.annotation.SuppressLint
@@ -186,10 +184,10 @@ fun YouTubeSongMenu(
         onAddComplete = { _, playlistNames ->
             val message =
                 when {
-                    playlistNames.size == 1 -> context.getString(R.string.added_to_playlist, playlistNames.first())
-                    else -> context.getString(R.string.added_to_n_playlists, playlistNames.size)
+                    playlistNames.size == 1 -> context.applicationContext.getString(R.string.added_to_playlist, playlistNames.first())
+                    else -> context.applicationContext.getString(R.string.added_to_n_playlists, playlistNames.size)
                 }
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context.applicationContext, message, Toast.LENGTH_SHORT).show()
         },
     )
 
@@ -485,7 +483,7 @@ fun YouTubeSongMenu(
                                 if (remoteResult.isFailure) {
                                     withContext(Dispatchers.Main) {
                                         Toast
-                                            .makeText(context, context.getString(R.string.error_unknown), Toast.LENGTH_SHORT)
+                                            .makeText(context.applicationContext, context.applicationContext.getString(R.string.error_unknown), Toast.LENGTH_SHORT)
                                             .show()
                                     }
                                     return@launch
@@ -664,12 +662,12 @@ fun YouTubeSongMenu(
                             modifier =
                                 Modifier.clickable {
                                     onDismiss()
-                                    val url = "https://music.youtube.com/watch?v=${song.id}"
+                                    val url = "<https://music.youtube.com/watch?v=${song.id}>"
                                     if (externalDownloaderPackage.isBlank()) {
                                         Toast
                                             .makeText(
-                                                context,
-                                                context.getString(R.string.external_downloader_not_configured),
+                                                context.applicationContext,
+                                                context.applicationContext.getString(R.string.external_downloader_not_configured),
                                                 Toast.LENGTH_LONG,
                                             ).show()
                                         return@clickable
@@ -685,8 +683,8 @@ fun YouTubeSongMenu(
                                     } catch (e: android.content.ActivityNotFoundException) {
                                         Toast
                                             .makeText(
-                                                context,
-                                                context.getString(R.string.external_downloader_not_installed),
+                                                context.applicationContext,
+                                                context.applicationContext.getString(R.string.external_downloader_not_installed),
                                                 Toast.LENGTH_SHORT,
                                             ).show()
                                     }
@@ -703,25 +701,22 @@ fun YouTubeSongMenu(
                         headlineContent = { Text("Save to Device") },
                         leadingContent = {
                             Icon(
-                                painter = painterResource(id = R.drawable.download), // Using your existing download icon
+                                painter = painterResource(id = R.drawable.download),
                                 contentDescription = null
                             )
                         },
                         modifier = Modifier.clickable {
-                            onDismiss() // Closes the bottom menu
-                            android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+                            onDismiss()
+                            android.widget.Toast.makeText(context.applicationContext, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
 
-                            // Grab the artist name (Fallback to "Unknown" if it's empty)
                             val artistName = song.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
 
-                            // Bundle up the song details for the Worker
                             val inputData = androidx.work.workDataOf(
                                 "SONG_ID" to song.id,
                                 "SONG_TITLE" to song.title,
                                 "SONG_ARTIST" to artistName
                             )
 
-                            // Trigger your custom AudioDownloadWorker
                             val workRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
                                 .setInputData(inputData)
                                 .build()
@@ -819,7 +814,3 @@ fun YouTubeSongMenu(
         }
     }
 }
-
-
-
-

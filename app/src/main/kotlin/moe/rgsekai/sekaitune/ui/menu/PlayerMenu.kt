@@ -247,10 +247,10 @@ fun PlayerMenu(
         onAddComplete = { songCount, playlistNames ->
             val message =
                 when {
-                    playlistNames.size == 1 -> context.getString(R.string.added_to_playlist, playlistNames.first())
-                    else -> context.getString(R.string.added_to_n_playlists, playlistNames.size)
+                    playlistNames.size == 1 -> context.applicationContext.getString(R.string.added_to_playlist, playlistNames.first())
+                    else -> context.applicationContext.getString(R.string.added_to_n_playlists, playlistNames.size)
                 }
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context.applicationContext, message, Toast.LENGTH_SHORT).show()
         },
     )
 
@@ -396,7 +396,7 @@ fun PlayerMenu(
 
     val nowPlayingTitle =
         remember(mediaMetadata.title) {
-            mediaMetadata.title.ifBlank { context.getString(R.string.no_title) }
+            mediaMetadata.title.ifBlank { context.applicationContext.getString(R.string.no_title) }
         }
 
     val nowPlayingSubtitle =
@@ -596,7 +596,7 @@ fun PlayerMenu(
                                                 ) as android.content.ClipboardManager
                                             val clip =
                                                 android.content.ClipData.newPlainText(
-                                                    context.getString(R.string.copy_link),
+                                                    context.applicationContext.getString(R.string.copy_link),
                                                     "https://music.youtube.com/watch?v=${mediaMetadata.id}",
                                                 )
                                             clipboard.setPrimaryClip(clip)
@@ -822,7 +822,7 @@ fun PlayerMenu(
                                         Toast
                                             .makeText(
                                                 context,
-                                                context.getString(R.string.external_downloader_not_configured),
+                                                context.applicationContext.getString(R.string.external_downloader_not_configured),
                                                 Toast.LENGTH_LONG,
                                             ).show()
                                         return@clickable
@@ -839,7 +839,7 @@ fun PlayerMenu(
                                         Toast
                                             .makeText(
                                                 context,
-                                                context.getString(R.string.external_downloader_not_installed),
+                                                context.applicationContext.getString(R.string.external_downloader_not_installed),
                                                 Toast.LENGTH_SHORT,
                                             ).show()
                                     }
@@ -1551,7 +1551,7 @@ fun EqualizerDialog(
                     }
                 }
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, context.getString(R.string.backup_create_success), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.applicationContext.getString(R.string.backup_create_success), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -1572,7 +1572,7 @@ fun EqualizerDialog(
 
                 if (raw.isNullOrBlank()) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, context.getString(R.string.eq_import_failed), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.applicationContext.getString(R.string.eq_import_failed), Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
@@ -1586,7 +1586,7 @@ fun EqualizerDialog(
 
                 if (payload.profiles.isEmpty()) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, context.getString(R.string.eq_import_failed), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.applicationContext.getString(R.string.eq_import_failed), Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
@@ -1594,7 +1594,7 @@ fun EqualizerDialog(
                 val existingIds = currentProfiles.map { it.id }.toMutableSet()
                 val normalizedImported =
                     payload.profiles.map { p ->
-                        val baseName = p.name.trim().ifBlank { context.getString(R.string.eq_imported_profile) }
+                        val baseName = p.name.trim().ifBlank { context.applicationContext.getString(R.string.eq_imported_profile) }
                         val incomingId = p.id.trim()
                         val finalId =
                             if (incomingId.isBlank() || !existingIds.add(incomingId)) {
@@ -1629,7 +1629,7 @@ fun EqualizerDialog(
                     Toast
                         .makeText(
                             context,
-                            context.getString(R.string.eq_import_success, normalizedImported.size),
+                            context.applicationContext.getString(R.string.eq_import_success, normalizedImported.size),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }

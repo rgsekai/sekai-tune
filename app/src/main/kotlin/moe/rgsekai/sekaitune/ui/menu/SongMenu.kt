@@ -283,8 +283,8 @@ fun SongMenu(
         onAddComplete = { songCount, playlistNames ->
             val message =
                 when {
-                    playlistNames.size == 1 -> context.getString(R.string.added_to_playlist, playlistNames.first())
-                    else -> context.getString(R.string.added_to_n_playlists, playlistNames.size)
+                    playlistNames.size == 1 -> context.applicationContext.getString(R.string.added_to_playlist, playlistNames.first())
+                    else -> context.applicationContext.getString(R.string.added_to_n_playlists, playlistNames.size)
                 }
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         },
@@ -706,7 +706,7 @@ fun SongMenu(
                                                         Toast
                                                             .makeText(
                                                                 context,
-                                                                context.getString(R.string.error_unknown),
+                                                                context.applicationContext.getString(R.string.error_unknown),
                                                                 Toast.LENGTH_SHORT,
                                                             ).show()
                                                         onDismiss()
@@ -864,7 +864,7 @@ fun SongMenu(
                                                 Toast
                                                     .makeText(
                                                         context,
-                                                        context.getString(R.string.external_downloader_not_configured),
+                                                        context.applicationContext.getString(R.string.external_downloader_not_configured),
                                                         Toast.LENGTH_LONG,
                                                     ).show()
                                                 return@clickable
@@ -881,7 +881,7 @@ fun SongMenu(
                                                 Toast
                                                     .makeText(
                                                         context,
-                                                        context.getString(R.string.external_downloader_not_installed),
+                                                        context.applicationContext.getString(R.string.external_downloader_not_installed),
                                                         Toast.LENGTH_SHORT,
                                                     ).show()
                                             }

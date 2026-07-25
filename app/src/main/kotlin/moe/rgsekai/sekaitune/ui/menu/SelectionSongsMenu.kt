@@ -104,9 +104,9 @@ fun SelectionSongMenu(
     val allLiked by remember(songSelection) {
         mutableStateOf(
             songSelection.isNotEmpty() &&
-                songSelection.all {
-                    it.song.liked
-                },
+                    songSelection.all {
+                        it.song.liked
+                    },
         )
     }
 
@@ -122,8 +122,8 @@ fun SelectionSongMenu(
                     Download.STATE_COMPLETED
                 } else if (songSelection.all {
                         downloads[it.id]?.state == Download.STATE_QUEUED ||
-                            downloads[it.id]?.state == Download.STATE_DOWNLOADING ||
-                            downloads[it.id]?.state == Download.STATE_COMPLETED
+                                downloads[it.id]?.state == Download.STATE_DOWNLOADING ||
+                                downloads[it.id]?.state == Download.STATE_COMPLETED
                     }
                 ) {
                     Download.STATE_DOWNLOADING
@@ -153,11 +153,11 @@ fun SelectionSongMenu(
             val message =
                 when {
                     songCount == 1 && playlistNames.size == 1 -> {
-                        context.getString(R.string.added_to_playlist, playlistNames.first())
+                        context.applicationContext.getString(R.string.added_to_playlist, playlistNames.first())
                     }
 
                     songCount > 1 && playlistNames.size == 1 -> {
-                        context.getString(
+                        context.applicationContext.getString(
                             R.string.added_n_songs_to_playlist,
                             songCount,
                             playlistNames.first(),
@@ -165,14 +165,14 @@ fun SelectionSongMenu(
                     }
 
                     songCount == 1 -> {
-                        context.getString(R.string.added_to_n_playlists, playlistNames.size)
+                        context.applicationContext.getString(R.string.added_to_n_playlists, playlistNames.size)
                     }
 
                     else -> {
-                        context.getString(R.string.added_n_songs_to_n_playlists, songCount, playlistNames.size)
+                        context.applicationContext.getString(R.string.added_n_songs_to_n_playlists, songCount, playlistNames.size)
                     }
                 }
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context.applicationContext, message, Toast.LENGTH_SHORT).show()
         },
     )
 
@@ -205,7 +205,7 @@ fun SelectionSongMenu(
                         showRemoveDownloadDialog = false
                         songSelection.forEach { song ->
                             DownloadService.sendRemoveDownload(
-                                context,
+                                context.applicationContext,
                                 ExoDownloadService::class.java,
                                 song.song.id,
                                 false,
@@ -384,7 +384,7 @@ fun SelectionSongMenu(
                                         clearAction()
                                         if (failed.isNotEmpty()) {
                                             Toast
-                                                .makeText(context, context.getString(R.string.error_unknown), Toast.LENGTH_SHORT)
+                                                .makeText(context.applicationContext, context.applicationContext.getString(R.string.error_unknown), Toast.LENGTH_SHORT)
                                                 .show()
                                         }
                                     }
@@ -450,72 +450,125 @@ fun SelectionSongMenu(
 
         item {
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
-                when (downloadState) {
-                    Download.STATE_COMPLETED -> {
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    text = stringResource(R.string.remove_download),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            leadingContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.offline),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    showRemoveDownloadDialog = true
-                                },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-                    }
-
-                    Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
-                        ListItem(
-                            headlineContent = { Text(text = stringResource(R.string.downloading)) },
-                            leadingContent = {
-                                CircularWavyProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    showRemoveDownloadDialog = true
-                                },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-                    }
-
-                    else -> {
-                        ListItem(
-                            headlineContent = { Text(text = stringResource(R.string.action_download)) },
-                            leadingContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.download),
-                                    contentDescription = null,
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    sendAddMissingDownloads(
-                                        context = context,
-                                        songs =
-                                            songSelection.map { song ->
-                                                HeaderDownloadItem(
-                                                    id = song.id,
-                                                    title = song.song.title,
-                                                )
-                                            },
-                                        downloads = downloadUtil.downloads.value,
+                Column {
+                    when (downloadState) {
+                        Download.STATE_COMPLETED -> {
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.remove_download),
+                                        color = MaterialTheme.colorScheme.error,
                                     )
                                 },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                                leadingContent = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.offline),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        showRemoveDownloadDialog = true
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+
+                        Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
+                            ListItem(
+                                headlineContent = { Text(text = stringResource(R.string.downloading)) },
+                                leadingContent = {
+                                    CircularWavyProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        showRemoveDownloadDialog = true
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+
+                        else -> {
+                            ListItem(
+                                headlineContent = { Text(text = stringResource(R.string.action_download)) },
+                                leadingContent = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.download),
+                                        contentDescription = null,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        sendAddMissingDownloads(
+                                            context = context.applicationContext,
+                                            songs =
+                                                songSelection.map { song ->
+                                                    HeaderDownloadItem(
+                                                        id = song.id,
+                                                        title = song.song.title,
+                                                    )
+                                                },
+                                            downloads = downloadUtil.downloads.value,
+                                        )
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
                     }
+
+                    HorizontalDivider(
+                        modifier = dividerModifier,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+
+                    ListItem(
+                        headlineContent = { Text("Save to Device") },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.download),
+                                contentDescription = null
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss()
+                            Toast.makeText(context.applicationContext, "Exporting ${songSelection.size} songs to Music folder...", Toast.LENGTH_SHORT).show()
+
+                            val workManager = androidx.work.WorkManager.getInstance(context.applicationContext)
+                            val updateRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.UpdateWorker>().build()
+
+                            var continuation = workManager.beginUniqueWork(
+                                "MultiSelect_Sequential_Download",
+                                androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
+                                updateRequest
+                            )
+
+                            for (i in 0 until songSelection.size) {
+                                val song = songSelection[i]
+                                val artistName = song.toMediaItem().mediaMetadata.artist?.toString() ?: "Unknown Artist"
+
+                                val data = androidx.work.workDataOf(
+                                    "SONG_ID" to song.id,
+                                    "SONG_TITLE" to song.song.title,
+                                    "SONG_ARTIST" to artistName,
+                                    "CURRENT_SONG_NUMBER" to (i + 1),
+                                    "TOTAL_SONGS" to songSelection.size
+                                )
+
+                                val downloadRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
+                                    .setInputData(data)
+                                    .build()
+
+                                continuation = continuation.then(downloadRequest)
+                            }
+
+                            continuation.enqueue()
+                            clearAction()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
             }
         }
@@ -594,7 +647,7 @@ fun SelectionSongMenu(
                                         clearAction()
                                         if (failed.isNotEmpty()) {
                                             Toast
-                                                .makeText(context, context.getString(R.string.error_unknown), Toast.LENGTH_SHORT)
+                                                .makeText(context.applicationContext, context.applicationContext.getString(R.string.error_unknown), Toast.LENGTH_SHORT)
                                                 .show()
                                         }
                                     }
@@ -683,11 +736,11 @@ fun SelectionMediaMetadataMenu(
             val message =
                 when {
                     songCount == 1 && playlistNames.size == 1 -> {
-                        context.getString(R.string.added_to_playlist, playlistNames.first())
+                        context.applicationContext.getString(R.string.added_to_playlist, playlistNames.first())
                     }
 
                     songCount > 1 && playlistNames.size == 1 -> {
-                        context.getString(
+                        context.applicationContext.getString(
                             R.string.added_n_songs_to_playlist,
                             songCount,
                             playlistNames.first(),
@@ -695,14 +748,14 @@ fun SelectionMediaMetadataMenu(
                     }
 
                     songCount == 1 -> {
-                        context.getString(R.string.added_to_n_playlists, playlistNames.size)
+                        context.applicationContext.getString(R.string.added_to_n_playlists, playlistNames.size)
                     }
 
                     else -> {
-                        context.getString(R.string.added_n_songs_to_n_playlists, songCount, playlistNames.size)
+                        context.applicationContext.getString(R.string.added_n_songs_to_n_playlists, songCount, playlistNames.size)
                     }
                 }
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context.applicationContext, message, Toast.LENGTH_SHORT).show()
         },
     )
 
@@ -718,8 +771,8 @@ fun SelectionMediaMetadataMenu(
                     Download.STATE_COMPLETED
                 } else if (songSelection.all {
                         downloads[it.id]?.state == Download.STATE_QUEUED ||
-                            downloads[it.id]?.state == Download.STATE_DOWNLOADING ||
-                            downloads[it.id]?.state == Download.STATE_COMPLETED
+                                downloads[it.id]?.state == Download.STATE_DOWNLOADING ||
+                                downloads[it.id]?.state == Download.STATE_COMPLETED
                     }
                 ) {
                     Download.STATE_DOWNLOADING
@@ -758,7 +811,7 @@ fun SelectionMediaMetadataMenu(
                         showRemoveDownloadDialog = false
                         songSelection.forEach { song ->
                             DownloadService.sendRemoveDownload(
-                                context,
+                                context.applicationContext,
                                 ExoDownloadService::class.java,
                                 song.id,
                                 false,
@@ -1006,78 +1059,127 @@ fun SelectionMediaMetadataMenu(
 
         item {
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
-                when (downloadState) {
-                    Download.STATE_COMPLETED -> {
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    text = stringResource(R.string.remove_download),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            leadingContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.offline),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    showRemoveDownloadDialog = true
-                                },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-                    }
-
-                    Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
-                        ListItem(
-                            headlineContent = { Text(text = stringResource(R.string.downloading)) },
-                            leadingContent = {
-                                CircularWavyProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    showRemoveDownloadDialog = true
-                                },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-                    }
-
-                    else -> {
-                        ListItem(
-                            headlineContent = { Text(text = stringResource(R.string.action_download)) },
-                            leadingContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.download),
-                                    contentDescription = null,
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    sendAddMissingDownloads(
-                                        context = context,
-                                        songs =
-                                            songSelection.map { song ->
-                                                HeaderDownloadItem(
-                                                    id = song.id,
-                                                    title = song.title,
-                                                )
-                                            },
-                                        downloads = downloadUtil.downloads.value,
+                Column {
+                    when (downloadState) {
+                        Download.STATE_COMPLETED -> {
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.remove_download),
+                                        color = MaterialTheme.colorScheme.error,
                                     )
                                 },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                                leadingContent = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.offline),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        showRemoveDownloadDialog = true
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+
+                        Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
+                            ListItem(
+                                headlineContent = { Text(text = stringResource(R.string.downloading)) },
+                                leadingContent = {
+                                    CircularWavyProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        showRemoveDownloadDialog = true
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+
+                        else -> {
+                            ListItem(
+                                headlineContent = { Text(text = stringResource(R.string.action_download)) },
+                                leadingContent = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.download),
+                                        contentDescription = null,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        sendAddMissingDownloads(
+                                            context = context.applicationContext,
+                                            songs =
+                                                songSelection.map { song ->
+                                                    HeaderDownloadItem(
+                                                        id = song.id,
+                                                        title = song.title,
+                                                    )
+                                                },
+                                            downloads = downloadUtil.downloads.value,
+                                        )
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
                     }
+
+                    HorizontalDivider(
+                        modifier = dividerModifier,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+
+                    ListItem(
+                        headlineContent = { Text("Save to Device") },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.download),
+                                contentDescription = null
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss()
+                            Toast.makeText(context.applicationContext, "Exporting ${songSelection.size} songs to Music folder...", Toast.LENGTH_SHORT).show()
+
+                            val workManager = androidx.work.WorkManager.getInstance(context.applicationContext)
+                            val updateRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.UpdateWorker>().build()
+
+                            var continuation = workManager.beginUniqueWork(
+                                "MultiSelect_Sequential_Download",
+                                androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
+                                updateRequest
+                            )
+
+                            for (i in 0 until songSelection.size) {
+                                val song = songSelection[i]
+                                val artistName = song.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
+
+                                val data = androidx.work.workDataOf(
+                                    "SONG_ID" to song.id,
+                                    "SONG_TITLE" to song.title,
+                                    "SONG_ARTIST" to artistName,
+                                    "CURRENT_SONG_NUMBER" to (i + 1),
+                                    "TOTAL_SONGS" to songSelection.size
+                                )
+
+                                val downloadRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
+                                    .setInputData(data)
+                                    .build()
+
+                                continuation = continuation.then(downloadRequest)
+                            }
+
+                            continuation.enqueue()
+                            clearAction()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
             }
         }
     }
 }
-
-
-
-

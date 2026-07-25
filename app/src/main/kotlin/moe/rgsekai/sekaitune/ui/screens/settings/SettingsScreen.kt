@@ -9,16 +9,24 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -30,6 +38,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -38,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -66,6 +76,14 @@ fun SettingsScreen(
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val listState = rememberLazyListState()
 
+    // SharedPreferences setup for saving the audio format choice (MP3 by default)
+    val sharedPrefs = remember {
+        context.getSharedPreferences("sekai_tune_prefs", Context.MODE_PRIVATE)
+    }
+    var selectedFormat by remember {
+        mutableStateOf(sharedPrefs.getString("audio_format", "mp3") ?: "mp3")
+    }
+
     val storagePermission =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Manifest.permission.READ_MEDIA_AUDIO
@@ -82,14 +100,20 @@ fun SettingsScreen(
 
     var isStorageGranted by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED,
+            ContextCompat.checkSelfPermission(
+                context,
+                storagePermission
+            ) == PackageManager.PERMISSION_GRANTED,
         )
     }
 
     var isNotificationGranted by remember {
         mutableStateOf(
             notificationPermission == null ||
-                ContextCompat.checkSelfPermission(context, notificationPermission) == PackageManager.PERMISSION_GRANTED,
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        notificationPermission
+                    ) == PackageManager.PERMISSION_GRANTED,
         )
     }
 
@@ -99,7 +123,8 @@ fun SettingsScreen(
         ) { result ->
             isStorageGranted = result[storagePermission] == true || isStorageGranted
             if (notificationPermission != null) {
-                isNotificationGranted = result[notificationPermission] == true || isNotificationGranted
+                isNotificationGranted =
+                    result[notificationPermission] == true || isNotificationGranted
             }
         }
 
@@ -107,7 +132,7 @@ fun SettingsScreen(
     val shouldShowPermissionHint = !isStorageGranted || !isNotificationGranted
     val hasUpdate =
         BuildConfig.UPDATER_AVAILABLE &&
-            Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
     var isUpdateDismissed by remember { mutableStateOf(false) }
     val settingsGroups = buildSettingsGroups(navController, isAndroid12OrLater, hasUpdate, context)
     val settingsItems =
@@ -203,7 +228,7 @@ fun SettingsScreen(
                     )
                 }
             }
-
+            // 2. THE NATIVE SETTINGS LIST (Make sure there is only ONE of these!)
             itemsIndexed(
                 items = settingsItems,
                 key = { _, item -> item.key },
@@ -219,7 +244,3 @@ fun SettingsScreen(
         }
     }
 }
-
-
-
-
