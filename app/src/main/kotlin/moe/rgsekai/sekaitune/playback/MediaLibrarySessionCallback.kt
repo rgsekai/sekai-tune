@@ -63,6 +63,7 @@ import moe.rgsekai.sekaitune.models.PersistQueue
 import moe.rgsekai.sekaitune.utils.dataStore
 import moe.rgsekai.sekaitune.utils.get
 import moe.rgsekai.sekaitune.utils.isLocalMediaId
+import timber.log.Timber
 import java.io.ObjectInputStream
 import java.text.Collator
 import java.time.LocalDateTime
@@ -160,11 +161,13 @@ class MediaLibrarySessionCallback
             isForPlayback: Boolean,
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
             scope.future {
+                Timber.tag("MediaResumption").i("onPlaybackResumption called by %s (isForPlayback=%b)", controller.packageName, isForPlayback)
                 val player = mediaSession.player
                 val currentItems = List(player.mediaItemCount) { index -> player.getMediaItemAt(index) }
                 val persistedItems =
                     withContext(Dispatchers.IO) {
                         persistenceManager.readPersistentObject<PersistQueue>(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE)?.let { queue ->
+                            Timber.tag("MediaResumption").v("Found persisted queue with %d items", queue.items.size)
                             PlaybackResumptionPlanner.PersistedItems(
                                 items = queue.items.map { it.toMediaItem() },
                                 mediaItemIndex = queue.mediaItemIndex,
@@ -180,6 +183,7 @@ class MediaLibrarySessionCallback
                         persistedItems = persistedItems,
                         isForPlayback = isForPlayback,
                     )
+                Timber.tag("MediaResumption").i("Resuming with %d items at index %d", result.items.size, result.startIndex)
                 MediaSession.MediaItemsWithStartPosition(
                     result.items,
                     result.startIndex,
@@ -222,8 +226,9 @@ class MediaLibrarySessionCallback
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: MediaLibraryService.LibraryParams?,
-        ): ListenableFuture<LibraryResult<MediaItem>> =
-            Futures.immediateFuture(
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            Timber.tag("MediaResumption").i("onGetLibraryRoot called by %s", browser.packageName)
+            return Futures.immediateFuture(
                 LibraryResult.ofItem(
                     MediaItem
                         .Builder()
@@ -240,6 +245,7 @@ class MediaLibrarySessionCallback
                     params,
                 ),
             )
+        }
 
         override fun onSearch(
             session: MediaLibrarySession,
