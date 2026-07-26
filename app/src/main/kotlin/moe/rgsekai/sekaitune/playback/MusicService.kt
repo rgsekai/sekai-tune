@@ -294,6 +294,9 @@ class MusicService :
     lateinit var mediaLibrarySessionCallback: MediaLibrarySessionCallback
 
     @Inject
+    lateinit var persistenceManager: PlaybackPersistenceManager
+
+    @Inject
     internal lateinit var loadWidgetInsightsUseCase: LoadWidgetInsightsUseCase
 
     private lateinit var audioManager: AudioManager
@@ -420,8 +423,6 @@ class MusicService :
     var queueTitle: String? = null
     private var infiniteQueueJob: Job? = null
     private var infiniteQueueGeneration = 0L
-    private val persistentStateLock = Any()
-    private val persistentSaveGeneration = AtomicLong(0L)
 
     @Volatile
     private var isRestoringPersistentState = false
@@ -1425,8 +1426,8 @@ class MusicService :
             runCatching {
                 if (dataStore.get(PersistentQueueKey, true)) {
                     playerInitialized.first { it }
-                    val persistedQueue = readPersistentObject<PersistQueue>(PERSISTENT_QUEUE_FILE)
-                    val persistedPlayerState = readPersistentObject<PersistPlayerState>(PERSISTENT_PLAYER_STATE_FILE)
+                    val persistedQueue = persistenceManager.readPersistentObject<PersistQueue>(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE)
+                    val persistedPlayerState = persistenceManager.readPersistentObject<PersistPlayerState>(PlaybackPersistenceManager.PERSISTENT_PLAYER_STATE_FILE)
 
                     if (persistedQueue != null || persistedPlayerState != null) {
                         isRestoringPersistentState = true
@@ -1450,7 +1451,7 @@ class MusicService :
                 Timber.tag(TAG).w(error, "Failed to restore persisted queue, clearing data")
                 isRestoringPersistentState = false
                 cancelRestoredQueueHydration()
-                clearPersistedQueueFiles()
+                persistenceManager.clearPersistedQueueFiles()
             }
             withContext(Dispatchers.Main) {
                 queueRestoreCompleted.value = true
@@ -3839,7 +3840,7 @@ class MusicService :
         closeAudioEffectSession()
         consecutivePlaybackErr = 0
         if (clearPersistentState) {
-            clearPersistedQueueFiles()
+            persistenceManager.clearPersistedQueueFiles()
         }
     }
 
@@ -7724,80 +7725,6 @@ class MusicService :
         )
     }
 
-    private inline fun <reified T> readPersistentObject(fileName: String): T? {
-        val persistentFile = filesDir.resolve(fileName)
-        if (!persistentFile.exists() || !persistentFile.isFile) return null
-
-        return synchronized(persistentStateLock) {
-            runCatching {
-                persistentFile.inputStream().use { fis ->
-                    ObjectInputStream(fis).use { input ->
-                        val payload = input.readObject()
-                        check(payload is T) { "Unexpected persistent payload type for $fileName" }
-                        payload
-                    }
-                }
-            }.onFailure {
-                Timber.tag(TAG).w(it, "Failed to read persistent file: $fileName")
-            }.getOrNull()
-        }
-    }
-
-    private fun clearPersistedQueueFiles() {
-        persistentSaveGeneration.incrementAndGet()
-        synchronized(persistentStateLock) {
-            listOf(
-                PERSISTENT_QUEUE_FILE,
-                PERSISTENT_PLAYER_STATE_FILE,
-                PERSISTENT_AUTOMIX_FILE,
-            ).forEach { fileName ->
-                val persistentFile = filesDir.resolve(fileName)
-                val tempFile = filesDir.resolve("$fileName.tmp")
-                runCatching {
-                    if (persistentFile.exists() && !persistentFile.delete()) {
-                        Timber.tag(TAG).w("Failed to delete persistent file: $fileName")
-                    }
-                    if (tempFile.exists() && !tempFile.delete()) {
-                        Timber.tag(TAG).w("Failed to delete temporary persistent file: $fileName")
-                    }
-                }.onFailure {
-                    Timber.tag(TAG).w(it, "Failed to clear persistent file: $fileName")
-                }
-            }
-        }
-    }
-
-    private fun writePersistentObject(
-        fileName: String,
-        payload: Serializable,
-    ) {
-        val persistentFile = filesDir.resolve(fileName)
-        val tempFile = filesDir.resolve("$fileName.tmp")
-
-        synchronized(persistentStateLock) {
-            runCatching {
-                FileOutputStream(tempFile).use { fos ->
-                    ObjectOutputStream(fos).use { output ->
-                        output.writeObject(payload)
-                        output.flush()
-                    }
-                }
-
-                if (!tempFile.renameTo(persistentFile)) {
-                    if (persistentFile.exists() && !persistentFile.delete()) {
-                        error("Could not replace $fileName")
-                    }
-                    if (!tempFile.renameTo(persistentFile)) {
-                        error("Could not atomically move $fileName")
-                    }
-                }
-            }.onFailure {
-                runCatching { tempFile.delete() }
-                reportException(it)
-            }
-        }
-    }
-
     private fun MediaItem.toPersistableMetadata(): moe.rgsekai.sekaitune.models.MediaMetadata? {
         val tagged = metadata
         if (tagged != null) return tagged
@@ -7866,11 +7793,11 @@ class MusicService :
     }
 
     private suspend fun saveQueueToDisk() {
-        val saveGeneration = persistentSaveGeneration.get()
+        val saveGeneration = persistenceManager.incrementGeneration()
         val snapshot =
             withContext(Dispatchers.Main.immediate) {
                 if (
-                    saveGeneration != persistentSaveGeneration.get() ||
+                    saveGeneration != persistenceManager.getGeneration() ||
                     isRestoringPersistentState ||
                     isHydratingRestoredQueue
                 ) {
@@ -7904,10 +7831,10 @@ class MusicService :
             } ?: return
 
         withContext(Dispatchers.IO) {
-            if (saveGeneration != persistentSaveGeneration.get()) return@withContext
-            writePersistentObject(PERSISTENT_QUEUE_FILE, snapshot.first)
-            if (saveGeneration != persistentSaveGeneration.get()) return@withContext
-            writePersistentObject(PERSISTENT_PLAYER_STATE_FILE, snapshot.second)
+            if (saveGeneration != persistenceManager.getGeneration()) return@withContext
+            persistenceManager.writePersistentObject(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE, snapshot.first)
+            if (saveGeneration != persistenceManager.getGeneration()) return@withContext
+            persistenceManager.writePersistentObject(PlaybackPersistenceManager.PERSISTENT_PLAYER_STATE_FILE, snapshot.second)
         }
     }
 
@@ -8190,9 +8117,6 @@ class MusicService :
         const val ERROR_CODE_NO_STREAM = 1000001
         const val CHUNK_LENGTH = 8 * 1024 * 1024L
         val RETRYABLE_STREAM_RESPONSE_CODES = setOf(403, 404, 410, 416)
-        const val PERSISTENT_QUEUE_FILE = "persistent_queue.data"
-        const val PERSISTENT_AUTOMIX_FILE = "persistent_automix.data"
-        const val PERSISTENT_PLAYER_STATE_FILE = "persistent_player_state.data"
         const val MAX_CONSECUTIVE_ERR = 5
         const val AUDIO_ROUTE_CHANGE_DEBOUNCE_MS = 350L
         const val AUDIO_EFFECT_ROUTE_REBIND_DELAY_MS = 200L

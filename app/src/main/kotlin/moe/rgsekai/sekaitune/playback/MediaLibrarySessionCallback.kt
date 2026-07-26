@@ -60,7 +60,6 @@ import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.models.filterExplicit
 import moe.rgsekai.sekaitune.innertube.models.filterVideo
 import moe.rgsekai.sekaitune.models.PersistQueue
-import moe.rgsekai.sekaitune.playback.MusicService.Companion.PERSISTENT_QUEUE_FILE
 import moe.rgsekai.sekaitune.utils.dataStore
 import moe.rgsekai.sekaitune.utils.get
 import moe.rgsekai.sekaitune.utils.isLocalMediaId
@@ -78,6 +77,7 @@ class MediaLibrarySessionCallback
         @ApplicationContext val context: Context,
         val database: MusicDatabase,
         val downloadUtil: DownloadUtil,
+        val persistenceManager: PlaybackPersistenceManager,
     ) : MediaLibrarySession.Callback {
         private val scope = CoroutineScope(Dispatchers.Main) + Job()
         private var pendingSearchJob: Job? = null
@@ -164,7 +164,7 @@ class MediaLibrarySessionCallback
                 val currentItems = List(player.mediaItemCount) { index -> player.getMediaItemAt(index) }
                 val persistedItems =
                     withContext(Dispatchers.IO) {
-                        readPersistentQueue()?.let { queue ->
+                        persistenceManager.readPersistentObject<PersistQueue>(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE)?.let { queue ->
                             PlaybackResumptionPlanner.PersistedItems(
                                 items = queue.items.map { it.toMediaItem() },
                                 mediaItemIndex = queue.mediaItemIndex,
@@ -186,20 +186,6 @@ class MediaLibrarySessionCallback
                     result.startPositionMs,
                 )
             }
-
-        private fun readPersistentQueue(): PersistQueue? {
-            val file = context.filesDir.resolve(PERSISTENT_QUEUE_FILE)
-            if (!file.exists() || !file.isFile) return null
-            return try {
-                file.inputStream().use { fis ->
-                    ObjectInputStream(fis).use { input ->
-                        input.readObject() as? PersistQueue
-                    }
-                }
-            } catch (e: Exception) {
-                null
-            }
-        }
 
         override fun onCustomCommand(
             session: MediaSession,
