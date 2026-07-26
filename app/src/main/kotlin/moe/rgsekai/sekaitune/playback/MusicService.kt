@@ -8086,27 +8086,42 @@ class MusicService :
         }
 
         ensureStartedAsForeground()
-        when (intent?.action) {
-            "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE" -> {
-                if (player.isPlaying) player.pause() else player.play()
-            }
 
-            "moe.rgsekai.sekaitune.WIDGET_SKIP_NEXT" -> {
-                if (player.hasNextMediaItem()) {
-                    player.seekToNext()
-                    player.prepare()
-                    player.play()
-                }
-            }
+        val action = intent?.action
+        if (action?.startsWith("moe.rgsekai.sekaitune.WIDGET_") == true) {
+            scope.launch {
+                queueRestoreCompleted.first { it }
+                when (action) {
+                    "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE" -> {
+                        if (player.isPlaying) {
+                            player.pause()
+                        } else {
+                            if (player.playbackState == Player.STATE_IDLE) {
+                                player.prepare()
+                            }
+                            player.play()
+                        }
+                    }
 
-            "moe.rgsekai.sekaitune.WIDGET_SKIP_PREV" -> {
-                if (player.hasPreviousMediaItem()) {
-                    player.seekToPrevious()
-                    player.prepare()
-                    player.play()
+                    "moe.rgsekai.sekaitune.WIDGET_SKIP_NEXT" -> {
+                        if (player.hasNextMediaItem()) {
+                            player.seekToNext()
+                            player.prepare()
+                            player.play()
+                        }
+                    }
+
+                    "moe.rgsekai.sekaitune.WIDGET_SKIP_PREV" -> {
+                        if (player.hasPreviousMediaItem()) {
+                            player.seekToPrevious()
+                            player.prepare()
+                            player.play()
+                        }
+                    }
                 }
             }
         }
+
         super.onStartCommand(intent, flags, startId)
         return START_NOT_STICKY
     }

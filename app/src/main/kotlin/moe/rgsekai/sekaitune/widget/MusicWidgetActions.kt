@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
+import androidx.core.content.ContextCompat
 import moe.rgsekai.sekaitune.playback.MusicService
 
 class PlayPauseAction : ActionCallback {
@@ -56,7 +57,7 @@ private fun sendWidgetAction(
 ) {
     val intent = Intent(action).setClass(context, MusicService::class.java)
     runCatching {
-        context.startService(intent)
+        ContextCompat.startForegroundService(context, intent)
     }.onFailure { error ->
         Log.e(TAG, "Failed to send widget action: $action", error)
     }
