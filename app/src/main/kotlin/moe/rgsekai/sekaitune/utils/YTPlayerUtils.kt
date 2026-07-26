@@ -48,6 +48,7 @@ object YTPlayerUtils {
     private const val DEFAULT_STREAM_EXPIRE_SECONDS = 300
     private const val MAX_PLAYBACK_DATA_CACHE_ENTRIES = 128
     private const val PLAYBACK_DATA_RESOLUTION_MUTEX_COUNT = 32
+    private const val RESOLUTION_CACHE_TTL_MS = 30_000L
     const val STREAM_URL_EXPIRY_SAFETY_MS = 60_000L
     private val RETRYABLE_STREAM_RESPONSE_CODES = setOf(403, 404, 410, 416)
 
@@ -154,6 +155,11 @@ object YTPlayerUtils {
         val authFingerprint: String,
     )
 
+    private data class RecentResolutionKey(
+        val videoId: String,
+        val audioQuality: AudioQuality,
+    )
+
     private data class CachedPlaybackData(
         val playbackData: PlaybackData,
         val expiresAtMs: Long,
@@ -161,6 +167,7 @@ object YTPlayerUtils {
 
     private val streamUrlCache = ConcurrentHashMap<String, CachedStreamUrl>()
     private val playbackDataCache = ConcurrentHashMap<PlaybackDataCacheKey, CachedPlaybackData>()
+    private val recentResolutionsCache = ConcurrentHashMap<RecentResolutionKey, Pair<Result<PlaybackData>, Long>>()
     private val playbackDataResolutionMutexes = Array(PLAYBACK_DATA_RESOLUTION_MUTEX_COUNT) { Mutex() }
     private val failedStreamClientsUntil = ConcurrentHashMap<String, Long>()
 
@@ -169,6 +176,7 @@ object YTPlayerUtils {
     fun clearPlaybackAuthCaches() {
         streamUrlCache.clear()
         playbackDataCache.clear()
+        recentResolutionsCache.clear()
         failedStreamClientsUntil.clear()
         lastSuccessfulClientKey = null
     }
@@ -462,6 +470,15 @@ object YTPlayerUtils {
             )
         getCachedPlaybackData(initialKey)?.let { return Result.success(it) }
 
+        val now = System.currentTimeMillis()
+        val recentKey = RecentResolutionKey(videoId, audioQuality)
+        recentResolutionsCache[recentKey]?.let { (result, timestamp) ->
+            if (now - timestamp < RESOLUTION_CACHE_TTL_MS) {
+                ColdStartTimer.addStage("PlaybackData Resolution Sequential Cache Hit for $videoId")
+                return result
+            }
+        }
+
         ColdStartTimer.addStage("PlaybackData Resolution Lock for $videoId")
         val resolutionMutex =
             playbackDataResolutionMutexes[(initialKey.hashCode() and Int.MAX_VALUE) % playbackDataResolutionMutexes.size]
@@ -477,6 +494,15 @@ object YTPlayerUtils {
                 ColdStartTimer.addStage("PlaybackData Resolution Shared Result for $videoId")
                 return@withLock Result.success(it)
             }
+
+            val recentKeyInner = RecentResolutionKey(videoId, audioQuality)
+            recentResolutionsCache[recentKeyInner]?.let { (result, timestamp) ->
+                if (System.currentTimeMillis() - timestamp < RESOLUTION_CACHE_TTL_MS) {
+                    ColdStartTimer.addStage("PlaybackData Resolution Shared Sequential Cache Hit for $videoId")
+                    return@withLock result
+                }
+            }
+
             resolvePlaybackData(
                 videoId = videoId,
                 playlistId = playlistId,
@@ -489,6 +515,11 @@ object YTPlayerUtils {
                     key = currentKey.copy(authFingerprint = playbackData.authFingerprint),
                     playbackData = playbackData,
                 )
+                recentResolutionsCache[recentKeyInner] = Result.success(playbackData) to System.currentTimeMillis()
+            }.onFailure { error ->
+                if (error !is CancellationException) {
+                    recentResolutionsCache[recentKeyInner] = Result.failure<PlaybackData>(error) to System.currentTimeMillis()
+                }
             }.also { result ->
                 val failure = result.exceptionOrNull()
                 if (failure is CancellationException) throw failure

@@ -918,8 +918,10 @@ class MusicService :
     private fun ensureStartedAsForeground() {
         if (hasCalledStartForeground) return
 
+        ColdStartTimer.addStage("ensureStartedAsForeground Start")
         val notification =
             try {
+                ColdStartTimer.addStage("Build Foreground Notification Start")
                 val contentIntent =
                     PendingIntent.getActivity(
                         this,
@@ -928,23 +930,27 @@ class MusicService :
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
 
-                NotificationCompat
-                    .Builder(this, CHANNEL_ID)
-                    .setSmallIcon(R.drawable.small_icon)
-                    .setContentTitle(getString(R.string.music_player))
-                    .setContentText(getString(R.string.app_name))
-                    .setContentIntent(contentIntent)
-                    .setCategory(Notification.CATEGORY_SERVICE)
-                    .setPriority(NotificationCompat.PRIORITY_LOW)
-                    .setOngoing(true)
-                    .setOnlyAlertOnce(true)
-                    .build()
+                val result =
+                    NotificationCompat
+                        .Builder(this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.small_icon)
+                        .setContentTitle(getString(R.string.music_player))
+                        .setContentText(getString(R.string.app_name))
+                        .setContentIntent(contentIntent)
+                        .setCategory(Notification.CATEGORY_SERVICE)
+                        .setPriority(NotificationCompat.PRIORITY_LOW)
+                        .setOngoing(true)
+                        .setOnlyAlertOnce(true)
+                        .build()
+                ColdStartTimer.addStage("Build Foreground Notification End")
+                result
             } catch (e: Exception) {
                 reportException(e)
                 return
             }
 
         try {
+            ColdStartTimer.addStage("startForeground Start")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(
                     NOTIFICATION_ID,
@@ -955,6 +961,7 @@ class MusicService :
                 startForeground(NOTIFICATION_ID, notification)
             }
             hasCalledStartForeground = true
+            ColdStartTimer.addStage("startForeground End")
         } catch (e: Exception) {
             reportException(e)
         }
@@ -1024,12 +1031,14 @@ class MusicService :
     }
 
     override fun onCreate() {
-        ColdStartTimer.addStage("MusicService onCreate")
+        ColdStartTimer.addStage("MusicService onCreate Start")
         super.onCreate()
+        ColdStartTimer.addStage("MusicService super.onCreate Done")
         ensureScopesActive()
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ColdStartTimer.addStage("MusicService: Creating Notification Channels")
                 val nm = getSystemService(NotificationManager::class.java)
                 nm?.createNotificationChannel(
                     NotificationChannel(
@@ -1050,6 +1059,7 @@ class MusicService :
             reportException(e)
         }
 
+        ColdStartTimer.addStage("MusicService: Initializing ExoPlayer")
         localPlayer =
             ExoPlayer
                 .Builder(this)
@@ -1071,7 +1081,9 @@ class MusicService :
                     addListener(audioEffectPlayerListener)
                     setOffloadEnabled(false)
                 }
+        ColdStartTimer.addStage("MusicService: ExoPlayer Built")
         castPlaybackRepository = CastPlaybackRepositoryLocator.get(this)
+        ColdStartTimer.addStage("MusicService: Wrapping Player")
         player =
             castPlaybackRepository
                 .createPlayer(
@@ -1083,6 +1095,7 @@ class MusicService :
                     sleepTimer = SleepTimer(scope, this)
                     addListener(sleepTimer)
                 }
+        ColdStartTimer.addStage("MusicService: Player Ready")
         playerInitialized.value = true
         widgetUpdater =
             MusicServiceWidgetUpdater(
@@ -1113,6 +1126,7 @@ class MusicService :
             toggleLibrary = ::toggleLibrary
         }
         // 1. Build the visual representation of the Like button
+        ColdStartTimer.addStage("MusicService: Building MediaLibrarySession")
         mediaSession = MediaLibrarySession
             .Builder(this, player, mediaLibrarySessionCallback)
             .setSessionActivity(
@@ -1125,12 +1139,16 @@ class MusicService :
             )
             .setBitmapLoader(CoilBitmapLoader(this, scope))
             .build()
+        ColdStartTimer.addStage("MusicService: MediaLibrarySession Built")
 
         updateNotification()
         player.repeatMode = REPEAT_MODE_OFF
 
+        ColdStartTimer.addStage("MusicService: Requesting Session Token")
         val sessionToken = SessionToken(this, ComponentName(this, MusicService::class.java))
         val controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
+        controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
+        ColdStartTimer.addStage("MusicService onCreate End")
         controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
         scope.launch(Dispatchers.IO) {
             val prefs = dataStore.data.first()
@@ -8021,6 +8039,7 @@ class MusicService :
         flags: Int,
         startId: Int,
     ): Int {
+        ColdStartTimer.addStage("MusicService onStartCommand Entry")
         if (intent?.action == ACTION_MEDIA_NOTIFICATION_DISMISSED) {
             handleMediaNotificationDismissed(intent)
             return START_NOT_STICKY
@@ -8030,9 +8049,12 @@ class MusicService :
 
         val action = intent?.action
         if (action?.startsWith("moe.rgsekai.sekaitune.WIDGET_") == true) {
+            ColdStartTimer.addStage("MusicService onStartCommand: Widget Action identified")
             widgetUpdater.setBuffering(true)
             scope.launch {
+                ColdStartTimer.addStage("MusicService: Waiting for Queue Restore")
                 queueRestoreCompleted.first { it }
+                ColdStartTimer.addStage("MusicService: Queue Restore Done, Executing Action: $action")
                 when (action) {
                     "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE" -> {
                         ColdStartTimer.addStage("Widget Action: Play/Pause")
@@ -8066,8 +8088,9 @@ class MusicService :
             }
         }
 
+        ColdStartTimer.addStage("MusicService: Calling super.onStartCommand")
         super.onStartCommand(intent, flags, startId)
-        ColdStartTimer.addStage("MusicService onStartCommand")
+        ColdStartTimer.addStage("MusicService onStartCommand Exit")
         return START_NOT_STICKY
     }
 
