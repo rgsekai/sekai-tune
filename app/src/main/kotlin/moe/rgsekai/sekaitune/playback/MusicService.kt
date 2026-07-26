@@ -235,6 +235,7 @@ import moe.rgsekai.sekaitune.ui.screens.settings.DiscordPresenceManager
 import moe.rgsekai.sekaitune.ui.screens.settings.ListenBrainzManager
 import moe.rgsekai.sekaitune.utils.AuthScopedCacheValue
 import moe.rgsekai.sekaitune.utils.CoilBitmapLoader
+import moe.rgsekai.sekaitune.utils.ColdStartTimer
 import moe.rgsekai.sekaitune.utils.NetworkConnectivityObserver
 import moe.rgsekai.sekaitune.utils.StreamClientUtils
 import moe.rgsekai.sekaitune.utils.SyncUtils
@@ -1023,6 +1024,7 @@ class MusicService :
     }
 
     override fun onCreate() {
+        ColdStartTimer.addStage("MusicService onCreate")
         super.onCreate()
         ensureScopesActive()
 
@@ -1436,11 +1438,15 @@ class MusicService :
                     var restoredQueue = false
                     try {
                         persistedQueue?.let { queue ->
+                            ColdStartTimer.addStage("Restore Queue Start")
                             restorePersistentQueue(queue)
+                            ColdStartTimer.addStage("Restore Queue End")
                             restoredQueue = true
                         }
                         persistedPlayerState?.let { playerState ->
+                            ColdStartTimer.addStage("Restore State Start")
                             restorePersistentPlayerState(playerState, restoredQueue)
+                            ColdStartTimer.addStage("Restore State End")
                         }
                     } finally {
                         isRestoringPersistentState = false
@@ -6202,6 +6208,9 @@ class MusicService :
     override fun onPlaybackStateChanged(
         @Player.State playbackState: Int,
     ) {
+        if (playbackState == Player.STATE_READY) {
+            ColdStartTimer.addStage("Player State: READY")
+        }
         super.onPlaybackStateChanged(playbackState)
 
         updateHistoryTrackingPlaybackState()
@@ -8020,6 +8029,7 @@ class MusicService :
                 queueRestoreCompleted.first { it }
                 when (action) {
                     "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE" -> {
+                        ColdStartTimer.addStage("Widget Action: Play/Pause")
                         if (player.isPlaying) {
                             player.pause()
                         } else {
@@ -8027,6 +8037,7 @@ class MusicService :
                                 player.prepare()
                             }
                             player.play()
+                            ColdStartTimer.addStage("Widget Action: Play Execution")
                         }
                     }
 
@@ -8050,6 +8061,7 @@ class MusicService :
         }
 
         super.onStartCommand(intent, flags, startId)
+        ColdStartTimer.addStage("MusicService onStartCommand")
         return START_NOT_STICKY
     }
 

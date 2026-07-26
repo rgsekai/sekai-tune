@@ -48,6 +48,7 @@ import moe.rgsekai.sekaitune.ui.player.CanvasArtworkPlaybackCache
 import moe.rgsekai.sekaitune.ui.screens.settings.ThemePalettes
 import moe.rgsekai.sekaitune.ui.theme.ThemeSeedPalette
 import moe.rgsekai.sekaitune.ui.theme.ThemeSeedPaletteCodec
+import moe.rgsekai.sekaitune.utils.ColdStartTimer
 import moe.rgsekai.sekaitune.utils.PreferenceStore
 import moe.rgsekai.sekaitune.utils.ProxyUtils
 import moe.rgsekai.sekaitune.utils.YTPlayerUtils
@@ -92,6 +93,7 @@ class App :
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate() {
+        ColdStartTimer.start()
         super.onCreate()
         instance = this
         if (currentProcessName()?.endsWith(":crash") == true) {
@@ -207,6 +209,7 @@ class App :
                 }
 
                 isInitialized = true
+                ColdStartTimer.addStage("App Init Complete")
             } catch (e: Exception) {
                 Timber.e(e, "Error during deferred initialization")
                 reportException(e)

@@ -42,7 +42,7 @@ import moe.rgsekai.sekaitune.extensions.div
 import moe.rgsekai.sekaitune.extensions.zipInputStream
 import moe.rgsekai.sekaitune.extensions.zipOutputStream
 import moe.rgsekai.sekaitune.playback.MusicService
-import moe.rgsekai.sekaitune.playback.MusicService.Companion.PERSISTENT_QUEUE_FILE
+import moe.rgsekai.sekaitune.playback.PlaybackPersistenceManager
 import moe.rgsekai.sekaitune.utils.dataStore
 import moe.rgsekai.sekaitune.utils.reportException
 import org.xmlpull.v1.XmlPullParser
@@ -427,7 +427,7 @@ class BackupRestoreViewModel
                     }
 
                     try {
-                        context.filesDir.resolve(PERSISTENT_QUEUE_FILE).delete()
+                        context.filesDir.resolve(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE).delete()
                     } catch (_: Exception) {
                     }
 
