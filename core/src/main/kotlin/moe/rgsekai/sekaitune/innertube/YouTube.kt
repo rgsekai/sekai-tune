@@ -101,6 +101,8 @@ import kotlin.random.Random
  * Modified from [ViMusic](https://github.com/vfsfitvnm/ViMusic)
  */
 object YouTube {
+    var onStageReached: ((String) -> Unit)? = null
+
     private const val BROWSE_ID_EXPLORE = "FEmusic_explore"
     private const val BROWSE_ID_NEW_RELEASE_ALBUMS = "FEmusic_new_releases_albums"
     private const val BROWSE_ID_MOODS_AND_GENRES = "FEmusic_moods_and_genres"
@@ -1984,17 +1986,21 @@ object YouTube {
         authState: PlaybackAuthState = currentPlaybackAuthState(),
     ): Result<PlayerResponse> =
         runCatching {
+            onStageReached?.invoke("Network: player Start")
             val resolvedPoToken = resolvePlayerPoToken(client, poToken, authState)
-            innerTube
-                .player(
-                    client = client,
-                    videoId = videoId,
-                    playlistId = playlistId,
-                    signatureTimestamp = signatureTimestamp,
-                    poToken = resolvedPoToken,
-                    setLogin = setLogin,
-                    authState = authState,
-                ).body<PlayerResponse>()
+            val response =
+                innerTube
+                    .player(
+                        client = client,
+                        videoId = videoId,
+                        playlistId = playlistId,
+                        signatureTimestamp = signatureTimestamp,
+                        poToken = resolvedPoToken,
+                        setLogin = setLogin,
+                        authState = authState,
+                    ).body<PlayerResponse>()
+            onStageReached?.invoke("Network: player End")
+            response
         }
 
     suspend fun registerPlayback(

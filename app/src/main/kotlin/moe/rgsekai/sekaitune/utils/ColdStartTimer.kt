@@ -7,7 +7,6 @@
 
 package moe.rgsekai.sekaitune.utils
 
-import android.os.SystemClock
 import timber.log.Timber
 
 object ColdStartTimer {
@@ -17,7 +16,7 @@ object ColdStartTimer {
     @Synchronized
     fun start() {
         if (startTime != 0L) return
-        startTime = SystemClock.elapsedRealtime()
+        startTime = System.currentTimeMillis()
         stages.clear()
         addStage("Process Start")
     }
@@ -25,11 +24,11 @@ object ColdStartTimer {
     @Synchronized
     fun addStage(name: String) {
         if (startTime == 0L) return
-        val now = SystemClock.elapsedRealtime()
+        val now = System.currentTimeMillis()
         stages.add(name to now)
         val totalElapsed = now - startTime
         val stageElapsed = if (stages.size > 1) now - stages[stages.size - 2].second else 0L
-        Timber.tag("ColdStart").i("Stage: %-25s | Step: %4d ms | Total: %5d ms", name, stageElapsed, totalElapsed)
+        Timber.tag("ColdStart").i("Stage: %-40s | Step: %4d ms | Total: %5d ms", name, stageElapsed, totalElapsed)
     }
 
     @Synchronized

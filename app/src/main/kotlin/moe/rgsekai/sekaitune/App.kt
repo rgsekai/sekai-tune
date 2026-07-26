@@ -132,6 +132,9 @@ class App :
         SekaiTuneCanvas.initialize(BuildConfig.CANVAS_BEARER_TOKEN)
         PaxsenixLyrics.setUserAgent("SekaiTune", BuildConfig.VERSION_NAME)
 
+        YouTube.onStageReached = { name -> ColdStartTimer.addStage(name) }
+        MoriCipherRuntime.onStageReached = { name -> ColdStartTimer.addStage(name) }
+
         val locale = Locale.getDefault()
         val languageTag = locale.toLanguageTag().replace("-Hant", "")
         YouTube.locale =

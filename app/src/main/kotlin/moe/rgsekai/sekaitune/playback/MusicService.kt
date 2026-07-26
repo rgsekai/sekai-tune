@@ -6923,6 +6923,7 @@ class MusicService :
             return dataSpec
         }
         val mediaId = dataSpec.key ?: return dataSpec
+        ColdStartTimer.addStage("resolvePlaybackDataSpec for $mediaId (pos=${dataSpec.position}, shortCircuit=$allowCacheShortCircuit)")
         val storedFormat =
             runBlocking(Dispatchers.IO) {
                 database.format(mediaId).first()
@@ -7007,24 +7008,28 @@ class MusicService :
 
         val playbackData =
             runBlocking(Dispatchers.IO) {
-                retryWithoutPlaybackLoginContext {
-                    YTPlayerUtils.playerResponseForPlayback(
-                        mediaId,
-                        audioQuality = if (lowDataModeActive) AudioQuality.LOW else audioQuality,
-                        connectivityManager = connectivityManager,
-                        preferredStreamClient = preferredStreamClient,
-                        networkMetered = lowDataModeActive,
-                    )
-                }.recoverCatching { youtubeFailure ->
-                    if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
+                ColdStartTimer.addStage("PlaybackData Resolution Start")
+                val result =
+                    retryWithoutPlaybackLoginContext {
+                        YTPlayerUtils.playerResponseForPlayback(
+                            mediaId,
+                            audioQuality = if (lowDataModeActive) AudioQuality.LOW else audioQuality,
+                            connectivityManager = connectivityManager,
+                            preferredStreamClient = preferredStreamClient,
+                            networkMetered = lowDataModeActive,
+                        )
+                    }.recoverCatching { youtubeFailure ->
+                        if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
 
-                    Timber.tag("MusicService").w(
-                        youtubeFailure,
-                        "YouTube stream clients hit bot detection for %s; trying external audio fallback",
-                        mediaId,
-                    )
-                    throw youtubeFailure
-                }
+                        Timber.tag("MusicService").w(
+                            youtubeFailure,
+                            "YouTube stream clients hit bot detection for %s; trying external audio fallback",
+                            mediaId,
+                        )
+                        throw youtubeFailure
+                    }
+                ColdStartTimer.addStage("PlaybackData Resolution End")
+                result
             }.getOrElse { throwable ->
                 when {
                     throwable is YTPlayerUtils.InvalidPlaybackLoginContextException -> {
@@ -8025,6 +8030,7 @@ class MusicService :
 
         val action = intent?.action
         if (action?.startsWith("moe.rgsekai.sekaitune.WIDGET_") == true) {
+            widgetUpdater.setBuffering(true)
             scope.launch {
                 queueRestoreCompleted.first { it }
                 when (action) {

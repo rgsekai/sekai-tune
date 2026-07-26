@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 
 object MoriCipherRuntime : MoriCipherResolver {
+    var onStageReached: ((String) -> Unit)? = null
     private val mutableSnapshot = MutableStateFlow(CipherSnapshot())
     override val snapshot: StateFlow<CipherSnapshot> = mutableSnapshot.asStateFlow()
 
@@ -177,9 +178,11 @@ object MoriCipherRuntime : MoriCipherResolver {
         videoId: String,
         signatureCipher: String,
     ): Result<String> {
+        onStageReached?.invoke("Rhino resolveStreamUrl Start")
         val signatureResult =
             withSelfHealingPlan(videoId) { plan ->
                 executionMutex.withLock {
+                    onStageReached?.invoke("Rhino executeSignature Start")
                     val cipherParameters = parseQueryString(signatureCipher)
                     val sourceUrl =
                         cipherParameters["url"]
@@ -191,13 +194,17 @@ object MoriCipherRuntime : MoriCipherResolver {
                         cipherParameters["sp"]?.takeIf { it.isNotBlank() }
                             ?: "signature"
                     val deciphered = requireEngine().executor.executeSignature(plan, signature)
-                    URLBuilder(sourceUrl)
-                        .apply {
-                            parameters[signatureParameter] = deciphered
-                        }.buildString()
+                    val result =
+                        URLBuilder(sourceUrl)
+                            .apply {
+                                parameters[signatureParameter] = deciphered
+                            }.buildString()
+                    onStageReached?.invoke("Rhino executeSignature End")
+                    result
                 }
             }
         val signedUrl = signatureResult.getOrElse { return Result.failure(it) }
+        onStageReached?.invoke("Rhino resolveStreamUrl End")
         return transformNParameter(videoId, signedUrl)
     }
 
@@ -224,7 +231,9 @@ object MoriCipherRuntime : MoriCipherResolver {
         operation: suspend (TransformPlan) -> T,
     ): Result<T> {
         val currentEngine = requireEngine()
+        onStageReached?.invoke("Rhino ensureCacheLoaded Start")
         ensureCacheLoaded(currentEngine)
+        onStageReached?.invoke("Rhino ensureCacheLoaded End")
         val firstPlan =
             currentEngine.artifact?.plan
                 ?: refresh(force = true, videoId = videoId)

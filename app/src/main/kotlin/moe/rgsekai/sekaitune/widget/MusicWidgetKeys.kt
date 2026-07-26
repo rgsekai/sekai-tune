@@ -17,6 +17,7 @@ object MusicWidgetKeys {
     val TRACK_ARTIST = stringPreferencesKey("widget_track_artist")
     val ART_PATH = stringPreferencesKey("widget_art_path")
     val IS_PLAYING = booleanPreferencesKey("widget_is_playing")
+    val IS_BUFFERING = booleanPreferencesKey("widget_is_buffering")
     val IS_AVAILABLE = booleanPreferencesKey("widget_is_available")
     val DOMINANT_COLOR = intPreferencesKey("widget_dominant_color")
     val PLAYBACK_POSITION = floatPreferencesKey("widget_position")

@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import moe.rgsekai.sekaitune.constants.AudioQuality
 import moe.rgsekai.sekaitune.constants.PlayerStreamClient
+import moe.rgsekai.sekaitune.utils.ColdStartTimer
 import moe.rgsekai.sekaitune.innertube.NewPipeUtils
 import moe.rgsekai.sekaitune.innertube.PlaybackAuthState
 import moe.rgsekai.sekaitune.innertube.YouTube
@@ -450,15 +451,18 @@ object YTPlayerUtils {
         // if provided, this preference overrides ConnectivityManager.isActiveNetworkMetered
         networkMetered: Boolean? = null,
     ): Result<PlaybackData> {
+        val authFingerprint = YouTube.currentPlaybackAuthState().fingerprint
         val isMetered = networkMetered ?: connectivityManager.isActiveNetworkMetered
         val initialKey =
             buildPlaybackDataCacheKey(
                 videoId = videoId,
                 audioQuality = audioQuality,
                 networkMetered = isMetered,
-                authFingerprint = YouTube.currentPlaybackAuthState().fingerprint,
+                authFingerprint = authFingerprint,
             )
         getCachedPlaybackData(initialKey)?.let { return Result.success(it) }
+
+        ColdStartTimer.addStage("PlaybackData Resolution Lock for $videoId")
         val resolutionMutex =
             playbackDataResolutionMutexes[(initialKey.hashCode() and Int.MAX_VALUE) % playbackDataResolutionMutexes.size]
         return resolutionMutex.withLock {
@@ -467,9 +471,12 @@ object YTPlayerUtils {
                     videoId = videoId,
                     audioQuality = audioQuality,
                     networkMetered = isMetered,
-                    authFingerprint = YouTube.currentPlaybackAuthState().fingerprint,
+                    authFingerprint = authFingerprint,
                 )
-            getCachedPlaybackData(currentKey)?.let { return@withLock Result.success(it) }
+            getCachedPlaybackData(currentKey)?.let {
+                ColdStartTimer.addStage("PlaybackData Resolution Shared Result for $videoId")
+                return@withLock Result.success(it)
+            }
             resolvePlaybackData(
                 videoId = videoId,
                 playlistId = playlistId,

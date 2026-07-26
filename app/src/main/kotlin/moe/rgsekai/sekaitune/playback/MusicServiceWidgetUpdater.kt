@@ -62,6 +62,22 @@ internal class MusicServiceWidgetUpdater(
         }
     }
 
+    fun setBuffering(buffering: Boolean) {
+        scope.launch(SilentHandler) {
+            playbackWidgets.forEach { target ->
+                val ids = GlanceAppWidgetManager(service).getGlanceIds(target.widgetClass)
+                ids.forEach { id ->
+                    updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
+                        prefs.toMutableWidgetPreferences().apply {
+                            this[MusicWidgetKeys.IS_BUFFERING] = buffering
+                        }
+                    }
+                    target.widget.update(service, id)
+                }
+            }
+        }
+    }
+
     fun updateProgressTracking() {
         progressJob?.cancel()
         if (player.isPlaying && player.duration > 0) {
@@ -85,6 +101,7 @@ internal class MusicServiceWidgetUpdater(
                 title = meta?.title?.toString() ?: service.getString(R.string.no_track_playing),
                 artist = meta?.artist?.toString().orEmpty(),
                 isPlaying = player.isPlaying,
+                isBuffering = player.playbackState == Player.STATE_BUFFERING,
                 isAvailable = mediaItem != null,
                 playbackPosition = player.playbackProgress(),
                 artPath = artFile?.absolutePath,
@@ -141,6 +158,7 @@ internal class MusicServiceWidgetUpdater(
             this[MusicWidgetKeys.TRACK_ARTIST]?.let { mutable[MusicWidgetKeys.TRACK_ARTIST] = it }
             this[MusicWidgetKeys.ART_PATH]?.let { mutable[MusicWidgetKeys.ART_PATH] = it }
             this[MusicWidgetKeys.IS_PLAYING]?.let { mutable[MusicWidgetKeys.IS_PLAYING] = it }
+            this[MusicWidgetKeys.IS_BUFFERING]?.let { mutable[MusicWidgetKeys.IS_BUFFERING] = it }
             this[MusicWidgetKeys.IS_AVAILABLE]?.let { mutable[MusicWidgetKeys.IS_AVAILABLE] = it }
             this[MusicWidgetKeys.DOMINANT_COLOR]?.let { mutable[MusicWidgetKeys.DOMINANT_COLOR] = it }
             this[MusicWidgetKeys.PLAYBACK_POSITION]?.let { mutable[MusicWidgetKeys.PLAYBACK_POSITION] = it }
@@ -156,6 +174,7 @@ internal class MusicServiceWidgetUpdater(
         this[MusicWidgetKeys.TRACK_TITLE] = snapshot.title
         this[MusicWidgetKeys.TRACK_ARTIST] = snapshot.artist
         this[MusicWidgetKeys.IS_PLAYING] = snapshot.isPlaying
+        this[MusicWidgetKeys.IS_BUFFERING] = snapshot.isBuffering
         this[MusicWidgetKeys.IS_AVAILABLE] = snapshot.isAvailable
         this[MusicWidgetKeys.PLAYBACK_POSITION] = snapshot.playbackPosition
 
@@ -283,6 +302,7 @@ internal class MusicServiceWidgetUpdater(
         val title: String,
         val artist: String,
         val isPlaying: Boolean,
+        val isBuffering: Boolean,
         val isAvailable: Boolean,
         val playbackPosition: Float,
         val artPath: String?,

@@ -53,6 +53,7 @@ internal data class WidgetPlaybackState(
     val title: String,
     val artist: String,
     val isPlaying: Boolean,
+    val isBuffering: Boolean,
     val artPath: String?,
     val isAvailable: Boolean,
     val dominantColor: Int?,
@@ -89,6 +90,7 @@ internal fun Preferences.toWidgetPlaybackState(context: Context): WidgetPlayback
                 else -> context.getString(R.string.unknown_artist)
             },
         isPlaying = this[MusicWidgetKeys.IS_PLAYING] ?: false,
+        isBuffering = this[MusicWidgetKeys.IS_BUFFERING] ?: false,
         artPath = this[MusicWidgetKeys.ART_PATH],
         isAvailable = isAvailable,
         dominantColor = this[MusicWidgetKeys.DOMINANT_COLOR],
@@ -314,7 +316,7 @@ internal fun WidgetExpressiveControlPill(
                         if (state.isPlaying) R.string.widget_pause else R.string.play,
                     ),
                 backgroundColor = palette.primaryContainer,
-                contentColor = palette.onPrimaryContainer,
+                contentColor = if (state.isBuffering) palette.onSurfaceVariant else palette.onPrimaryContainer,
                 cornerRadius = if (state.isPlaying) 13.dp else 22.dp,
                 iconSize = 26.dp,
             )
