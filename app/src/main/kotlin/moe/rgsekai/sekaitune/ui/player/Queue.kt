@@ -217,11 +217,11 @@ fun Queue(
             val message =
                 when {
                     songCount == 1 && playlistNames.size == 1 -> {
-                        context.getString(R.string.added_to_playlist, playlistNames.first())
+                        context.applicationContext.getString(R.string.added_to_playlist, playlistNames.first())
                     }
 
                     songCount > 1 && playlistNames.size == 1 -> {
-                        context.getString(
+                        context.applicationContext.getString(
                             R.string.added_n_songs_to_playlist,
                             songCount,
                             playlistNames.first(),
@@ -229,11 +229,11 @@ fun Queue(
                     }
 
                     songCount == 1 -> {
-                        context.getString(R.string.added_to_n_playlists, playlistNames.size)
+                        context.applicationContext.getString(R.string.added_to_n_playlists, playlistNames.size)
                     }
 
                     else -> {
-                        context.getString(R.string.added_n_songs_to_n_playlists, songCount, playlistNames.size)
+                        context.applicationContext.getString(R.string.added_n_songs_to_n_playlists, songCount, playlistNames.size)
                     }
                 }
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -251,7 +251,7 @@ fun Queue(
             },
             title = { Text(text = stringResource(R.string.create_playlist)) },
             placeholder = { Text(text = stringResource(R.string.playlist_name)) },
-            initialTextFieldValue = TextFieldValue(queueTitle ?: context.getString(R.string.queue)),
+            initialTextFieldValue = TextFieldValue(queueTitle ?: context.applicationContext.getString(R.string.queue)),
             isInputValid = { it.trim().isNotEmpty() && selectedSongs.isNotEmpty() },
             onDismiss = { showCreateQueuePlaylistDialog = false },
             onDone = onDone@{ rawPlaylistName ->
@@ -285,9 +285,9 @@ fun Queue(
                     withContext(Dispatchers.Main) {
                         val message =
                             if (songs.size == 1) {
-                                context.getString(R.string.added_to_playlist, playlistName)
+                                context.applicationContext.getString(R.string.added_to_playlist, playlistName)
                             } else {
-                                context.getString(R.string.added_n_songs_to_playlist, songs.size, playlistName)
+                                context.applicationContext.getString(R.string.added_n_songs_to_playlist, songs.size, playlistName)
                             }
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                         clearSelection()
@@ -312,11 +312,11 @@ fun Queue(
                 val snackbarResult =
                     snackbarHostState.showSnackbar(
                         message =
-                            context.getString(
+                            context.applicationContext.getString(
                                 R.string.removed_song_from_queue,
                                 window.mediaItem.metadata?.title,
                             ),
-                        actionLabel = context.getString(R.string.undo),
+                        actionLabel = context.applicationContext.getString(R.string.undo),
                         duration = SnackbarDuration.Short,
                     )
                 if (snackbarResult == SnackbarResult.ActionPerformed) {
@@ -343,7 +343,7 @@ fun Queue(
                         snackbarHostState.showSnackbar(
                             message =
                                 if (windows.size == 1) {
-                                    context.getString(
+                                    context.applicationContext.getString(
                                         R.string.removed_song_from_queue,
                                         windows
                                             .first()
@@ -351,9 +351,9 @@ fun Queue(
                                             ?.title,
                                     )
                                 } else {
-                                    context.getString(R.string.removed_n_songs_from_queue, windows.size)
+                                    context.applicationContext.getString(R.string.removed_n_songs_from_queue, windows.size)
                                 },
-                            actionLabel = context.getString(R.string.undo),
+                            actionLabel = context.applicationContext.getString(R.string.undo),
                             duration = SnackbarDuration.Short,
                         )
                     if (snackbarResult == SnackbarResult.ActionPerformed) {
