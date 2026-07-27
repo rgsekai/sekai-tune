@@ -143,14 +143,22 @@ private fun PlaybackCommandCompact(
             WidgetControlButton(
                 modifier = GlanceModifier.size(56.dp),
                 action = playPauseAction(),
-                icon = if (state.isPlaying) R.drawable.pause else R.drawable.play,
+                icon = when {
+                    state.isBuffering -> R.drawable.more_horiz
+                    state.isPlaying -> R.drawable.pause
+                    else -> R.drawable.play
+                },
                 contentDescription =
                     context.getString(
-                        if (state.isPlaying) R.string.widget_pause else R.string.play,
+                        when {
+                            state.isBuffering -> R.string.loading
+                            state.isPlaying -> R.string.widget_pause
+                            else -> R.string.play
+                        },
                     ),
                 backgroundColor = palette.primaryContainer,
                 contentColor = palette.onPrimaryContainer,
-                cornerRadius = if (state.isPlaying) 16.dp else 28.dp,
+                cornerRadius = if (state.isPlaying || state.isBuffering) 16.dp else 28.dp,
                 iconSize = 28.dp,
             )
         }
@@ -230,14 +238,22 @@ private fun PlaybackCommandPanel(
                             .defaultWeight()
                             .height(60.dp),
                     action = playPauseAction(),
-                    icon = if (state.isPlaying) R.drawable.pause else R.drawable.play,
+                    icon = when {
+                        state.isBuffering -> R.drawable.more_horiz
+                        state.isPlaying -> R.drawable.pause
+                        else -> R.drawable.play
+                    },
                     contentDescription =
                         context.getString(
-                            if (state.isPlaying) R.string.widget_pause else R.string.play,
+                            when {
+                                state.isBuffering -> R.string.loading
+                                state.isPlaying -> R.string.widget_pause
+                                else -> R.string.play
+                            },
                         ),
                     backgroundColor = palette.primaryContainer,
                     contentColor = palette.onPrimaryContainer,
-                    cornerRadius = if (state.isPlaying) 18.dp else 30.dp,
+                    cornerRadius = if (state.isPlaying || state.isBuffering) 18.dp else 30.dp,
                     iconSize = 32.dp,
                 )
                 Spacer(GlanceModifier.width(8.dp))

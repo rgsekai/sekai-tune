@@ -31,6 +31,7 @@ import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -310,14 +311,22 @@ internal fun WidgetExpressiveControlPill(
                         .defaultWeight()
                         .height(44.dp),
                 action = playPauseAction(),
-                icon = if (state.isPlaying) R.drawable.pause else R.drawable.play,
+                icon = when {
+                    state.isBuffering -> R.drawable.more_horiz
+                    state.isPlaying -> R.drawable.pause
+                    else -> R.drawable.play
+                },
                 contentDescription =
                     context.getString(
-                        if (state.isPlaying) R.string.widget_pause else R.string.play,
+                        when {
+                            state.isBuffering -> R.string.loading
+                            state.isPlaying -> R.string.widget_pause
+                            else -> R.string.play
+                        },
                     ),
                 backgroundColor = palette.primaryContainer,
-                contentColor = if (state.isBuffering) palette.onSurfaceVariant else palette.onPrimaryContainer,
-                cornerRadius = if (state.isPlaying) 13.dp else 22.dp,
+                contentColor = palette.onPrimaryContainer,
+                cornerRadius = if (state.isPlaying || state.isBuffering) 13.dp else 22.dp,
                 iconSize = 26.dp,
             )
             WidgetControlButton(

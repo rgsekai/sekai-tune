@@ -123,14 +123,22 @@ private fun PlaybackSpotlightOverlay(
                             .padding(bottom = 8.dp)
                             .size(54.dp),
                     action = playPauseAction(),
-                    icon = if (state.isPlaying) R.drawable.pause else R.drawable.play,
+                    icon = when {
+                        state.isBuffering -> R.drawable.more_horiz
+                        state.isPlaying -> R.drawable.pause
+                        else -> R.drawable.play
+                    },
                     contentDescription =
                         context.getString(
-                            if (state.isPlaying) R.string.widget_pause else R.string.play,
+                            when {
+                                state.isBuffering -> R.string.loading
+                                state.isPlaying -> R.string.widget_pause
+                                else -> R.string.play
+                            },
                         ),
                     backgroundColor = palette.primaryContainer,
                     contentColor = palette.onPrimaryContainer,
-                    cornerRadius = if (state.isPlaying) 15.dp else 27.dp,
+                    cornerRadius = if (state.isPlaying || state.isBuffering) 15.dp else 27.dp,
                     iconSize = 27.dp,
                 )
             } else {
@@ -200,14 +208,22 @@ private fun PlaybackSpotlightOverlay(
                         WidgetControlButton(
                             modifier = GlanceModifier.size(52.dp),
                             action = playPauseAction(),
-                            icon = if (state.isPlaying) R.drawable.pause else R.drawable.play,
+                            icon = when {
+                                state.isBuffering -> R.drawable.more_horiz
+                                state.isPlaying -> R.drawable.pause
+                                else -> R.drawable.play
+                            },
                             contentDescription =
                                 context.getString(
-                                    if (state.isPlaying) R.string.widget_pause else R.string.play,
+                                    when {
+                                        state.isBuffering -> R.string.loading
+                                        state.isPlaying -> R.string.widget_pause
+                                        else -> R.string.play
+                                    },
                                 ),
                             backgroundColor = palette.primaryContainer,
                             contentColor = palette.onPrimaryContainer,
-                            cornerRadius = if (state.isPlaying) 14.dp else 26.dp,
+                            cornerRadius = if (state.isPlaying || state.isBuffering) 14.dp else 26.dp,
                             iconSize = 26.dp,
                         )
                     }

@@ -151,14 +151,22 @@ private fun PlaybackCapsuleLayout(
                 WidgetControlButton(
                     modifier = GlanceModifier.size(if (compact) 50.dp else 56.dp),
                     action = playPauseAction(),
-                    icon = if (state.isPlaying) R.drawable.pause else R.drawable.play,
+                    icon = when {
+                        state.isBuffering -> R.drawable.more_horiz
+                        state.isPlaying -> R.drawable.pause
+                        else -> R.drawable.play
+                    },
                     contentDescription =
                         context.getString(
-                            if (state.isPlaying) R.string.widget_pause else R.string.play,
+                            when {
+                                state.isBuffering -> R.string.loading
+                                state.isPlaying -> R.string.widget_pause
+                                else -> R.string.play
+                            },
                         ),
                     backgroundColor = palette.primaryContainer,
                     contentColor = palette.onPrimaryContainer,
-                    cornerRadius = if (state.isPlaying) 15.dp else 28.dp,
+                    cornerRadius = if (state.isPlaying || state.isBuffering) 15.dp else 28.dp,
                     iconSize = if (compact) 24.dp else 28.dp,
                 )
             }

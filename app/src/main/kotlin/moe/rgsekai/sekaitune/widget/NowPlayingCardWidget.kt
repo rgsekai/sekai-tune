@@ -161,14 +161,22 @@ private fun NowPlayingCardBar(
             WidgetControlButton(
                 modifier = GlanceModifier.size(46.dp),
                 action = playPauseAction(),
-                icon = if (state.isPlaying) R.drawable.pause else R.drawable.play,
+                icon = when {
+                    state.isBuffering -> R.drawable.more_horiz
+                    state.isPlaying -> R.drawable.pause
+                    else -> R.drawable.play
+                },
                 contentDescription =
                     context.getString(
-                        if (state.isPlaying) R.string.widget_pause else R.string.play,
+                        when {
+                            state.isBuffering -> R.string.loading
+                            state.isPlaying -> R.string.widget_pause
+                            else -> R.string.play
+                        },
                     ),
                 backgroundColor = palette.primaryContainer,
                 contentColor = palette.onPrimaryContainer,
-                cornerRadius = if (state.isPlaying) 13.dp else 23.dp,
+                cornerRadius = if (state.isPlaying || state.isBuffering) 13.dp else 23.dp,
                 iconSize = 22.dp,
             )
         }

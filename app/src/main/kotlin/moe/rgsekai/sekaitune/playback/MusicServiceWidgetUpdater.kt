@@ -9,12 +9,13 @@ package moe.rgsekai.sekaitune.playback
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.LruCache
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.media3.common.Player
 import androidx.palette.graphics.Palette
@@ -24,12 +25,15 @@ import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.toBitmap
 import kotlinx.coroutines.CancellationException
+import moe.rgsekai.sekaitune.utils.ColdStartTimer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.extensions.SilentHandler
@@ -55,24 +59,33 @@ internal class MusicServiceWidgetUpdater(
     private val loadWidgetInsights: LoadWidgetInsightsUseCase,
 ) {
     private var progressJob: Job? = null
+    private val updateMutex = Mutex()
+    private val dominantColorCache = LruCache<String, Int>(50)
 
     fun update() {
         scope.launch(SilentHandler) {
-            pushState()
+            updateMutex.withLock {
+                pushState()
+            }
         }
     }
 
     fun setBuffering(buffering: Boolean) {
+        ColdStartTimer.addStage("Widget: setBuffering($buffering)")
         scope.launch(SilentHandler) {
-            playbackWidgets.forEach { target ->
-                val ids = GlanceAppWidgetManager(service).getGlanceIds(target.widgetClass)
-                ids.forEach { id ->
-                    updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
-                        prefs.toMutableWidgetPreferences().apply {
-                            this[MusicWidgetKeys.IS_BUFFERING] = buffering
+            updateMutex.withLock {
+                playbackWidgets.forEach { target ->
+                    val ids = GlanceAppWidgetManager(service).getGlanceIds(target.widgetClass)
+                    if (ids.isEmpty()) return@forEach
+
+                    ids.forEach { id ->
+                        updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
+                            prefs.toMutablePreferences().apply {
+                                this[MusicWidgetKeys.IS_BUFFERING] = buffering
+                            }
                         }
                     }
-                    target.widget.update(service, id)
+                    target.widget.updateAll(service)
                 }
             }
         }
@@ -93,9 +106,19 @@ internal class MusicServiceWidgetUpdater(
 
     private suspend fun pushState() {
         val mediaItem = player.currentMediaItem
+        val mediaId = mediaItem?.mediaId
         val meta = mediaItem?.mediaMetadata
         val artFile = meta?.artworkUri?.let { cacheAlbumArt(it) }
-        val dominantColor = artFile?.let { extractDominantColor(it) }
+
+        val dominantColor =
+            if (mediaId != null) {
+                dominantColorCache.get(mediaId) ?: artFile?.let { extractDominantColor(it) }?.also {
+                    dominantColorCache.put(mediaId, it)
+                }
+            } else {
+                null
+            }
+
         val snapshot =
             WidgetSnapshot(
                 title = meta?.title?.toString() ?: service.getString(R.string.no_track_playing),
@@ -117,14 +140,16 @@ internal class MusicServiceWidgetUpdater(
     private suspend fun updateProgress(progress: Float) {
         progressWidgets.forEach { target ->
             val ids = GlanceAppWidgetManager(service).getGlanceIds(target.widgetClass)
+            if (ids.isEmpty()) return@forEach
+
             ids.forEach { id ->
                 updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
-                    prefs.toMutableWidgetPreferences().apply {
+                    prefs.toMutablePreferences().apply {
                         this[MusicWidgetKeys.PLAYBACK_POSITION] = progress
                     }
                 }
-                target.widget.update(service, id)
             }
+            target.widget.updateAll(service)
         }
     }
 
@@ -144,31 +169,13 @@ internal class MusicServiceWidgetUpdater(
 
         ids.forEach { id ->
             updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
-                prefs.toMutableWidgetPreferences().apply {
+                prefs.toMutablePreferences().apply {
                     writeSnapshot(targetSnapshot)
                 }
             }
-            target.widget.update(service, id)
         }
+        target.widget.updateAll(service)
     }
-
-    private fun Preferences.toMutableWidgetPreferences(): MutablePreferences =
-        mutablePreferencesOf().also { mutable ->
-            this[MusicWidgetKeys.TRACK_TITLE]?.let { mutable[MusicWidgetKeys.TRACK_TITLE] = it }
-            this[MusicWidgetKeys.TRACK_ARTIST]?.let { mutable[MusicWidgetKeys.TRACK_ARTIST] = it }
-            this[MusicWidgetKeys.ART_PATH]?.let { mutable[MusicWidgetKeys.ART_PATH] = it }
-            this[MusicWidgetKeys.IS_PLAYING]?.let { mutable[MusicWidgetKeys.IS_PLAYING] = it }
-            this[MusicWidgetKeys.IS_BUFFERING]?.let { mutable[MusicWidgetKeys.IS_BUFFERING] = it }
-            this[MusicWidgetKeys.IS_AVAILABLE]?.let { mutable[MusicWidgetKeys.IS_AVAILABLE] = it }
-            this[MusicWidgetKeys.DOMINANT_COLOR]?.let { mutable[MusicWidgetKeys.DOMINANT_COLOR] = it }
-            this[MusicWidgetKeys.PLAYBACK_POSITION]?.let { mutable[MusicWidgetKeys.PLAYBACK_POSITION] = it }
-            this[MusicWidgetKeys.LISTENING_TIME]?.let { mutable[MusicWidgetKeys.LISTENING_TIME] = it }
-            this[MusicWidgetKeys.TOTAL_PLAYS]?.let { mutable[MusicWidgetKeys.TOTAL_PLAYS] = it }
-            this[MusicWidgetKeys.RECENT_SONGS]?.let { mutable[MusicWidgetKeys.RECENT_SONGS] = it }
-            this[MusicWidgetKeys.GENRES]?.let { mutable[MusicWidgetKeys.GENRES] = it }
-            this[MusicWidgetKeys.RECOMMENDATIONS]?.let { mutable[MusicWidgetKeys.RECOMMENDATIONS] = it }
-            this[MusicWidgetKeys.TOP_SONG_SUMMARY]?.let { mutable[MusicWidgetKeys.TOP_SONG_SUMMARY] = it }
-        }
 
     private fun MutablePreferences.writeSnapshot(snapshot: WidgetSnapshot) {
         this[MusicWidgetKeys.TRACK_TITLE] = snapshot.title

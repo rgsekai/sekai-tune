@@ -1352,7 +1352,7 @@ class MusicService :
             }
 
         dataStore.data
-            .map { it[DiscordTokenKey] to (it[EnableDiscordRPCKey] ?: true) }
+            .map { it[DiscordTokenKey] to (it[EnableDiscordRPCKey] ?: false) }
             .debounce(300)
             .distinctUntilChanged()
             .collectLatest(scope) { (key, enabled) ->
@@ -1689,7 +1689,7 @@ class MusicService :
         try {
             ensureDiscordSyncFresh(request.epoch)
 
-            val enabled = dataStore.get(EnableDiscordRPCKey, true)
+            val enabled = dataStore.get(EnableDiscordRPCKey, false)
             val token = dataStore.get(DiscordTokenKey, "")
             val hasToken = token.isNotBlank()
             val showWhenPaused = dataStore.get(DiscordShowWhenPausedKey, false)
@@ -2069,7 +2069,7 @@ class MusicService :
         // Launch in scope to avoid blocking
         scope.launch {
             // Don't start if Discord RPC is disabled in settings
-            if (!dataStore.get(EnableDiscordRPCKey, true)) {
+            if (!dataStore.get(EnableDiscordRPCKey, false)) {
                 if (DiscordPresenceManager.isRunning()) {
                     Timber.tag("MusicService").d("Discord RPC disabled → stopping presence manager")
                     try {

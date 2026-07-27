@@ -290,14 +290,22 @@ private fun ListeningInsightsHeader(
             WidgetControlButton(
                 modifier = GlanceModifier.size(48.dp),
                 action = playPauseAction(),
-                icon = if (playbackState.isPlaying) R.drawable.pause else R.drawable.play,
+                icon = when {
+                    playbackState.isBuffering -> R.drawable.more_horiz
+                    playbackState.isPlaying -> R.drawable.pause
+                    else -> R.drawable.play
+                },
                 contentDescription =
                     context.getString(
-                        if (playbackState.isPlaying) R.string.widget_pause else R.string.play,
+                        when {
+                            playbackState.isBuffering -> R.string.loading
+                            playbackState.isPlaying -> R.string.widget_pause
+                            else -> R.string.play
+                        },
                     ),
                 backgroundColor = palette.primaryContainer,
                 contentColor = palette.onPrimaryContainer,
-                cornerRadius = if (playbackState.isPlaying) 14.dp else 24.dp,
+                cornerRadius = if (playbackState.isPlaying || playbackState.isBuffering) 14.dp else 24.dp,
                 iconSize = 24.dp,
             )
         }
