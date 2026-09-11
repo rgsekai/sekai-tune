@@ -743,17 +743,13 @@
     <string name="context_info">Contexts (comma-separated)</string>
     <string name="target_language">Target Language</string>
     <string name="close_dialog">Close</string>
-    <string name="support_development_title">Support development</string>    <string name="support_development_donate">Donate to support development</string>
+    <string name="support_development_title">Support development</string>
+    <string name="support_development_donate">Donate to support development</string>
     <string name="support_development_star">Star on GitHub</string>
     <string name="support">Support</string>
-    <string name="settings_support_subtitle">Get help, report an issue, and find project information</string>
-    <string name="support_get_help">Get help</string>
-    <string name="support_report_issue">Report an issue</string>
-    <string name="support_report_issue_desc">Share a bug report or feature request on GitHub</string>
-    <string name="support_project_page">Project page</string>
-    <string name="support_project_page_desc">Open the Sekai Tune repository on GitHub</string>
-    <string name="support_app_information">App information</string>
-    <string name="support_privacy_desc">Review privacy controls and data handling</string>
+    <string name="settings_support_subtitle">Support the development of Sekai Tune</string>
+    <string name="buy_me_a_coffee">Buy Me a Coffee</string>
+    <string name="buy_me_a_coffee_desc">Support the project on Buy Me a Coffee</string>
     <string name="later">Later</string>
     <string name="new_update_available">New update available</string>
     <string name="release_notes_unavailable">Release notes are unavailable</string>

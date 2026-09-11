@@ -34,8 +34,7 @@ import moe.rgsekai.sekaitune.ui.component.PreferenceEntry
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 
-private const val PROJECT_URL = "https://github.com/rgsekai/sekai-tune"
-private const val ISSUES_URL = "$PROJECT_URL/issues/new/choose"
+private const val BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/rgsekai"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,42 +70,13 @@ fun SupportScreen(navController: NavController) {
                     ).verticalScroll(rememberScrollState())
                     .padding(bottom = SettingsDimensions.ScreenBottomPadding),
         ) {
-            PreferenceGroup(title = stringResource(R.string.support_get_help)) {
+            PreferenceGroup(title = stringResource(R.string.support_development_title)) {
                 item {
                     PreferenceEntry(
-                        title = { Text(stringResource(R.string.support_report_issue)) },
-                        description = stringResource(R.string.support_report_issue_desc),
-                        icon = { Icon(painterResource(R.drawable.info), null) },
-                        onClick = { uriHandler.openUri(ISSUES_URL) },
-                    )
-                }
-
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.support_project_page)) },
-                        description = stringResource(R.string.support_project_page_desc),
-                        icon = { Icon(painterResource(R.drawable.github), null) },
-                        onClick = { uriHandler.openUri(PROJECT_URL) },
-                    )
-                }
-            }
-
-            PreferenceGroup(title = stringResource(R.string.support_app_information)) {
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.privacy)) },
-                        description = stringResource(R.string.support_privacy_desc),
-                        icon = { Icon(painterResource(R.drawable.security), null) },
-                        onClick = { navController.navigate("settings/privacy") },
-                    )
-                }
-
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.about)) },
-                        description = stringResource(R.string.settings_about_subtitle),
-                        icon = { Icon(painterResource(R.drawable.info), null) },
-                        onClick = { navController.navigate("settings/about") },
+                        title = { Text(stringResource(R.string.buy_me_a_coffee)) },
+                        description = stringResource(R.string.buy_me_a_coffee_desc),
+                        icon = { Icon(painterResource(R.drawable.coffee), null) },
+                        onClick = { uriHandler.openUri(BUY_ME_A_COFFEE_URL) },
                     )
                 }
             }

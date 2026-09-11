@@ -244,7 +244,7 @@ fun buildSettingsGroups(
                         add(
                             SettingsItem(
                                 key = "support",
-                                icon = painterResource(R.drawable.github),
+                                icon = painterResource(R.drawable.attach_money),
                                 title = stringResource(R.string.support),
                                 subtitle = stringResource(R.string.settings_support_subtitle),
                                 accentColor = MaterialTheme.colorScheme.tertiary,
