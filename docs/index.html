@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sekai Tune - Redefining YouTube Music on Android</title>
+    <meta name="description" content="Sekai Tune is a high-performance, privacy-focused YouTube Music client for Android. Enjoy ad-free playback, custom lyrics, spatial audio, and deep customization.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">
+                <img src="assets/sekai_tune.svg" alt="Sekai Tune Logo">
+                <span>Sekai Tune</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#showcase">Gallery</a>
+                <a href="https://github.com/rgsekai/sekai-tune" target="_blank" class="github-btn"><i class="fab fa-github"></i> GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content reveal">
+            <h1 class="hero-title">Your Music. <br><span class="gradient-text">Redefined.</span></h1>
+            <p class="hero-subtitle">High-performance, privacy-focused YouTube Music client for Android built for people who care about their listening experience.</p>
+            <div class="hero-actions">
+                <a href="https://github.com/rgsekai/sekai-tune/releases/latest" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download Latest
+                </a>
+                <a href="#features" class="btn btn-secondary">Explore Features</a>
+            </div>
+        </div>
+        <div class="hero-image reveal delay-1">
+            <img src="assets/screen1.jpg" alt="Sekai Tune App Screenshot" class="app-mockup">
+            <img src="assets/screen2.jpg" alt="Sekai Tune App Screenshot" class="app-mockup floating">
+        </div>
+    </header>
+
+    <section id="features" class="features-section">
+        <div class="section-header reveal">
+            <h2>Everything you need. <br><span class="gradient-text">Nothing you don't.</span></h2>
+            <p>Built from the ground up to ensure your music stays private, looks clean, and works perfectly.</p>
+        </div>
+
+        <div class="bento-grid">
+            <div class="bento-card reveal">
+                <div class="card-icon"><i class="fas fa-play-circle"></i></div>
+                <h3>Uninterrupted Playback</h3>
+                <p>Ad-free playback with background listening. Access your playlists, liked songs, and subscriptions instantly. Fast, lightweight, and supports local files.</p>
+            </div>
+            <div class="bento-card reveal delay-1">
+                <div class="card-icon"><i class="fas fa-sliders-h"></i></div>
+                <h3>Pro Audio Controls</h3>
+                <p>EBU R128 loudness normalization, tempo & pitch controls, smooth crossfading, and deep integration with system equalizers and spatial audio.</p>
+            </div>
+            <div class="bento-card reveal delay-2">
+                <div class="card-icon"><i class="fas fa-microphone-alt"></i></div>
+                <h3>Lyrics & Discovery</h3>
+                <p>Live synced lyrics with AI translation and romanization. Built-in music recognition to find songs around you, plus detailed listening statistics.</p>
+            </div>
+            <div class="bento-card reveal">
+                <div class="card-icon"><i class="fas fa-palette"></i></div>
+                <h3>Deep Customization</h3>
+                <p>Material 3 design powered by album-art dynamic colors. Choose from up to 9 player styles and tailor gestures, animations, and layouts to fit your workflow.</p>
+            </div>
+            <div class="bento-card reveal delay-1 bento-wide">
+                <div class="card-icon"><i class="fas fa-sync-alt"></i></div>
+                <h3>Seamless Sync & Social</h3>
+                <p>Import playlists from Spotify, integrate your YouTube Music account, scrobble to Last.fm and ListenBrainz, and show off what you're listening to with Discord Rich Presence.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="showcase" class="showcase-section">
+        <div class="section-header reveal">
+            <h2>Beautiful by Design</h2>
+            <p>A clean, responsive interface that adapts to you and your music.</p>
+        </div>
+        
+        <div class="gallery reveal">
+            <div class="gallery-track">
+                <img src="assets/screen3.jpg" alt="Gallery Image 1">
+                <img src="assets/screen4.jpg" alt="Gallery Image 2">
+                <img src="assets/screen5.jpg" alt="Gallery Image 3">
+                <img src="assets/screen6.jpg" alt="Gallery Image 4">
+                <img src="assets/screen7.jpg" alt="Gallery Image 5">
+                <img src="assets/screen8.jpg" alt="Gallery Image 6">
+                <img src="assets/screen9.jpg" alt="Gallery Image 7">
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <img src="assets/sekai_tune.svg" alt="Sekai Tune Logo" width="40">
+                <h3>Sekai Tune</h3>
+            </div>
+            <div class="footer-text">
+                <p>SekaiTune is an independent third-party client. Not affiliated with Google LLC or YouTube.</p>
+                <p>Users are encouraged to support artists by purchasing music via official channels.</p>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/rgsekai/sekai-tune">Source Code</a>
+                <a href="https://github.com/rgsekai/sekai-tune/blob/main/LICENSE">License</a>
+                <a href="https://github.com/rgsekai/sekai-tune/blob/main/PRIVACY.md">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
