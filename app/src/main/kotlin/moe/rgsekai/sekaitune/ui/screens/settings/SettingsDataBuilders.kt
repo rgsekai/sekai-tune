@@ -175,11 +175,19 @@ fun buildSettingsGroups(
                                     accentColor = MaterialTheme.colorScheme.secondary,
                                     onClick = {
                                         try {
+                                            @Suppress("InlinedApi")
                                             val intent =
-                                                Intent(
-                                                    Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
-                                                    Uri.parse("package:${context.packageName}"),
-                                                )
+                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                                    Intent(
+                                                        Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
+                                                        Uri.parse("package:${context.packageName}"),
+                                                    )
+                                                } else {
+                                                    Intent(
+                                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                                        Uri.parse("package:${context.packageName}"),
+                                                    )
+                                                }
                                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
@@ -233,6 +241,16 @@ fun buildSettingsGroups(
                                 ),
                             )
                         }
+                        add(
+                            SettingsItem(
+                                key = "support",
+                                icon = painterResource(R.drawable.github),
+                                title = stringResource(R.string.support),
+                                subtitle = stringResource(R.string.settings_support_subtitle),
+                                accentColor = MaterialTheme.colorScheme.tertiary,
+                                onClick = { navController.navigate("settings/support") },
+                            )
+                        )
                         add(
                             SettingsItem(
                                 key = "about",

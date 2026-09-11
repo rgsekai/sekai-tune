@@ -73,6 +73,7 @@ import moe.rgsekai.sekaitune.ui.screens.settings.PoTokenScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.PrivacySettings
 import moe.rgsekai.sekaitune.ui.screens.settings.SettingsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.StorageSettings
+import moe.rgsekai.sekaitune.ui.screens.settings.SupportScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.ThemeCreatorScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.UpdateScreen
 
@@ -439,6 +440,9 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/about") {
         AboutScreen(navController)
+    }
+    composable("settings/support") {
+        SupportScreen(navController)
     }
     composable("settings/po_token") {
         PoTokenScreen(navController)
