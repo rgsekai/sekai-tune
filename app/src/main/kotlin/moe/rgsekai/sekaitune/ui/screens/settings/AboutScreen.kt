@@ -910,10 +910,8 @@ private fun LinkChipRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Safe fallback to guarantee only the GitHub link (the first item) is rendered,
-        // effectively stripping the Privacy button from the UI.
-        if (links.size > 0) {
-            val link = links[0]
+        for (i in 0 until links.size) {
+            val link = links[i]
             val label = stringResource(link.labelResId)
             val onClick =
                 remember(link.url, onOpenUri) {

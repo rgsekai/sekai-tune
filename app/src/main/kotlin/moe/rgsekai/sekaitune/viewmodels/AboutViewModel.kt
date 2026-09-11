@@ -431,6 +431,12 @@ class AboutViewModel
                             labelResId = R.string.about_content_desc_github,
                             url = "https://github.com/rgsekai/sekai-tune",
                         ),
+                        AboutLinkUiModel(
+                            id = "website",
+                            iconResId = R.drawable.language,
+                            labelResId = R.string.visit_website,
+                            url = "https://rgsekai.github.io/sekai-tune/",
+                        ),
                     ),
                 leadDeveloper =
                     TeamMember(
