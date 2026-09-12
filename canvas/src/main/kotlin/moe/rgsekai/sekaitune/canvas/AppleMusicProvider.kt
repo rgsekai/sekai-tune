@@ -215,6 +215,13 @@ object AppleMusicProvider {
 
                 Log.d("trying resolve for $targetAlbumId (from $itemType)")
 
+                val artworkObj = attributes["artwork"]?.jsonObject
+                val staticUrl =
+                    artworkObj?.get("url")?.jsonPrimitive?.contentOrNull
+                        ?.replace("{w}", "1000")
+                        ?.replace("{h}", "1000")
+                        ?.replace("{f}", "jpg")
+
                 // Check for immediate motion in search result
                 val ev = attributes["editorialVideo"]?.jsonObject
                 if (ev != null) {
@@ -229,6 +236,7 @@ object AppleMusicProvider {
                             artist = resultArtistName,
                             albumId = targetAlbumId,
                             albumName = resolvedAlbumName,
+                            static = staticUrl,
                             animated = videoUrls.animated,
                             animatedVertical = videoUrls.animatedVertical,
                         )
@@ -246,8 +254,27 @@ object AppleMusicProvider {
                     )
                 if (fetched != null) return@runCatching fetched
             }
-            Log.d("no canvas found in resolution/lookup for $term after ${scoredResults.size} results")
-            null
+            Log.d("no animated canvas found in lookup for $term after ${scoredResults.size} results, checking static fallback")
+            val bestStaticResult =
+                scoredResults.firstNotNullOfOrNull { (_, obj) ->
+                    val attributes = obj["attributes"]?.jsonObject ?: return@firstNotNullOfOrNull null
+                    val artworkObj = attributes["artwork"]?.jsonObject ?: return@firstNotNullOfOrNull null
+                    val staticUrl =
+                        artworkObj["url"]?.jsonPrimitive?.contentOrNull
+                            ?.replace("{w}", "1000")
+                            ?.replace("{h}", "1000")
+                            ?.replace("{f}", "jpg") ?: return@firstNotNullOfOrNull null
+                    val name = attributes["name"]?.jsonPrimitive?.contentOrNull
+                    val artistName = attributes["artistName"]?.jsonPrimitive?.contentOrNull
+                    val collName = attributes["collectionName"]?.jsonPrimitive?.contentOrNull
+                    CanvasArtwork(
+                        name = name,
+                        artist = artistName,
+                        albumName = collName,
+                        static = staticUrl,
+                    )
+                }
+            bestStaticResult
         }.onFailure {
             if (it is CancellationException) throw it
             Log.e(it, "error in searchAndFetchMotion for $term")
@@ -306,6 +333,13 @@ object AppleMusicProvider {
             val finalArtist = artistOverride ?: artistName
 
             val ev = attributes?.get("editorialVideo")?.jsonObject
+            val artworkObj = attributes?.get("artwork")?.jsonObject
+            val staticUrl =
+                artworkObj?.get("url")?.jsonPrimitive?.contentOrNull
+                    ?.replace("{w}", "1000")
+                    ?.replace("{h}", "1000")
+                    ?.replace("{f}", "jpg")
+
             if (ev != null) {
                 val videoUrls = extractEditorialVideoUrls(ev)
                 if (!videoUrls.animated.isNullOrBlank() || !videoUrls.animatedVertical.isNullOrBlank()) {
@@ -315,13 +349,24 @@ object AppleMusicProvider {
                         artist = finalArtist,
                         albumId = albumId,
                         albumName = albumName,
+                        static = staticUrl,
                         animated = videoUrls.animated,
                         animatedVertical = videoUrls.animatedVertical,
                     )
                 }
             }
 
-            Log.d("no editorialVideo for $albumId (available keys: ${attributes?.keys})")
+            if (!staticUrl.isNullOrBlank()) {
+                return@runCatching CanvasArtwork(
+                    name = finalTitle,
+                    artist = finalArtist,
+                    albumId = albumId,
+                    albumName = albumName,
+                    static = staticUrl,
+                )
+            }
+
+            Log.d("no editorialVideo or static artwork for $albumId (available keys: ${attributes?.keys})")
             null
         }.onFailure {
             if (it is CancellationException) throw it
@@ -362,11 +407,14 @@ object AppleMusicProvider {
 
         val artistMatch = resultArtistName.equals(artist, ignoreCase = true)
         val artistFuzzy =
-            resultArtistName.contains(artist, ignoreCase = true) ||
+            artist.isBlank() ||
+                artist.equals("Unknown Artist", ignoreCase = true) ||
+                artist.equals("Cloud Audio", ignoreCase = true) ||
+                resultArtistName.contains(artist, ignoreCase = true) ||
                 artist.contains(resultArtistName, ignoreCase = true)
         if (!artistFuzzy) return null
 
-        var score = if (artistMatch) 10 else 5
+        var score = if (artistMatch) 10 else if (artist.isNotBlank()) 5 else 0
 
         val nameMatch = resultName.equals(term, ignoreCase = true)
         val nameFuzzy = resultName.contains(term, ignoreCase = true) || term.contains(resultName, ignoreCase = true)

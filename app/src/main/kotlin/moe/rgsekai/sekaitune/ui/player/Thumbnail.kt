@@ -558,6 +558,9 @@ fun Thumbnail(
                                         val baseArtworkUrl =
                                             item.metadata?.thumbnailUrl?.highRes()
                                                 ?: item.mediaMetadata.artworkUri?.toString()
+                                                ?: canvasArtwork?.static
+                                                ?: canvasArtwork?.preferredVerticalAnimationUrl
+                                                ?: canvasArtwork?.preferredAnimationUrl
 
                                         val thumbnailSwapState =
                                             rememberThumbnailSwapState(

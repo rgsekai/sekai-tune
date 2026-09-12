@@ -712,7 +712,7 @@ class LocalSongScanner
             unknownTitle: String,
         ): List<LocalTrackRecord> {
             val results = mutableListOf<LocalTrackRecord>()
-            val folderQueue = ArrayDeque<String>()
+            val folderQueue = ArrayDeque<Pair<String, Uri>>()
 
             val rootDocId =
                 runCatching {
@@ -726,18 +726,18 @@ class LocalSongScanner
                 }.getOrNull()
 
             if (rootDocId != null) {
-                folderQueue.add(rootDocId)
+                folderQueue.add(rootDocId to treeUri)
             }
 
             val visitedDocIds = mutableSetOf<String>()
             var queriedViaDirectContract = false
 
             while (folderQueue.isNotEmpty()) {
-                val currentDocId = folderQueue.removeFirst()
+                val (currentDocId, currentTreeUri) = folderQueue.removeFirst()
                 if (!visitedDocIds.add(currentDocId)) continue
 
                 try {
-                    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, currentDocId)
+                    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(currentTreeUri, currentDocId)
                     val projection =
                         arrayOf(
                             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -765,10 +765,14 @@ class LocalSongScanner
                             if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
                                 val folderName = displayName.lowercase(Locale.ROOT)
                                 if (!shouldExcludeFolder(folderName, sanitizedExcludedFolders)) {
-                                    folderQueue.add(docId)
+                                    val subTreeUri =
+                                        runCatching {
+                                            DocumentsContract.buildTreeDocumentUri(treeUri.authority, docId)
+                                        }.getOrNull() ?: currentTreeUri
+                                    folderQueue.add(docId to subTreeUri)
                                 }
                             } else if (SupportedLocalAudio.isSupported(displayName, mimeType) || mimeType.startsWith("audio/")) {
-                                val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                                val docUri = DocumentsContract.buildDocumentUriUsingTree(currentTreeUri, docId)
                                 results +=
                                     extractFastCloudTrackRecord(
                                         docUri = docUri,
@@ -784,7 +788,7 @@ class LocalSongScanner
                     }
                 } catch (error: Throwable) {
                     if (error is CancellationException) throw error
-                    Timber.tag(LogTag).w(error, "Failed to query child documents for docId: %s in tree: %s", currentDocId, treeUri)
+                    Timber.tag(LogTag).w(error, "Failed to query child documents for docId: %s in tree: %s", currentDocId, currentTreeUri)
                 }
             }
 
@@ -907,15 +911,25 @@ class LocalSongScanner
             )
         }
 
+        private fun cleanFilenameTags(text: String): String =
+            text
+                .replace(Regex("""(?i)\s*\((?:mp3|flac|wav|m4a|aac|opus|ogg|320k|320kbps|128k|128kbps|256k|256kbps|audio|official|video|mv|lyrics?|visualizer|remaster(?:ed)?|version|edit|mix|remix|hq|hd|yt|youtube|spotify-downloader\.com)\b[^)]*\)"""), "")
+                .replace(Regex("""(?i)\s*\[(?:mp3|flac|wav|m4a|aac|opus|ogg|320k|320kbps|128k|128kbps|256k|256kbps|audio|official|video|mv|lyrics?|visualizer|remaster(?:ed)?|version|edit|mix|remix|hq|hd|yt|youtube|spotify-downloader\.com)\b[^]]*\]"""), "")
+                .replace(Regex("""(?i)\s*-\s*(?:mp3|flac|wav|320k|320kbps|audio|official|video|mv|lyrics?|visualizer|remaster(?:ed)?|version|edit|mix|remix|hq|hd)\b.*$"""), "")
+                .replace('_', ' ')
+                .replace(Regex("""\s+"""), " ")
+                .trim('-', '_', ' ')
+
         private fun parseArtistAndTitleFromFilename(rawName: String): Triple<String?, String?, String?> {
             val strippedNumber = rawName.replace(Regex("""^\d+[\s.\-_]+"""), "").trim()
             val target = strippedNumber.ifBlank { rawName }
 
-            val parts = target.split(Regex("""\s+[-–—]\s+""")).map(String::trim).filter(String::isNotBlank)
+            val cleaned = cleanFilenameTags(target)
+            val parts = cleaned.split(Regex("""\s*[-–—]\s*""")).map(String::trim).filter(String::isNotBlank)
             return when {
-                parts.size >= 3 -> Triple(parts[0], parts[1], parts.drop(2).joinToString(" - "))
-                parts.size == 2 -> Triple(parts[0], null, parts[1])
-                else -> Triple(null, null, target)
+                parts.size >= 3 -> Triple(cleanFilenameTags(parts[0]), cleanFilenameTags(parts[1]), cleanFilenameTags(parts.drop(2).joinToString(" - ")))
+                parts.size == 2 -> Triple(cleanFilenameTags(parts[0]), null, cleanFilenameTags(parts[1]))
+                else -> Triple(null, null, cleaned.ifBlank { target })
             }
         }
 
@@ -997,12 +1011,82 @@ class LocalSongScanner
             val artistIds: List<String>,
         )
 
-        private companion object {
-            val AlbumArtUri: Uri = Uri.parse("content://media/external/audio/albumart")
-            val ArtistSeparators = Regex("[,;/&]")
+        companion object {
             const val LocalArtworkDirectoryName = "local_music_artwork"
             const val LogTag = "LocalSongScanner"
+            val AlbumArtUri: Uri = Uri.parse("content://media/external/audio/albumart")
+            val ArtistSeparators = Regex("[,;/&]")
             const val SqlBatchSize = 900
+
+            fun extractArtworkForUri(
+                context: Context,
+                contentUri: Uri,
+            ): String? {
+                val retriever = MediaMetadataRetriever()
+                return try {
+                    retriever.setDataSource(context, contentUri)
+                    val artworkBytes = retriever.embeddedPicture ?: return null
+                    val extension = artworkBytes.imageExtension() ?: "jpg"
+                    val fileName = "${stableHash(contentUri.toString())}.$extension"
+                    val artworkDirectory = File(context.filesDir, LocalArtworkDirectoryName)
+                    val artworkFile = File(artworkDirectory, fileName)
+                    if (!artworkFile.exists() || artworkFile.length() != artworkBytes.size.toLong()) {
+                        artworkDirectory.mkdirs()
+                        FileOutputStream(artworkFile).use { outputStream ->
+                            outputStream.write(artworkBytes)
+                        }
+                    }
+                    FileProvider
+                        .getUriForFile(
+                            context,
+                            "${context.packageName}.FileProvider",
+                            artworkFile,
+                        ).toString()
+                } catch (error: Throwable) {
+                    if (error is CancellationException) throw error
+                    Timber.tag(LogTag).w(error, "Failed to extract embedded artwork for %s", contentUri)
+                    null
+                } finally {
+                    runCatching { retriever.release() }
+                        .onFailure { error -> Timber.tag(LogTag).w(error, "Failed to release artwork retriever") }
+                }
+            }
+
+            private fun stableHash(source: String): String =
+                UUID
+                    .nameUUIDFromBytes(source.toByteArray(StandardCharsets.UTF_8))
+                    .toString()
+                    .replace("-", "")
+
+            private fun ByteArray.imageExtension(): String? =
+                when {
+                    size >= 3 &&
+                        this[0] == 0xFF.toByte() &&
+                        this[1] == 0xD8.toByte() &&
+                        this[2] == 0xFF.toByte() -> "jpg"
+
+                    size >= 8 &&
+                        this[0] == 0x89.toByte() &&
+                        this[1] == 0x50.toByte() &&
+                        this[2] == 0x4E.toByte() &&
+                        this[3] == 0x47.toByte() &&
+                        this[4] == 0x0D.toByte() &&
+                        this[5] == 0x0A.toByte() &&
+                        this[6] == 0x1A.toByte() &&
+                        this[7] == 0x0A.toByte() -> "png"
+
+                    size >= 12 &&
+                        this[0] == 0x52.toByte() &&
+                        this[1] == 0x49.toByte() &&
+                        this[2] == 0x46.toByte() &&
+                        this[3] == 0x46.toByte() &&
+                        this[8] == 0x57.toByte() &&
+                        this[9] == 0x45.toByte() &&
+                        this[10] == 0x42.toByte() &&
+                        this[11] == 0x50.toByte() -> "webp"
+
+                    else -> null
+                }
         }
     }
 

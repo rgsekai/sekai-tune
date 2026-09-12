@@ -38,6 +38,7 @@ import android.media.audiofx.LoudnessEnhancer
 import android.media.audiofx.Virtualizer
 import android.net.ConnectivityManager
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -215,6 +216,7 @@ import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint
 import moe.rgsekai.sekaitune.innertube.models.response.PlayerResponse
 import moe.rgsekai.sekaitune.lastfm.LastFM
+import moe.rgsekai.sekaitune.localmedia.LocalSongScanner
 import moe.rgsekai.sekaitune.lyrics.LyricsHelper
 import moe.rgsekai.sekaitune.lyrics.LyricsPreloadManager
 import moe.rgsekai.sekaitune.models.MediaMetadata
@@ -233,6 +235,7 @@ import moe.rgsekai.sekaitune.scrobbling.LastFmServiceConfig
 import moe.rgsekai.sekaitune.storage.StorageFolderKind
 import moe.rgsekai.sekaitune.storage.StorageLocationRepository
 import moe.rgsekai.sekaitune.together.TogetherPlaybackSync
+import moe.rgsekai.sekaitune.ui.player.resolveCanvasArtworkForPlayback
 import moe.rgsekai.sekaitune.ui.screens.settings.DiscordPresenceManager
 import moe.rgsekai.sekaitune.ui.screens.settings.ListenBrainzManager
 import moe.rgsekai.sekaitune.utils.AuthScopedCacheValue
@@ -6226,6 +6229,44 @@ class MusicService :
 
         widgetUpdater.update()
 
+        val trackId = mediaItem?.mediaId?.trim().orEmpty()
+        val currentMeta = currentMediaMetadata.value
+        if (!timelineEmpty && trackId.isNotBlank() && trackId.isLocalMediaId() && (currentMeta == null || currentMeta.thumbnailUrl.isNullOrBlank())) {
+            scope.launch(Dispatchers.IO + SilentHandler) {
+                val localUri = runCatching { Uri.parse(trackId) }.getOrNull() ?: return@launch
+                var resolvedThumbUrl: String? =
+                    LocalSongScanner.extractArtworkForUri(this@MusicService, localUri)
+
+                if (resolvedThumbUrl.isNullOrBlank()) {
+                    val title = mediaItem?.mediaMetadata?.title?.toString().orEmpty()
+                    val artist = mediaItem?.mediaMetadata?.artist?.toString().orEmpty()
+                    val albumTitle = mediaItem?.mediaMetadata?.albumTitle?.toString()
+                    val canvas =
+                        resolveCanvasArtworkForPlayback(
+                            mediaId = trackId,
+                            songTitleRaw = title,
+                            artistNameRaw = artist,
+                            albumTitleRaw = albumTitle,
+                            storefront = "us",
+                            requireVertical = false,
+                            allowNetwork = true,
+                        )
+                    resolvedThumbUrl = canvas?.static ?: canvas?.preferredAnimationUrl ?: canvas?.preferredVerticalAnimationUrl
+                }
+
+                if (!resolvedThumbUrl.isNullOrBlank()) {
+                    val existing = database.song(trackId).first()?.song
+                    if (existing != null && existing.thumbnailUrl == null) {
+                        database.update(existing.copy(thumbnailUrl = resolvedThumbUrl))
+                    }
+                    if (player.currentMediaItem?.mediaId == trackId) {
+                        currentMediaMetadata.value = currentMediaMetadata.value?.copy(thumbnailUrl = resolvedThumbUrl)
+                        widgetUpdater.update()
+                    }
+                }
+            }
+        }
+
         scrobbleManager?.onSongStop()
 
         if (!timelineEmpty &&
@@ -6950,6 +6991,7 @@ class MusicService :
 
         return DataSource.Factory {
             SchemeRoutingDataSource(
+                context = this@MusicService,
                 cachedFactory = cachedFactory,
                 directFactory = directFactory,
             )
@@ -7471,6 +7513,7 @@ class MusicService :
         )
 
     private class SchemeRoutingDataSource(
+        private val context: Context,
         private val cachedFactory: DataSource.Factory,
         private val directFactory: DataSource.Factory,
     ) : DataSource {
@@ -7484,20 +7527,95 @@ class MusicService :
 
         override fun open(dataSpec: DataSpec): Long {
             val normalizedScheme = dataSpec.uri.scheme?.lowercase(Locale.US)
-            val selectedFactory =
-                if (
-                    normalizedScheme == "content" ||
+            val isLocalContent =
+                normalizedScheme == "content" ||
                     normalizedScheme == "file" ||
                     normalizedScheme == "android.resource"
-                ) {
-                    directFactory
+            val selectedFactory = if (isLocalContent) directFactory else cachedFactory
+
+            val candidateDataSpecs =
+                if (isLocalContent && normalizedScheme == "content") {
+                    resolveContentUriCandidates(dataSpec)
                 } else {
-                    cachedFactory
+                    listOf(dataSpec)
                 }
-            val selectedDataSource = selectedFactory.createDataSource()
-            transferListeners.forEach(selectedDataSource::addTransferListener)
-            delegate = selectedDataSource
-            return selectedDataSource.open(dataSpec)
+
+            var lastException: Exception? = null
+            for (candidate in candidateDataSpecs) {
+                val selectedDataSource = selectedFactory.createDataSource()
+                transferListeners.forEach(selectedDataSource::addTransferListener)
+                try {
+                    val openResult = selectedDataSource.open(candidate)
+                    delegate = selectedDataSource
+                    return openResult
+                } catch (e: Exception) {
+                    lastException = e
+                    runCatching { selectedDataSource.close() }
+                    if (!isSecurityOrDescendantError(e)) {
+                        throw e
+                    }
+                    Timber.tag("MusicService").w(e, "Security/descendant error on candidate URI %s, trying next candidate...", candidate.uri)
+                }
+            }
+
+            throw lastException ?: IOException("Failed to open data source for ${dataSpec.uri}")
+        }
+
+        private fun isSecurityOrDescendantError(throwable: Throwable?): Boolean {
+            var current: Throwable? = throwable
+            while (current != null) {
+                if (current is SecurityException) return true
+                val msg = current.message
+                if (msg != null && (msg.contains("descendant", ignoreCase = true) || msg.contains("permission", ignoreCase = true))) {
+                    return true
+                }
+                current = current.cause
+            }
+            return false
+        }
+
+        private fun resolveContentUriCandidates(dataSpec: DataSpec): List<DataSpec> {
+            val originalUri = dataSpec.uri
+            val candidates = mutableListOf<DataSpec>()
+            candidates += dataSpec
+
+            val authority = originalUri.authority ?: return candidates
+            val docId =
+                runCatching {
+                    if (DocumentsContract.isDocumentUri(context, originalUri) || DocumentsContract.isTreeUri(originalUri)) {
+                        DocumentsContract.getDocumentId(originalUri)
+                    } else {
+                        null
+                    }
+                }.getOrNull()
+
+            if (docId != null) {
+                // 1. Direct document URI candidate
+                val directDocUri = runCatching { DocumentsContract.buildDocumentUri(authority, docId) }.getOrNull()
+                if (directDocUri != null && directDocUri != originalUri) {
+                    candidates += dataSpec.buildUpon().setUri(directDocUri).build()
+                }
+
+                // 2. Tree URI candidate with self docId
+                val selfTreeUri = runCatching { DocumentsContract.buildDocumentUriUsingTree(DocumentsContract.buildTreeDocumentUri(authority, docId), docId) }.getOrNull()
+                if (selfTreeUri != null && selfTreeUri != originalUri && !candidates.any { it.uri == selfTreeUri }) {
+                    candidates += dataSpec.buildUpon().setUri(selfTreeUri).build()
+                }
+
+                // 3. Persisted permissions candidate trees
+                runCatching {
+                    val persisted = context.contentResolver.persistedUriPermissions
+                    for (perm in persisted) {
+                        if (!perm.isReadPermission || perm.uri.authority != authority) continue
+                        val candidateTreeUri = runCatching { DocumentsContract.buildDocumentUriUsingTree(perm.uri, docId) }.getOrNull()
+                        if (candidateTreeUri != null && candidateTreeUri != originalUri && !candidates.any { it.uri == candidateTreeUri }) {
+                            candidates += dataSpec.buildUpon().setUri(candidateTreeUri).build()
+                        }
+                    }
+                }
+            }
+
+            return candidates
         }
 
         override fun read(

@@ -25,7 +25,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 object SekaiTuneCanvas {
-    private const val BASE_URL = "https://artwork-SekaiTune.koiiverse.cloud/"
+    private const val BASE_URL = "https://artwork-sekaitune.koiiverse.cloud/"
     private const val FALLBACK_URL = "https://artwork.boidu.dev/"
 
     @Volatile
