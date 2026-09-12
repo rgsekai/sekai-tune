@@ -1,13 +1,13 @@
-<?xml version='1.0' encoding='utf-8'?>
+﻿<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="songs">பாட்டுகள்</string>
-    <string name="artists">கலைஞர்கள்</string>
-    <string name="albums">இசைத் தொகுப்பு</string>
-    <string name="history">கேட்ட பாடல்கள்</string>
-    <string name="today">இன்று</string>
-    <string name="yesterday">நேற்று</string>
-    <string name="this_week">இந்த வாரம்</string>
-    <string name="last_week">கடந்த வாரம்</string>
-    <string name="most_played_songs">அதிகம் கேட்கப்பட்ட பாடல்கள்</string>
-    <string name="search">தேடு</string>
+    <string name="songs">à®ªà®¾à®Ÿà¯à®Ÿà¯à®•à®³à¯</string>
+    <string name="artists">à®•à®²à¯ˆà®žà®°à¯à®•à®³à¯</string>
+    <string name="albums">à®‡à®šà¯ˆà®¤à¯ à®¤à¯Šà®•à¯à®ªà¯à®ªà¯</string>
+    <string name="history">à®•à¯‡à®Ÿà¯à®Ÿ à®ªà®¾à®Ÿà®²à¯à®•à®³à¯</string>
+    <string name="today">à®‡à®©à¯à®±à¯</string>
+    <string name="yesterday">à®¨à¯‡à®±à¯à®±à¯</string>
+    <string name="this_week">à®‡à®¨à¯à®¤ à®µà®¾à®°à®®à¯</string>
+    <string name="last_week">à®•à®Ÿà®¨à¯à®¤ à®µà®¾à®°à®®à¯</string>
+    <string name="most_played_songs">à®…à®¤à®¿à®•à®®à¯ à®•à¯‡à®Ÿà¯à®•à®ªà¯à®ªà®Ÿà¯à®Ÿ à®ªà®¾à®Ÿà®²à¯à®•à®³à¯</string>
+    <string name="search">à®¤à¯‡à®Ÿà¯</string>
 </resources>

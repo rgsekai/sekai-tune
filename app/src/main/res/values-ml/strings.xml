@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="album_backdrop">പശ്ചാത്തല മങ്ങൽ</string>
-    <string name="album_backdrop_desc">പ്ലെയറിൽ ആർട്ട്വർക്ക് മങ്ങിയ പശ്ചാത്തലമായി കാണിക്കുക</string>
-    <string name="backdrop_blur_amount">പശ്ചാത്തല മങ്ങലിന്റെ അളവ്</string>
+    <string name="album_backdrop">à´ªà´¶àµà´šà´¾à´¤àµà´¤à´² à´®à´™àµà´™àµ½</string>
+    <string name="album_backdrop_desc">à´ªàµà´²àµ†à´¯à´±à´¿àµ½ à´†àµ¼à´Ÿàµà´Ÿàµà´µàµ¼à´•àµà´•àµ à´®à´™àµà´™à´¿à´¯ à´ªà´¶àµà´šà´¾à´¤àµà´¤à´²à´®à´¾à´¯à´¿ à´•à´¾à´£à´¿à´•àµà´•àµà´•</string>
+    <string name="backdrop_blur_amount">à´ªà´¶àµà´šà´¾à´¤àµà´¤à´² à´®à´™àµà´™à´²à´¿à´¨àµà´±àµ† à´…à´³à´µàµ</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
 </resources>

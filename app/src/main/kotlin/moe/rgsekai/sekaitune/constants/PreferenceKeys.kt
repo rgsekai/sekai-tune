@@ -304,47 +304,6 @@ val PauseListenHistoryKey = booleanPreferencesKey("pauseListenHistory")
 val PauseSearchHistoryKey = booleanPreferencesKey("pauseSearchHistory")
 val DisableScreenshotKey = booleanPreferencesKey("disableScreenshot")
 
-val DiscordTokenKey = stringPreferencesKey("discordToken")
-val DiscordRefreshTokenKey = stringPreferencesKey("discordRefreshToken")
-val DiscordTokenExpiresAtKey = longPreferencesKey("discordTokenExpiresAt")
-val DiscordInfoDismissedKey = booleanPreferencesKey("discordInfoDismissed")
-val DiscordUsernameKey = stringPreferencesKey("discordUsername")
-val DiscordNameKey = stringPreferencesKey("discordName")
-val DiscordAvatarUrlKey = stringPreferencesKey("discordAvatarUrl")
-val EnableDiscordRPCKey = booleanPreferencesKey("discordRPCEnable")
-
-// Discord activity customization keys
-val DiscordActivityNameKey = stringPreferencesKey("discordActivityName")
-val DiscordActivityDetailsKey = stringPreferencesKey("discordActivityDetails")
-val DiscordActivityStateKey = stringPreferencesKey("discordActivityState")
-
-// Custom button labels and urls for Discord activity buttons
-val DiscordActivityButton1LabelKey = stringPreferencesKey("discordActivityButton1Label")
-val DiscordActivityButton1UrlSourceKey = stringPreferencesKey("discordActivityButton1UrlSource")
-val DiscordActivityButton1CustomUrlKey = stringPreferencesKey("discordActivityButton1CustomUrl")
-val DiscordActivityButton2LabelKey = stringPreferencesKey("discordActivityButton2Label")
-val DiscordActivityButton2UrlSourceKey = stringPreferencesKey("discordActivityButton2UrlSource")
-val DiscordActivityButton2CustomUrlKey = stringPreferencesKey("discordActivityButton2CustomUrl")
-val DiscordActivityButton1EnabledKey = booleanPreferencesKey("discordActivityButton1Enabled")
-val DiscordActivityButton2EnabledKey = booleanPreferencesKey("discordActivityButton2Enabled")
-val DiscordShowWhenPausedKey = booleanPreferencesKey("discordShowWhenPaused")
-
-// Activity type for Discord presence (PLAYING, STREAMING, LISTENING, WATCHING, COMPETING)
-val DiscordActivityTypeKey = stringPreferencesKey("discordActivityType")
-val DiscordPresenceStatusKey = stringPreferencesKey("discordPresenceStatus") // "ONLINE", "IDLE", "DND", "INVISIBLE"
-
-// Discord image selection keys
-// Values for type keys: "thumbnail", "artist", "appicon", "custom"
-val DiscordLargeImageTypeKey = stringPreferencesKey("discordLargeImageType")
-val DiscordLargeTextSourceKey = stringPreferencesKey("discordLargeTextSource")
-val DiscordLargeTextCustomKey = stringPreferencesKey("discordLargeTextCustom")
-val DiscordLargeImageCustomUrlKey = stringPreferencesKey("discordLargeImageCustomUrl")
-val DiscordSmallImageTypeKey = stringPreferencesKey("discordSmallImageType")
-val DiscordSmallImageCustomUrlKey = stringPreferencesKey("discordSmallImageCustomUrl")
-
-// Activity platform (discord client platform) selection
-val DiscordActivityPlatformKey = stringPreferencesKey("discordActivityPlatform")
-
 val TranslatorContextsKey = stringPreferencesKey("translatorContexts")
 val TranslatorTargetLangKey = stringPreferencesKey("translatorTargetLang")
 val EnableTranslatorKey = booleanPreferencesKey("enableTranslator")

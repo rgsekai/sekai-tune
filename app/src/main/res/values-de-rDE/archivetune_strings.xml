@@ -223,7 +223,7 @@
     <string name="history_no_results_title">Keine Treffenden Songs</string>
     <string name="scanning_device">Durchsuche Gerät…</string>
     <string name="settings_internet_subtitle">Proxy-, DNS- und Netzwerkwiedergabeverhalten</string>
-    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, Discord &amp; Proxy-Anmeldedaten</string>
+    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, Proxy-Anmeldedaten</string>
     <string name="history_remote_empty_desc">Dein Syncronisierter Hörverlauf wird hier erscheinen, nachdem du es auf YouTube Music angehört hast.</string>
     <string name="local_songs_ready_desc">Spiele lokale Songs von diesem Gerät.</string>
     <string name="local_songs_permission_body">Speicherzugriff zulassen, um Audiodateien auf diesem Gerät abzurufen.</string>
@@ -342,7 +342,7 @@
     <string name="settings_playback_subtitle">Audioverhalten, Überblendung und Wiedergabe im Hintergrund</string>
     <string name="settings_behavior_title">Verhalten</string>
     <string name="settings_behavior_subtitle">Verlauf, Standardeinstellungen und Datenschutzverhalten</string>
-    <string name="settings_integration_subtitle">Discord, Last.fm, und ListenBrainz</string>
+    <string name="settings_integration_subtitle">Last.fm, und ListenBrainz</string>
     <string name="settings_backup_restore_subtitle">Exportieren und wiederherstellenpersönlicher App-Daten</string>
     <string name="settings_developer_options_title">Entwickleroptionen</string>
     <string name="settings_developer_options_subtitle">Experimentelle Funktionen und Fehlerbehebung</string>

@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="album_backdrop">पृष्ठभूमिधुंधलापन</string>
-    <string name="album_backdrop_desc">प्लेयरे कलाकृतिं धुंधलीपृष्ठभूमिरूपेण दर्शयतु</string>
-    <string name="backdrop_blur_amount">पृष्ठभूमिधुंधलापनमात्रा</string>
+    <string name="album_backdrop">à¤ªà¥ƒà¤·à¥à¤ à¤­à¥‚à¤®à¤¿à¤§à¥à¤‚à¤§à¤²à¤¾à¤ªà¤¨</string>
+    <string name="album_backdrop_desc">à¤ªà¥à¤²à¥‡à¤¯à¤°à¥‡ à¤•à¤²à¤¾à¤•à¥ƒà¤¤à¤¿à¤‚ à¤§à¥à¤‚à¤§à¤²à¥€à¤ªà¥ƒà¤·à¥à¤ à¤­à¥‚à¤®à¤¿à¤°à¥‚à¤ªà¥‡à¤£ à¤¦à¤°à¥à¤¶à¤¯à¤¤à¥</string>
+    <string name="backdrop_blur_amount">à¤ªà¥ƒà¤·à¥à¤ à¤­à¥‚à¤®à¤¿à¤§à¥à¤‚à¤§à¤²à¤¾à¤ªà¤¨à¤®à¤¾à¤¤à¥à¤°à¤¾</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
 </resources>

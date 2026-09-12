@@ -403,7 +403,7 @@
     <string name="settings_playback_subtitle">音声動作、クロスフェード、バックグラウンド再生</string>
     <string name="settings_behavior_title">動作</string>
     <string name="settings_behavior_subtitle">履歴、デフォルト、プライバシー動作</string>
-    <string name="settings_integration_subtitle">Discord、Last.fm、Libre.fm、ListenBrainz</string>
+    <string name="settings_integration_subtitle">Last.fm、Libre.fm、ListenBrainz</string>
     <string name="settings_backup_restore_subtitle">個人のアプリデータをエクスポート・復元</string>
     <string name="settings_developer_options_title">開発者オプション</string>
     <string name="settings_developer_options_subtitle">実験的機能とデバッグ</string>
@@ -499,7 +499,7 @@
     <string name="backup_category_settings">アプリ設定</string>
     <string name="backup_category_settings_desc">外観、再生、環境設定</string>
     <string name="backup_category_account">アカウント詳細</string>
-    <string name="backup_category_account_desc">YouTube、Spotify、Last.fm、Libre.fm、Discord、プロキシ認証情報</string>
+    <string name="backup_category_account_desc">YouTube、Spotify、Last.fm、Libre.fm、プロキシ認証情報</string>
     <string name="internal_service">内部サービス</string>
     <string name="external_service">外部サービス</string>
     <string name="restore_invalid_file">選択したファイルは有効なバックアップアーカイブではない。</string>

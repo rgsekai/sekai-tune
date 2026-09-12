@@ -306,7 +306,7 @@
     <string name="backup_category_settings">Paramètres de l\'application</string>
     <string name="backup_category_settings_desc">Apparence, lecture &amp; préférences</string>
     <string name="backup_category_account">Détails du compte</string>
-    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, Libre.fm, Discord et identifiants de proxy</string>
+    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, Libre.fm, identifiants de proxy</string>
     <string name="aod_customize_thumbnail_size">Taille des miniatures</string>
     <string name="aod_control_filled">Rempli</string>
     <string name="music_recognition_history">Historique de reconnaissance</string>
@@ -494,7 +494,7 @@
     <string name="settings_updates_subtitle">Version, notes de version et canal de mise à jour</string>
     <string name="storage_migration_warning">Avertissement : Ne fermez pas l\'application et n\'éteignez pas votre appareil pendant cette opération. Cela pourrait entraîner une perte de données.</string>
     <string name="aod_customize_title_max_lines">Nombre maximal de lignes pour le titre</string>
-    <string name="settings_integration_subtitle">Discord, Last.fm, Libre.fm et ListenBrainz</string>
+    <string name="settings_integration_subtitle">Last.fm, Libre.fm et ListenBrainz</string>
     <string name="aod_alignment_start">Début</string>
     <string name="aod_shape_pixel_circle">Cercle de pixels</string>
     <string name="year_in_music_empty_subtitle">Écoutez davantage de musique pendant %d et votre récapitulatif s\'affichera ici.</string>

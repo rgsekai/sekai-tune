@@ -57,7 +57,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.ChiperSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.ContentSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.CustomizeBackground
 import moe.rgsekai.sekaitune.ui.screens.settings.DebugSettings
-import moe.rgsekai.sekaitune.ui.screens.settings.DiscordSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.HiddenPlaylistsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IconScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IntegrationScreen
@@ -393,9 +392,6 @@ fun NavGraphBuilder.navigationBuilder(
     composable("settings/backup_restore") {
         BackupAndRestore(navController)
     }
-    composable("settings/discord") {
-        DiscordSettings(navController)
-    }
     composable("settings/integration") {
         IntegrationScreen(navController)
     }
@@ -407,10 +403,6 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/lastfm") {
         LastFMSettings(navController)
-    }
-    composable("settings/discord/experimental") {
-        moe.rgsekai.sekaitune.ui.screens.settings
-            .DiscordExperimental(navController)
     }
     composable("settings/misc") {
         DebugSettings(navController)

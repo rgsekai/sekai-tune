@@ -306,7 +306,7 @@
     <string name="backup_category_settings">Configuración de la aplicación</string>
     <string name="backup_category_settings_desc">Apariencia, reproducción y preferencias</string>
     <string name="backup_category_account">Detalles de la cuenta</string>
-    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, Libre.fm, Discord y credenciales de proxy</string>
+    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, Libre.fm, credenciales de proxy</string>
     <string name="news">Noticias de los desarrolladores</string>
     <string name="news_loading">Cargando noticias…</string>
     <string name="news_empty_title">Aquí aún no hay nada</string>
@@ -358,7 +358,7 @@
     <string name="settings_playback_subtitle">Comportamiento del audio, fundido cruzado y reproducción en segundo plano</string>
     <string name="settings_behavior_title">Comportamiento</string>
     <string name="settings_behavior_subtitle">Historial, ajustes predeterminados y configuración de privacidad</string>
-    <string name="settings_integration_subtitle">Discord, Last.fm, Libre.fm, y ListenBrainz</string>
+    <string name="settings_integration_subtitle">Last.fm, Libre.fm, y ListenBrainz</string>
     <string name="settings_backup_restore_subtitle">Exporta y recupera los datos de tus aplicaciones personales</string>
     <string name="settings_developer_options_title">Opciones de desarrollador</string>
     <string name="settings_developer_options_subtitle">Funciones experimentales y depuración</string>

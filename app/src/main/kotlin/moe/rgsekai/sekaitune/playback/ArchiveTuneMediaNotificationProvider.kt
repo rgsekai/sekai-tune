@@ -40,32 +40,13 @@ class SekaiTuneMediaNotificationProvider(
         mediaButtonPreferences: ImmutableList<CommandButton>,
         actionFactory: MediaNotification.ActionFactory,
         onNotificationChangedCallback: MediaNotification.Provider.Callback,
-    ): MediaNotification {
-        val mediaNotification =
-            delegate.createNotification(
-                mediaSession,
-                mediaButtonPreferences,
-                actionFactory,
-                onNotificationChangedCallback,
-            )
-
-        val originalDeleteIntent = mediaNotification.notification.deleteIntent ?: return mediaNotification
-        mediaNotification.notification.deleteIntent =
-            PendingIntent.getService(
-                context,
-                mediaNotification.notificationId,
-                Intent(context, MusicService::class.java).apply {
-                    action = MusicService.ACTION_MEDIA_NOTIFICATION_DISMISSED
-                    putExtra(
-                        MusicService.EXTRA_MEDIA_NOTIFICATION_DELETE_INTENT,
-                        originalDeleteIntent,
-                    )
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-
-        return mediaNotification
-    }
+    ): MediaNotification =
+        delegate.createNotification(
+            mediaSession,
+            mediaButtonPreferences,
+            actionFactory,
+            onNotificationChangedCallback,
+        )
 
     override fun handleCustomCommand(
         session: MediaSession,

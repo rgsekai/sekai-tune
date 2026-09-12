@@ -515,8 +515,6 @@ fun Thumbnail(
                                                         )
                                                         seekDirection = context.getString(R.string.seek_forward_dynamic, skipAmount / 1000)
                                                     }
-                                                    // If a user double-tap skip lands on a new media item, force a centralized Discord sync
-                                                    playerConnection.service.forceDiscordSync("thumbnail_double_tap_skip")
 
                                                     showSeekEffect = true
                                                 },

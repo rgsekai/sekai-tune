@@ -273,7 +273,7 @@
     <string name="settings_playback_subtitle">오디오 동작, 크로스페이드 및 백그라운드 재생 설정</string>
     <string name="settings_behavior_title">동작</string>
     <string name="settings_behavior_subtitle">감상 기록, 기본값 및 개인정보 동작 설정</string>
-    <string name="settings_integration_subtitle">Discord, Last.fm 및 ListenBrainz 연동 설정</string>
+    <string name="settings_integration_subtitle">Last.fm 및 ListenBrainz 연동 설정</string>
     <string name="settings_backup_restore_subtitle">앱 개인 데이터 백업 및 복구</string>
     <string name="settings_developer_options_title">개발자 옵션</string>
     <string name="settings_developer_options_subtitle">실험적인 기능 활성화 및 디버깅 툴 제공</string>
@@ -345,7 +345,7 @@
     <string name="backup_category_settings">앱 설정</string>
     <string name="backup_category_settings_desc">테마, 재생 옵션 및 기본 설정</string>
     <string name="backup_category_account">계정 정보</string>
-    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, Discord 및 프록시 자격 증명</string>
+    <string name="backup_category_account_desc">YouTube, Spotify, Last.fm, 및 프록시 자격 증명</string>
     <string name="login_success">로그인에 성공했습니다.</string>
     <string name="ai_integration">AI 연동</string>
     <string name="ai_integration_desc">AI 가사 번역 및 사용자 지정을 구성합니다.</string>
