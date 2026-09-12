@@ -178,6 +178,8 @@ import moe.rgsekai.sekaitune.constants.RepeatModeKey
 import moe.rgsekai.sekaitune.constants.ScrobbleDelayPercentKey
 import moe.rgsekai.sekaitune.constants.ScrobbleDelaySecondsKey
 import moe.rgsekai.sekaitune.constants.ScrobbleMinSongDurationKey
+import moe.rgsekai.sekaitune.models.QueueFilter
+import moe.rgsekai.sekaitune.playback.queues.QueueFilterProvider
 import moe.rgsekai.sekaitune.constants.ShowLyricsKey
 import moe.rgsekai.sekaitune.constants.SkipSilenceKey
 import moe.rgsekai.sekaitune.constants.SmartTrimmerKey
@@ -240,6 +242,7 @@ import moe.rgsekai.sekaitune.utils.NetworkConnectivityObserver
 import moe.rgsekai.sekaitune.utils.StreamClientUtils
 import moe.rgsekai.sekaitune.utils.SyncUtils
 import moe.rgsekai.sekaitune.utils.YTPlayerUtils
+import moe.rgsekai.sekaitune.utils.PreferenceStore
 import moe.rgsekai.sekaitune.utils.dataStore
 import moe.rgsekai.sekaitune.utils.enumPreference
 import moe.rgsekai.sekaitune.utils.get
@@ -480,6 +483,7 @@ class MusicService :
     val currentMediaMetadata = MutableStateFlow<moe.rgsekai.sekaitune.models.MediaMetadata?>(null)
     val queueRestoreCompleted = MutableStateFlow(false)
     val infiniteQueueLoading = MutableStateFlow(false)
+    val currentQueueFilter = MutableStateFlow(QueueFilter.ALL)
     private val playerInitialized = MutableStateFlow(false)
     private val currentSong =
         currentMediaMetadata
@@ -3773,7 +3777,6 @@ class MusicService :
         if (isCurrentPlaybackItemLocal(currentMeta)) return
         if (infiniteQueueJob?.isActive == true) return
 
-        val seedMediaId = currentMeta.id.trim().ifBlank { return }
         val generation = ++infiniteQueueGeneration
         infiniteQueueLoading.value = true
 
@@ -3782,18 +3785,21 @@ class MusicService :
                 try {
                     val hideExplicit = dataStore.get(HideExplicitKey, false)
                     val hideVideo = dataStore.get(HideVideoKey, false)
-                    val radioQueue = YouTubeQueue(WatchEndpoint(videoId = seedMediaId), followAutomixPreview = true)
-                    val status =
-                        withContext(Dispatchers.IO) {
-                            radioQueue
-                                .getInitialStatus()
-                                .filterExplicit(hideExplicit)
-                                .filterVideo(hideVideo)
-                        }
+                    val filter = currentQueueFilter.value
+
+                    val (filteredItems, radioQueue) =
+                        QueueFilterProvider.fetchFilteredQueue(
+                            seedSong = currentMeta,
+                            filter = filter,
+                            database = database,
+                            hideExplicit = hideExplicit,
+                            hideVideo = hideVideo,
+                        )
+
                     val knownIds =
                         (0 until player.mediaItemCount)
                             .mapTo(mutableSetOf()) { player.getMediaItemAt(it).mediaId }
-                    val newItems = status.items.filter { knownIds.add(it.mediaId) }.toMutableList()
+                    val newItems = filteredItems.filter { knownIds.add(it.mediaId) }.toMutableList()
                     var loadedPageCount = 1
 
                     while (
@@ -3831,6 +3837,75 @@ class MusicService :
                     throw e
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to bootstrap auto-queue")
+                } finally {
+                    if (generation == infiniteQueueGeneration) {
+                        infiniteQueueJob = null
+                        infiniteQueueLoading.value = false
+                    }
+                }
+            }
+    }
+
+    fun setQueueFilter(filter: QueueFilter) {
+        currentQueueFilter.value = filter
+        val currentMeta = player.currentMetadata ?: return
+        if (isCurrentPlaybackItemLocal(currentMeta)) return
+
+        cancelInfiniteQueueBootstrap()
+        val currentIndex = player.currentMediaItemIndex
+
+        // Remove only subsequent items that were auto-added
+        val idsToRemove = synchronized(autoAddedMediaIds) { autoAddedMediaIds.toSet() }
+        for (i in player.mediaItemCount - 1 downTo 0) {
+            if (i <= currentIndex) continue
+            val item = player.getMediaItemAt(i)
+            if (item.mediaId in idsToRemove) {
+                player.removeMediaItem(i)
+            }
+        }
+        autoAddedMediaIds.clear()
+
+        // Ensure infinite queue is enabled
+        PreferenceStore.launchEdit(dataStore) {
+            this[AutoLoadMoreKey] = true
+        }
+
+        val generation = ++infiniteQueueGeneration
+        infiniteQueueLoading.value = true
+
+        infiniteQueueJob =
+            scope.launch(SilentHandler) {
+                try {
+                    val hideExplicit = dataStore.get(HideExplicitKey, false)
+                    val hideVideo = dataStore.get(HideVideoKey, false)
+
+                    val (filteredItems, queue) =
+                        QueueFilterProvider.fetchFilteredQueue(
+                            seedSong = currentMeta,
+                            filter = filter,
+                            database = database,
+                            hideExplicit = hideExplicit,
+                            hideVideo = hideVideo,
+                        )
+
+                    val knownIds =
+                        (0 until player.mediaItemCount)
+                            .mapTo(mutableSetOf()) { player.getMediaItemAt(it).mediaId }
+                    val newItems = filteredItems.filter { knownIds.add(it.mediaId) }
+
+                    if (generation != infiniteQueueGeneration) return@launch
+
+                    if (newItems.isNotEmpty()) {
+                        val insertIndex = player.currentMediaItemIndex + 1
+                        player.addMediaItems(insertIndex, newItems)
+                        newItems.forEach { autoAddedMediaIds.add(it.mediaId) }
+                    }
+
+                    currentQueue = queue
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to apply queue filter $filter")
                 } finally {
                     if (generation == infiniteQueueGeneration) {
                         infiniteQueueJob = null

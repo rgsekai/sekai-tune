@@ -85,6 +85,7 @@ class PlayerConnection(
     val error = MutableStateFlow<PlaybackException?>(null)
     val waitingForNetworkConnection = service.waitingForNetworkConnection
     val queueRestoreCompleted = service.queueRestoreCompleted
+    val currentQueueFilter = service.currentQueueFilter
 
     init {
         player.addListener(this)
@@ -101,6 +102,10 @@ class PlayerConnection(
         if (player.mediaItemCount > 0 && service.currentMediaMetadata.value == null) {
             service.currentMediaMetadata.value = player.currentMetadata
         }
+    }
+
+    fun setQueueFilter(filter: moe.rgsekai.sekaitune.models.QueueFilter) {
+        service.setQueueFilter(filter)
     }
 
     fun playQueue(queue: Queue) {

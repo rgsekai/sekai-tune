@@ -184,6 +184,7 @@ fun Queue(
     var locked by rememberPreference(QueueEditLockKey, defaultValue = true)
     var infiniteQueueEnabled by rememberPreference(AutoLoadMoreKey, defaultValue = true)
     val infiniteQueueLoading by playerConnection.service.infiniteQueueLoading.collectAsState()
+    val currentQueueFilter by playerConnection.currentQueueFilter.collectAsState()
     val togetherSessionState by playerConnection.service.togetherSessionState.collectAsState()
     val togetherForcesLock =
         togetherSessionState is moe.rgsekai.sekaitune.together.TogetherSessionState.Joined &&
@@ -817,6 +818,7 @@ fun Queue(
                     queueDuration = queueLength,
                     infiniteQueueEnabled = infiniteQueueEnabled,
                     infiniteQueueLoading = infiniteQueueLoading,
+                    selectedFilter = currentQueueFilter,
                     backgroundColor = backgroundColor,
                     onBackgroundColor = onBackgroundColor,
                     onToggleLike = {
@@ -884,6 +886,9 @@ fun Queue(
                         } else {
                             playerConnection.service.onInfiniteQueueDisabled()
                         }
+                    },
+                    onFilterSelected = { filter ->
+                        playerConnection.setQueueFilter(filter)
                     },
                 )
 

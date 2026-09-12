@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import moe.rgsekai.sekaitune.models.QueueFilter
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -106,6 +109,7 @@ fun CurrentSongHeader(
     queueDuration: Int,
     infiniteQueueEnabled: Boolean,
     infiniteQueueLoading: Boolean,
+    selectedFilter: moe.rgsekai.sekaitune.models.QueueFilter,
     backgroundColor: Color,
     onBackgroundColor: Color,
     onToggleLike: () -> Unit,
@@ -115,6 +119,7 @@ fun CurrentSongHeader(
     onShuffleClick: () -> Unit,
     onLockClick: () -> Unit,
     onInfiniteQueueClick: () -> Unit,
+    onFilterSelected: (moe.rgsekai.sekaitune.models.QueueFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -299,13 +304,6 @@ fun CurrentSongHeader(
                     checkedContainerColor = onBackgroundColor.copy(alpha = 0.22f),
                     checkedContentColor = onBackgroundColor,
                 )
-            val infiniteCheckedColors =
-                ToggleButtonDefaults.toggleButtonColors(
-                    checkedContainerColor = MaterialTheme.colorScheme.primary,
-                    checkedContentColor = MaterialTheme.colorScheme.onPrimary,
-                    containerColor = onBackgroundColor.copy(alpha = 0.12f),
-                    contentColor = onBackgroundColor.copy(alpha = 0.5f),
-                )
 
             ToggleButton(
                 checked = shuffleModeEnabled,
@@ -341,7 +339,7 @@ fun CurrentSongHeader(
                     onRepeatClick()
                 },
                 modifier = Modifier.weight(1f).size(48.dp),
-                shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
                 colors = if (repeatMode != Player.REPEAT_MODE_OFF) checkedColors else uncheckedColors,
             ) {
                 Icon(
@@ -357,29 +355,118 @@ fun CurrentSongHeader(
                     modifier = Modifier.size(22.dp),
                 )
             }
+        }
 
-            ToggleButton(
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // YouTube Music style Auto-play Header with Switch
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        if (enableHapticFeedback) {
+                            view.performHapticFeedback(
+                                android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                                android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                            )
+                        }
+                        onInfiniteQueueClick()
+                    },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.autoplay),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = onBackgroundColor,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.autoplay_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onBackgroundColor.copy(alpha = 0.55f),
+                )
+            }
+
+            androidx.compose.material3.Switch(
                 checked = infiniteQueueEnabled,
-                onCheckedChange = { onInfiniteQueueClick() },
-                modifier = Modifier.weight(1f).size(48.dp),
-                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                colors = infiniteCheckedColors,
-                enabled = !infiniteQueueLoading,
-            ) {
-                AnimatedContent(
-                    targetState = infiniteQueueLoading,
-                    label = "InfiniteQueueLoading",
-                ) { loading ->
-                    if (loading) {
-                        CircularWavyProgressIndicator(
-                            modifier = Modifier.size(22.dp),
-                            color = LocalContentColor.current,
+                onCheckedChange = {
+                    if (enableHapticFeedback) {
+                        view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                            android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
                         )
-                    } else {
-                        Icon(
-                            painter = painterResource(R.drawable.all_inclusive),
-                            contentDescription = stringResource(R.string.similar_content),
-                            modifier = Modifier.size(22.dp),
+                    }
+                    onInfiniteQueueClick()
+                },
+                colors = androidx.compose.material3.SwitchDefaults.colors(
+                    checkedThumbColor = backgroundColor,
+                    checkedTrackColor = onBackgroundColor,
+                    uncheckedThumbColor = onBackgroundColor.copy(alpha = 0.6f),
+                    uncheckedTrackColor = onBackgroundColor.copy(alpha = 0.12f),
+                    uncheckedBorderColor = onBackgroundColor.copy(alpha = 0.2f),
+                ),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Queue Filter Chips Row (All, Discover, Familiar, Popular, Deep cuts)
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            items(
+                items = QueueFilter.entries,
+                key = { it.name },
+            ) { filter ->
+                val isSelected = filter == selectedFilter
+                val chipShape = RoundedCornerShape(100.dp)
+
+                Box(
+                    modifier =
+                        Modifier
+                            .clip(chipShape)
+                            .then(
+                                if (isSelected) {
+                                    Modifier.background(onBackgroundColor)
+                                } else {
+                                    Modifier
+                                        .background(onBackgroundColor.copy(alpha = 0.08f))
+                                        .border(1.dp, onBackgroundColor.copy(alpha = 0.16f), chipShape)
+                                }
+                            )
+                            .clickable {
+                                if (enableHapticFeedback) {
+                                    view.performHapticFeedback(
+                                        android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                                        android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                                    )
+                                }
+                                onFilterSelected(filter)
+                            }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        if (isSelected && infiniteQueueLoading) {
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                color = backgroundColor,
+                            )
+                        }
+                        Text(
+                            text = stringResource(filter.titleRes),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) backgroundColor else onBackgroundColor.copy(alpha = 0.85f),
                         )
                     }
                 }
@@ -387,23 +474,6 @@ fun CurrentSongHeader(
         }
 
         Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = stringResource(R.string.queue_continue_playing),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = onBackgroundColor,
-        )
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            text = stringResource(R.string.queue_autoplaying_similar),
-            style = MaterialTheme.typography.bodySmall,
-            color = onBackgroundColor.copy(alpha = 0.5f),
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
 
         HorizontalDivider(
             color = onBackgroundColor.copy(alpha = 0.08f),

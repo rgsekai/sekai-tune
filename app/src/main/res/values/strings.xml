@@ -33,6 +33,13 @@
     <string name="filter_liked">Liked</string>
     <string name="filter_downloaded">Downloaded</string>
     <string name="filter_all">All</string>
+    <string name="filter_discover">Discover</string>
+    <string name="filter_familiar">Familiar</string>
+    <string name="filter_popular">Popular</string>
+    <string name="filter_deep_cuts">Deep cuts</string>
+    <string name="autoplay">Auto-play</string>
+    <string name="autoplay_desc">Add similar content for endless listening</string>
+    <string name="tuning_queue">Tuning queue…</string>
     <string name="filter_songs">Songs</string>
     <string name="filter_videos">Videos</string>
     <string name="filter_albums">Albums</string>
