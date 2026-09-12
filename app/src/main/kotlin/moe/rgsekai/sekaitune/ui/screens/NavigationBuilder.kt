@@ -59,7 +59,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.CustomizeBackground
 import moe.rgsekai.sekaitune.ui.screens.settings.DebugSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.HiddenPlaylistsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IconScreen
-import moe.rgsekai.sekaitune.ui.screens.settings.IntegrationScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.InternetSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.LogcatScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsAnimationSettings
@@ -390,9 +389,6 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/backup_restore") {
         BackupAndRestore(navController)
-    }
-    composable("settings/integration") {
-        IntegrationScreen(navController)
     }
     composable("settings/ai_integration") {
         AiIntegrationSettings(navController)

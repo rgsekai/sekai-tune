@@ -238,8 +238,7 @@
     <string name="dismiss">Loobu</string>
     <string name="options">Valikud</string>
     <string name="preview">Eelvaade</string>
-    <string name="scrobbling">Kraasimine</string>
-    <string name="added_to_playlist">Lisatud â€ž%sâ€œ esitusloendisse</string>
+<string name="added_to_playlist">Lisatud â€ž%sâ€œ esitusloendisse</string>
     <string name="added_n_songs_to_playlist">%1$d lugu on isatud â€ž%2$sâ€œ esitusloendisse</string>
     <string name="added_to_n_playlists">Lisatud %d-te esitusloendisse</string>
     <string name="added_n_songs_to_n_playlists">%1$d lugu on isatud %2$d-te esitusloendisse</string>

@@ -432,14 +432,9 @@
     <string name="restore_failed">ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð²Ñ–Ð´Ð½Ð¾Ð²Ð¸Ñ‚Ð¸ Ñ€ÐµÐ·ÐµÑ€Ð²Ð½Ñƒ ÐºÐ¾Ð¿Ñ–ÑŽ</string>
     <string name="options">ÐŸÐ°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¸</string>
     <string name="preview">ÐŸÐ¾Ð¿ÐµÑ€ÐµÐ´Ð½Ñ–Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´</string>
-    <string name="scrobbling">Ð¡ÐºÑ€Ð¾Ð±Ð»Ñ–Ð½Ð³</string>
-    <string name="username">Ð†Ð¼\'Ñ ÐºÐ¾Ñ€Ð¸ÑÑ‚ÑƒÐ²Ð°Ñ‡Ð°</string>
+<string name="username">Ð†Ð¼\'Ñ ÐºÐ¾Ñ€Ð¸ÑÑ‚ÑƒÐ²Ð°Ñ‡Ð°</string>
     <string name="password">ÐŸÐ°Ñ€Ð¾Ð»ÑŒ</string>
     <string name="logging_in">Ð’Ñ…Ñ–Ð´â€¦</string>
-    <string name="listenbrainz_scrobbling">Ð¡ÐºÑ€Ð¾Ð±Ð»Ñ–Ð½Ð³ Ñƒ ListenBrainz</string>
-    <string name="listenbrainz_scrobbling_description">Ð£Ð²Ñ–Ð¼ÐºÐ½ÑƒÑ‚Ð¸ Ð½Ð°Ð´ÑÐ¸Ð»Ð°Ð½Ð½Ñ Ñ–Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ñ–Ñ— Ð¿Ñ€Ð¾ Ð¿Ñ–ÑÐ½Ñ–, Ñ‰Ð¾ Ð·Ð°Ñ€Ð°Ð· Ð·Ð²ÑƒÑ‡Ð°Ñ‚ÑŒ, Ñ‚Ð° Ð¿Ñ€Ð¾ Ð¿Ñ€Ð¾ÑÐ»ÑƒÑ…Ð°Ð½Ñ– ÐºÐ¾Ð¼Ð¿Ð¾Ð·Ð¸Ñ†Ñ–Ñ— Ð´Ð¾ ListenBrainz</string>
-    <string name="set_listenbrainz_token">Ð’ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚Ð¸ Ñ‚Ð¾ÐºÐµÐ½ ListenBrainz</string>
-    <string name="edit_listenbrainz_token">Ð ÐµÐ´Ð°Ð³ÑƒÐ²Ð°Ñ‚Ð¸ Ñ‚Ð¾ÐºÐµÐ½ ListenBrainz</string>
     <string name="target_language">ÐœÐ¾Ð²Ð° Ð¿ÐµÑ€ÐµÐºÐ»Ð°Ð´Ñƒ</string>
     <string name="close_dialog">Ð—Ð°ÐºÑ€Ð¸Ñ‚Ð¸</string>
     <string name="new_update_available">Ð”Ð¾ÑÑ‚ÑƒÐ¿Ð½Ðµ Ð½Ð¾Ð²Ðµ Ð¾Ð½Ð¾Ð²Ð»ÐµÐ½Ð½Ñ</string>

@@ -403,8 +403,7 @@
     <string name="settings_playback_subtitle">Hành vi âm thanh, chuyển bài và phát nền</string>
     <string name="settings_behavior_title">Hành vi</string>
     <string name="settings_behavior_subtitle">Lịch sử, mặc định và hành vi riêng tư</string>
-    <string name="settings_integration_subtitle">Last.fm và ListenBrainz</string>
-    <string name="settings_backup_restore_subtitle">Xuất và khôi phục dữ liệu ứng dụng cá nhân</string>
+<string name="settings_backup_restore_subtitle">Xuất và khôi phục dữ liệu ứng dụng cá nhân</string>
     <string name="settings_developer_options_title">Tùy chọn nhà phát triển</string>
     <string name="settings_developer_options_subtitle">Tính năng thử nghiệm và gỡ lỗi</string>
     <string name="settings_lyrics_subtitle">Nhà cung cấp lời bài hát, tải trước và dịch thuật</string>

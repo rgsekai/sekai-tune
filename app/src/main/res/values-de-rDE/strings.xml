@@ -321,14 +321,9 @@
     <string name="dismiss">ZurÃ¼ckweisen</string>
     <string name="options">Optionen</string>
     <string name="preview">Vorschau</string>
-    <string name="scrobbling">Scrobbling</string>
-    <string name="username">Benutzername</string>
+<string name="username">Benutzername</string>
     <string name="password">Passwort</string>
     <string name="logging_in">Anmelden</string>
-    <string name="listenbrainz_scrobbling">ListenBrainz-Scrobbling</string>
-    <string name="listenbrainz_scrobbling_description">Ãœbermitteln von â€žJetzt lÃ¤uftâ€œ und abgeschlossenen Wiedergaben an ListenBrainz aktivieren</string>
-    <string name="set_listenbrainz_token">ListenBrainz-Token festlegen</string>
-    <string name="edit_listenbrainz_token">ListenBrainz-Token bearbeiten</string>
     <string name="target_language">Zielsprache</string>
     <string name="close_dialog">SchlieÃŸen</string>
     <string name="new_update_available">Neues Update verfÃ¼gbar</string>

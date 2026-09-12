@@ -273,8 +273,7 @@
     <string name="settings_playback_subtitle">오디오 동작, 크로스페이드 및 백그라운드 재생 설정</string>
     <string name="settings_behavior_title">동작</string>
     <string name="settings_behavior_subtitle">감상 기록, 기본값 및 개인정보 동작 설정</string>
-    <string name="settings_integration_subtitle">Last.fm 및 ListenBrainz 연동 설정</string>
-    <string name="settings_backup_restore_subtitle">앱 개인 데이터 백업 및 복구</string>
+<string name="settings_backup_restore_subtitle">앱 개인 데이터 백업 및 복구</string>
     <string name="settings_developer_options_title">개발자 옵션</string>
     <string name="settings_developer_options_subtitle">실험적인 기능 활성화 및 디버깅 툴 제공</string>
     <string name="settings_lyrics_subtitle">가사 출처, 사전 로드 및 번역 설정</string>

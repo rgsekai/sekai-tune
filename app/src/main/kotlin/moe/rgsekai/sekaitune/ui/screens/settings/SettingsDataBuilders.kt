@@ -83,14 +83,6 @@ fun buildSettingsGroups(
                             onClick = { navController.navigate("settings/lyrics") },
                         ),
                         SettingsItem(
-                            key = "integration",
-                            icon = painterResource(R.drawable.auto_awesome),
-                            title = stringResource(R.string.integration),
-                            subtitle = stringResource(R.string.settings_integration_subtitle),
-                            accentColor = MaterialTheme.colorScheme.secondary,
-                            onClick = { navController.navigate("settings/integration") },
-                        ),
-                        SettingsItem(
                             key = "ai_integration",
                             icon = painterResource(R.drawable.ai),
                             title = stringResource(R.string.ai_integration),

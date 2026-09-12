@@ -631,19 +631,13 @@
     <string name="backup_create_failed">Ø°Ø®ÛŒØ±Û Ù†ÛÛŒÚº Ú©Ø± Ø³Ú©Ø§</string>
     <string name="restore_success">Ú©Ø§Ù…ÛŒØ§Ø¨ÛŒ Ø³Û’ Ø°Ø®ÛŒØ±Û’ Ú©Ùˆ Ù…Ø­ÙÙˆØ¸ Ú©ÛŒØ§ Ú¯ÛŒØ§</string>
     <string name="restore_failed">Ø°Ø®ÛŒØ±Û’ Ú©Ùˆ Ø¨Ø­Ø§Ù„ Ú©Ø±Ù†Û’ Ù…ÛŒÚº Ù†Ø§Ú©Ø§Ù…</string>
-    <string name="account_integrations_summary">ListenBrainz</string>
-    <string name="options">Ø§Ù†ØªØ®Ø§Ø¨</string>
+<string name="options">Ø§Ù†ØªØ®Ø§Ø¨</string>
     <string name="preview">Ù¾ÛŒØ´ Ù†Ø¸Ø§Ø±Û</string>
-    <string name="scrobbling">Ø³Ú©Ø±ÙˆØ¨Ù„Ù†Ú¯</string>
-    <string name="username">ØµØ§Ø±ÙÙ Ù†Ø§Ù…</string>
+<string name="username">ØµØ§Ø±ÙÙ Ù†Ø§Ù…</string>
     <string name="password">Ø®ÙÛŒÛ Ù„ÙØ¸</string>
     <string name="logging_in">Ø¯Ø§Ø®Ù„ ÛÙˆ Ø±ÛØ§ ÛÛ’</string>
     <string name="duration_seconds_short">%1$d</string>
     <string name="percent_format">%1$d%%</string>
-    <string name="listenbrainz_scrobbling">ListenBrainz Ú©ÛŒ Ø³Ú©Ø±ÙˆØ¨Ù„Ù†Ú¯</string>
-    <string name="listenbrainz_scrobbling_description">Ø§Ø¨ Ø³Ù†Ø§ Ø¬Ø§ Ø±ÛØ§ ÛÛ’ Ø§ÙˆØ± Ø³Ù†Ù†Û’ Ú©Û’ Ø§Ø®ØªØªØ§Ù…Ø§Øª Ú©Ùˆ ListenBrainz Ú©Ùˆ Ø¨Ú¾ÛŒØ¬Ù†Û’ Ú©Û’ Ù„Ø¦Û’ ÙØ¹Ø§Ù„ Ú©Ø±ÛŒÚº</string>
-    <string name="set_listenbrainz_token">ListenBrainz Ú©Ùˆ Ù¹ÙˆÚ©Ù† Ú©Ùˆ ØªØ±ØªÛŒØ¨ Ø¯ÛŒÚº</string>
-    <string name="edit_listenbrainz_token">ListenBrainz Ú©Ùˆ Ù¹ÙˆÚ©Ù† Ú©ÛŒ ØªØ±Ù…ÛŒÙ… Ú©Ø±ÛŒÚº</string>
 </resources>
 
 

@@ -451,14 +451,9 @@
     <string name="dismiss">Bá» qua</string>
     <string name="options">TÃ¹y chá»n</string>
     <string name="preview">Xem trÆ°á»›c</string>
-    <string name="scrobbling">Scrobbling</string>
-    <string name="username">TÃªn ngÆ°á»i dÃ¹ng</string>
+<string name="username">TÃªn ngÆ°á»i dÃ¹ng</string>
     <string name="password">Máº­t kháº©u</string>
     <string name="logging_in">Äang Ä‘Äƒng nháº­p</string>
-    <string name="listenbrainz_scrobbling">Scrobbling ListenBrainz</string>
-    <string name="listenbrainz_scrobbling_description">Báº­t gá»­i tráº¡ng thÃ¡i Ä‘ang phÃ¡t vÃ  Ä‘Ã£ phÃ¡t xong cho ListenBrainz</string>
-    <string name="set_listenbrainz_token">Äáº·t token ListenBrainz</string>
-    <string name="edit_listenbrainz_token">Chá»‰nh sá»­a token ListenBrainz</string>
     <string name="target_language">NgÃ´n ngá»¯ Ä‘Ã­ch</string>
     <string name="close_dialog">ÄÃ³ng</string>
     <string name="new_update_available">Cáº­p nháº­t má»›i cÃ³ sáºµn</string>
@@ -735,8 +730,7 @@
     <string name="custom_font">PhÃ´ng chá»¯ tÃ¹y chá»‰nh</string>
     <string name="custom_font_desc">Chá»n tá»‡p phÃ´ng .ttf</string>
     <string name="custom_font_invalid">Chá»n tá»‡p phÃ´ng .ttf</string>
-    <string name="account_integrations_summary">ListenBrainz</string>
-    <string name="device_mute_recovery_volume">TÄƒng Ã¢m lÆ°á»£ng tá»« 0</string>
+<string name="device_mute_recovery_volume">TÄƒng Ã¢m lÆ°á»£ng tá»« 0</string>
     <string name="device_mute_recovery_volume_disabled">ÄÃ£ táº¯t</string>
     <string name="device_volume_zero_playback_paused">PhÃ¡t nháº¡c Ä‘Ã£ táº¡m dá»«ng vÃ¬ Ã¢m lÆ°á»£ng thiáº¿t bá»‹ lÃ  0. TÄƒng Ã¢m lÆ°á»£ng Ä‘á»ƒ tiáº¿p tá»¥c.</string>
     <string name="download_progress_percent">%1$d%%</string>

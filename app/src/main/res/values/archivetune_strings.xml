@@ -429,8 +429,7 @@
     <string name="settings_playback_subtitle">Audio behavior, crossfade, and background playback</string>
     <string name="settings_behavior_title">Behavior</string>
     <string name="settings_behavior_subtitle">History, defaults, and privacy behavior</string>
-    <string name="settings_integration_subtitle">Last.fm, Libre.fm, and ListenBrainz</string>
-    <string name="settings_backup_restore_subtitle">Export and recover your personal app data</string>
+<string name="settings_backup_restore_subtitle">Export and recover your personal app data</string>
     <string name="settings_developer_options_title">Developer Options</string>
     <string name="settings_developer_options_subtitle">Experimental features and debugging</string>
     <string name="settings_lyrics_subtitle">Lyrics providers, preloading, and translation</string>

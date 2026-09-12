@@ -350,8 +350,7 @@
     <string name="settings_playback_subtitle">Perilaku audio, crossfade, dan pemutaran latar belakang</string>
     <string name="settings_behavior_title">Perilaku</string>
     <string name="settings_behavior_subtitle">Riwayat, default, dan perilaku privasi</string>
-    <string name="settings_integration_subtitle">Last.fm, dan ListenBrainz</string>
-    <string name="settings_backup_restore_subtitle">Ekspor dan pulihkan data aplikasi pribadi Anda</string>
+<string name="settings_backup_restore_subtitle">Ekspor dan pulihkan data aplikasi pribadi Anda</string>
     <string name="settings_developer_options_title">Opsi Pengembang</string>
     <string name="settings_developer_options_subtitle">Fitur eksperimental dan debugging</string>
     <string name="settings_lyrics_subtitle">Penyedia lirik, pramuat, dan terjemahan</string>

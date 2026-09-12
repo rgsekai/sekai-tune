@@ -201,8 +201,6 @@
     <string name="dark_theme_off">å…³</string>
     <string name="show_button">æ˜¾ç¤ºæŒ‰é’®</string>
     <string name="clear_song_cache">æ¸…é™¤æ­Œæ›²ç¼“å­˜</string>
-    <string name="set_listenbrainz_token">è®¾ç½® ListenBrainz ä»¤ç‰Œ</string>
-    <string name="edit_listenbrainz_token">ç¼–è¾‘ ListenBrainz ä»¤ç‰Œ</string>
     <string name="experiment_settings">å®žéªŒæ€§çŽ¯å¢ƒ</string>
     <string name="experimental_features">å®žéªŒç‰¹å¾</string>
     <string name="no_logs">æ²¡æœ‰æ—¥å¿—</string>
@@ -322,12 +320,10 @@
     <string name="restore_failed">å¤‡ä»½æ¢å¤å¤±è´¥</string>
     <string name="options">é€‰é¡¹</string>
     <string name="preview">é¢„è§ˆ</string>
-    <string name="scrobbling">Scrobbling</string>
-    <string name="username">ç”¨æˆ·å</string>
+<string name="username">ç”¨æˆ·å</string>
     <string name="password">å¯†ç </string>
     <string name="logging_in">æ­£åœ¨ç™»å½•...â€¦</string>
-    <string name="listenbrainz_scrobbling_description">å¯ç”¨æäº¤æ­£åœ¨æ’­æ”¾å’Œå·²å®Œæˆçš„è†å¬è®°å½•åˆ° ListenBrainz</string>
-    <string name="real_time_playback_stats">å®žæ—¶å›žæ”¾ç»Ÿè®¡</string>
+<string name="real_time_playback_stats">å®žæ—¶å›žæ”¾ç»Ÿè®¡</string>
     <string name="playback_state_idle">ç©ºé—²</string>
     <string name="dark_theme">é»‘æš—ä¸»é¢˜</string>
     <string name="dark_theme_on">å¼€</string>
@@ -424,8 +420,7 @@
     <string name="eq_virtualizer">è™šæ‹ŸçŽ¯ç»•å£°</string>
     <string name="smart_trimmer">æ™ºèƒ½æ¸…ç†</string>
     <string name="smart_trimmer_description">æ™ºèƒ½æ¸…ç†ç¨‹åºåŠ¨æ€ç®¡ç†å›¾ç‰‡ä¸Žæ­Œæ›²ç¼“å­˜ï¼Œè‡ªåŠ¨å‰”é™¤æ—§æ¡ç›®ä»¥èŠ‚çœç£ç›˜ç©ºé—´.</string>
-    <string name="listenbrainz_scrobbling">ListenBrainz è®°å½•</string>
-    <string name="show_nerd_stats">è¯¦ç»†ç»Ÿè®¡ä¿¡æ¯</string>
+<string name="show_nerd_stats">è¯¦ç»†ç»Ÿè®¡ä¿¡æ¯</string>
     <string name="nerd_stats">è°ƒè¯•ä¿¡æ¯</string>
     <string name="state_label">çŠ¶æ€</string>
     <string name="last_end">ä¸Šæ¬¡ç»“æŸä½ç½®</string>

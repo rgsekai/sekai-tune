@@ -124,8 +124,6 @@
         <h3>同期 &amp; ソーシャル</h3>
         <ul>
           <li>YouTube Musicアカウント連携</li>
-          <li>Last.fm スクロブリング対応</li>
-          <li>ListenBrainz 履歴同期</li>
           <li>Discord リッチプレゼンス対応</li>
         </ul>
       </div>

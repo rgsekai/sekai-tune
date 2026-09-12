@@ -189,9 +189,6 @@ val TogetherRequireHostApprovalToJoinKey = booleanPreferencesKey("together_requi
 val TogetherLastJoinLinkKey = stringPreferencesKey("together_last_join_link")
 val TogetherWelcomeShownKey = booleanPreferencesKey("together_welcome_shown")
 
-// ListenBrainz scrobbling
-val ListenBrainzEnabledKey = booleanPreferencesKey("listenbrainz_enabled")
-val ListenBrainzTokenKey = stringPreferencesKey("listenbrainz_token")
 
 val AiProviderKey = stringPreferencesKey("ai_provider")
 val AiCustomEndpointKey = stringPreferencesKey("ai_custom_endpoint")

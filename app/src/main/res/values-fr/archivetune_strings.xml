@@ -494,8 +494,7 @@
     <string name="settings_updates_subtitle">Version, notes de version et canal de mise à jour</string>
     <string name="storage_migration_warning">Avertissement : Ne fermez pas l\'application et n\'éteignez pas votre appareil pendant cette opération. Cela pourrait entraîner une perte de données.</string>
     <string name="aod_customize_title_max_lines">Nombre maximal de lignes pour le titre</string>
-    <string name="settings_integration_subtitle">Last.fm, Libre.fm et ListenBrainz</string>
-    <string name="aod_alignment_start">Début</string>
+<string name="aod_alignment_start">Début</string>
     <string name="aod_shape_pixel_circle">Cercle de pixels</string>
     <string name="year_in_music_empty_subtitle">Écoutez davantage de musique pendant %d et votre récapitulatif s\'affichera ici.</string>
     <string name="storage_location_free">%s libre</string>

@@ -403,8 +403,7 @@
     <string name="settings_playback_subtitle">音声動作、クロスフェード、バックグラウンド再生</string>
     <string name="settings_behavior_title">動作</string>
     <string name="settings_behavior_subtitle">履歴、デフォルト、プライバシー動作</string>
-    <string name="settings_integration_subtitle">Last.fm、Libre.fm、ListenBrainz</string>
-    <string name="settings_backup_restore_subtitle">個人のアプリデータをエクスポート・復元</string>
+<string name="settings_backup_restore_subtitle">個人のアプリデータをエクスポート・復元</string>
     <string name="settings_developer_options_title">開発者オプション</string>
     <string name="settings_developer_options_subtitle">実験的機能とデバッグ</string>
     <string name="settings_lyrics_subtitle">歌詞プロバイダー、プリロード、翻訳</string>

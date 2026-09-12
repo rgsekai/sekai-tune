@@ -16,8 +16,6 @@ Features:
 - Music recognition for songs around you
 - Listening statistics
 - YouTube Music account integration
-- Last.fm scrobbling
-- ListenBrainz history sync
 - Discord rich presence support
 - Material 3 design language
 - Album-art powered dynamic colors

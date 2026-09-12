@@ -462,14 +462,9 @@
     <string name="restore_failed">ë°±ì—…ì„ ë³µì›í•˜ì§€ ëª»í–ˆìŠµë‹ˆë‹¤.</string>
     <string name="options">ì˜µì…˜</string>
     <string name="preview">ë¯¸ë¦¬ë³´ê¸°</string>
-    <string name="scrobbling">ìŠ¤í¬ë¡œë¸”ë§</string>
-    <string name="username">ì‚¬ìš©ìž ì´ë¦„</string>
+<string name="username">ì‚¬ìš©ìž ì´ë¦„</string>
     <string name="password">ë¹„ë°€ë²ˆí˜¸</string>
     <string name="logging_in">ë¡œê·¸ì¸ ì¤‘â€¦</string>
-    <string name="listenbrainz_scrobbling">ListenBrainz ìŒì•… ì „ì†¡</string>
-    <string name="listenbrainz_scrobbling_description">ì§€ê¸ˆ ë“£ëŠ” ë…¸ëž˜ ë° ê°ìƒ ê¸°ë¡ì„ ListenBrainz ì„œë¹„ìŠ¤ë¡œ ì‹¤ì‹œê°„ ì „ì†¡í•©ë‹ˆë‹¤.</string>
-    <string name="set_listenbrainz_token">ListenBrainz í† í° ì„¤ì •</string>
-    <string name="edit_listenbrainz_token">ListenBrainz í† í° íŽ¸ì§‘</string>
     <string name="target_language">ëŒ€ìƒ ì–¸ì–´</string>
     <string name="close_dialog">ë‹«ê¸°</string>
     <string name="support_development_title">ê°œë°œ ì§€ì›</string>    <string name="support_development_donate">ê°œë°œ í›„ì›í•˜ê¸°</string>
@@ -708,8 +703,7 @@
     <string name="total_label">ì´</string>
     <string name="list_view">ëª©ë¡ ë³´ê¸°</string>
     <string name="player_background_style_v8_v9_desc">V8 ë° V9 í”Œë ˆì´ì–´ ìŠ¤íƒ€ì¼ì—ì„œëŠ” ì‚¬ìš©í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.</string>
-    <string name="account_integrations_summary">ListenBrainz</string>
-    <string name="all_artists_filter">ëª¨ë“  ì•„í‹°ìŠ¤íŠ¸</string>
+<string name="all_artists_filter">ëª¨ë“  ì•„í‹°ìŠ¤íŠ¸</string>
     <string name="sort_artist">ì•„í‹°ìŠ¤íŠ¸</string>
     <string name="custom_font">ì‚¬ìš©ìž ì§€ì • ê¸€ê¼´</string>
     <string name="subscribed_only">êµ¬ë… ì¤‘ì¸ ì•„í‹°ìŠ¤íŠ¸ë§Œ</string>

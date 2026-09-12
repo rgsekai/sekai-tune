@@ -393,14 +393,9 @@
     <string name="dismiss">ØªØ¬Ø§Ù‡Ù„</string>
     <string name="options">Ø®ÙŠØ§Ø±Ø§Øª</string>
     <string name="preview">Ø¹Ø±Ø¶</string>
-    <string name="scrobbling">Ø³Ø¬Ù„ Ø§Ù„Ø¥Ø³ØªÙ…Ø§Ø¹</string>
-    <string name="username">Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</string>
+<string name="username">Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</string>
     <string name="password">ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±</string>
     <string name="logging_in">Ø¬Ø§Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„</string>
-    <string name="listenbrainz_scrobbling">Ø³Ø¬Ù„ Ø§Ø³ØªÙ…Ø§Ø¹ ListenBrainz</string>
-    <string name="listenbrainz_scrobbling_description">ØªÙØ¹ÙŠÙ„ Ø¥Ø±Ø³Ø§Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„ØªØ´ØºÙŠÙ„ Ø§Ù„Ø­Ø§Ù„ÙŠ ÙˆØ§Ù„Ù…Ù‚Ø§Ø·Ø¹ Ø§Ù„ØªÙŠ ØªÙ… Ø§Ù„Ø§Ø³ØªÙ…Ø§Ø¹ Ø¥Ù„ÙŠÙ‡Ø§ Ø¥Ù„Ù‰ ListenBrainz</string>
-    <string name="set_listenbrainz_token">ØªÙØ¹ÙŠÙ„ Ø±Ù…Ø² ListenBrainz</string>
-    <string name="edit_listenbrainz_token">ØªØ¹Ø¯ÙŠÙ„ Ø±Ù…Ø² ListenBrainz</string>
     <string name="target_language">Ø§Ù„Ù„ØºØ© Ø§Ù„Ù…Ø³ØªÙ‡Ø¯ÙØ©</string>
     <string name="close_dialog">Ø¥ØºÙ„Ø§Ù‚</string>
     <string name="new_update_available">ØªØ­Ø¯ÙŠØ« Ø¬Ø¯ÙŠØ¯ Ù…ØªÙˆÙØ±</string>

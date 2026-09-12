@@ -155,8 +155,6 @@ import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MIN
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
 import moe.rgsekai.sekaitune.constants.HideVideoKey
 import moe.rgsekai.sekaitune.constants.HistoryDuration
-import moe.rgsekai.sekaitune.constants.ListenBrainzEnabledKey
-import moe.rgsekai.sekaitune.constants.ListenBrainzTokenKey
 import moe.rgsekai.sekaitune.constants.MaxSongCacheSizeKey
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants.CommandToggleLike
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants.CommandToggleRepeatMode
@@ -223,7 +221,6 @@ import moe.rgsekai.sekaitune.storage.StorageFolderKind
 import moe.rgsekai.sekaitune.storage.StorageLocationRepository
 import moe.rgsekai.sekaitune.together.TogetherPlaybackSync
 import moe.rgsekai.sekaitune.ui.player.resolveCanvasArtworkForPlayback
-import moe.rgsekai.sekaitune.ui.screens.settings.ListenBrainzManager
 import moe.rgsekai.sekaitune.utils.AuthScopedCacheValue
 import moe.rgsekai.sekaitune.utils.CoilBitmapLoader
 import moe.rgsekai.sekaitune.utils.ColdStartTimer
@@ -5849,99 +5846,14 @@ class MusicService :
 
         if (events.containsAny(EVENT_TIMELINE_CHANGED, EVENT_POSITION_DISCONTINUITY)) {
             currentMediaMetadata.value = player.currentMetadata
-            scope.launch {
-                try {
-                    val mediaId = player.currentMediaItem?.mediaId
-                    val song = if (mediaId != null) withContext(Dispatchers.IO) { database.song(mediaId).first() } else null
-                    val finalSong =
-                        resolvePresenceSong(
-                            dbSong = song,
-                            mediaMetadata = player.currentMetadata,
-                            durationMs = player.duration,
-                        ) ?: return@launch
-                    try {
-                        val lbEnabled = dataStore.get(ListenBrainzEnabledKey, false)
-                        val lbToken = dataStore.get(ListenBrainzTokenKey, "")
-                        if (lbEnabled && !lbToken.isNullOrBlank()) {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    ListenBrainzManager.submitPlayingNow(
-                                        this@MusicService,
-                                        lbToken,
-                                        finalSong,
-                                        player.currentPosition,
-                                    )
-                                } catch (ie: Exception) {
-                                    Timber.tag("MusicService").v(ie, "ListenBrainz playing_now submit failed on transition")
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                    }
-                } catch (e: Exception) {
-                    Timber.tag("MusicService").v(e, "timeline/position follow-up work failed")
-                }
-            }
         }
         if (events.contains(EVENT_TIMELINE_CHANGED) && !isCrossfading) {
             scheduleCrossfade()
         }
 
         // Also handle immediate update for play state and media item transition events explicitly
-        if (events.containsAny(
-                Player.EVENT_PLAYBACK_STATE_CHANGED,
-                Player.EVENT_PLAY_WHEN_READY_CHANGED,
-                Player.EVENT_IS_PLAYING_CHANGED,
-                Player.EVENT_MEDIA_ITEM_TRANSITION,
-            )
-        ) {
-            if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
-                currentMediaMetadata.value = player.currentMetadata
-            }
-            // Capture player state on Main thread
-            val currentMediaId = player.currentMediaItem?.mediaId
-            val currentMetadata = player.currentMetadata
-            val currentPosition = player.currentPosition
-            val currentDuration = player.duration
-            val isPlaying = player.isPlaying
-
-            scope.launch {
-                try {
-                    val song =
-                        if (currentMediaId !=
-                            null
-                        ) {
-                            withContext(Dispatchers.IO) { database.song(currentMediaId).first() }
-                        } else {
-                            null
-                        }
-                    val finalSong =
-                        resolvePresenceSong(
-                            dbSong = song,
-                            mediaMetadata = currentMetadata,
-                            durationMs = currentDuration,
-                        ) ?: return@launch
-                    try {
-                        val lbEnabled = withContext(Dispatchers.IO) { dataStore.get(ListenBrainzEnabledKey, false) }
-                        val lbToken = withContext(Dispatchers.IO) { dataStore.get(ListenBrainzTokenKey, "") }
-                        if (lbEnabled && !lbToken.isNullOrBlank()) {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    ListenBrainzManager.submitPlayingNow(this@MusicService, lbToken, finalSong, currentPosition)
-                                } catch (ie: Exception) {
-                                    Timber
-                                        .tag(
-                                            "MusicService",
-                                        ).v(ie, "ListenBrainz playing_now submit failed for isPlaying/mediaTransition")
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                    }
-                } catch (e: Exception) {
-                    Timber.tag("MusicService").v(e, "isPlaying/mediaTransition follow-up work failed")
-                }
-            }
+        if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+            currentMediaMetadata.value = player.currentMetadata
         }
 
         // Persist queue on play/pause so a force-stop right after pausing still restores the correct position
@@ -6936,26 +6848,6 @@ class MusicService :
                 }
             }
 
-            ioScope.launch {
-                try {
-                    val song =
-                        database.song(mediaId).first()
-                            ?: return@launch
-
-                    val lbEnabled = dataStore.get(ListenBrainzEnabledKey, false)
-                    val lbToken = dataStore.get(ListenBrainzTokenKey, "")
-                    if (lbEnabled && !lbToken.isNullOrBlank()) {
-                        val endMs = System.currentTimeMillis()
-                        val startMs = endMs - playbackStats.totalPlayTimeMs
-                        try {
-                            ListenBrainzManager.submitFinished(this@MusicService, lbToken, song, startMs, endMs)
-                        } catch (ie: Exception) {
-                            Timber.tag("MusicService").v(ie, "ListenBrainz finished submit failed")
-                        }
-                    }
-                } catch (_: Exception) {
-                }
-            }
         }
     }
 

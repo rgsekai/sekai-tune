@@ -468,14 +468,9 @@
     <string name="restore_failed">Gagal memulihkan cadangan</string>
     <string name="options">Pilihan</string>
     <string name="preview">Pratinjau</string>
-    <string name="scrobbling">Scrobbling</string>
-    <string name="username">Nama pengguna</string>
+<string name="username">Nama pengguna</string>
     <string name="password">Kata sandi</string>
     <string name="logging_in">Lagi Mlebuâ€¦</string>
-    <string name="listenbrainz_scrobbling">Scrobbling ListenBrainz</string>
-    <string name="listenbrainz_scrobbling_description">Aktifkan pengiriman lagu yang sedang diputer dan yang sudah selesai ke ListenBrainz</string>
-    <string name="set_listenbrainz_token">Setel token ListenBrainz</string>
-    <string name="edit_listenbrainz_token">Sunting token ListenBrainz</string>
     <string name="album_name">Nama Album</string>
     <string name="app_icon">Ikon Aplikasi</string>
     <string name="target_language">Bahasa Sasaran</string>

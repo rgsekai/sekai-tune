@@ -358,8 +358,7 @@
     <string name="settings_playback_subtitle">Comportamiento del audio, fundido cruzado y reproducción en segundo plano</string>
     <string name="settings_behavior_title">Comportamiento</string>
     <string name="settings_behavior_subtitle">Historial, ajustes predeterminados y configuración de privacidad</string>
-    <string name="settings_integration_subtitle">Last.fm, Libre.fm, y ListenBrainz</string>
-    <string name="settings_backup_restore_subtitle">Exporta y recupera los datos de tus aplicaciones personales</string>
+<string name="settings_backup_restore_subtitle">Exporta y recupera los datos de tus aplicaciones personales</string>
     <string name="settings_developer_options_title">Opciones de desarrollador</string>
     <string name="settings_developer_options_subtitle">Funciones experimentales y depuración</string>
     <string name="settings_lyrics_subtitle">Proveedores de letras, precarga y traducción</string>

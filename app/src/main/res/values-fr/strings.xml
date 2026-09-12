@@ -330,14 +330,9 @@
     <string name="dismiss">Rejeter</string>
     <string name="options">Options</string>
     <string name="preview">AperÃ§u</string>
-    <string name="scrobbling">Scrobbling</string>
-    <string name="username">Nom d\'utilisateur</string>
+<string name="username">Nom d\'utilisateur</string>
     <string name="password">Mot de passe</string>
     <string name="logging_in">Connexion</string>
-    <string name="listenbrainz_scrobbling">Scrobbling ListenBrainz</string>
-    <string name="listenbrainz_scrobbling_description">Activez l\'envoi des titres en cours d\'Ã©coute et des titres terminÃ©s Ã  ListenBrainz</string>
-    <string name="set_listenbrainz_token">DÃ©finir le jeton ListenBrainz</string>
-    <string name="edit_listenbrainz_token">Modifier le jeton ListenBrainz</string>
     <string name="target_language">Langue cible</string>
     <string name="close_dialog">Fermer</string>
     <string name="new_update_available">Nouvelle mise Ã  jour disponible</string>
@@ -726,8 +721,7 @@
     <string name="total_label">total</string>
     <string name="list_view">Affichage sous forme de liste</string>
     <string name="player_background_style_v8_v9_desc">Non disponible avec les styles de lecteur V8 et V9</string>
-    <string name="account_integrations_summary">ListenBrainz</string>
-    <string name="lyrics_mode">Mode paroles</string>
+<string name="lyrics_mode">Mode paroles</string>
     <string name="all_artists_filter">Tous les artistes</string>
     <string name="sort_artist">Artiste</string>
     <string name="custom_font">Police personnalisÃ©e</string>

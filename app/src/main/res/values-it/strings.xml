@@ -353,14 +353,9 @@
     <string name="dismiss">Ignora</string>
     <string name="options">Opzioni</string>
     <string name="preview">Anteprima</string>
-    <string name="scrobbling">Scrobbling</string>
-    <string name="username">Nome utente</string>
+<string name="username">Nome utente</string>
     <string name="password">Parola d\'ordine</string>
     <string name="logging_in">Accessoâ€¦</string>
-    <string name="listenbrainz_scrobbling">AscoltaBrainz che scrobbling</string>
-    <string name="listenbrainz_scrobbling_description">Abilita l\'invio degli ascolti in riproduzione e finiti a ListenBrainz</string>
-    <string name="set_listenbrainz_token">Imposta il token ListenBrainz</string>
-    <string name="edit_listenbrainz_token">Modifica il token ListenBrainz</string>
     <string name="target_language">Lingua di destinazione</string>
     <string name="close_dialog">Chiudi</string>
     <string name="new_update_available">Nuovo aggiornamento disponibile</string>

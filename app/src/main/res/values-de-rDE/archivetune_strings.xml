@@ -342,8 +342,7 @@
     <string name="settings_playback_subtitle">Audioverhalten, Überblendung und Wiedergabe im Hintergrund</string>
     <string name="settings_behavior_title">Verhalten</string>
     <string name="settings_behavior_subtitle">Verlauf, Standardeinstellungen und Datenschutzverhalten</string>
-    <string name="settings_integration_subtitle">Last.fm, und ListenBrainz</string>
-    <string name="settings_backup_restore_subtitle">Exportieren und wiederherstellenpersönlicher App-Daten</string>
+<string name="settings_backup_restore_subtitle">Exportieren und wiederherstellenpersönlicher App-Daten</string>
     <string name="settings_developer_options_title">Entwickleroptionen</string>
     <string name="settings_developer_options_subtitle">Experimentelle Funktionen und Fehlerbehebung</string>
     <string name="settings_lyrics_subtitle">Anbieter von Songtexten, Vorausladen und Übersetzung</string>

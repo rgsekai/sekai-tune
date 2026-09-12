@@ -355,14 +355,9 @@
     <string name="dismiss">Reddet</string>
     <string name="options">SeÃ§enekler</string>
     <string name="preview">Ã–nizleme</string>
-    <string name="scrobbling">Skrobling</string>
-    <string name="username">KullanÄ±cÄ± adÄ±</string>
+<string name="username">KullanÄ±cÄ± adÄ±</string>
     <string name="password">Åžifre</string>
     <string name="logging_in">GiriÅŸ yapÄ±lÄ±yor</string>
-    <string name="listenbrainz_scrobbling">ListenBrainz skrobling yapÄ±yor</string>
-    <string name="listenbrainz_scrobbling_description">Åžu anda Ã§alÄ±nan ve biten dinlemelerin ListenBrainz\'e gÃ¶nderilmesini etkinleÅŸtirin</string>
-    <string name="set_listenbrainz_token">ListenBrainz jetonunu ayarla</string>
-    <string name="edit_listenbrainz_token">ListenBrainz jetonunu dÃ¼zenleyin</string>
     <string name="target_language">Hedef Dil</string>
     <string name="close_dialog">Kapat</string>
     <string name="new_update_available">Yeni gÃ¼ncelleme mevcut</string>

@@ -392,14 +392,9 @@
     <string name="restore_failed">No se pudo restaurar la copia de seguridad</string>
     <string name="options">Opciones</string>
     <string name="preview">Vista previa</string>
-    <string name="scrobbling">Scrobbling (Last.fm)</string>
-    <string name="username">Nombre de usuario</string>
+<string name="username">Nombre de usuario</string>
     <string name="password">ContraseÃ±a</string>
     <string name="logging_in">Iniciar sesiÃ³n</string>
-    <string name="listenbrainz_scrobbling">Scrobbling de ListenBrainz</string>
-    <string name="listenbrainz_scrobbling_description">Activar el envÃ­o de listas de reproducciÃ³n actuales y terminadas a ListenBrainz</string>
-    <string name="set_listenbrainz_token">Establecer token de ListenBrainz</string>
-    <string name="edit_listenbrainz_token">Editar token de ListenBrainz</string>
     <string name="target_language">Idioma de destino</string>
     <string name="close_dialog">Cerrar</string>
     <string name="new_update_available">Nueva actualizaciÃ³n disponible</string>
@@ -744,8 +739,7 @@
     <string name="recent_requests">Peticiones recientes</string>
     <string name="display">Pantalla</string>
     <string name="romanization">Alfabeto latino</string>
-    <string name="account_integrations_summary">ListenBrainz</string>
-    <string name="album_name">TÃ­tulo del Ã¡lbum</string>
+<string name="album_name">TÃ­tulo del Ã¡lbum</string>
     <string name="app_icon">Icono de la aplicaciÃ³n</string>
     <string name="check_for_update">Buscar actualizaciones</string>
     <string name="saved_accounts">Cuentas guardadas</string>

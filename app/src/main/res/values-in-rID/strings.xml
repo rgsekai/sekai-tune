@@ -468,14 +468,9 @@
     <string name="restore_failed">Gagal memulihkan cadangan</string>
     <string name="options">Pilihan</string>
     <string name="preview">Pratinjau</string>
-    <string name="scrobbling">Scrobbling</string>
-    <string name="username">Nama pengguna</string>
+<string name="username">Nama pengguna</string>
     <string name="password">Kata sandi</string>
     <string name="logging_in">Sedang Masukâ€¦</string>
-    <string name="listenbrainz_scrobbling">Scrobble ListenBrainz</string>
-    <string name="listenbrainz_scrobbling_description">Aktifkan pengiriman lagu yang sedang diputar dan yang sudah selesai ke ListenBrainz</string>
-    <string name="set_listenbrainz_token">Atur token ListenBrainz</string>
-    <string name="edit_listenbrainz_token">Sunting token ListenBrainz</string>
     <string name="album_name">Nama album</string>
     <string name="app_icon">Ikon Aplikasi</string>
     <string name="target_language">Bahasa Sasaran</string>
@@ -694,8 +689,7 @@
     <string name="duration_sort">Durasi</string>
     <string name="offline_shortcut">Offline</string>
     <string name="cached">Tersimpan di Cache</string>
-    <string name="account_integrations_summary">ListenBrainz</string>
-    <string name="instant_playback">Pemutaran Instan</string>
+<string name="instant_playback">Pemutaran Instan</string>
     <string name="on_device">Di perangkat ini</string>
     <string name="recently_played">Baru saja Diputar</string>
     <string name="top_mixes">Mix Teratas untuk Anda</string>

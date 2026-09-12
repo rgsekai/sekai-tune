@@ -822,7 +822,6 @@ class BackupRestoreViewModel
                     "accountEmail",
                     "accountChannelHandle",
                     "useLoginForBrowse",
-                    "listenbrainz_token",
                     "proxyUsername",
                     "proxyPassword",
                     "spotify_sp_dc",

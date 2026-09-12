@@ -95,8 +95,6 @@
         <ul>
           <li>Import playlist from spotify</li>
           <li>YouTube Music account integration</li>
-          <li>Last.fm scrobbling</li>
-          <li>ListenBrainz history sync</li>
           <li>Discord rich presence support</li>
         </ul>
       </div>
