@@ -8,12 +8,15 @@
 package moe.rgsekai.sekaitune.ui.screens.library
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.documentfile.provider.DocumentFile
+import timber.log.Timber
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -199,7 +202,7 @@ fun LocalSongScreen(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
-            val normalizedFolder = uri?.toFolderEntry() ?: return@rememberLauncherForActivityResult
+            val normalizedFolder = uri?.toFolderEntry(context) ?: return@rememberLauncherForActivityResult
             onIncludedFoldersChange(
                 LocalSongScanConfig.deduplicateFolderEntries(includedFolders + normalizedFolder),
             )
@@ -215,7 +218,7 @@ fun LocalSongScreen(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
-            val normalizedFolder = uri?.toFolderEntry() ?: return@rememberLauncherForActivityResult
+            val normalizedFolder = uri?.toFolderEntry(context) ?: return@rememberLauncherForActivityResult
             onExcludedFoldersChange(
                 LocalSongScanConfig.deduplicateFolderEntries(excludedFolders + normalizedFolder),
             )
@@ -1292,6 +1295,34 @@ private fun LocalSongFolderChip(
     enabled: Boolean,
     onRemove: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val isTree = remember(folderPath) { LocalSongScanConfig.isTreeUri(folderPath) }
+    val displayLabel =
+        remember(folderPath) {
+            if (isTree) {
+                val treeUri = runCatching { Uri.parse(folderPath) }.getOrNull()
+                val docFile = treeUri?.let { runCatching { DocumentFile.fromTreeUri(context, it) }.getOrNull() }
+                val folderName = docFile?.name?.takeIf { it.isNotBlank() }
+                val providerPrefix =
+                    when {
+                        folderPath.contains("google.android.apps.docs", ignoreCase = true) -> "Drive"
+                        folderPath.contains("pcloud", ignoreCase = true) -> "pCloud"
+                        folderPath.contains("skydrive", ignoreCase = true) ||
+                            folderPath.contains("onedrive", ignoreCase = true) -> "OneDrive"
+                        folderPath.contains("dropbox", ignoreCase = true) -> "Dropbox"
+                        folderPath.contains("nextcloud", ignoreCase = true) -> "Nextcloud"
+                        else -> "Cloud"
+                    }
+                if (folderName != null) {
+                    "$providerPrefix: $folderName"
+                } else {
+                    providerPrefix
+                }
+            } else {
+                folderPath
+            }
+        }
+
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
@@ -1303,13 +1334,13 @@ private fun LocalSongFolderChip(
             modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
         ) {
             Icon(
-                painter = painterResource(R.drawable.snippet_folder),
+                painter = painterResource(if (isTree) R.drawable.backup else R.drawable.snippet_folder),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(16.dp),
             )
             Text(
-                text = folderPath,
+                text = displayLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
@@ -1387,14 +1418,29 @@ private fun ScanSheetInfoRow(
     }
 }
 
-private fun Uri.toFolderEntry(): String? {
+private fun Uri.toFolderEntry(context: android.content.Context): String? {
     if (!DocumentsContract.isTreeUri(this)) return null
+    runCatching {
+        context.contentResolver.takePersistableUriPermission(
+            this,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
+    }.onFailure { error ->
+        Timber.w(error, "Failed to take persistable URI permission for %s", this)
+    }
+
     val treeDocumentId =
         runCatching { DocumentsContract.getTreeDocumentId(this) }
             .getOrNull()
             .orEmpty()
-    val relativeFolder = treeDocumentId.substringAfter(':', missingDelimiterValue = treeDocumentId)
-    return LocalSongScanConfig.normalizeFolderEntry(relativeFolder).takeIf(String::isNotEmpty)
+
+    val authority = this.authority
+    if (authority == "com.android.externalstorage.documents" && treeDocumentId.contains(':')) {
+        val relativeFolder = treeDocumentId.substringAfter(':', missingDelimiterValue = treeDocumentId)
+        return LocalSongScanConfig.normalizeFolderEntry(relativeFolder).takeIf(String::isNotEmpty)
+    }
+
+    return this.toString()
 }
 
 private enum class LocalSongSortType {
