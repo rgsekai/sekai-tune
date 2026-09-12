@@ -394,13 +394,6 @@
     <string name="options">Ø®ÙŠØ§Ø±Ø§Øª</string>
     <string name="preview">Ø¹Ø±Ø¶</string>
     <string name="scrobbling">Ø³Ø¬Ù„ Ø§Ù„Ø¥Ø³ØªÙ…Ø§Ø¹</string>
-    <string name="lastfm_integration">ØªÙƒØ§Ù…Ù„ Last.fm / Libre.fm</string>
-    <string name="enable_scrobbling">ØªÙØ¹ÙŠÙ„ Ø³Ø¬Ù„ Ø§Ù„Ø¥Ø³ØªÙ…Ø§Ø¹</string>
-    <string name="lastfm_now_playing">ØªØ­Ø¯ÙŠØ« Ø§Ù„ØªØ´ØºÙŠÙ„ Ø§Ù„Ø­Ø§Ù„ÙŠ</string>
-    <string name="scrobbling_configuration">Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø³Ø¬Ù„ Ø§Ù„Ø¥Ø³ØªÙ…Ø§Ø¹</string>
-    <string name="scrobble_min_track_duration">Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†ÙŠ Ù„Ù…Ø¯Ø© Ø§Ù„Ù…Ù‚Ø·Ø¹</string>
-    <string name="scrobble_delay_percent">Ù†Ø³Ø¨Ø© ØªØ£Ø®ÙŠØ± Ø³Ø¬Ù„ Ø§Ù„Ø¥Ø³ØªÙ…Ø§Ø¹</string>
-    <string name="scrobble_delay_minutes">ØªØ£Ø®ÙŠØ± Ø³Ø¬Ù„ Ø§Ù„Ø¥Ø³ØªÙ…Ø§Ø¹ (Ø«ÙˆØ§Ù†ÙŠ)</string>
     <string name="username">Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</string>
     <string name="password">ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±</string>
     <string name="logging_in">Ø¬Ø§Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„</string>

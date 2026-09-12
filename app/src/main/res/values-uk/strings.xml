@@ -161,7 +161,6 @@
     <string name="pitch_mode_semitones_short">st</string>
     <string name="pitch_mode_multiplier_short">x</string>
     <string name="sort_by_create_date">Ð”Ð°Ñ‚Ð° Ð´Ð¾Ð´Ð°Ð²Ð°Ð½Ð½Ñ</string>
-    <string name="scrobble_min_track_duration">ÐœÑ–Ð½Ñ–Ð¼Ð°Ð»ÑŒÐ½Ð° Ñ‚Ñ€Ð¸Ð²Ð°Ð»Ñ–ÑÑ‚ÑŒ Ñ‚Ñ€ÐµÐºÑƒ</string>
     <string name="sort_by_name">ÐÐ°Ð·Ð²Ð°</string>
     <string name="sort_by_artist">Ð’Ð¸ÐºÐ¾Ð½Ð°Ð²ÐµÑ†ÑŒ</string>
     <string name="sort_by_play_time">Ð§Ð°Ñ Ð²Ñ–Ð´Ñ‚Ð²Ð¾Ñ€ÐµÐ½Ð½Ñ</string>
@@ -434,12 +433,6 @@
     <string name="options">ÐŸÐ°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¸</string>
     <string name="preview">ÐŸÐ¾Ð¿ÐµÑ€ÐµÐ´Ð½Ñ–Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´</string>
     <string name="scrobbling">Ð¡ÐºÑ€Ð¾Ð±Ð»Ñ–Ð½Ð³</string>
-    <string name="lastfm_integration">Ð†Ð½Ñ‚ÐµÐ³Ñ€Ð°Ñ†Ñ–Ñ Ð· Last.fm</string>
-    <string name="enable_scrobbling">Ð£Ð²Ñ–Ð¼ÐºÐ½ÑƒÑ‚Ð¸ ÑÐºÑ€Ð¾Ð±Ð»Ñ–Ð½Ð³</string>
-    <string name="lastfm_now_playing">ÐžÐ½Ð¾Ð²Ð¸Ñ‚Ð¸ Now Playing</string>
-    <string name="scrobbling_configuration">ÐÐ°Ð»Ð°ÑˆÑ‚ÑƒÐ²Ð°Ð½Ð½Ñ ÑÐºÑ€Ð¾Ð±Ð»Ñ–Ð½Ð³Ñƒ</string>
-    <string name="scrobble_delay_percent">Ð’Ñ–Ð´ÑÐ¾Ñ‚Ð¾Ðº Ð·Ð°Ñ‚Ñ€Ð¸Ð¼ÐºÐ¸ ÑÐºÑ€Ð¾Ð±Ð»Ñ–Ð½Ð³Ñƒ</string>
-    <string name="scrobble_delay_minutes">Ð—Ð°Ñ‚Ñ€Ð¸Ð¼ÐºÐ° ÑÐºÑ€Ð¾Ð±Ð»Ñ–Ð½Ð³Ñƒ (ÑÐµÐºÑƒÐ½Ð´Ð¸)</string>
     <string name="username">Ð†Ð¼\'Ñ ÐºÐ¾Ñ€Ð¸ÑÑ‚ÑƒÐ²Ð°Ñ‡Ð°</string>
     <string name="password">ÐŸÐ°Ñ€Ð¾Ð»ÑŒ</string>
     <string name="logging_in">Ð’Ñ…Ñ–Ð´â€¦</string>

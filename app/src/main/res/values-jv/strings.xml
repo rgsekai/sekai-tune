@@ -469,13 +469,6 @@
     <string name="options">Pilihan</string>
     <string name="preview">Pratinjau</string>
     <string name="scrobbling">Scrobbling</string>
-    <string name="lastfm_integration">Integrasi Last.fm</string>
-    <string name="enable_scrobbling">Aktifkan Scrobbling</string>
-    <string name="lastfm_now_playing">Perbarui Lagi Diputar</string>
-    <string name="scrobbling_configuration">Konfigurasi Scrobbling</string>
-    <string name="scrobble_min_track_duration">Durasi Trek Minimum</string>
-    <string name="scrobble_delay_percent">Persen Penundaan Scrobble</string>
-    <string name="scrobble_delay_minutes">Penundaan Scrobble (Detik)</string>
     <string name="username">Nama pengguna</string>
     <string name="password">Kata sandi</string>
     <string name="logging_in">Lagi Mlebuâ€¦</string>

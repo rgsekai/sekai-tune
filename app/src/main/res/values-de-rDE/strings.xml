@@ -322,13 +322,6 @@
     <string name="options">Optionen</string>
     <string name="preview">Vorschau</string>
     <string name="scrobbling">Scrobbling</string>
-    <string name="lastfm_integration">Last.fm-Integration</string>
-    <string name="enable_scrobbling">Scrobbling aktivieren</string>
-    <string name="lastfm_now_playing">Aktuellen Titel aktualisieren</string>
-    <string name="scrobbling_configuration">Scrobbling-Konfiguration</string>
-    <string name="scrobble_min_track_duration">Minimale TitelÂ­dauer</string>
-    <string name="scrobble_delay_percent">Scrobble-VerzÃ¶gerung (Prozent)</string>
-    <string name="scrobble_delay_minutes">Scrobble-VerzÃ¶gerung (Sekunden)</string>
     <string name="username">Benutzername</string>
     <string name="password">Passwort</string>
     <string name="logging_in">Anmelden</string>

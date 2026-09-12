@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="home">ä¸»é¡µ</string>
     <string name="songs">æ­Œæ›²</string>
@@ -322,12 +322,7 @@
     <string name="restore_failed">å¤‡ä»½æ¢å¤å¤±è´¥</string>
     <string name="options">é€‰é¡¹</string>
     <string name="preview">é¢„è§ˆ</string>
-    <string name="scrobbling">Last.fm</string>
-    <string name="lastfm_integration">Last.fm è”åŠ¨</string>
-    <string name="scrobbling_configuration">æŠ„å†™é…ç½®</string>
-    <string name="scrobble_min_track_duration">æœ€ä½Žè½¨é“æ—¶é•¿</string>
-    <string name="scrobble_delay_percent">æ‹¼å­—å»¶è¿Ÿç™¾åˆ†æ¯”</string>
-    <string name="scrobble_delay_minutes">Scrobble å»¶è¿Ÿï¼ˆç§’æ•°ï¼‰</string>
+    <string name="scrobbling">Scrobbling</string>
     <string name="username">ç”¨æˆ·å</string>
     <string name="password">å¯†ç </string>
     <string name="logging_in">æ­£åœ¨ç™»å½•...â€¦</string>
@@ -372,8 +367,6 @@
     <string name="clear">æ¸…é™¤</string>
     <string name="song_cache">æ­Œæ›²ç¼“å­˜</string>
     <string name="dismiss">å¿½ç•¥</string>
-    <string name="enable_scrobbling">å¯ç”¨ Scrobbling</string>
-    <string name="lastfm_now_playing">æ›´æ–°ã€Œæ­£åœ¨æ’­æ”¾ã€çŠ¶æ€</string>
     <string name="eq_save">ä¿å­˜</string>
     <string name="eq_save_profile">ä¿å­˜é…ç½®</string>
     <string name="eq_profile_name">é…ç½®åç§°</string>

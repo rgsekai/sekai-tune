@@ -140,7 +140,6 @@ import moe.rgsekai.sekaitune.constants.CrossfadeDurationKey
 import moe.rgsekai.sekaitune.constants.CrossfadeEnabledKey
 import moe.rgsekai.sekaitune.constants.CrossfadeGaplessKey
 import moe.rgsekai.sekaitune.constants.DeviceMutePlaybackRecoveryVolumeKey
-import moe.rgsekai.sekaitune.constants.EnableLastFMScrobblingKey
 import moe.rgsekai.sekaitune.constants.EqualizerBandLevelsMbKey
 import moe.rgsekai.sekaitune.constants.EqualizerBassBoostEnabledKey
 import moe.rgsekai.sekaitune.constants.EqualizerBassBoostStrengthKey
@@ -156,8 +155,6 @@ import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MIN
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
 import moe.rgsekai.sekaitune.constants.HideVideoKey
 import moe.rgsekai.sekaitune.constants.HistoryDuration
-import moe.rgsekai.sekaitune.constants.LastFMSessionKey
-import moe.rgsekai.sekaitune.constants.LastFMUseNowPlaying
 import moe.rgsekai.sekaitune.constants.ListenBrainzEnabledKey
 import moe.rgsekai.sekaitune.constants.ListenBrainzTokenKey
 import moe.rgsekai.sekaitune.constants.MaxSongCacheSizeKey
@@ -173,9 +170,6 @@ import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
 import moe.rgsekai.sekaitune.constants.PlayerVolumeKey
 import moe.rgsekai.sekaitune.constants.RepeatModeKey
-import moe.rgsekai.sekaitune.constants.ScrobbleDelayPercentKey
-import moe.rgsekai.sekaitune.constants.ScrobbleDelaySecondsKey
-import moe.rgsekai.sekaitune.constants.ScrobbleMinSongDurationKey
 import moe.rgsekai.sekaitune.models.QueueFilter
 import moe.rgsekai.sekaitune.playback.queues.QueueFilterProvider
 import moe.rgsekai.sekaitune.constants.ShowLyricsKey
@@ -212,7 +206,6 @@ import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint
 import moe.rgsekai.sekaitune.innertube.models.response.PlayerResponse
-import moe.rgsekai.sekaitune.lastfm.LastFM
 import moe.rgsekai.sekaitune.localmedia.LocalSongScanner
 import moe.rgsekai.sekaitune.lyrics.LyricsHelper
 import moe.rgsekai.sekaitune.lyrics.LyricsPreloadManager
@@ -226,7 +219,6 @@ import moe.rgsekai.sekaitune.playback.queues.Queue
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
 import moe.rgsekai.sekaitune.playback.queues.filterExplicit
 import moe.rgsekai.sekaitune.playback.queues.filterVideo
-import moe.rgsekai.sekaitune.scrobbling.LastFmServiceConfig
 import moe.rgsekai.sekaitune.storage.StorageFolderKind
 import moe.rgsekai.sekaitune.storage.StorageLocationRepository
 import moe.rgsekai.sekaitune.together.TogetherPlaybackSync
@@ -620,8 +612,6 @@ class MusicService :
                 }
             }
         }
-
-    private var scrobbleManager: moe.rgsekai.sekaitune.utils.ScrobbleManager? = null
 
     private lateinit var widgetUpdater: MusicServiceWidgetUpdater
 
@@ -1292,60 +1282,6 @@ class MusicService :
                 val safeSizeMb = maxSongCacheSizeMb.toLong().coerceAtMost(Long.MAX_VALUE / bytesPerMb)
                 val limitBytes = safeSizeMb * bytesPerMb
                 trimPlayerCacheToBytes(limitBytes)
-            }
-
-        dataStore.data
-            .map { preferences ->
-                val serviceConfig = LastFmServiceConfig.fromPreferences(preferences)
-                Triple(
-                    preferences[EnableLastFMScrobblingKey] ?: false,
-                    !preferences[LastFMSessionKey].isNullOrBlank(),
-                    serviceConfig.initialized,
-                )
-            }.debounce(300)
-            .distinctUntilChanged()
-            .collect(scope) { (enabled, hasSession, serviceConfigured) ->
-                val shouldEnable = enabled && hasSession && serviceConfigured
-                if (shouldEnable && scrobbleManager == null) {
-                    val delayPercent = dataStore.get(ScrobbleDelayPercentKey, LastFM.DEFAULT_SCROBBLE_DELAY_PERCENT)
-                    val minSongDuration = dataStore.get(ScrobbleMinSongDurationKey, LastFM.DEFAULT_SCROBBLE_MIN_SONG_DURATION)
-                    val delaySeconds = dataStore.get(ScrobbleDelaySecondsKey, LastFM.DEFAULT_SCROBBLE_DELAY_SECONDS)
-
-                    scrobbleManager =
-                        moe.rgsekai.sekaitune.utils.ScrobbleManager(
-                            ioScope,
-                            minSongDuration = minSongDuration,
-                            scrobbleDelayPercent = delayPercent,
-                            scrobbleDelaySeconds = delaySeconds,
-                        )
-                    scrobbleManager?.useNowPlaying = dataStore.get(LastFMUseNowPlaying, false)
-                } else if (!shouldEnable && scrobbleManager != null) {
-                    scrobbleManager?.destroy()
-                    scrobbleManager = null
-                }
-            }
-
-        dataStore.data
-            .map { it[LastFMUseNowPlaying] ?: false }
-            .distinctUntilChanged()
-            .collectLatest(scope) {
-                scrobbleManager?.useNowPlaying = it
-            }
-
-        dataStore.data
-            .map { prefs ->
-                Triple(
-                    prefs[ScrobbleDelayPercentKey] ?: LastFM.DEFAULT_SCROBBLE_DELAY_PERCENT,
-                    prefs[ScrobbleMinSongDurationKey] ?: LastFM.DEFAULT_SCROBBLE_MIN_SONG_DURATION,
-                    prefs[ScrobbleDelaySecondsKey] ?: LastFM.DEFAULT_SCROBBLE_DELAY_SECONDS,
-                )
-            }.distinctUntilChanged()
-            .collect(scope) { (delayPercent, minSongDuration, delaySeconds) ->
-                scrobbleManager?.let {
-                    it.scrobbleDelayPercent = delayPercent
-                    it.minSongDuration = minSongDuration
-                    it.scrobbleDelaySeconds = delaySeconds
-                }
             }
 
         scope.launch(Dispatchers.IO) {
@@ -5650,8 +5586,6 @@ class MusicService :
             }
         }
 
-        scrobbleManager?.onSongStop()
-
         if (!timelineEmpty &&
             dataStore.get(AutoLoadMoreKey, true) &&
             reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT &&
@@ -5691,10 +5625,6 @@ class MusicService :
             !currentQueue.hasNextPage()
         ) {
             onInfiniteQueueEnabled()
-        }
-
-        if (player.playWhenReady && player.playbackState == Player.STATE_READY) {
-            scrobbleManager?.onSongStart(player.currentMetadata, duration = player.duration)
         }
 
         scope.launch {
@@ -5946,8 +5876,6 @@ class MusicService :
                                 }
                             }
                         }
-
-                        // Last.fm now playing - handled by ScrobbleManager
                     } catch (_: Exception) {
                     }
                 } catch (e: Exception) {
@@ -6008,19 +5936,12 @@ class MusicService :
                                 }
                             }
                         }
-
-                        // Last.fm now playing - handled by ScrobbleManager
                     } catch (_: Exception) {
                     }
                 } catch (e: Exception) {
                     Timber.tag("MusicService").v(e, "isPlaying/mediaTransition follow-up work failed")
                 }
             }
-        }
-
-        if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
-            // Scrobble: Track play/pause state
-            scrobbleManager?.onPlayerStateChanged(player.isPlaying, player.currentMetadata, duration = player.duration)
         }
 
         // Persist queue on play/pause so a force-stop right after pausing still restores the correct position

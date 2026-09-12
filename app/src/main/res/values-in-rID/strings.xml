@@ -469,13 +469,6 @@
     <string name="options">Pilihan</string>
     <string name="preview">Pratinjau</string>
     <string name="scrobbling">Scrobbling</string>
-    <string name="lastfm_integration">Integrasi Last.fm</string>
-    <string name="enable_scrobbling">Aktifkan Scrobbling</string>
-    <string name="lastfm_now_playing">Perbarui Sedang Diputar</string>
-    <string name="scrobbling_configuration">Konfigurasi Scrobbling</string>
-    <string name="scrobble_min_track_duration">Durasi Trek Minimum</string>
-    <string name="scrobble_delay_percent">Persen Penundaan Scrobble</string>
-    <string name="scrobble_delay_minutes">Penundaan Scrobble (Detik)</string>
     <string name="username">Nama pengguna</string>
     <string name="password">Kata sandi</string>
     <string name="logging_in">Sedang Masukâ€¦</string>
@@ -701,7 +694,7 @@
     <string name="duration_sort">Durasi</string>
     <string name="offline_shortcut">Offline</string>
     <string name="cached">Tersimpan di Cache</string>
-    <string name="account_integrations_summary">Last.fm. Libre.fm, ListenBrainz</string>
+    <string name="account_integrations_summary">ListenBrainz</string>
     <string name="instant_playback">Pemutaran Instan</string>
     <string name="on_device">Di perangkat ini</string>
     <string name="recently_played">Baru saja Diputar</string>

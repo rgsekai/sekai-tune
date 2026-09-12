@@ -239,10 +239,6 @@
     <string name="options">Valikud</string>
     <string name="preview">Eelvaade</string>
     <string name="scrobbling">Kraasimine</string>
-    <string name="lastfm_integration">Last.fm-i lÃµiming</string>
-    <string name="enable_scrobbling">LÃ¼lita kraasimine sisse</string>
-    <string name="lastfm_now_playing">Uuenda hetkel esitamisel loo andmeid</string>
-    <string name="scrobbling_configuration">Kraasimise seadistused</string>
     <string name="added_to_playlist">Lisatud â€ž%sâ€œ esitusloendisse</string>
     <string name="added_n_songs_to_playlist">%1$d lugu on isatud â€ž%2$sâ€œ esitusloendisse</string>
     <string name="added_to_n_playlists">Lisatud %d-te esitusloendisse</string>

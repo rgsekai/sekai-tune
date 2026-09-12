@@ -356,13 +356,6 @@
     <string name="options">SeÃ§enekler</string>
     <string name="preview">Ã–nizleme</string>
     <string name="scrobbling">Skrobling</string>
-    <string name="lastfm_integration">Last.fm / Libre.fm Entegrasyonu</string>
-    <string name="enable_scrobbling">Scrobbling\'i EtkinleÅŸtir</string>
-    <string name="lastfm_now_playing">Åžimdi OynatÄ±lÄ±yor GÃ¼ncellemesi</string>
-    <string name="scrobbling_configuration">Scrobbling YapÄ±landÄ±rmasÄ±</string>
-    <string name="scrobble_min_track_duration">Minimum ParÃ§a SÃ¼resi</string>
-    <string name="scrobble_delay_percent">Scrobble Gecikme YÃ¼zdesi</string>
-    <string name="scrobble_delay_minutes">Scrobble Gecikmesi (Saniye)</string>
     <string name="username">KullanÄ±cÄ± adÄ±</string>
     <string name="password">Åžifre</string>
     <string name="logging_in">GiriÅŸ yapÄ±lÄ±yor</string>

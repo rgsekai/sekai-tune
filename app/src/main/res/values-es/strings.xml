@@ -393,13 +393,6 @@
     <string name="options">Opciones</string>
     <string name="preview">Vista previa</string>
     <string name="scrobbling">Scrobbling (Last.fm)</string>
-    <string name="lastfm_integration">IntegraciÃ³n con Last.fm / Libre.fm</string>
-    <string name="enable_scrobbling">Activa el Scrobbling</string>
-    <string name="lastfm_now_playing">Actualizar ReproducciÃ³n en curso</string>
-    <string name="scrobbling_configuration">ConfiguraciÃ³n del Scrobbling</string>
-    <string name="scrobble_min_track_duration">DuraciÃ³n mÃ­nima de la pista</string>
-    <string name="scrobble_delay_percent">Porcentaje de retraso del scrobbling</string>
-    <string name="scrobble_delay_minutes">Retraso de Scrobble (Segundos)</string>
     <string name="username">Nombre de usuario</string>
     <string name="password">ContraseÃ±a</string>
     <string name="logging_in">Iniciar sesiÃ³n</string>
@@ -751,7 +744,7 @@
     <string name="recent_requests">Peticiones recientes</string>
     <string name="display">Pantalla</string>
     <string name="romanization">Alfabeto latino</string>
-    <string name="account_integrations_summary">Last.fm, Libre.fm, ListenBrainz</string>
+    <string name="account_integrations_summary">ListenBrainz</string>
     <string name="album_name">TÃ­tulo del Ã¡lbum</string>
     <string name="app_icon">Icono de la aplicaciÃ³n</string>
     <string name="check_for_update">Buscar actualizaciones</string>

@@ -61,7 +61,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.HiddenPlaylistsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IconScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IntegrationScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.InternetSettings
-import moe.rgsekai.sekaitune.ui.screens.settings.LastFMSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.LogcatScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsAnimationSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsSettings
@@ -400,9 +399,6 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/music_together") {
         MusicTogetherScreen(navController)
-    }
-    composable("settings/lastfm") {
-        LastFMSettings(navController)
     }
     composable("settings/misc") {
         DebugSettings(navController)

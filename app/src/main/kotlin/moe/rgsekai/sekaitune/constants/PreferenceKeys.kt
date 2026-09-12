@@ -215,25 +215,6 @@ enum class AiApiValidationStatus {
     FAILED,
 }
 
-// Last.fm scrobbling
-val LastFMSessionKey = stringPreferencesKey("lastfmSession")
-val LastFMUsernameKey = stringPreferencesKey("lastfmUsername")
-val LastFMProviderKey = stringPreferencesKey("lastfmProvider")
-val LastFMCustomEndpointKey = stringPreferencesKey("lastfmCustomEndpoint")
-val LastFMApiKeyOverrideKey = stringPreferencesKey("lastfmApiKeyOverride")
-val LastFMSecretOverrideKey = stringPreferencesKey("lastfmSecretOverride")
-val EnableLastFMScrobblingKey = booleanPreferencesKey("lastfmScrobblingEnable")
-val LastFMUseNowPlaying = booleanPreferencesKey("lastfmUseNowPlaying")
-val ScrobbleDelayPercentKey = floatPreferencesKey("scrobbleDelayPercent")
-val ScrobbleMinSongDurationKey = intPreferencesKey("scrobbleMinSongDuration")
-val ScrobbleDelaySecondsKey = intPreferencesKey("scrobbleDelaySeconds")
-
-enum class LastFmProvider {
-    LASTFM,
-    LIBREFM,
-    CUSTOM,
-}
-
 val AudioQualityKey = stringPreferencesKey("audioQuality")
 
 val NetworkMeteredKey = booleanPreferencesKey("networkMetered")

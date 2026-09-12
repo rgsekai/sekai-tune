@@ -398,13 +398,6 @@
     <string name="options">ÐžÐ¿Ñ†Ð¸Ð¸</string>
     <string name="preview">ÐŸÑ€ÐµÐ´Ð¿Ñ€Ð¾ÑÐ¼Ð¾Ñ‚Ñ€</string>
     <string name="scrobbling">Ð¡ÐºÑ€Ð¾Ð±Ð±Ð»Ð¸Ð½Ð³</string>
-    <string name="lastfm_integration">Ð˜Ð½Ñ‚ÐµÐ³Ñ€Ð°Ñ†Ð¸Ñ Ñ Last.fm</string>
-    <string name="enable_scrobbling">Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ ÑÐºÑ€Ð¾Ð±Ð±Ð»Ð¸Ð½Ð³</string>
-    <string name="lastfm_now_playing">ÐžÐ±Ð½Ð¾Ð²Ð»ÑÑ‚ÑŒ \"Ð¡ÐµÐ¹Ñ‡Ð°Ñ Ð¸Ð³Ñ€Ð°ÐµÑ‚\"</string>
-    <string name="scrobbling_configuration">ÐÐ°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ° ÑÐºÑ€Ð¾Ð±Ð±Ð»Ð¸Ð½Ð³Ð°</string>
-    <string name="scrobble_min_track_duration">ÐœÐ¸Ð½Ð¸Ð¼Ð°Ð»ÑŒÐ½Ð°Ñ Ð´Ð»Ð¸Ð½Ð° Ñ‚Ñ€ÐµÐºÐ°</string>
-    <string name="scrobble_delay_percent">ÐŸÑ€Ð¾Ñ†ÐµÐ½Ñ‚ Ð·Ð°Ð´ÐµÑ€Ð¶ÐºÐ¸ ÑÐºÑ€Ð¾Ð±Ð±Ð»Ð¸Ð½Ð³Ð°</string>
-    <string name="scrobble_delay_minutes">Ð—Ð°Ð´ÐµÑ€Ð¶ÐºÐ° ÑÐºÑ€Ð¾Ð±Ð±Ð»Ð¸Ð½Ð³Ð° (Ð² ÑÐµÐºÑƒÐ½Ð´Ð°Ñ…)</string>
     <string name="username">Ð˜Ð¼Ñ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ</string>
     <string name="password">ÐŸÐ°Ñ€Ð¾Ð»ÑŒ</string>
     <string name="logging_in">Ð’Ñ‹Ð¿Ð¾Ð»Ð½ÐµÐ½Ð¸Ðµ Ð²Ñ…Ð¾Ð´Ð°â€¦</string>
