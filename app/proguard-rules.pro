@@ -145,7 +145,6 @@
 # internal Ktor HTTP Client
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**
--keep class moe.rgsekai.sekaitune.moriextractor.BackendExtractorResponse { *; }
 
 # engine HTTP Android/OkHttp Ktor
 -dontwarn kotlinx.coroutines.**

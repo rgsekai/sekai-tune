@@ -56,20 +56,16 @@ import moe.rgsekai.sekaitune.constants.ExternalDownloaderEnabledKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_DEFAULT
 import moe.rgsekai.sekaitune.constants.HistoryDuration
-import moe.rgsekai.sekaitune.constants.InnerTubeCookieKey
 import moe.rgsekai.sekaitune.constants.LowDataModeKey
 import moe.rgsekai.sekaitune.constants.PauseOnDeviceMuteKey
 import moe.rgsekai.sekaitune.constants.PermanentShuffleKey
 import moe.rgsekai.sekaitune.constants.PersistentQueueKey
 import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
-import moe.rgsekai.sekaitune.constants.PoTokenGvsKey
-import moe.rgsekai.sekaitune.constants.PoTokenPlayerKey
 import moe.rgsekai.sekaitune.constants.SeekExtraSeconds
 import moe.rgsekai.sekaitune.constants.SkipSilenceKey
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
 import moe.rgsekai.sekaitune.constants.WakelockKey
-import moe.rgsekai.sekaitune.innertube.utils.hasYouTubeLoginCookie
 import moe.rgsekai.sekaitune.ui.component.ArtistSeparatorsDialog
 import moe.rgsekai.sekaitune.ui.component.CrossfadeSliderPreference
 import moe.rgsekai.sekaitune.ui.component.EnumListPreference
@@ -212,21 +208,11 @@ fun PlayerSettings(navController: NavController) {
             WakelockKey,
             defaultValue = false,
         )
-    val (innerTubeCookie, _) = rememberPreference(InnerTubeCookieKey, defaultValue = "")
-    val (poTokenGvs, _) = rememberPreference(PoTokenGvsKey, defaultValue = "")
-    val (poTokenPlayer, _) = rememberPreference(PoTokenPlayerKey, defaultValue = "")
-    val isSekaiTuneExtractorEnabled =
-        remember(innerTubeCookie, poTokenGvs, poTokenPlayer) {
-            hasYouTubeLoginCookie(innerTubeCookie) &&
-                poTokenGvs.isNotBlank() &&
-                poTokenPlayer.isNotBlank()
-        }
     val playerStreamClients =
         remember {
             listOf(
                 PlayerStreamClient.ANDROID_VR,
                 PlayerStreamClient.WEB_REMIX,
-                PlayerStreamClient.SekaiTune_EXTRACTOR,
             )
         }
     val selectedPlayerStreamClient =
@@ -235,27 +221,13 @@ fun PlayerSettings(navController: NavController) {
         } else {
             PlayerStreamClient.ANDROID_VR
         }
-    val audioQualityEnabled = selectedPlayerStreamClient != PlayerStreamClient.SekaiTune_EXTRACTOR
-    val isPlayerStreamClientEnabled =
-        remember(isSekaiTuneExtractorEnabled) {
-            { client: PlayerStreamClient ->
-                client != PlayerStreamClient.SekaiTune_EXTRACTOR ||
-                    isSekaiTuneExtractorEnabled
-            }
-        }
 
     var showArtistSeparatorsDialog by remember { mutableStateOf(false) }
     var showTagsManagementDialog by remember { mutableStateOf(false) }
     var showExternalDownloaderPackageDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(playerStreamClient, isSekaiTuneExtractorEnabled) {
-        if (
-            playerStreamClient !in playerStreamClients ||
-            (
-                playerStreamClient == PlayerStreamClient.SekaiTune_EXTRACTOR &&
-                    !isSekaiTuneExtractorEnabled
-            )
-        ) {
+    LaunchedEffect(playerStreamClient) {
+        if (playerStreamClient !in playerStreamClients) {
             onPlayerStreamClientChange(PlayerStreamClient.ANDROID_VR)
         }
     }
@@ -326,7 +298,6 @@ fun PlayerSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.graphic_eq), null) },
                         selectedValue = audioQuality,
                         onValueSelected = onAudioQualityChange,
-                        isEnabled = audioQualityEnabled,
                         valueText = {
                             when (it) {
                                 AudioQuality.HIGHEST -> stringResource(R.string.audio_quality_max)
@@ -346,17 +317,10 @@ fun PlayerSettings(navController: NavController) {
                         selectedValue = selectedPlayerStreamClient,
                         values = playerStreamClients,
                         onValueSelected = onPlayerStreamClientChange,
-                        isValueEnabled = isPlayerStreamClientEnabled,
                         valueText = {
                             when (it) {
                                 PlayerStreamClient.WEB_REMIX -> {
                                     stringResource(R.string.player_stream_client_web_remix)
-                                }
-
-                                PlayerStreamClient.SekaiTune_EXTRACTOR -> {
-                                    stringResource(
-                                        R.string.player_stream_client_SekaiTune_extractor,
-                                    )
                                 }
 
                                 PlayerStreamClient.ANDROID_VR -> {
@@ -371,23 +335,11 @@ fun PlayerSettings(navController: NavController) {
                         valueDescription = {
                             when (it) {
                                 PlayerStreamClient.ANDROID_VR -> {
-                                    stringResource(R.string.player_stream_client_android_vr_desc) // Add this!
+                                    stringResource(R.string.player_stream_client_android_vr_desc)
                                 }
 
                                 PlayerStreamClient.WEB_REMIX -> {
                                     stringResource(R.string.player_stream_client_web_remix_desc)
-                                }
-
-                                PlayerStreamClient.SekaiTune_EXTRACTOR -> {
-                                    if (isSekaiTuneExtractorEnabled) {
-                                        stringResource(
-                                            R.string.player_stream_client_SekaiTune_extractor_desc,
-                                        )
-                                    } else {
-                                        stringResource(
-                                            R.string.player_stream_client_SekaiTune_extractor_login_required,
-                                        )
-                                    }
                                 }
 
                                 else -> {

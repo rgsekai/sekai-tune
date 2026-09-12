@@ -59,7 +59,6 @@ include(":lastfm")
 include(":canvas")
 include(":shazamkit")
 include(":spotifycore")
-include(":moriextractor")
 include(":morideobfuscator")
 
 // Use a local copy of NewPipe Extractor by uncommenting the lines below.
