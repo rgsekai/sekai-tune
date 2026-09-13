@@ -62,9 +62,6 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -690,24 +687,6 @@ private fun HostControlsCard(
         subtitleResId = R.string.together_display_name,
         accent = MaterialTheme.colorScheme.primary,
     ) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = !host.onlineMode,
-                onClick = { viewModel.setHostModeOnline(false) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                icon = {},
-            ) {
-                Text(text = stringResource(R.string.together_lan))
-            }
-            SegmentedButton(
-                selected = host.onlineMode,
-                onClick = { viewModel.setHostModeOnline(true) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                icon = {},
-            ) {
-                Text(text = stringResource(R.string.together_online))
-            }
-        }
         SettingsRow(
             iconResId = R.drawable.person,
             titleResId = R.string.together_display_name,
@@ -777,26 +756,6 @@ private fun JoinControlsCard(
         subtitleResId = R.string.join_session,
         accent = MaterialTheme.colorScheme.tertiary,
     ) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = !join.onlineMode,
-                enabled = !join.disabled,
-                onClick = { viewModel.setJoinModeOnline(false) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                icon = {},
-            ) {
-                Text(text = stringResource(R.string.together_join_link))
-            }
-            SegmentedButton(
-                selected = join.onlineMode,
-                enabled = !join.disabled,
-                onClick = { viewModel.setJoinModeOnline(true) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                icon = {},
-            ) {
-                Text(text = stringResource(R.string.together_join_code))
-            }
-        }
         SettingsRow(
             iconResId = R.drawable.input,
             titleResId = R.string.join_session,
