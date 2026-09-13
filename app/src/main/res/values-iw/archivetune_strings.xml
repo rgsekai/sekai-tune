@@ -63,26 +63,6 @@
     <string name="remote_history">מרוחק</string>
     <string name="charts">טבלאות</string>
     <string name="back_button_desc">אחורה</string>
-    <string name="news">חדשות ממפתחים</string>
-    <string name="news_loading">טוען חדשות…</string>
-    <string name="news_empty_title">עדיין אין כאן כלום</string>
-    <string name="news_empty_desc">אין כרגע הודעות. אנא בדקו שוב בקרוב.</string>
-    <string name="news_error_title">לא ניתן היה לטעון את החדשות</string>
-    <string name="news_error_desc">בדוק את חיבור האינטרנט שלך ונסה שוב.</string>
-    <string name="news_retry">נסה שוב</string>
-    <string name="news_search_placeholder">חיפוש חדשות…</string>
-    <string name="news_search_results_title">תוצאות חיפוש</string>
-    <string name="news_no_results_title">אין מאמרים תואמים</string>
-    <string name="news_no_results_desc">נסה מונח חיפוש אחר.</string>
-    <string name="news_important_badge">חשוב</string>
-    <string name="news_tooltip_title">הכרזות חדשות</string>
-    <string name="news_tooltip_body">יש לך הודעות שלא נקראו ממפתחים.</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="one">כתבה אחת</item>
-        <item quantity="two">שתי כתבות</item>
-        <item quantity="other">%d כתבות</item>
-    </plurals>
     <string name="no_title">ללא כותרת</string>
     <string name="unknown_artist">אמן לא ידוע</string>
     <string name="aod_customize_title">התאמה אישית של AOD</string>

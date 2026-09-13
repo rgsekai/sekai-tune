@@ -64,24 +64,6 @@
     <string name="remote_history">遠端</string>
     <string name="charts">圖表</string>
     <string name="back_button_desc">返回</string>
-    <string name="news">開發者動態</string>
-    <string name="news_loading">正在加載動態…</string>
-    <string name="news_empty_title">尚無內容</string>
-    <string name="news_empty_desc">目前沒有公告，請稍後再來查看。</string>
-    <string name="news_error_title">無法載入新聞</string>
-    <string name="news_error_desc">請檢查您的網路連線，並再試一次。</string>
-    <string name="news_retry">重試</string>
-    <string name="news_search_placeholder">搜尋新聞…</string>
-    <string name="news_search_results_title">搜尋結果</string>
-    <string name="news_no_results_title">沒有符合的文章</string>
-    <string name="news_no_results_desc">嘗試使用其他關鍵字。</string>
-    <string name="news_important_badge">重要</string>
-    <string name="news_tooltip_title">最新公告</string>
-    <string name="news_tooltip_body">您有來自開發者的未讀公告。</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="other">%d 篇文章</item>
-    </plurals>
     <string name="no_title">無標題</string>
     <string name="unknown_artist">未知藝人</string>
     <string name="aod_customize_title">AOD 選項</string>

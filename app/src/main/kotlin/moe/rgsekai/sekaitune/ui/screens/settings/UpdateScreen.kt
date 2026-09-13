@@ -51,7 +51,6 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
@@ -60,10 +59,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -106,9 +102,6 @@ import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.EnableUpdateNotificationKey
-import moe.rgsekai.sekaitune.constants.UpdateChannel
-import moe.rgsekai.sekaitune.constants.UpdateChannelKey
-import moe.rgsekai.sekaitune.defaultUpdateChannel
 import moe.rgsekai.sekaitune.ui.component.BottomSheetPage
 import moe.rgsekai.sekaitune.ui.component.BottomSheetPageState
 import moe.rgsekai.sekaitune.ui.component.IconButton
@@ -119,7 +112,6 @@ import moe.rgsekai.sekaitune.utils.AppUpdateInstaller
 import moe.rgsekai.sekaitune.utils.GitCommit
 import moe.rgsekai.sekaitune.utils.UpdateNotificationManager
 import moe.rgsekai.sekaitune.utils.Updater
-import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -141,18 +133,11 @@ fun UpdateScreen(
             EnableUpdateNotificationKey,
             defaultValue = false,
         )
-    val (updateChannel, onUpdateChannelChange) =
-        rememberEnumPreference(
-            UpdateChannelKey,
-            defaultValue = defaultUpdateChannel,
-        )
 
     var commits by remember { mutableStateOf<List<GitCommit>>(emptyList()) }
     var isLoadingCommits by remember { mutableStateOf(true) }
     var latestVersion by remember { mutableStateOf<String?>(null) }
     var isExpanded by rememberSaveable { mutableStateOf(true) }
-    var showCanaryChannelConfirmDialog by rememberSaveable { mutableStateOf(false) }
-    var showEnableUpdateNotificationConfirmDialog by rememberSaveable { mutableStateOf(false) }
     var hasNotificationPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -269,11 +254,7 @@ fun UpdateScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        val downloadUrl =
-            when (updateChannel) {
-                UpdateChannel.CANARY -> Updater.getLatestCanaryDownloadUrl()
-                UpdateChannel.STABLE -> Updater.getLatestDownloadUrl()
-            }
+        val downloadUrl = Updater.getLatestDownloadUrl()
 
         Button(
             onClick = { installUpdate(downloadUrl) },
@@ -296,22 +277,10 @@ fun UpdateScreen(
         showUpdateErrorDialog = false
 
         coroutineScope.launch {
-            val versionResult =
-                when (updateChannel) {
-                    UpdateChannel.CANARY -> {
-                        Updater.getLatestCanaryReleaseNotes().onSuccess { notes ->
-                            updateSheetNotes = notes
-                        }
-                        Updater.getLatestCanaryVersionName()
-                    }
-
-                    else -> {
-                        Updater.getLatestReleaseNotes().onSuccess { notes ->
-                            updateSheetNotes = notes
-                        }
-                        Updater.getLatestVersionName()
-                    }
-                }
+            Updater.getLatestReleaseNotes().onSuccess { notes ->
+                updateSheetNotes = notes
+            }
+            val versionResult = Updater.getLatestVersionName()
 
             updateSheetLoading = false
 
@@ -344,125 +313,13 @@ fun UpdateScreen(
             }
         }
 
-    if (showEnableUpdateNotificationConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showEnableUpdateNotificationConfirmDialog = false },
-            title = { Text(stringResource(R.string.enable_update_notification)) },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = stringResource(R.string.updates_channel_warning_intro),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = stringResource(R.string.updates_channel_warning_stable_title),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = stringResource(R.string.updates_channel_warning_stable_source),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Text(
-                            text = stringResource(R.string.updates_channel_warning_stable_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = stringResource(R.string.updates_channel_warning_canary_title),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = stringResource(R.string.updates_canary_hosting_description),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Text(
-                            text = stringResource(R.string.updates_channel_warning_canary_risk),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-
-                    Text(
-                        text = stringResource(R.string.updates_channel_warning_canary_unstable),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = stringResource(R.string.updates_channel_warning_canary_acknowledgement),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showEnableUpdateNotificationConfirmDialog = false
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            onEnableUpdateNotificationChange(true)
-                            UpdateNotificationManager.schedulePeriodicUpdateCheck(context)
-                        }
-                    },
-                ) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEnableUpdateNotificationConfirmDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        )
-    }
-
-    if (showCanaryChannelConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showCanaryChannelConfirmDialog = false },
-            title = { Text(stringResource(R.string.channel_canary)) },
-            text = {
-                Text(
-                    text = stringResource(R.string.updates_canary_channel_confirmation),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showCanaryChannelConfirmDialog = false
-                        onUpdateChannelChange(UpdateChannel.CANARY)
-                    },
-                ) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCanaryChannelConfirmDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        )
-    }
-
-    LaunchedEffect(updateChannel) {
+    LaunchedEffect(Unit) {
         if (!BuildConfig.UPDATER_AVAILABLE) {
             isLoadingCommits = false
             return@LaunchedEffect
         }
 
-        val versionResult =
-            when (updateChannel) {
-                UpdateChannel.CANARY -> Updater.getLatestCanaryVersionName()
-                else -> Updater.getLatestVersionName()
-            }
-        versionResult.onSuccess {
+        Updater.getLatestVersionName().onSuccess {
             latestVersion = it
             if (!Updater.isUpdateAvailable(it, BuildConfig.VERSION_NAME)) {
                 onUpToDate()
@@ -483,11 +340,6 @@ fun UpdateScreen(
         targetValue = if (isExpanded) 180f else 0f,
         label = "rotation",
     )
-    val topBarSubtitle =
-        when (updateChannel) {
-            UpdateChannel.CANARY -> stringResource(R.string.updates_subtitle_canary)
-            UpdateChannel.STABLE -> stringResource(R.string.updates_subtitle_stable)
-        }
 
     Scaffold(
         modifier =
@@ -507,7 +359,7 @@ fun UpdateScreen(
                 },
                 subtitle = {
                     Text(
-                        text = topBarSubtitle,
+                        text = stringResource(R.string.updates_subtitle_stable),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -551,7 +403,6 @@ fun UpdateScreen(
                 UpdateSummaryCard(
                     currentVersion = BuildConfig.VERSION_NAME,
                     latestVersion = latestVersion,
-                    updateChannel = updateChannel,
                     isUpdateAvailable = isUpdateAvailable,
                 )
             }
@@ -559,7 +410,7 @@ fun UpdateScreen(
             item {
                 UpdateActionPanel(
                     onOpenChangelog = {
-                        navController.navigate("settings/changelog?channel=$updateChannel")
+                        navController.navigate("settings/changelog")
                     },
                     onCheckForUpdate = onCheckForUpdate,
                 )
@@ -570,17 +421,15 @@ fun UpdateScreen(
                     enableUpdateNotification = enableUpdateNotification,
                     onUpdateNotificationChange = { enabled ->
                         if (enabled) {
-                            showEnableUpdateNotificationConfirmDialog = true
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                onEnableUpdateNotificationChange(true)
+                                UpdateNotificationManager.schedulePeriodicUpdateCheck(context)
+                            }
                         } else {
                             onEnableUpdateNotificationChange(false)
                             UpdateNotificationManager.cancelPeriodicUpdateCheck(context)
-                        }
-                    },
-                    updateChannel = updateChannel,
-                    onStableSelected = { onUpdateChannelChange(UpdateChannel.STABLE) },
-                    onCanarySelected = {
-                        if (updateChannel != UpdateChannel.CANARY) {
-                            showCanaryChannelConfirmDialog = true
                         }
                     },
                 )
@@ -643,15 +492,7 @@ fun UpdateScreen(
 
         val downloadTitle =
             buildString {
-                when (updateChannel) {
-                    UpdateChannel.CANARY -> {
-                        append(context.getString(R.string.app_name))
-                        append(' ')
-                        append(context.getString(R.string.channel_canary))
-                    }
-                    UpdateChannel.STABLE -> append(context.getString(R.string.app_name))
-
-                }
+                append(context.getString(R.string.app_name))
                 append(' ')
                 append(updateSheetVersion ?: "?")
             }
@@ -800,14 +641,8 @@ fun UpdateScreen(
 private fun UpdateSummaryCard(
     currentVersion: String,
     latestVersion: String?,
-    updateChannel: UpdateChannel,
     isUpdateAvailable: Boolean,
 ) {
-    val channelLabel =
-        when (updateChannel) {
-            UpdateChannel.STABLE -> stringResource(R.string.channel_stable)
-            UpdateChannel.CANARY -> stringResource(R.string.channel_canary)
-        }
     val supportingText =
         when {
             latestVersion == null -> stringResource(R.string.updates_status_checking)
@@ -823,18 +658,6 @@ private fun UpdateSummaryCard(
     val statusContentColor =
         if (isUpdateAvailable) {
             MaterialTheme.colorScheme.onPrimaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSecondaryContainer
-        }
-    val channelContainerColor =
-        if (updateChannel == UpdateChannel.CANARY) {
-            MaterialTheme.colorScheme.tertiaryContainer
-        } else {
-            MaterialTheme.colorScheme.secondaryContainer
-        }
-    val channelContentColor =
-        if (updateChannel == UpdateChannel.CANARY) {
-            MaterialTheme.colorScheme.onTertiaryContainer
         } else {
             MaterialTheme.colorScheme.onSecondaryContainer
         }
@@ -870,28 +693,11 @@ private fun UpdateSummaryCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.current_version),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Surface(
-                            shape = MaterialTheme.shapes.large,
-                            color = channelContainerColor,
-                        ) {
-                            Text(
-                                text = channelLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = channelContentColor,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            )
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.current_version),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
 
                     Text(
                         text = currentVersion,
@@ -971,9 +777,6 @@ private fun UpdateActionPanel(
 private fun UpdateControlsPanel(
     enableUpdateNotification: Boolean,
     onUpdateNotificationChange: (Boolean) -> Unit,
-    updateChannel: UpdateChannel,
-    onStableSelected: () -> Unit,
-    onCanarySelected: () -> Unit,
 ) {
     Card(
         modifier =
@@ -1009,24 +812,10 @@ private fun UpdateControlsPanel(
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             )
-            SingleChoiceSegmentedButtonRow(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, top = 2.dp, end = 16.dp, bottom = 16.dp),
-            ) {
-                SegmentedButton(
-                    selected = updateChannel == UpdateChannel.STABLE,
-                    onClick = onStableSelected,
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 1),
-                    icon = {},
-                ) {
-                    Text(text = stringResource(R.string.channel_stable))
-                }
-                }
-            }
         }
     }
+}
+
 @Composable
 private fun CommitHistorySection(
     commits: List<GitCommit>,
@@ -1290,7 +1079,3 @@ private fun formatCommitDate(isoDate: String): String =
     } catch (e: Exception) {
         isoDate.take(10)
     }
-
-
-
-

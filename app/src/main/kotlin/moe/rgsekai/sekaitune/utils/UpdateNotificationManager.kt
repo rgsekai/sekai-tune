@@ -34,9 +34,6 @@ import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.EnableUpdateNotificationKey
 import moe.rgsekai.sekaitune.constants.LastNotifiedVersionKey
 import moe.rgsekai.sekaitune.constants.LastUpdateCheckKey
-import moe.rgsekai.sekaitune.constants.UpdateChannel
-import moe.rgsekai.sekaitune.constants.UpdateChannelKey
-import moe.rgsekai.sekaitune.defaultUpdateChannel
 import java.util.concurrent.TimeUnit
 
 object UpdateNotificationManager {
@@ -115,11 +112,6 @@ object UpdateNotificationManager {
 
                 schedulePeriodicUpdateCheck(context)
 
-                val updateChannel =
-                    dataStore.data
-                        .map { UpdateChannel.fromStoredName(it[UpdateChannelKey], defaultUpdateChannel) }
-                        .first()
-
                 val lastCheck = dataStore.data.map { it[LastUpdateCheckKey] ?: 0L }.first()
                 val now = System.currentTimeMillis()
 
@@ -127,15 +119,11 @@ object UpdateNotificationManager {
 
                 dataStore.edit { it[LastUpdateCheckKey] = now }
 
-                val versionResult =
-                    when (updateChannel) {
-                        UpdateChannel.CANARY -> Updater.getLatestCanaryVersionName()
-                        UpdateChannel.STABLE -> Updater.getLatestVersionName()
-                    }
+                val versionResult = Updater.getLatestVersionName()
 
                 versionResult.onSuccess { latestVersion ->
                     if (Updater.isUpdateAvailable(latestVersion, BuildConfig.VERSION_NAME)) {
-                        notifyIfNewVersion(context, latestVersion, updateChannel)
+                        notifyIfNewVersion(context, latestVersion)
                     }
                 }
             } catch (e: Exception) {
@@ -147,7 +135,6 @@ object UpdateNotificationManager {
     suspend fun notifyIfNewVersion(
         context: Context,
         latestVersion: String,
-        updateChannel: UpdateChannel = UpdateChannel.STABLE,
     ) {
         if (!BuildConfig.UPDATER_AVAILABLE) return
 
@@ -156,7 +143,7 @@ object UpdateNotificationManager {
             val lastNotified = dataStore.data.map { it[LastNotifiedVersionKey] ?: "" }.first()
 
             if (latestVersion != lastNotified && Updater.isUpdateAvailable(latestVersion, BuildConfig.VERSION_NAME)) {
-                showUpdateNotification(context, latestVersion, updateChannel)
+                showUpdateNotification(context, latestVersion)
                 dataStore.edit { it[LastNotifiedVersionKey] = latestVersion }
             }
         } catch (e: Exception) {
@@ -167,7 +154,6 @@ object UpdateNotificationManager {
     private fun showUpdateNotification(
         context: Context,
         newVersion: String,
-        updateChannel: UpdateChannel = UpdateChannel.STABLE,
     ) {
         createNotificationChannel(context)
 
@@ -184,11 +170,7 @@ object UpdateNotificationManager {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        val downloadUrl =
-            when (updateChannel) {
-                UpdateChannel.CANARY -> Updater.getLatestCanaryDownloadUrl()
-                UpdateChannel.STABLE -> Updater.getLatestDownloadUrl()
-            }
+        val downloadUrl = Updater.getLatestDownloadUrl()
         val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
         val downloadPendingIntent =
             PendingIntent.getActivity(
@@ -224,7 +206,3 @@ object UpdateNotificationManager {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }
 }
-
-
-
-

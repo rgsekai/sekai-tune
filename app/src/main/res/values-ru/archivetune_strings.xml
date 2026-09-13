@@ -293,27 +293,6 @@
     <string name="local_songs_scan_included_folders_desc">Сканировать только те песни, которые хранятся в папках, соответствующих любому из этих путей.</string>
     <string name="local_songs_scan_included_folders_empty">Все папки включены.</string>
     <string name="local_songs_scan_included_folders_add">Включить папку</string>
-    <string name="news">Новости от разработчиков</string>
-    <string name="news_loading">Загрузка новостей…</string>
-    <string name="news_empty_title">Пока здесь ничего нет</string>
-    <string name="news_empty_desc">На данный момент объявлений нет. Загляните позже.</string>
-    <string name="news_error_title">Не удалось загрузить новости</string>
-    <string name="news_error_desc">Проверьте подключение к Интернету и попробуйте ещё раз.</string>
-    <string name="news_retry">Повторить попытку</string>
-    <string name="news_search_placeholder">Поиск новостей…</string>
-    <string name="news_search_results_title">Результаты поиска</string>
-    <string name="news_no_results_title">Статей по этому запросу не найдено</string>
-    <string name="news_no_results_desc">Попробуйте ввести другой поисковый запрос.</string>
-    <string name="news_important_badge">Важно</string>
-    <string name="news_tooltip_title">Новые объявления</string>
-    <string name="news_tooltip_body">У вас есть непрочитанные объявления от разработчиков.</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="one">%d статья</item>
-        <item quantity="few">%d статьи</item>
-        <item quantity="many">%d статей</item>
-        <item quantity="other">%d статей</item>
-    </plurals>
     <string name="aod_customize_title">Настройка AOD</string>
     <string name="aod_customize_subtitle">Форма, компоновка, элементы управления и стилизация интерфейса</string>
     <string name="aod_customize_entry_desc">Настройка always-on экрана проигрывателя</string>

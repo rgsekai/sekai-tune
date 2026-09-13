@@ -24,8 +24,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import moe.rgsekai.sekaitune.BuildConfig
-import moe.rgsekai.sekaitune.constants.UpdateChannel
-import moe.rgsekai.sekaitune.defaultUpdateChannel
 import moe.rgsekai.sekaitune.musicrecognition.MusicRecognitionRoute
 import moe.rgsekai.sekaitune.ui.screens.BrowseScreen
 import moe.rgsekai.sekaitune.ui.screens.artist.ArtistAlbumsScreen
@@ -111,15 +109,6 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("stats") {
         StatsScreen(navController)
-    }
-    composable(
-        route = "view_news/{newsId}",
-        arguments =
-            listOf(
-                navArgument("newsId") { type = NavType.StringType },
-            ),
-    ) {
-        ViewNewsScreen(navController)
     }
     composable(MusicRecognitionRoute) {
         MusicRecognitionScreen(navController)
@@ -407,20 +396,8 @@ fun NavGraphBuilder.navigationBuilder(
             UpdateScreen(navController, onUpToDate = onClearUpdateBadge)
         }
     }
-    composable(
-        route = "settings/changelog?channel={channel}",
-        arguments =
-            listOf(
-                navArgument("channel") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-            ),
-    ) { backStackEntry ->
-        val channelName = backStackEntry.arguments?.getString("channel")
-        val channel = UpdateChannel.fromStoredName(channelName, defaultUpdateChannel)
-        ChangelogScreen(navController, channel = channel)
+    composable("settings/changelog") {
+        ChangelogScreen(navController)
     }
     composable("settings/about") {
         AboutScreen(navController)

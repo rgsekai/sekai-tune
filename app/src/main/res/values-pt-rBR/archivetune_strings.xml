@@ -64,26 +64,6 @@
     <string name="remote_history">Remoto</string>
     <string name="charts">Paradas</string>
     <string name="back_button_desc">Voltar</string>
-    <string name="news">Notícias dos desenvolvedores</string>
-    <string name="news_loading">Carregando notícias…</string>
-    <string name="news_empty_title">Nada aqui ainda</string>
-    <string name="news_empty_desc">Nenhum anúncio no momento. Verifique novamente em breve.</string>
-    <string name="news_error_title">Não foi possível carregar notícias</string>
-    <string name="news_error_desc">Verifique sua conexão com a internet e tente novamente.</string>
-    <string name="news_retry">Tentar novamente</string>
-    <string name="news_search_placeholder">Pesquisar notícias…</string>
-    <string name="news_search_results_title">Resultados da pesquisa</string>
-    <string name="news_no_results_title">Nenhum artigo correspondente</string>
-    <string name="news_no_results_desc">Tente um termo de pesquisa diferente.</string>
-    <string name="news_important_badge">Importante</string>
-    <string name="news_tooltip_title">Novos anúncios</string>
-    <string name="news_tooltip_body">Você tem anúncios não lidos dos desenvolvedores.</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="one">%d artigo</item>
-        <item quantity="many">%d artigos</item>
-        <item quantity="other">%d artigos</item>
-    </plurals>
     <string name="no_title">Sem título</string>
     <string name="unknown_artist">Artista desconhecido</string>
     <string name="aod_customize_title">Personalização do AOD</string>

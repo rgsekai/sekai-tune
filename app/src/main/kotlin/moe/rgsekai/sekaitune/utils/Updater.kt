@@ -16,10 +16,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import moe.rgsekai.sekaitune.App
 import moe.rgsekai.sekaitune.BuildConfig
-import moe.rgsekai.sekaitune.constants.CanaryReleasesEtagKey
-import moe.rgsekai.sekaitune.constants.CanaryReleasesFingerprintKey
-import moe.rgsekai.sekaitune.constants.CanaryReleasesJsonKey
-import moe.rgsekai.sekaitune.constants.CanaryReleasesLastCheckedAtKey
 import moe.rgsekai.sekaitune.constants.GitHubReleasesEtagKey
 import moe.rgsekai.sekaitune.constants.GitHubReleasesFingerprintKey
 import moe.rgsekai.sekaitune.constants.GitHubReleasesJsonKey
@@ -53,11 +49,9 @@ object Updater {
     private val client = HttpClient()
     private const val ReleaseCacheCheckIntervalMs: Long = 6 * 60 * 60 * 1000L
     private const val StableReleaseBaseUrl = "https://github.com/rgsekai/sekai-tune/releases"
-    private const val CanaryReleaseBaseUrl = "https://github.com/rgsekai/sekai-tune/releases"
     var lastCheckTime = -1L
         private set
     private var latestReleaseTag: String? = null
-    private var latestCanaryReleaseTag: String? = null
 
     private val isUpdaterDistribution: Boolean
         get() =
@@ -80,9 +74,6 @@ object Updater {
 
     private fun stableReleaseArtifactName(): String =
         "app-$releaseArtifactPrefix${BuildConfig.DEVICE}-${BuildConfig.ARCHITECTURE}-release.apk"
-
-    private fun canaryReleaseArtifactName(): String =
-        "app-$releaseArtifactPrefix${BuildConfig.DEVICE}-${BuildConfig.ARCHITECTURE}-nightly.apk"
 
     private data class SemVer(
         val major: Int,
@@ -219,14 +210,6 @@ object Updater {
         return candidates.maxWithOrNull(compareBy({ it.first }, { it.second.publishedAt }))?.second
     }
 
-    internal fun findLatestCanaryRelease(releases: List<ReleaseInfo>): ReleaseInfo? {
-        if (releases.isEmpty()) return null
-        return releases.maxByOrNull { release ->
-            val dateTag = release.tagName.removePrefix("N").takeWhile { it.isDigit() }
-            dateTag.toLongOrNull() ?: 0L
-        }
-    }
-
     private fun preferredReleaseVersionNameOrNull(release: ReleaseInfo): String? = parseReleaseSemVerOrNull(release)?.normalizedName()
 
     private fun parseReleasesJson(json: String): List<ReleaseInfo> {
@@ -328,7 +311,7 @@ object Updater {
 
     suspend fun getCommitHistory(
         count: Int = 20,
-        branch: String = "dev",
+        branch: String = "main",
     ): Result<List<GitCommit>> =
         runCatching {
             if (!isUpdaterDistribution) {
@@ -337,7 +320,7 @@ object Updater {
 
             val response =
                 client
-                    .get("https://api.github.com/repos/rqsekai/sekai-tune/commits?sha=$branch&per_page=$count")
+                    .get("https://api.github.com/repos/rgsekai/sekai-tune/commits?sha=$branch&per_page=$count")
                     .bodyAsText()
             val jsonArray = JSONArray(response)
             val commits = mutableListOf<GitCommit>()
@@ -375,188 +358,6 @@ object Updater {
             return "$StableReleaseBaseUrl/download/$tag/$artifactName"
         }
         return "$StableReleaseBaseUrl/latest/download/$artifactName"
-    }
-
-    suspend fun getLatestCanaryVersionName(): Result<String> =
-        getLatestCanaryReleaseInfo().map { latest ->
-            latest.tagName.ifBlank { latest.name }
-        }
-
-    suspend fun getLatestCanaryReleaseNotes(): Result<String?> = getLatestCanaryReleaseInfo().map { it.body }
-
-    suspend fun getLatestCanaryReleaseInfo(): Result<ReleaseInfo> =
-        runCatching {
-            if (!isUpdaterDistribution) {
-                throw IllegalStateException("Updater is not available for this distribution")
-            }
-
-            val releases = getAllCanaryReleases().getOrThrow()
-            val latest =
-                findLatestCanaryRelease(releases)
-                    ?: throw IllegalStateException("No Canary releases found")
-            lastCheckTime = System.currentTimeMillis()
-            latestCanaryReleaseTag = latest.tagName
-            latest
-        }
-
-    suspend fun getCachedCanaryReleases(): List<ReleaseInfo> {
-        if (!isUpdaterDistribution) {
-            return emptyList()
-        }
-
-        val cachedJson = App.instance.dataStore.getAsync(CanaryReleasesJsonKey)
-        return cachedJson
-            ?.takeIf { it.isNotBlank() }
-            ?.let { runCatching { parseReleasesJson(it) }.getOrNull() }
-            ?: emptyList()
-    }
-
-    suspend fun getAllCanaryReleases(
-        perPage: Int = 10,
-        forceRefresh: Boolean = false,
-    ): Result<List<ReleaseInfo>> {
-        if (!isUpdaterDistribution) {
-            return Result.success(emptyList())
-        }
-
-        return runCatching {
-            val now = System.currentTimeMillis()
-            val cachedJson = App.instance.dataStore.getAsync(CanaryReleasesJsonKey)
-            val cachedEtag = App.instance.dataStore.getAsync(CanaryReleasesEtagKey)
-            val lastCheckedAt = App.instance.dataStore.getAsync(CanaryReleasesLastCheckedAtKey, 0L)
-            val cachedFingerprint = App.instance.dataStore.getAsync(CanaryReleasesFingerprintKey)
-
-            val cachedReleases =
-                cachedJson
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { runCatching { parseReleasesJson(it) }.getOrNull() }
-
-            val shouldCheckNetwork =
-                forceRefresh || cachedJson.isNullOrBlank() || (now - lastCheckedAt) >= ReleaseCacheCheckIntervalMs
-
-            if (!shouldCheckNetwork) {
-                return@runCatching cachedReleases ?: emptyList()
-            }
-
-            val networkResult =
-                runCatching {
-                    fetchCanaryReleasesNetwork(
-                        perPage = perPage,
-                        cachedEtag = cachedEtag,
-                    )
-                }.getOrNull()
-
-            if (networkResult == null) {
-                val fallback = cachedReleases
-                if (fallback != null) {
-                    return@runCatching fallback
-                }
-                throw IllegalStateException("Failed to fetch Canary releases")
-            }
-
-            when {
-                networkResult.status == HttpStatusCode.NotModified -> {
-                    App.instance.dataStore.edit { settings ->
-                        settings[CanaryReleasesLastCheckedAtKey] = now
-                        networkResult.etag?.let { settings[CanaryReleasesEtagKey] = it }
-                    }
-                    val fallback = cachedReleases
-                    if (fallback != null) {
-                        return@runCatching fallback
-                    }
-                    throw IllegalStateException("Canary release cache is empty")
-                }
-
-                networkResult.status.value in 200..299 && !networkResult.body.isNullOrBlank() -> {
-                    val networkBody = networkResult.body
-                    val releases = parseReleasesJson(networkBody)
-                    val newFingerprint = getCanaryTopReleaseFingerprint(releases)
-                    val hasPayloadChanged = cachedJson != networkBody
-                    val hasTopReleaseChanged = cachedFingerprint != newFingerprint
-
-                    App.instance.dataStore.edit { settings ->
-                        settings[CanaryReleasesLastCheckedAtKey] = now
-                        networkResult.etag?.let { settings[CanaryReleasesEtagKey] = it }
-                        if (hasPayloadChanged || hasTopReleaseChanged || cachedJson.isNullOrBlank()) {
-                            settings[CanaryReleasesJsonKey] = networkBody
-                            settings[CanaryReleasesFingerprintKey] = newFingerprint
-                        }
-                    }
-                    releases
-                }
-
-                else -> {
-                    val fallback = cachedReleases
-                    if (fallback != null) {
-                        fallback
-                    } else {
-                        throw IllegalStateException("Failed to fetch Canary releases: HTTP ${networkResult.status.value}")
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun fetchCanaryReleasesNetwork(
-        perPage: Int,
-        cachedEtag: String?,
-    ): ReleasesNetworkResult {
-        val response: HttpResponse =
-            client.get("https://api.github.com/repos/rukamori/daily-nightly/releases?per_page=$perPage") {
-                headers {
-                    append("Accept", "application/vnd.github+json")
-                    append("User-Agent", "SekaiTune")
-                    if (!cachedEtag.isNullOrBlank()) {
-                        append("If-None-Match", cachedEtag)
-                    }
-                }
-            }
-        val etag = response.headers["ETag"]
-        return when (response.status) {
-            HttpStatusCode.NotModified -> {
-                ReleasesNetworkResult(
-                    status = response.status,
-                    body = null,
-                    etag = cachedEtag ?: etag,
-                )
-            }
-
-            else -> {
-                ReleasesNetworkResult(
-                    status = response.status,
-                    body = response.bodyAsText(),
-                    etag = etag,
-                )
-            }
-        }
-    }
-
-    private fun getCanaryTopReleaseFingerprint(releases: List<ReleaseInfo>): String {
-        val latest = findLatestCanaryRelease(releases) ?: return ""
-        return listOf(
-            latest.tagName,
-            latest.name,
-            latest.publishedAt,
-            latest.body.orEmpty(),
-            latest.htmlUrl,
-        ).joinToString("||")
-    }
-
-    fun getLatestCanaryDownloadUrl(): String {
-        if (!isUpdaterDistribution) {
-            return ""
-        }
-
-        if (!canDownloadUpdatesDirectly) {
-            return "$CanaryReleaseBaseUrl/latest"
-        }
-
-        val artifactName = canaryReleaseArtifactName()
-        val tag = latestCanaryReleaseTag
-        if (tag != null) {
-            return "$CanaryReleaseBaseUrl/download/$tag/$artifactName"
-        }
-        return "$CanaryReleaseBaseUrl/latest/download/$artifactName"
     }
 
     suspend fun getAllReleases(
@@ -650,7 +451,3 @@ object Updater {
         }
     }
 }
-
-
-
-

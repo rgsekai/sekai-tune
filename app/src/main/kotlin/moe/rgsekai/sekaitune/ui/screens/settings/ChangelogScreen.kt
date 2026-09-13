@@ -25,7 +25,6 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
-import moe.rgsekai.sekaitune.constants.UpdateChannel
 import moe.rgsekai.sekaitune.ui.component.IconButton
 import moe.rgsekai.sekaitune.ui.component.MarkdownText
 import moe.rgsekai.sekaitune.ui.utils.backToMain
@@ -38,7 +37,6 @@ import java.util.Locale
 @Composable
 fun ChangelogScreen(
     navController: NavController,
-    channel: UpdateChannel = UpdateChannel.STABLE,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var releases by remember { mutableStateOf<List<ReleaseInfo>>(emptyList()) }
@@ -46,11 +44,7 @@ fun ChangelogScreen(
     var error by remember { mutableStateOf<String?>(null) }
 
     suspend fun loadReleases(forceRefresh: Boolean) {
-        val result =
-            when (channel) {
-                UpdateChannel.CANARY -> Updater.getAllCanaryReleases(forceRefresh = forceRefresh)
-                else -> Updater.getAllReleases(forceRefresh = forceRefresh)
-            }
+        val result = Updater.getAllReleases(forceRefresh = forceRefresh)
         result
             .onSuccess { r ->
                 releases = r
@@ -64,11 +58,7 @@ fun ChangelogScreen(
     }
 
     LaunchedEffect(Unit) {
-        val cachedReleases =
-            when (channel) {
-                UpdateChannel.CANARY -> Updater.getCachedCanaryReleases()
-                else -> Updater.getCachedReleases()
-            }
+        val cachedReleases = Updater.getCachedReleases()
         if (cachedReleases.isNotEmpty()) {
             releases = cachedReleases
             isLoading = false
@@ -226,7 +216,3 @@ private fun ReleaseCard(release: ReleaseInfo) {
         }
     }
 }
-
-
-
-

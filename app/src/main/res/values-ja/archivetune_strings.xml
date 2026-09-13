@@ -64,25 +64,6 @@
     <string name="remote_history">リモート</string>
     <string name="charts">チャート</string>
     <string name="back_button_desc">戻る</string>
-    <string name="news">開発者からのお知らせ</string>
-    <string name="news_loading">お知らせを読み込み中…</string>
-    <string name="news_empty_title">まだ何もない</string>
-    <string name="news_empty_desc">現在お知らせはない。あとで確認してね。</string>
-    <string name="news_error_title">お知らせを読み込めなかった</string>
-    <string name="news_error_desc">インターネット接続を確認してもう一度試してね。</string>
-    <string name="news_retry">再試行</string>
-    <string name="news_search_placeholder">お知らせを検索…</string>
-    <string name="news_search_results_title">検索結果</string>
-    <string name="news_no_results_title">一致する記事がない</string>
-    <string name="news_no_results_desc">別の検索語を試してね。</string>
-    <string name="news_important_badge">重要</string>
-    <string name="news_tooltip_title">新しいお知らせ</string>
-    <string name="news_tooltip_body">開発者から未読のお知らせがある。</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="one">%d件の記事</item>
-        <item quantity="other">%d件の記事</item>
-    </plurals>
     <string name="no_title">タイトルなし</string>
     <string name="unknown_artist">不明なアーティスト</string>
     <string name="aod_customize_title">AODカスタマイズ</string>

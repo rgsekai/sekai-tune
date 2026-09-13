@@ -311,7 +311,6 @@
     <string name="aod_control_filled">Rempli</string>
     <string name="music_recognition_history">Historique de reconnaissance</string>
     <string name="aod_customize_artwork_glow">Lueur de l\'œuvre</string>
-    <string name="news_empty_title">Rien ici pour l\'instant</string>
     <string name="aod_customize_thumbnail_shape_desc">Utilise des formes pour le masque graphique de l\'AOD.</string>
     <string name="ai_model">Modèle</string>
     <string name="spotify_reload_playlist">Actualiser la playlist</string>
@@ -333,11 +332,6 @@
     <string name="settings_lyrics_subtitle">Fournisseurs de paroles, préchargement et traduction</string>
     <string name="aod_customize_sample_artist">Koiverse Ensemble</string>
     <string name="ai_integration">Intégration de l\'IA</string>
-    <plurals name="news_article_count">
-        <item quantity="one">%d article</item>
-        <item quantity="many">%d articles</item>
-        <item quantity="other">%d articles</item>
-    </plurals>
     <string name="aod_customize_control_size">Taille du contrôle</string>
     <string name="lyrics_share_style_frosted_dark">Noir givré</string>
     <string name="local_songs_scan_included_folders_desc">Analyser uniquement les morceaux stockés dans des dossiers dont le chemin d\'accès correspond à l\'un de ces chemins.</string>
@@ -357,21 +351,17 @@
     <string name="aod_accent_theme">Thème</string>
     <string name="lyrics_share_style_deep_blur">Flou profond</string>
     <string name="aod_shape_pentagon">Pentagone</string>
-    <string name="news_no_results_title">Aucun article correspondant</string>    <string name="storage_migration_cache_progress">Transfert du cache... %1$d%%</string>
+    <string name="storage_migration_cache_progress">Transfert du cache... %1$d%%</string>
     <string name="ai_api_testing">Test de connexion…</string>
     <string name="aod_customize_horizontal_padding">Remplissage horizontal</string>
     <string name="local_songs_scan_included_folders_empty">Tous les dossiers sont inclus.</string>
     <string name="aod_position_bottom">En bas</string>
     <string name="year_in_music_top_track">Votre titre préféré</string>
     <string name="aod_position_center">Centre</string>
-    <string name="news">Actualités des développeurs</string>
     <string name="settings_developer_options_title">Options pour les développeurs</string>
-    <string name="news_search_results_title">Résultats de la recherche</string>
     <string name="aod_accent_monochrome">Monochrome</string>
     <string name="aod_alignment_center">Centre</string>
-    <string name="news_retry">Réessayer</string>
     <string name="spotify_connect">Se connecter à Spotify</string>
-    <string name="news_important_badge">Important</string>
     <string name="aod_customize_ambient_intensity">Intensité ambiante</string>
     <string name="top_songs">Meilleurs Titres</string>
     <string name="settings_appearance_subtitle">Thèmes, mise en page et styles visuels</string>
@@ -379,7 +369,6 @@
     <string name="lyrics_share_style_clear_glass">Verre transparent</string>
     <string name="aod_control_minimal">Minimal</string>
     <string name="spotify_connected_as">Connecté en tant que %1$s</string>
-    <string name="news_search_placeholder">Rechercher des actualités…</string>
     <string name="year_in_music_minutes_label">Durée d\'écoute</string>
     <string name="storage_folder_invalid">Sélectionnez un dossier valide.</string>
     <string name="aod_background_pure_black">Noir pur</string>
@@ -393,7 +382,6 @@
     <string name="storage_folder_selected_restart">Le dossier de stockage a été enregistré. L\'application redémarrera dans 3 secondes.</string>
     <string name="aod_customize_vertical_spacing">Espacement vertical</string>
     <string name="player_design_v8">Immersion prolongée</string>
-    <string name="news_tooltip_body">Vous avez des annonces non lues de la part des développeurs.</string>
     <string name="spotify_playlists">Playlist Spotify</string>
     <string name="aod_shape_sunny">Ensoleillé</string>
     <string name="import_m3u_format">Playlist audio M3U</string>
@@ -412,14 +400,12 @@
     <string name="aod_shape_heart">Cœur</string>
     <string name="year_in_music_plays_label">Nombre total de lectures</string>
     <string name="aod_position_top">En haut</string>    <string name="ai_provider_none">Aucun (désactivé)</string>
-    <string name="news_error_title">Impossible de charger les actualités</string>
     <string name="android_auto_suggested_songs">Suggestions de titres</string>
     <string name="ai_custom_endpoint">Point de terminaison personnalisé</string>
     <string name="ai_model_api_key_required">Une clé API est requise pour charger les modèles</string>
     <string name="music_recognition_history_no_results_title">Aucun historique correspondant</string>
     <string name="year_in_music_totals_title">Vous avez fait vivre la musique</string>
     <string name="aod_customize_show_controls">Afficher les commandes</string>
-    <string name="news_error_desc">Vérifiez votre connexion Internet et réessayez.</string>
     <string name="spotify_not_connected">Spotify n\'est pas connecté</string>
     <string name="settings_developer_options_subtitle">Fonctionnalités expérimentales et débogage</string>    <string name="aod_customize_controls">Commandes</string>
     <string name="storage_cache_cleared">Le cache a été vidé.</string>
@@ -453,9 +439,7 @@
     <string name="year_in_music_ranked_albums">Les albums que vous avez réécoutés</string>
     <string name="ai_api_status_unknown">Non testé</string>    <string name="new_releases">Nouveautés</string>
     <string name="aod_customize_background_style">Style d\'arrière-plan</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
     <string name="year_in_music_recap">Récapitulatif Musical</string>
-    <string name="news_loading">Chargement des actualités…</string>
     <string name="about_content_desc_github">GitHub</string>
     <string name="ai_translation_menu">Traduction par IA</string>
     <string name="ep">EP</string>
@@ -484,7 +468,6 @@
     <string name="settings_behavior_subtitle">Historique, paramètres par défaut et paramètres de confidentialité</string>
     <string name="ai_api_test_failed">Échec du test de l\'API</string>
     <string name="lyrics_share_style_album_tint">Teinte de l\'album</string>
-    <string name="news_empty_desc">Il n\'y a aucune annonce pour le moment. Revenez bientôt.</string>
     <string name="playlist_sync_progress_step">%1$d/%2$d titres</string>
     <string name="settings_internet_subtitle">Comportement de la lecture en réseau, du proxy et du DNS</string>
     <string name="ai_model_no_results">Aucun modèle ne correspond à votre recherche</string>
@@ -518,14 +501,12 @@
     <string name="storage_location_removable">Carte SD</string>
     <string name="aod_control_tonal">Tonale</string>
     <string name="android_auto_mixes_and_radios">Mix et Radios</string>
-    <string name="news_no_results_desc">Essayez un autre terme de recherche.</string>
     <string name="aod_customize_show_thumbnail">Afficher la miniature</string>
     <string name="settings_behavior_title">Comportement</string>
     <string name="aod_shape_rounded">Arrondi</string>
     <string name="external_service">Service externe</string>
     <string name="aod_customize_percent_value">%1$d%%</string>
     <string name="storage_cache_clear_failed">Impossible de vider le cache. Vérifiez l\'accès à la carte SD.</string>
-    <string name="news_tooltip_title">Nouvelles annonces</string>
     <string name="settings_backup_restore_subtitle">Exporter et récupérer les données personnelles de vos applications</string>
     <string name="aod_customize_show_album">Afficher l\'album</string>
     <string name="aod_customize_show_exit_button">Afficher le bouton « Quitter »</string>

@@ -211,8 +211,6 @@ import moe.rgsekai.sekaitune.constants.SYSTEM_DEFAULT
 import moe.rgsekai.sekaitune.constants.SearchSource
 import moe.rgsekai.sekaitune.constants.SearchSourceKey
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
-import moe.rgsekai.sekaitune.constants.UpdateChannel
-import moe.rgsekai.sekaitune.constants.UpdateChannelKey
 import moe.rgsekai.sekaitune.constants.UseSystemFontKey
 import moe.rgsekai.sekaitune.db.MusicDatabase
 import moe.rgsekai.sekaitune.db.entities.Album
@@ -293,7 +291,6 @@ import moe.rgsekai.sekaitune.viewmodels.BackupCategory
 import moe.rgsekai.sekaitune.viewmodels.BackupRestoreViewModel
 import moe.rgsekai.sekaitune.viewmodels.HomeViewModel
 import moe.rgsekai.sekaitune.viewmodels.NetworkBannerViewModel
-import moe.rgsekai.sekaitune.viewmodels.NewsViewModel
 import moe.rgsekai.sekaitune.viewmodels.OnlineSearchSort
 import moe.rgsekai.sekaitune.viewmodels.OnlineSearchViewModel
 import java.util.Locale
@@ -324,7 +321,6 @@ class MainActivity : ComponentActivity() {
     private var pendingTogetherJoinLink: String? = null
     private var pendingBackupRestoreUri by mutableStateOf<Uri?>(null)
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
-    private var latestUpdateChannel by mutableStateOf(defaultUpdateChannel)
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
     private var isMusicServiceBound = false
@@ -544,8 +540,6 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val updateChannel by rememberEnumPreference(UpdateChannelKey, defaultValue = defaultUpdateChannel)
-
             LaunchedEffect(Unit) {
                 while (playerConnection == null) {
                     delay(100)
@@ -556,16 +550,9 @@ class MainActivity : ComponentActivity() {
                     BuildConfig.UPDATER_AVAILABLE &&
                     System.currentTimeMillis() - Updater.lastCheckTime > 1.days.inWholeMilliseconds
                 ) {
-                    val channelString = withContext(Dispatchers.IO) { dataStore.data.first()[UpdateChannelKey] }
-                    val actualChannel = UpdateChannel.fromStoredName(channelString, defaultUpdateChannel)
-                    val versionResult =
-                        when (actualChannel) {
-                            UpdateChannel.CANARY -> Updater.getLatestCanaryVersionName()
-                            UpdateChannel.STABLE -> Updater.getLatestVersionName()
-                        }
+                    val versionResult = Updater.getLatestVersionName()
                     versionResult.onSuccess {
                         if (Updater.isUpdateAvailable(it, BuildConfig.VERSION_NAME)) {
-                            latestUpdateChannel = actualChannel
                             latestVersionName = it
                         }
                     }
@@ -656,17 +643,12 @@ class MainActivity : ComponentActivity() {
             }
 
             // fetch release notes and show sheet when a new version is detected
-            LaunchedEffect(latestVersionName, latestUpdateChannel, updateChannel) {
+            LaunchedEffect(latestVersionName) {
                 if (
                     BuildConfig.UPDATER_AVAILABLE &&
-                    latestUpdateChannel == updateChannel &&
                     Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
                 ) {
-                    val releaseNotesResult =
-                        when (latestUpdateChannel) {
-                            UpdateChannel.CANARY -> Updater.getLatestCanaryReleaseNotes()
-                            UpdateChannel.STABLE -> Updater.getLatestReleaseNotes()
-                        }
+                    val releaseNotesResult = Updater.getLatestReleaseNotes()
                     releaseNotesResult
                         .onSuccess {
                             releaseNotesState.value = it
@@ -836,11 +818,9 @@ class MainActivity : ComponentActivity() {
                     val coroutineScope = rememberCoroutineScope()
                     val homeViewModel: HomeViewModel = hiltViewModel()
                     val networkBannerViewModel: NetworkBannerViewModel = hiltViewModel()
-                    val newsViewModel: NewsViewModel = hiltViewModel()
                     val allLocalItems by homeViewModel.allLocalItems.collectAsState()
                     val allYtItems by homeViewModel.allYtItems.collectAsState()
                     val networkBannerState by networkBannerViewModel.bannerState.collectAsStateWithLifecycle()
-                    val hasUnreadNews by newsViewModel.hasUnreadNews.collectAsStateWithLifecycle()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val (previousTab) = rememberSaveable { mutableStateOf("home") }
                     val currentRoute = navBackStackEntry?.destination?.route
@@ -1719,7 +1699,6 @@ class MainActivity : ComponentActivity() {
                                                         BadgedBox(badge = {
                                                             if (
                                                                 BuildConfig.UPDATER_AVAILABLE &&
-                                                                latestUpdateChannel == updateChannel &&
                                                                 Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
                                                             ) {
                                                                 Badge()

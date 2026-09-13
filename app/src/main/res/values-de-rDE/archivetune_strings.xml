@@ -231,25 +231,6 @@
     <string name="local_songs_scan_failed">Scannen des Gerätes konnte nicht abgeschlossen werden.</string>
     <string name="local_songs_scan_subtitle">Lade auf diesem Gerät gespeicherte Songs neu und aktualisiere die Metadaten der lokalen Bibliothek.</string>
     <string name="local_songs_scan_filters_note">Änderungen werden beim erneuten Scannen des Gerätes übernommen.</string>
-    <string name="news">Neuigkeiten von den Entwickelern</string>
-    <string name="news_loading">Lade Neuigkeiten…</string>
-    <string name="news_empty_title">Noch nichts hier</string>
-    <string name="news_empty_desc">Derzeit gibt es keine Ankündigungen. Schaue bald wieder vorbei.</string>
-    <string name="news_error_title">Neuigkeiten konnten nicht geladen werden</string>
-    <string name="news_error_desc">Prüfen deine Internetverbindung und versuche es erneut.</string>
-    <string name="news_retry">Erneut versuchen</string>
-    <string name="news_search_placeholder">Neuigkeiten suchen…</string>
-    <string name="news_search_results_title">Suchergebnisse</string>
-    <string name="news_no_results_title">Keine passenden Artikel</string>
-    <string name="news_no_results_desc">Versuch einen anderen Suchbegriff.</string>
-    <string name="news_important_badge">Wichtig</string>
-    <string name="news_tooltip_title">Neue Ankündigungen</string>
-    <string name="news_tooltip_body">Du hast ungelesene Mitteilungen von den Entwicklern.</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="one">%d Artikel</item>
-        <item quantity="other">%d Artikel</item>
-    </plurals>
     <string name="aod_customize_title">AOD-Anpassungen</string>
     <string name="aod_customize_subtitle">Form, Anordnung, Bedienelemente und Gestaltung der Umgebung</string>
     <string name="aod_customize_entry_desc">Always-on-Wiedergabebildschirm anpassen</string>

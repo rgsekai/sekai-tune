@@ -52,24 +52,6 @@
     <string name="remote_history">Online</string>
     <string name="charts">Grafik</string>
     <string name="back_button_desc">Kembali</string>
-    <string name="news">Berita Dari Pengembang</string>
-    <string name="news_loading">Memuat berita…</string>
-    <string name="news_empty_title">Belum ada apa pun di sini</string>
-    <string name="news_empty_desc">Tidak ada pengumuman saat ini. Segera periksa kembali.</string>
-    <string name="news_error_title">Tidak dapat memuat berita</string>
-    <string name="news_error_desc">Periksa koneksi internet Anda dan coba lagi.</string>
-    <string name="news_retry">Coba lagi</string>
-    <string name="news_search_placeholder">Cari berita…</string>
-    <string name="news_search_results_title">Hasil pencarian</string>
-    <string name="news_no_results_title">Tidak ada artikel yang cocok</string>
-    <string name="news_no_results_desc">Coba istilah pencarian lain.</string>
-    <string name="news_important_badge">Penting</string>
-    <string name="news_tooltip_title">Pengumuman Baru</string>
-    <string name="news_tooltip_body">Anda memiliki pengumuman yang belum dibaca dari pengembang.</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="other">%d artikel</item>
-    </plurals>
     <string name="no_title">Tidak ada judul</string>
     <string name="unknown_artist">Artis tidak dikenal</string>
     <string name="aod_customize_title">Kustomisasi AOD</string>

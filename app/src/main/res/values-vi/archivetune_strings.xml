@@ -302,24 +302,6 @@
     <string name="backup_category_account">Chi tiết tài khoản</string>
     <string name="backup_category_account_desc">Thông tin đăng nhập YouTube, Spotify, Last.fm, proxy</string>
     <string name="login_success">Đăng nhập thành công</string>
-    <string name="news">Tin tức từ Nhà phát triển</string>
-    <string name="news_loading">Đang tải tin tức…</string>
-    <string name="news_empty_title">Chưa có gì ở đây</string>
-    <string name="news_empty_desc">Hiện không có thông báo nào. Hãy quay lại sau.</string>
-    <string name="news_error_title">Không thể tải tin tức</string>
-    <string name="news_error_desc">Kiểm tra kết nối internet của bạn và thử lại.</string>
-    <string name="news_retry">Thử lại</string>
-    <string name="news_search_placeholder">Tìm kiếm tin tức…</string>
-    <string name="news_search_results_title">Kết quả tìm kiếm</string>
-    <string name="news_no_results_title">Không có bài viết phù hợp</string>
-    <string name="news_no_results_desc">Hãy thử một cụm từ tìm kiếm khác.</string>
-    <string name="news_important_badge">Quan trọng</string>
-    <string name="news_tooltip_title">Thông báo mới</string>
-    <string name="news_tooltip_body">Bạn có thông báo chưa đọc từ nhà phát triển.</string>
-    <string name="news_author_on_date">%1$s · %2$s</string>
-    <plurals name="news_article_count">
-        <item quantity="other">%d bài viết</item>
-    </plurals>
     <string name="aod_customize_title">Tùy chỉnh AOD</string>
     <string name="aod_customize_subtitle">Hình dạng, bố cục, điều khiển và kiểu dáng xung quanh</string>
     <string name="aod_customize_entry_desc">Tùy chỉnh màn hình trình phát luôn bật</string>

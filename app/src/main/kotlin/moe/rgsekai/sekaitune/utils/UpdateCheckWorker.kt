@@ -14,9 +14,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.constants.EnableUpdateNotificationKey
-import moe.rgsekai.sekaitune.constants.UpdateChannel
-import moe.rgsekai.sekaitune.constants.UpdateChannelKey
-import moe.rgsekai.sekaitune.defaultUpdateChannel
 
 class UpdateCheckWorker(
     context: Context,
@@ -33,30 +30,9 @@ class UpdateCheckWorker(
             val isEnabled = dataStore.data.map { it[EnableUpdateNotificationKey] ?: false }.first()
             if (!isEnabled) return Result.success()
 
-            val updateChannel =
-                dataStore.data
-                    .map { UpdateChannel.fromStoredName(it[UpdateChannelKey], defaultUpdateChannel) }
-                    .first()
-
-            when (updateChannel) {
-                UpdateChannel.CANARY -> {
-                    Updater.getLatestCanaryVersionName().onSuccess { latestVersion ->
-                        if (Updater.isUpdateAvailable(latestVersion, BuildConfig.VERSION_NAME)) {
-                            UpdateNotificationManager.notifyIfNewVersion(
-                                applicationContext,
-                                latestVersion,
-                                updateChannel,
-                            )
-                        }
-                    }
-                }
-
-                UpdateChannel.STABLE -> {
-                    Updater.getLatestVersionName().onSuccess { latestVersion ->
-                        if (Updater.isUpdateAvailable(latestVersion, BuildConfig.VERSION_NAME)) {
-                            UpdateNotificationManager.notifyIfNewVersion(applicationContext, latestVersion)
-                        }
-                    }
+            Updater.getLatestVersionName().onSuccess { latestVersion ->
+                if (Updater.isUpdateAvailable(latestVersion, BuildConfig.VERSION_NAME)) {
+                    UpdateNotificationManager.notifyIfNewVersion(applicationContext, latestVersion)
                 }
             }
 
@@ -66,7 +42,3 @@ class UpdateCheckWorker(
         }
     }
 }
-
-
-
-
