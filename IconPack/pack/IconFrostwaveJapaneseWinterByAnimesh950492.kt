@@ -1,4 +1,4 @@
-package moe.rukamori.iconpack
+package moe.rgsekai.sekaitune.iconpack
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
