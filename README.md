@@ -32,15 +32,15 @@
 
 <div align="center">
 
-<img src="screen1.jpg" width="32%">
-  <img src="screen2.jpg" width="32%">
-  <img src="screen3.jpg" width="32%">
-<img src="screen4.jpg" width="32%">
-  <img src="screen5.jpg" width="32%">
-  <img src="screen6.jpg" width="32%">
-<img src="screen7.jpg" width="32%">
-  <img src="screen8.jpg" width="32%">
-  <img src="screen9.jpg" width="32%">
+<img src="docs/assets/screen1.jpg" width="32%">
+  <img src="docs/assets/screen2.jpg" width="32%">
+  <img src="docs/assets/screen3.jpg" width="32%">
+<img src="docs/assets/screen4.jpg" width="32%">
+  <img src="docs/assets/screen5.jpg" width="32%">
+  <img src="docs/assets/screen6.jpg" width="32%">
+<img src="docs/assets/screen7.jpg" width="32%">
+  <img src="docs/assets/screen8.jpg" width="32%">
+  <img src="docs/assets/screen9.jpg" width="32%">
 
 </div>
 
