@@ -49,11 +49,6 @@ android {
             abiFilters.add("arm64-v8a")
         }
 
-        val togetherBearerToken =
-            localProperties.getProperty("TOGETHER_BEARER_TOKEN")
-                ?: System.getenv("TOGETHER_BEARER_TOKEN")
-                ?: ""
-        buildConfigField("String", "TOGETHER_BEARER_TOKEN", "\"$togetherBearerToken\"")
 
         val nightlyBuildHash =
             (
@@ -201,6 +196,8 @@ dependencies {
     implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
     implementation("androidx.credentials:credentials:1.2.2")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")

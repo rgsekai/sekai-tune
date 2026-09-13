@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isHost(resourceData) {
+      return isAuthenticated() && request.auth.uid == resourceData.hostId;
+    }
+
+    // ----------------------------------------------------
+    // User Settings & Secrets (Feature 2)
+    // ----------------------------------------------------
+    match /user_settings/{userId} {
+      allow read, write: if isUser(userId);
+    }
+
+    // ----------------------------------------------------
+    // Together Online Sessions (Feature 1)
+    // ----------------------------------------------------
+    match /together_sessions/{sessionId} {
+      // Must be authenticated (Anonymous Auth or Google Sign-In)
+      allow read: if isAuthenticated();
+
+      // Only authenticated clients can create a session; creator must be the host
+      allow create: if isAuthenticated()
+        && request.resource.data.sessionId == sessionId
+        && request.resource.data.hostId == request.auth.uid;
+
+      // Only the host can delete a session
+      allow delete: if isHost(resource.data);
+
+      // Session Updates
+      allow update: if isAuthenticated() && (
+        // Host has full update authority
+        isHost(resource.data) ||
+
+        // Guest updates under strict independent constraints:
+        (
+          // 1. Immutable session metadata for guests
+          request.resource.data.sessionId == resource.data.sessionId &&
+          request.resource.data.hostId == resource.data.hostId &&
+          request.resource.data.code == resource.data.code &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.active == resource.data.active &&
+          request.resource.data.settings == resource.data.settings &&
+
+          // 2. Guests can ONLY add, update, or remove their OWN entry in the participants map
+          request.resource.data.participants.diff(resource.data.participants).affectedKeys().hasOnly([request.auth.uid]) &&
+
+          // 3. Independent Playback permission check
+          (
+            request.resource.data.playback == resource.data.playback ||
+            resource.data.settings.allowGuestsToControlPlayback == true
+          ) &&
+
+          // 4. Independent Queue permission check
+          (
+            request.resource.data.queue == resource.data.queue ||
+            resource.data.settings.allowGuestsToAddTracks == true
+          )
+        )
+      );
+    }
+  }
+}

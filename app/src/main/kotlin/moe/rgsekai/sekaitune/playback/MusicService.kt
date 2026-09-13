@@ -626,7 +626,8 @@ class MusicService :
             moe.rgsekai.sekaitune.together.TogetherSessionState.Idle,
         )
     private var togetherServer: moe.rgsekai.sekaitune.together.TogetherServer? = null
-    private var togetherOnlineHost: moe.rgsekai.sekaitune.together.TogetherOnlineHost? = null
+    private var togetherOnlineHost: moe.rgsekai.sekaitune.together.FirestoreTogetherHost? = null
+    private var togetherOnlineGuest: moe.rgsekai.sekaitune.together.FirestoreTogetherGuest? = null
     private var togetherClient: moe.rgsekai.sekaitune.together.TogetherClient? = null
     private var togetherBroadcastJob: Job? = null
     private var togetherOnlineConnectJob: Job? = null
@@ -3434,25 +3435,6 @@ class MusicService :
         }
     }
 
-    private fun togetherOnlineErrorMessage(t: Throwable): String {
-        if (t is moe.rgsekai.sekaitune.together.TogetherOnlineApiException) {
-            val code = t.statusCode
-            return when {
-                code == 404 -> getString(R.string.together_session_not_found)
-                code != null && code in 500..599 -> getString(R.string.together_server_error)
-                else -> t.message ?: getString(R.string.network_unavailable)
-            }
-        }
-        val root = generateSequence(t) { it.cause }.lastOrNull() ?: t
-        return when (root) {
-            is UnknownHostException -> getString(R.string.together_server_unreachable)
-            is ConnectException -> getString(R.string.together_server_unreachable)
-            is SocketTimeoutException -> getString(R.string.together_connection_timed_out)
-            is javax.net.ssl.SSLHandshakeException -> getString(R.string.together_server_unreachable)
-            else -> getString(R.string.network_unavailable)
-        }
-    }
-
     fun startTogetherOnlineHost(
         displayName: String,
         settings: moe.rgsekai.sekaitune.together.TogetherRoomSettings,
@@ -3466,68 +3448,46 @@ class MusicService :
             stopTogetherInternal()
             togetherIsOnlineSession = true
 
-            val baseUrl =
-                moe.rgsekai.sekaitune.together.TogetherOnlineEndpoint
-                    .baseUrlOrNull(dataStore)
-            if (baseUrl == null) {
-                scope.launch(SilentHandler) {
-                    togetherSessionState.value =
-                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = getString(R.string.together_online_not_configured),
-                            recoverable = true,
-                        )
-                }
-                return@launch
-            }
-
-            val togetherToken =
-                moe.rgsekai.sekaitune.BuildConfig.TOGETHER_BEARER_TOKEN
-                    .trim()
-                    .takeIf { it.isNotBlank() }
-            if (togetherToken == null) {
-                scope.launch(SilentHandler) {
-                    togetherSessionState.value =
-                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = getString(R.string.together_token_missing),
-                            recoverable = true,
-                        )
-                }
-                return@launch
-            }
-
-            val api =
-                moe.rgsekai.sekaitune.together
-                    .TogetherOnlineApi(baseUrl = baseUrl, bearerToken = togetherToken)
-            val hostName = displayName.trim().ifBlank { getString(R.string.app_name) }
-
-            val created =
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+            if (auth.currentUser == null) {
                 runCatching {
-                    api.createSession(
-                        hostDisplayName = hostName,
-                        settings = settings,
-                    )
-                }.getOrElse { t ->
+                    com.google.android.gms.tasks.Tasks.await(auth.signInAnonymously())
+                }.onFailure { e ->
+                    Timber.tag("Together").e(e, "Anonymous sign in failed")
                     scope.launch(SilentHandler) {
                         togetherSessionState.value =
                             moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                                message = togetherOnlineErrorMessage(t),
+                                message = getString(R.string.network_unavailable),
                                 recoverable = true,
                             )
                     }
-                    reportException(t)
                     return@launch
                 }
+            }
+
+            val hostUid = auth.currentUser?.uid ?: run {
+                scope.launch(SilentHandler) {
+                    togetherSessionState.value =
+                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
+                            message = getString(R.string.network_unavailable),
+                            recoverable = true,
+                        )
+                }
+                return@launch
+            }
+
+            val sessionId = java.util.UUID.randomUUID().toString()
+            val code = (100000..999999).random().toString()
+            val hostName = displayName.trim().ifBlank { getString(R.string.app_name) }
 
             val onlineHost =
-                moe.rgsekai.sekaitune.together.TogetherOnlineHost(
-                    externalScope = ioScope,
-                    sessionId = created.sessionId,
-                    sessionKey = created.hostKey,
-                    hostId = togetherHostId,
+                moe.rgsekai.sekaitune.together.FirestoreTogetherHost(
+                    scope = ioScope,
+                    sessionId = sessionId,
+                    code = code,
+                    hostUid = hostUid,
                     hostDisplayName = hostName,
-                    initialSettings = created.settings,
-                    clientId = getOrCreateTogetherClientId(),
-                    bearerToken = togetherToken,
+                    settings = settings,
                 )
 
             onlineHost.onEvent = { event ->
@@ -3537,80 +3497,36 @@ class MusicService :
             }
 
             togetherOnlineHost = onlineHost
-            scheduleTogetherHostInactivityTimeout(created.sessionId) {
-                api.endSession(
-                    sessionId = created.sessionId,
-                    hostKey = created.hostKey,
-                )
+            val initialState = buildTogetherRoomState(sessionId = sessionId, hostId = hostUid)
+            val success = onlineHost.createSession(initialState)
+            if (!success) {
+                scope.launch(SilentHandler) {
+                    togetherSessionState.value =
+                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
+                            message = getString(R.string.together_server_unreachable),
+                            recoverable = true,
+                        )
+                }
+                stopTogetherInternal()
+                return@launch
+            }
+
+            scheduleTogetherHostInactivityTimeout(sessionId) {
+                onlineHost.close()
             }
 
             scope.launch(SilentHandler) {
                 togetherSessionState.value =
                     moe.rgsekai.sekaitune.together.TogetherSessionState.HostingOnline(
-                        sessionId = created.sessionId,
-                        code = created.code,
-                        settings = created.settings,
-                        roomState = null,
+                        sessionId = sessionId,
+                        code = code,
+                        settings = settings,
+                        roomState = initialState.copy(
+                            participants = onlineHost.currentParticipants(),
+                            settings = settings,
+                        ),
                     )
             }
-
-            val wsUrl =
-                moe.rgsekai.sekaitune.together.TogetherOnlineEndpoint.onlineWebSocketUrlOrNull(
-                    rawWsUrl = created.wsUrl,
-                    baseUrl = baseUrl,
-                )
-            if (wsUrl == null) {
-                scope.launch(SilentHandler) {
-                    togetherSessionState.value =
-                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = "Connection failed: Invalid server websocket URL",
-                            recoverable = true,
-                        )
-                }
-                ioScope.launch(SilentHandler) { stopTogetherInternal() }
-                return@launch
-            }
-
-            togetherOnlineConnectJob?.cancel()
-            togetherOnlineConnectJob =
-                ioScope.launch(SilentHandler) {
-                    onlineHost.connect(wsUrl)
-                }
-
-            togetherBroadcastJob =
-                ioScope.launch(SilentHandler) {
-                    while (togetherOnlineHost === onlineHost) {
-                        val state =
-                            if (togetherAuthorityParticipantId == null || togetherAuthorityParticipantId == togetherHostId) {
-                                buildTogetherRoomState(
-                                    sessionId = created.sessionId,
-                                    hostId = togetherHostId,
-                                )
-                            } else {
-                                null
-                            }
-                        if (state != null) {
-                            onlineHost.broadcastRoomState(state)
-                            scope.launch(SilentHandler) {
-                                val hosting =
-                                    togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.HostingOnline
-                                if (hosting?.sessionId == created.sessionId) {
-                                    val currentSettings = onlineHost.currentSettings()
-                                    togetherSessionState.value =
-                                        hosting.copy(
-                                            settings = currentSettings,
-                                            roomState =
-                                                state.copy(
-                                                    participants = onlineHost.currentParticipants(),
-                                                    settings = currentSettings,
-                                                ),
-                                        )
-                                }
-                            }
-                        }
-                        kotlinx.coroutines.delay(TogetherPlaybackSync.BroadcastIntervalMs)
-                    }
-                }
         }
     }
 
@@ -3852,85 +3768,64 @@ class MusicService :
             stopTogetherInternal()
             togetherIsOnlineSession = true
 
-            val baseUrl =
-                moe.rgsekai.sekaitune.together.TogetherOnlineEndpoint
-                    .baseUrlOrNull(dataStore)
-            if (baseUrl == null) {
-                scope.launch(SilentHandler) {
-                    togetherSessionState.value =
-                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = getString(R.string.together_online_not_configured),
-                            recoverable = true,
-                        )
-                }
-                return@launch
-            }
-
-            val togetherToken =
-                moe.rgsekai.sekaitune.BuildConfig.TOGETHER_BEARER_TOKEN
-                    .trim()
-                    .takeIf { it.isNotBlank() }
-            if (togetherToken == null) {
-                scope.launch(SilentHandler) {
-                    togetherSessionState.value =
-                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = getString(R.string.together_token_missing),
-                            recoverable = true,
-                        )
-                }
-                return@launch
-            }
-
-            val api =
-                moe.rgsekai.sekaitune.together
-                    .TogetherOnlineApi(baseUrl = baseUrl, bearerToken = togetherToken)
-            val resolved =
-                runCatching { api.resolveCode(trimmedCode) }
-                    .getOrElse { t ->
-                        scope.launch(SilentHandler) {
-                            togetherSessionState.value =
-                                moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                                    message = togetherOnlineErrorMessage(t),
-                                    recoverable = true,
-                                )
-                        }
-                        reportException(t)
-                        return@launch
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+            if (auth.currentUser == null) {
+                runCatching {
+                    com.google.android.gms.tasks.Tasks.await(auth.signInAnonymously())
+                }.onFailure { e ->
+                    Timber.tag("Together").e(e, "Anonymous sign in failed")
+                    scope.launch(SilentHandler) {
+                        togetherSessionState.value =
+                            moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
+                                message = getString(R.string.network_unavailable),
+                                recoverable = true,
+                            )
                     }
+                    return@launch
+                }
+            }
 
-            val client =
-                moe.rgsekai.sekaitune.together.TogetherClient(
-                    ioScope,
-                    clientId = getOrCreateTogetherClientId(),
-                    bearerToken = togetherToken,
-                )
-            togetherClient = client
-            togetherClock =
-                moe.rgsekai.sekaitune.together
-                    .TogetherClock()
-            togetherSelfParticipantId = null
+            val guestUid = auth.currentUser?.uid ?: run {
+                scope.launch(SilentHandler) {
+                    togetherSessionState.value =
+                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
+                            message = getString(R.string.network_unavailable),
+                            recoverable = true,
+                        )
+                }
+                return@launch
+            }
+
+            val guestName = displayName.trim().ifBlank { getString(R.string.together_role_guest) }
+            val guest = moe.rgsekai.sekaitune.together.FirestoreTogetherGuest(
+                scope = ioScope,
+                guestUid = guestUid,
+                displayName = guestName,
+            )
+            togetherOnlineGuest = guest
+            togetherClock = moe.rgsekai.sekaitune.together.TogetherClock()
+            togetherSelfParticipantId = guestUid
             togetherLastAppliedQueueHash = null
 
             togetherClientEventsJob?.cancel()
             togetherClientEventsJob =
                 ioScope.launch(SilentHandler) {
-                    client.events.collect { event ->
+                    guest.events.collect { event ->
                         when (event) {
                             is moe.rgsekai.sekaitune.together.TogetherClientEvent.Welcome -> {
                                 togetherSelfParticipantId = event.welcome.participantId
                                 scope.launch(SilentHandler) {
                                     val state = togetherSessionState.value
                                     if (state is moe.rgsekai.sekaitune.together.TogetherSessionState.JoiningOnline) {
-                                        val selfName = displayName.trim().ifBlank { getString(R.string.together_role_guest) }
                                         val initial =
                                             moe.rgsekai.sekaitune.together.TogetherRoomState(
-                                                sessionId = resolved.sessionId,
+                                                sessionId = event.welcome.sessionId,
                                                 hostId = togetherHostId,
                                                 participants =
                                                     listOf(
                                                         moe.rgsekai.sekaitune.together.TogetherParticipant(
                                                             id = event.welcome.participantId,
-                                                            name = selfName,
+                                                            name = guestName,
                                                             isHost = false,
                                                             isPending = event.welcome.isPending,
                                                             isConnected = true,
@@ -3949,98 +3844,16 @@ class MusicService :
                                         togetherSessionState.value =
                                             moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
                                                 role = moe.rgsekai.sekaitune.together.TogetherRole.Guest,
-                                                sessionId = resolved.sessionId,
+                                                sessionId = event.welcome.sessionId,
                                                 selfParticipantId = event.welcome.participantId,
                                                 roomState = initial,
                                             )
                                     }
                                 }
-                                startTogetherHeartbeat(resolved.sessionId, client)
                             }
 
                             is moe.rgsekai.sekaitune.together.TogetherClientEvent.RoomState -> {
                                 applyRemoteRoomState(event.state)
-                            }
-
-                            is moe.rgsekai.sekaitune.together.TogetherClientEvent.HostTransferred -> {
-                                handleTogetherClientHostTransferred(event.transfer)
-                            }
-
-                            is moe.rgsekai.sekaitune.together.TogetherClientEvent.ControlRequested -> {
-                                val joined =
-                                    togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
-                                if (togetherAuthorityParticipantId == togetherSelfParticipantId &&
-                                    joined?.roomState?.settings?.allowGuestsToControlPlayback == true
-                                ) {
-                                    applyHostControl(event.request.action)
-                                }
-                            }
-
-                            is moe.rgsekai.sekaitune.together.TogetherClientEvent.AddTrackRequested -> {
-                                val joined =
-                                    togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
-                                if (togetherAuthorityParticipantId == togetherSelfParticipantId &&
-                                    joined?.roomState?.settings?.allowGuestsToAddTracks == true
-                                ) {
-                                    applyHostAddTrack(event.request.track, event.request.mode)
-                                }
-                            }
-
-                            is moe.rgsekai.sekaitune.together.TogetherClientEvent.JoinDecision -> {
-                                if (!event.decision.approved) {
-                                    scope.launch(SilentHandler) {
-                                        togetherSessionState.value =
-                                            moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                                                message = getString(R.string.not_allowed),
-                                                recoverable = true,
-                                            )
-                                    }
-                                    ioScope.launch(SilentHandler) { stopTogetherInternal() }
-                                }
-                            }
-
-                            is moe.rgsekai.sekaitune.together.TogetherClientEvent.ServerIssue -> {
-                                Timber.tag("Together").w("server issue (online) code=${event.code.orEmpty()} message=${event.message}")
-                                when (event.code) {
-                                    "GUEST_CONTROL_DISABLED" -> {
-                                        showTogetherNotice(event.message, key = "GUEST_CONTROL_DISABLED")
-                                        val joined =
-                                            togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
-                                        if (joined?.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest) {
-                                            togetherPendingGuestControl = null
-                                            togetherLastSentControlAction = null
-                                            scope.launch(SilentHandler) { applyRemoteRoomState(joined.roomState, force = true) }
-                                        }
-                                    }
-
-                                    "GUEST_ADD_DISABLED" -> {
-                                        showTogetherNotice(event.message, key = "GUEST_ADD_DISABLED")
-                                    }
-
-                                    "HOST_OFFLINE" -> {
-                                        showTogetherNotice(event.message, key = "HOST_OFFLINE")
-                                    }
-
-                                    else -> {
-                                        scope.launch(SilentHandler) {
-                                            togetherSessionState.value =
-                                                moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                                                    message = event.message,
-                                                    recoverable = true,
-                                                )
-                                        }
-                                        ioScope.launch(SilentHandler) { stopTogetherInternal() }
-                                    }
-                                }
-                            }
-
-                            is moe.rgsekai.sekaitune.together.TogetherClientEvent.HeartbeatPong -> {
-                                val clock = togetherClock ?: return@collect
-                                clock.onPong(
-                                    sentAtElapsedMs = event.pong.clientElapsedRealtimeMs,
-                                    receivedAtElapsedMs = event.receivedAtElapsedRealtimeMs,
-                                    serverElapsedMs = event.pong.serverElapsedRealtimeMs,
-                                )
                             }
 
                             is moe.rgsekai.sekaitune.together.TogetherClientEvent.Error -> {
@@ -4058,49 +3871,21 @@ class MusicService :
                                 val current = togetherSessionState.value
                                 if (current is moe.rgsekai.sekaitune.together.TogetherSessionState.Idle) return@collect
                                 scope.launch(SilentHandler) {
-                                    val currentState = togetherSessionState.value
                                     togetherSessionState.value =
                                         moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                                            message =
-                                                if (currentState is moe.rgsekai.sekaitune.together.TogetherSessionState.Joined &&
-                                                    currentState.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest
-                                                ) {
-                                                    getString(R.string.together_host_left_session)
-                                                } else {
-                                                    getString(R.string.network_unavailable)
-                                                },
+                                            message = getString(R.string.together_host_left_session),
                                             recoverable = true,
                                         )
                                 }
                                 ioScope.launch(SilentHandler) { stopTogetherInternal() }
                             }
+
+                            else -> Unit
                         }
                     }
                 }
 
-            val wsUrl =
-                moe.rgsekai.sekaitune.together.TogetherOnlineEndpoint.onlineWebSocketUrlOrNull(
-                    rawWsUrl = resolved.wsUrl,
-                    baseUrl = baseUrl,
-                )
-            if (wsUrl == null) {
-                scope.launch(SilentHandler) {
-                    togetherSessionState.value =
-                        moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = "Connection failed: Invalid server websocket URL",
-                            recoverable = true,
-                        )
-                }
-                ioScope.launch(SilentHandler) { stopTogetherInternal() }
-                return@launch
-            }
-
-            client.connect(
-                wsUrl = wsUrl,
-                sessionId = resolved.sessionId,
-                sessionKey = resolved.guestKey,
-                displayName = displayName.trim().ifBlank { getString(R.string.together_role_guest) },
-            )
+            guest.joinByCode(trimmedCode)
         }
     }
 
@@ -4180,11 +3965,12 @@ class MusicService :
     }
 
     fun requestTogetherControl(action: moe.rgsekai.sekaitune.together.ControlAction) {
-        val client =
-            togetherClient ?: run {
-                showTogetherNotice(getString(R.string.network_unavailable), key = "TOGETHER_CLIENT_MISSING")
-                return
-            }
+        val client = togetherClient
+        val onlineGuest = togetherOnlineGuest
+        if (client == null && onlineGuest == null) {
+            showTogetherNotice(getString(R.string.network_unavailable), key = "TOGETHER_CLIENT_MISSING")
+            return
+        }
         val state = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined ?: return
         if (state.role !is moe.rgsekai.sekaitune.together.TogetherRole.Guest) return
         if (!state.roomState.settings.allowGuestsToControlPlayback) {
@@ -4231,14 +4017,22 @@ class MusicService :
                     togetherPendingGuestControl
                 }
             }
-        client.requestControl(state.sessionId, action)
+        if (client != null) {
+            client.requestControl(state.sessionId, action)
+        } else if (onlineGuest != null) {
+            ioScope.launch(SilentHandler) {
+                onlineGuest.requestControl(action)
+            }
+        }
     }
 
     fun requestTogetherAddTrack(
         track: moe.rgsekai.sekaitune.together.TogetherTrack,
         mode: moe.rgsekai.sekaitune.together.AddTrackMode,
     ) {
-        val client = togetherClient ?: return
+        val client = togetherClient
+        val onlineGuest = togetherOnlineGuest
+        if (client == null && onlineGuest == null) return
         val state = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined ?: return
         if (state.role !is moe.rgsekai.sekaitune.together.TogetherRole.Guest) return
         if (!state.roomState.settings.allowGuestsToAddTracks) {
@@ -4246,7 +4040,13 @@ class MusicService :
             showTogetherNotice(getString(R.string.not_allowed), key = "GUEST_ADD_DISABLED_LOCAL")
             return
         }
-        client.requestAddTrack(state.sessionId, track, mode)
+        if (client != null) {
+            client.requestAddTrack(state.sessionId, track, mode)
+        } else if (onlineGuest != null) {
+            ioScope.launch(SilentHandler) {
+                onlineGuest.requestAddTrack(track, mode)
+            }
+        }
     }
 
     private suspend fun handleTogetherHostEvent(
@@ -4771,7 +4571,13 @@ class MusicService :
         togetherClient = null
 
         try {
-            togetherOnlineHost?.disconnect()
+            togetherOnlineGuest?.leave()
+        } catch (_: Exception) {
+        }
+        togetherOnlineGuest = null
+
+        try {
+            togetherOnlineHost?.close()
         } catch (_: Exception) {
         }
         togetherOnlineHost = null
@@ -5804,6 +5610,38 @@ class MusicService :
                             moe.rgsekai.sekaitune.together.ControlAction.Pause
                         }
                     requestTogetherControl(action)
+                }
+            }
+        }
+        val onlineHost = togetherOnlineHost
+        if (onlineHost != null && !togetherApplyingRemote && (togetherAuthorityParticipantId == null || togetherAuthorityParticipantId == togetherHostId)) {
+            if (events.containsAny(
+                    Player.EVENT_PLAYBACK_STATE_CHANGED,
+                    Player.EVENT_PLAY_WHEN_READY_CHANGED,
+                    Player.EVENT_IS_PLAYING_CHANGED,
+                    Player.EVENT_MEDIA_ITEM_TRANSITION,
+                    Player.EVENT_POSITION_DISCONTINUITY,
+                    Player.EVENT_TIMELINE_CHANGED,
+                    Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED,
+                    Player.EVENT_REPEAT_MODE_CHANGED,
+                )
+            ) {
+                ioScope.launch(SilentHandler) {
+                    val state = buildTogetherRoomState(sessionId = onlineHost.sessionId, hostId = togetherHostId)
+                    onlineHost.broadcastRoomState(state)
+                    scope.launch(SilentHandler) {
+                        val hosting = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.HostingOnline
+                        if (hosting?.sessionId == onlineHost.sessionId) {
+                            togetherSessionState.value =
+                                hosting.copy(
+                                    settings = onlineHost.currentSettings(),
+                                    roomState = state.copy(
+                                        participants = onlineHost.currentParticipants(),
+                                        settings = onlineHost.currentSettings(),
+                                    ),
+                                )
+                        }
+                    }
                 }
             }
         }
