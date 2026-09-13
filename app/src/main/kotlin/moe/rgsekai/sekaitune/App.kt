@@ -31,7 +31,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import moe.rgsekai.sekaitune.canvas.SekaiTuneCanvas
 import moe.rgsekai.sekaitune.constants.*
 import moe.rgsekai.sekaitune.extensions.*
 import moe.rgsekai.sekaitune.innertube.YouTube
@@ -127,7 +126,6 @@ class App :
         )
         MoriCipherUpdateScheduler.schedule(this)
         CanvasArtworkPlaybackCache.init(this)
-        SekaiTuneCanvas.initialize(BuildConfig.CANVAS_BEARER_TOKEN)
         PaxsenixLyrics.setUserAgent("SekaiTune", BuildConfig.VERSION_NAME)
 
         YouTube.onStageReached = { name -> ColdStartTimer.addStage(name) }

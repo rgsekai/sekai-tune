@@ -25,15 +25,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 object SekaiTuneCanvas {
-    private const val BASE_URL = "https://artwork-sekaitune.koiiverse.cloud/"
-    private const val FALLBACK_URL = "https://artwork.boidu.dev/"
-
-    @Volatile
-    private var bearerToken: String? = null
-
-    fun initialize(bearerToken: String?) {
-        this.bearerToken = bearerToken?.trim()?.takeIf { it.isNotEmpty() }
-    }
+    private const val BETTERLYRICS_URL = "https://artwork.boidu.dev/"
 
     private val json =
         Json {
@@ -56,28 +48,7 @@ object SekaiTuneCanvas {
             }
             install(HttpCache)
             defaultRequest {
-                url(BASE_URL)
-                // bearerToken?.let { header(HttpHeaders.Authorization, "Bearer $it") }
-            }
-            expectSuccess = false
-        }
-    }
-
-    private val fallbackClient by lazy {
-        HttpClient(OkHttp) {
-            install(ContentNegotiation) { json(json) }
-            install(HttpTimeout) {
-                connectTimeoutMillis = 12_000
-                requestTimeoutMillis = 18_000
-                socketTimeoutMillis = 18_000
-            }
-            install(ContentEncoding) {
-                gzip()
-                deflate()
-            }
-            install(HttpCache)
-            defaultRequest {
-                url(FALLBACK_URL)
+                url(BETTERLYRICS_URL)
             }
             expectSuccess = false
         }
@@ -117,21 +88,7 @@ object SekaiTuneCanvas {
                 else -> null
             }
 
-        val value =
-            primary ?: run {
-                val fallbackResponse =
-                    runCatching {
-                        fallbackClient.get {
-                            parameter("s", song)
-                            parameter("a", artist)
-                            parameter("storefront", storefront)
-                        }
-                    }.getOrNull()
-                when (fallbackResponse?.status) {
-                    HttpStatusCode.OK -> runCatching { fallbackResponse.body<CanvasArtwork>() }.getOrNull()
-                    else -> null
-                }
-            } ?: AppleMusicProvider.getBySongArtist(song, artist, null, storefront)
+        val value = primary ?: AppleMusicProvider.getBySongArtist(song, artist, null, storefront)
 
         cache[key] =
             CacheEntry(
@@ -162,19 +119,7 @@ object SekaiTuneCanvas {
                 else -> null
             }
 
-        val value =
-            primary ?: run {
-                val fallbackResponse =
-                    runCatching {
-                        fallbackClient.get {
-                            parameter("id", albumId)
-                        }
-                    }.getOrNull()
-                when (fallbackResponse?.status) {
-                    HttpStatusCode.OK -> runCatching { fallbackResponse.body<CanvasArtwork>() }.getOrNull()
-                    else -> null
-                }
-            } ?: AppleMusicProvider.getByAlbumId(albumId)
+        val value = primary ?: AppleMusicProvider.getByAlbumId(albumId)
 
         cache[key] =
             CacheEntry(
@@ -205,22 +150,8 @@ object SekaiTuneCanvas {
                 else -> null
             }
 
-        val fallback =
-            primary ?: run {
-                val fallbackResponse =
-                    runCatching {
-                        fallbackClient.get {
-                            parameter("url", url)
-                        }
-                    }.getOrNull()
-                when (fallbackResponse?.status) {
-                    HttpStatusCode.OK -> runCatching { fallbackResponse.body<CanvasArtwork>() }.getOrNull()
-                    else -> null
-                }
-            }
-
         val value =
-            fallback ?: parseAppleMusicAlbumUrl(url)?.let { (albumId, storefront) ->
+            primary ?: parseAppleMusicAlbumUrl(url)?.let { (albumId, storefront) ->
                 AppleMusicProvider.getByAlbumId(albumId, storefront)
             }
 
@@ -231,11 +162,6 @@ object SekaiTuneCanvas {
             )
 
         return value
-    }
-
-    suspend fun isHealthy(): Boolean {
-        val response = runCatching { client.get("health") }.getOrNull() ?: return false
-        return response.status == HttpStatusCode.OK
     }
 
     private fun parseAppleMusicAlbumUrl(url: String): Pair<String, String>? {
