@@ -161,7 +161,7 @@ private data class SavedAccountCollection(
 fun AccountSettings(
     navController: NavController,
     latestVersionName: String,
-    authViewModel: AuthViewModel = viewModel(),
+    authViewModel: AuthViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val firebaseUser = authViewModel.currentUser

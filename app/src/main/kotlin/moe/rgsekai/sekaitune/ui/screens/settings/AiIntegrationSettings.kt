@@ -49,6 +49,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -135,7 +136,7 @@ private enum class TestApiVisualState { Idle, Testing, Success, Failed }
 fun AiIntegrationSettings(
     navController: NavController,
     viewModel: AiIntegrationSettingsViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val firebaseUser = authViewModel.currentUser
@@ -182,10 +183,17 @@ fun AiIntegrationSettings(
         PreferenceGroup(title = "Account Integration") {
             item {
                 if (firebaseUser != null) {
+                    val syncState by authViewModel.syncStatus.collectAsStateWithLifecycle()
+                    val syncDesc = when (val s = syncState) {
+                        is moe.rgsekai.sekaitune.sync.SyncStatus.Syncing -> "Syncing settings with cloud..."
+                        is moe.rgsekai.sekaitune.sync.SyncStatus.Success -> "Settings synced"
+                        is moe.rgsekai.sekaitune.sync.SyncStatus.Error -> "Sync failed: ${s.message}"
+                        moe.rgsekai.sekaitune.sync.SyncStatus.Idle -> "Cloud sync active"
+                    }
                     // --- STATE 1: LOGGED IN ---
                     PreferenceEntry(
                         title = { Text(firebaseUser.displayName ?: "Google User") },
-                        description = firebaseUser.email ?: "",
+                        description = "${firebaseUser.email.orEmpty()}\n$syncDesc",
                         icon = {
                             if (firebaseUser.photoUrl != null) {
                                 AsyncImage(
@@ -202,23 +210,31 @@ fun AiIntegrationSettings(
                                 )
                             }
                         },
-                        // 2. THIS ADDS THE LOGOUT BUTTON ON THE RIGHT SIDE
-                        // 2. THIS ADDS THE LOGOUT BUTTON ON THE RIGHT SIDE
                         trailingContent = {
-                            IconButton(
-                                onClick = { showLogoutDialog = true },
-                                onLongClick = {} // <--- This empty bracket fixes the error!
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Logout,
-                                    contentDescription = "Sign Out",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { authViewModel.syncNow() },
+                                    onLongClick = {}
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = "Sync now",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { showLogoutDialog = true },
+                                    onLongClick = {}
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Logout,
+                                        contentDescription = "Sign Out",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         },
-                        onClick = {
-                            // Empty so clicking the row does nothing, forcing them to use the logout button
-                        }
+                        onClick = { authViewModel.syncNow() }
                     )
                 } else {
                     // --- STATE 2: LOGGED OUT ---
