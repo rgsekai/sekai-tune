@@ -111,8 +111,8 @@ This file should be reviewed whenever SekaiTune changes its permissions, storage
 
 For questions or corrections, use the project repository and issue tracker.
 
-- Repository: [https://github.com/rgsekai/SekaiTune](https://github.com/rgsekai/SekaiTune)
-- Issues: [https://github.com/rgsekai/SekaiTune/issues](https://github.com/rgsekai/SekaiTune/issues)
+- Repository: [https://github.com/rgsekai/sekai-tune](https://github.com/rgsekai/sekai-tune)
+- Issues: [https://github.com/rgsekai/sekai-tune/issues](https://github.com/rgsekai/sekai-tune/issues)
 
 ## Technical Appendix
 
@@ -122,11 +122,11 @@ This appendix maps the main statements above to concrete implementation surfaces
 | --- | --- | --- |
 | Permissions and backup behavior | The manifest declares network, media, microphone, Bluetooth, notification, boot, wake-lock, and foreground-service permissions. It also enables backup, cleartext traffic, and audio playback capture. Separate XML files exclude selected caches and internal playback database files from Android backup and device transfer. | `app/src/main/AndroidManifest.xml`, `app/src/main/res/xml/data_extraction_rules.xml`, `app/src/main/res/xml/backup_rules.xml` |
 | Local database contents | The Room schema includes songs, artists, albums, playlists, search history, lyrics, audio format metadata, and playback event records. | `app/schemas/moe.rgsekai.sekaitune.db.InternalDatabase/9.json` |
-| Settings and tokens stored locally | DataStore preference keys include UI settings, proxy settings, history toggles, Together values, YouTube session values, account name or email fields, Discord values, and update-cache keys. | `app/src/main/kotlin/moe/SekaiTuneapp/SekaiTune/constants/PreferenceKeys.kt` |
-| YouTube signed-in state | The Innertube layer exposes visitor data, data sync ID, cookie, PO token values, proxy state, and login-for-browse behavior as part of the current playback auth state. | `innertube/src/main/kotlin/moe/SekaiTuneapp/SekaiTune/innertube/YouTube.kt` |
-| Manual backup export | The backup view model writes app settings plus database files into a ZIP archive chosen by the user. | `app/src/main/kotlin/moe/SekaiTuneapp/SekaiTune/viewmodels/BackupRestoreViewModel.kt` |
-| External network integrations | Build configuration defines keys for Together and canvas services. The updater fetches release information and caches related metadata in app preferences. | `app/build.gradle.kts`, `app/src/main/kotlin/moe/SekaiTuneapp/SekaiTune/utils/Updater.kt` |
-| Canvas service requests | The canvas module sends song and artist names, album IDs, or album URLs to `https://artwork-SekaiTune.koiiverse.cloud/` and can attach a bearer token. | `canvas/src/main/kotlin/moe/SekaiTuneapp/SekaiTune/canvas/SekaiTuneCanvas.kt` |
+| Settings and tokens stored locally | DataStore preference keys include UI settings, proxy settings, history toggles, Together values, YouTube session values, account name or email fields, Discord values, and update-cache keys. | `app/src/main/kotlin/moe/rgsekai/sekaitune/constants/PreferenceKeys.kt` |
+| YouTube signed-in state | The Innertube layer exposes visitor data, data sync ID, cookie, PO token values, proxy state, and login-for-browse behavior as part of the current playback auth state. | `core/src/main/kotlin/moe/rgsekai/sekaitune/innertube/YouTube.kt` |
+| Manual backup export | The backup view model writes app settings plus database files into a ZIP archive chosen by the user. | `app/src/main/kotlin/moe/rgsekai/sekaitune/viewmodels/BackupRestoreViewModel.kt` |
+| External network integrations | Build configuration defines keys for Together and canvas services. The updater fetches release information and caches related metadata in app preferences. | `app/build.gradle.kts`, `app/src/main/kotlin/moe/rgsekai/sekaitune/utils/Updater.kt` |
+| Canvas service requests | The canvas module sends song and artist names, album IDs, or album URLs to `https://artwork.boidu.dev/` and can attach a bearer token. | `canvas/src/main/kotlin/moe/rgsekai/sekaitune/canvas/SekaiTuneCanvas.kt` |
 | Public feature claims | The repository README and store metadata describe privacy, YouTube integration, lyrics, music recognition, Discord Rich Presence, and other network-backed features that must stay aligned with this notice. | `README.md`, `fastlane/metadata/android/en-US/full_description.txt` |
 | Current dependency posture | The current Android dependency declarations show Compose, Room, Hilt, Ktor, Media3, Coil, Timber, and related libraries. They do not currently show Firebase, Crashlytics, Sentry, mobile ad SDKs, or mobile analytics SDKs in the Android app dependency definitions reviewed for this notice. | `app/build.gradle.kts`, `gradle/libs.versions.toml` |
 
