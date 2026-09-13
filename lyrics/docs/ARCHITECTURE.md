@@ -10,7 +10,7 @@ Each provider is an independent Gradle submodule with the same skeleton:
 <name>/
 ├── build.gradle.kts          # Gradle config (Ktor, kotlinx-serialization)
 └── src/
-    ├── main/kotlin/moe/rukamori/SekaiTune/<name>/
+    ├── main/kotlin/moe/rgsekai/sekaitune/<name>/
     │   ├── <Provider>.kt      # Main singleton object
     │   └── models/            # Response data classes
     └── test/                  # Unit tests

@@ -194,8 +194,8 @@ class AboutContributorsRepository
 
         private companion object {
             const val ContributorsLimit = 20
-            const val GitHubOwner = "rukamori"
-            const val GitHubRepo = "SekaiTune"
+            const val GitHubOwner = "rgsekai"
+            const val GitHubRepo = "sekai-tune"
         }
     }
 

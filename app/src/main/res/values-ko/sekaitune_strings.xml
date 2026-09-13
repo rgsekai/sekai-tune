@@ -371,7 +371,7 @@
     <string name="music_recognition_history_no_results_body">다른 곡, 아티스트, 앨범 또는 코드를 입력해 보세요.</string>
     <string name="about_lead_developer">리드 개발자</string>
     <string name="aod_customize_text_alignment">텍스트 정렬</string>
-    <string name="aod_customize_sample_artist">Koiverse Ensemble</string>
+    <string name="aod_customize_sample_artist">Sekai Tune Ensemble</string>
     <string name="aod_customize_control_size">컨트롤 크기</string>
     <string name="lyrics_share_style_frosted_dark">프로스테드 다크</string>
     <string name="local_songs_scan_included_folders_desc">지정한 특정 폴더 경로 아래에 있는 음원 파일들만 스캔합니다.</string>

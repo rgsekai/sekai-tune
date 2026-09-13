@@ -2,9 +2,8 @@
 
 # 🎨 SekaiTune Icon Pack
 
-**A curated collection of beautiful, community-crafted icons for [SekaiTune](https://github.com/koiverse)**
+**A curated collection of beautiful, community-crafted icons for [Sekai Tune](https://github.com/rgsekai/sekai-tune)**
 
-[![Icons](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Frukamori%2FSekaiTuneIconPack%2Fmain%2Fmetadata.json&query=%24.length&label=Icons&color=blueviolet&style=for-the-badge)](#icon-gallery)
 [![Contributors](https://img.shields.io/badge/Contributors-4-orange?style=for-the-badge)](#contributors)
 [![License](https://img.shields.io/badge/License-Community-green?style=for-the-badge)](#license)
 

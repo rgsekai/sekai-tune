@@ -5,30 +5,19 @@
   <p align="center">
     <strong>InnerTube API client for YouTube Music.</strong>
     <br />
-    <em>The core library powering <a href="https://github.com/rukamori/SekaiTune">SekaiTune</a> — a high-performance, privacy-focused YouTube Music client for Android.</em>
+    <em>The core library powering <a href="https://github.com/rgsekai/sekai-tune">Sekai Tune</a> — a high-performance, privacy-focused YouTube Music client for Android.</em>
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/github/v/release/rukamori/core?style=for-the-badge&color=6366f1&labelColor=1e1e2e&logo=github" alt="Latest Version" />
-    <img src="https://img.shields.io/github/license/rukamori/core?style=for-the-badge&color=6366f1&labelColor=1e1e2e" alt="License" />
     <img src="https://img.shields.io/badge/Language-Kotlin-7f52ff?style=for-the-badge&logo=kotlin&color=6366f1&labelColor=1e1e2e" alt="Kotlin" />
     <img src="https://img.shields.io/badge/Runtime-JVM-6366f1?style=for-the-badge&logo=openjdk&labelColor=1e1e2e" alt="JVM" />
-    <img src="https://img.shields.io/github/stars/rukamori/core?style=for-the-badge&color=6366f1&labelColor=1e1e2e&logo=github" alt="Stars" />
   </p>
-
-  <a href="https://star-history.com/#rukamori/core&rukamori/SekaiTune&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=rukamori/core,rukamori/SekaiTune&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=rukamori/core,rukamori/SekaiTune&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=rukamori/core,rukamori/SekaiTune&type=Date" width="600" />
-    </picture>
-  </a>
 
 </div>
 
 ## Overview
 
-This is the standalone InnerTube API core extracted from [SekaiTune](https://github.com/rukamori/SekaiTune). It provides a complete Ktor-based HTTP client for interacting with YouTube Music's InnerTube API, including request signing, response parsing, proxy rotation, and playback authentication.
+This is the standalone InnerTube API core for [Sekai Tune](https://github.com/rgsekai/sekai-tune). It provides a complete Ktor-based HTTP client for interacting with YouTube Music's InnerTube API, including request signing, response parsing, proxy rotation, and playback authentication.
 
 ## Features
 

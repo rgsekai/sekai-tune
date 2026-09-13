@@ -12,7 +12,7 @@ import moe.rgsekai.sekaitune.spotify.models.SpotifyTrack
 
 /**
  * Utility object for creating search queries from Spotify track data.
- * The actual mapping to Metrolist MediaMetadata is done in the app module
+ * The actual mapping to Sekai Tune MediaMetadata is done in the app module
  * where MediaMetadata class is available.
  */
 object SpotifyMapper {

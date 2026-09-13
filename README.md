@@ -144,8 +144,6 @@
 
 Sekai Tune is made possible by the work of many open-source projects and communities:
 
-* **SekaiTune** by [rgsekai](https://github.com/rgsekai/sekai-tune) for the original codebase and foundation this project is built upon.
-* **Metrolist** by [Mostafa Alagamy](...) for the base framework.
 * **SimpMusic** by [maxrave-dev](...) for the lyrics API provider.
 * **BetterLyrics** for word-by-word lyrics, unison and artwork provider support.
 * **[Material Color Utilities](https://github.com/material-foundation/material-color-utilities)**

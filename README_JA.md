@@ -201,7 +201,6 @@ SekaiTuneは無料かつオープンソースです。気に入ったら開発�
 
 私たちはオープンソースの偉大なプロジェクトに支えられています：
 
-- **Metrolist** – ベースフレームワーク  
 - **SimpMusic** – 歌詞API  
 - **BetterLyrics** – 歌詞・アートワークAPI  
 - **Material Color Utilities**  

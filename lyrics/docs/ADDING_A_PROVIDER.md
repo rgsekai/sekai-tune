@@ -13,7 +13,7 @@ Each provider lives in its own Gradle submodule under the `lyrics/` directory. P
 ```
 lyrics/yourprovider/
 ├── build.gradle.kts
-└── src/main/kotlin/moe/rukamori/SekaiTune/yourprovider/
+└── src/main/kotlin/moe/rgsekai/sekaitune/yourprovider/
     └── YourProvider.kt
 ```
 
@@ -127,7 +127,7 @@ data class LyricsResponse(
 Once the module is registered, create a provider wrapper in the app module at:
 
 ```
-app/src/main/kotlin/moe/rukamori/SekaiTune/lyrics/YourProvider.kt
+app/src/main/kotlin/moe/rgsekai/sekaitune/lyrics/YourProvider.kt
 ```
 
 ```kotlin
@@ -179,7 +179,7 @@ private val baseProviders =
 Use `@Serializable` data classes for your response models. Place them in a `models/` subdirectory if you have more than one:
 
 ```
-lyrics/yourprovider/src/main/kotlin/moe/rukamori/SekaiTune/yourprovider/
+lyrics/yourprovider/src/main/kotlin/moe/rgsekai/sekaitune/yourprovider/
 ├── YourProvider.kt
 └── models/
     ├── SearchResponse.kt

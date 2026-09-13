@@ -21,7 +21,7 @@ Run tests for all providers:
 Place tests in `src/test/kotlin/` matching the provider's package:
 
 ```
-kugou/src/test/kotlin/moe/rukamori/SekaiTune/kugou/
+kugou/src/test/kotlin/moe/rgsekai/sekaitune/kugou/
 └── KuGouTest.kt
 ```
 

@@ -390,7 +390,7 @@
     <string name="local_songs_scan_included_folders_desc">Analizar únicamente las canciones almacenadas en carpetas que coincidan con cualquiera de estas rutas.</string>
     <string name="local_songs_scan_included_folders_empty">Incluidas toda las carpetas.</string>
     <string name="local_songs_scan_included_folders_add">Incluir carpeta</string>
-    <string name="aod_customize_sample_artist">Koiverse Ensemble</string>
+    <string name="aod_customize_sample_artist">Sekai Tune Ensemble</string>
     <string name="aod_customize_sample_album">Sesiones siempre activas</string>
     <string name="aod_customize_sample_elapsed">1:24</string>
     <string name="aod_customize_sample_duration">3:48</string>
