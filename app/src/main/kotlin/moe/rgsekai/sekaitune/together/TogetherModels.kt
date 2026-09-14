@@ -53,6 +53,8 @@ data class TogetherRoomState(
     val repeatMode: Int = 0,
     val shuffleEnabled: Boolean = false,
     val sentAtElapsedRealtimeMs: Long = 0L,
+    val code: String? = null,
+    val joinLink: String? = null,
 )
 
 @Immutable
@@ -95,11 +97,14 @@ sealed class TogetherSessionState {
         val sessionId: String,
         val selfParticipantId: String,
         val roomState: TogetherRoomState,
+        val code: String? = null,
+        val joinLink: String? = null,
     ) : TogetherSessionState()
 
     data class Error(
         val message: String,
         val recoverable: Boolean = true,
+        val isSignInRequired: Boolean = false,
     ) : TogetherSessionState()
 }
 

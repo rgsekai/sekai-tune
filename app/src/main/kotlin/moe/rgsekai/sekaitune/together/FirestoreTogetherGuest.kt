@@ -31,6 +31,7 @@ class FirestoreTogetherGuest(
     private var sessionDocRef: DocumentReference? = null
     private var listenerRegistration: ListenerRegistration? = null
     private var currentSessionId: String? = null
+    private var currentCode: String? = null
 
     private val _events = MutableSharedFlow<TogetherClientEvent>(
         extraBufferCapacity = 64,
@@ -56,6 +57,7 @@ class FirestoreTogetherGuest(
                 val doc = query.documents[0]
                 val sessionId = doc.id
                 currentSessionId = sessionId
+                currentCode = doc.getString("code") ?: code.trim()
                 val docRef = doc.reference
                 sessionDocRef = docRef
 
@@ -161,6 +163,7 @@ class FirestoreTogetherGuest(
             val queueHash = rawPlayback?.get("queueHash") as? String ?: ""
             val hostId = snapshot.getString("hostId") ?: ""
             val sessionId = snapshot.getString("sessionId") ?: currentSessionId.orEmpty()
+            val sessionCode = snapshot.getString("code") ?: currentCode
 
             val roomState = TogetherRoomState(
                 sessionId = sessionId,
@@ -174,7 +177,8 @@ class FirestoreTogetherGuest(
                 positionMs = positionMs,
                 repeatMode = repeatMode,
                 shuffleEnabled = shuffleEnabled,
-                sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime()
+                sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime(),
+                code = sessionCode,
             )
 
             _events.tryEmit(TogetherClientEvent.RoomState(roomState))

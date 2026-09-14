@@ -120,6 +120,7 @@ data class MusicTogetherStatusUiModel(
     val error: Boolean,
     val waitingApproval: Boolean,
     val canLeave: Boolean,
+    val showSignInAction: Boolean = false,
 )
 
 @Immutable
@@ -563,7 +564,8 @@ class MusicTogetherViewModel
                         ?.isPending == true
             val isJoinedAsAcceptedGuest = isJoinedAsGuest && !isWaitingApproval
             val disableJoinUi = isHostRole || isCreatingSessionLoading || isJoinedAsGuest
-            val active = state.isConnectedToSession
+            val isActive = isHosting || (state is TogetherSessionState.Joined)
+            val isSignInRequired = (state as? TogetherSessionState.Error)?.isSignInRequired == true
             val status =
                 MusicTogetherStatusUiModel(
                     titleResId = R.string.together_status,
@@ -590,37 +592,63 @@ class MusicTogetherViewModel
                             }
 
                             is TogetherSessionState.Error -> {
-                                R.string.together_error_state
+                                if (state.isSignInRequired) {
+                                    R.string.together_signin_required
+                                } else {
+                                    R.string.together_error_state
+                                }
                             }
                         },
                     errorMessage = (state as? TogetherSessionState.Error)?.message,
-                    iconResId = if (state is TogetherSessionState.Error) R.drawable.error else R.drawable.fire,
-                    active = active,
+                    iconResId =
+                        when {
+                            isSignInRequired -> R.drawable.person
+                            state is TogetherSessionState.Error -> R.drawable.error
+                            else -> R.drawable.fire
+                        },
+                    active = isActive,
                     error = state is TogetherSessionState.Error,
                     waitingApproval = isWaitingApproval,
-                    canLeave = active || isJoining,
+                    canLeave = isActive || isJoining,
+                    showSignInAction = isSignInRequired,
                 )
             val sessionShare =
-                when (state) {
-                    is TogetherSessionState.Hosting -> {
-                        MusicTogetherSessionShareUiModel(
-                            labelResId = R.string.session_link,
-                            value = state.joinLink,
-                            maxLines = 3,
-                        )
-                    }
+                if (isHostRole) {
+                    val code =
+                        when (state) {
+                            is TogetherSessionState.HostingOnline -> state.code
+                            is TogetherSessionState.Joined -> state.code ?: roomState?.code
+                            else -> roomState?.code
+                        }
+                    val link =
+                        when (state) {
+                            is TogetherSessionState.Hosting -> state.joinLink
+                            is TogetherSessionState.Joined -> state.joinLink ?: roomState?.joinLink
+                            else -> roomState?.joinLink
+                        }
+                    when {
+                        !code.isNullOrBlank() -> {
+                            MusicTogetherSessionShareUiModel(
+                                labelResId = R.string.session_code,
+                                value = code,
+                                maxLines = 2,
+                            )
+                        }
 
-                    is TogetherSessionState.HostingOnline -> {
-                        MusicTogetherSessionShareUiModel(
-                            labelResId = R.string.session_code,
-                            value = state.code,
-                            maxLines = 2,
-                        )
-                    }
+                        !link.isNullOrBlank() -> {
+                            MusicTogetherSessionShareUiModel(
+                                labelResId = R.string.session_link,
+                                value = link,
+                                maxLines = 3,
+                            )
+                        }
 
-                    else -> {
-                        null
+                        else -> {
+                            null
+                        }
                     }
+                } else {
+                    null
                 }
             val playback = roomState.toPlaybackUiModel()
             val host =
@@ -653,7 +681,9 @@ class MusicTogetherViewModel
                     waitingApproval = isWaitingApproval,
                     joining = isJoining,
                 )
-            val showModerationActions = state is TogetherSessionState.HostingOnline
+            val showModerationActions =
+                state is TogetherSessionState.HostingOnline ||
+                    (state is TogetherSessionState.Joined && state.role is TogetherRole.Host && (state.code != null || roomState?.code != null))
             val participantModels =
                 MusicTogetherParticipantUiModels(
                     roomState
@@ -802,11 +832,13 @@ class MusicTogetherViewModel
                 }
             }
 
-            if (previous.hostId != current.hostId) {
+            val prevHostName = previous.actorName(previous.hostId)
+            val currHostName = current.actorName(current.hostId)
+            if (previous.hostId.isNotBlank() && current.hostId.isNotBlank() && previous.hostId != current.hostId && prevHostName != currHostName && prevHostName != "Unknown" && currHostName != "Unknown") {
                 addLog(
                     iconResId = R.drawable.sync,
                     messageResId = R.string.together_activity_host_transferred,
-                    args = listOf(current.actorName(current.hostId)),
+                    args = listOf(currHostName),
                 )
             }
 

@@ -595,8 +595,11 @@
     <string name="about_lead_developer">Lead Developer</string>    <string name="about_respecter">Respecter</string>
     <string name="about_contributors">Contributors</string>
     <string name="about_contributor_translation">Contributor Translation</string>
-    <string name="about_license">LICENSE</string>
+    <string name="about_license">Licenses</string>
     <string name="about_license_unknown">Unknown license</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_SekaiTune">Sekai Tune is based on the open-source Sekai Tune project</string>
+    <string name="together_signin_required">Sign-in required</string>
+    <string name="together_signin_required_message">Please sign in with Google to use Online sessions.</string>
+    <string name="go_to_signin">Go to sign-in</string>
 </resources>
 
 

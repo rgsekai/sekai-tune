@@ -3412,7 +3412,7 @@ class MusicService :
                 ioScope.launch(SilentHandler) {
                     while (togetherServer === server) {
                         if (togetherAuthorityParticipantId == null || togetherAuthorityParticipantId == togetherHostId) {
-                            val state = buildTogetherRoomState(sessionId = sessionId, hostId = togetherHostId)
+                            val state = buildTogetherRoomState(sessionId = sessionId, hostId = togetherHostId, joinLink = joinLink)
                             server.broadcastRoomState(state)
                             scope.launch(SilentHandler) {
                                 val hosting = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Hosting
@@ -3424,6 +3424,7 @@ class MusicService :
                                                 state.copy(
                                                     participants = server.currentParticipants(),
                                                     settings = server.currentSettings(),
+                                                    joinLink = joinLink,
                                                 ),
                                         )
                                 }
@@ -3449,32 +3450,20 @@ class MusicService :
             togetherIsOnlineSession = true
 
             val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-            if (auth.currentUser == null) {
-                runCatching {
-                    com.google.android.gms.tasks.Tasks.await(auth.signInAnonymously())
-                }.onFailure { e ->
-                    Timber.tag("Together").e(e, "Anonymous sign in failed")
-                    scope.launch(SilentHandler) {
-                        togetherSessionState.value =
-                            moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                                message = getString(R.string.network_unavailable),
-                                recoverable = true,
-                            )
-                    }
-                    return@launch
-                }
-            }
-
-            val hostUid = auth.currentUser?.uid ?: run {
+            val user = auth.currentUser
+            if (user == null || user.isAnonymous) {
                 scope.launch(SilentHandler) {
                     togetherSessionState.value =
                         moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = getString(R.string.network_unavailable),
+                            message = getString(R.string.together_signin_required_message),
                             recoverable = true,
+                            isSignInRequired = true,
                         )
                 }
                 return@launch
             }
+
+            val hostUid = user.uid
 
             val sessionId = java.util.UUID.randomUUID().toString()
             val code = (100000..999999).random().toString()
@@ -3497,7 +3486,7 @@ class MusicService :
             }
 
             togetherOnlineHost = onlineHost
-            val initialState = buildTogetherRoomState(sessionId = sessionId, hostId = hostUid)
+            val initialState = buildTogetherRoomState(sessionId = sessionId, hostId = hostUid, code = code)
             val success = onlineHost.createSession(initialState)
             if (!success) {
                 scope.launch(SilentHandler) {
@@ -3524,6 +3513,7 @@ class MusicService :
                         roomState = initialState.copy(
                             participants = onlineHost.currentParticipants(),
                             settings = settings,
+                            code = code,
                         ),
                     )
             }
@@ -3604,6 +3594,7 @@ class MusicService :
                                                 repeatMode = 0,
                                                 shuffleEnabled = false,
                                                 sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime(),
+                                                joinLink = rawLink,
                                             )
                                         togetherSessionState.value =
                                             moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
@@ -3611,6 +3602,7 @@ class MusicService :
                                                 sessionId = joinInfo.sessionId,
                                                 selfParticipantId = event.welcome.participantId,
                                                 roomState = initial,
+                                                joinLink = rawLink,
                                             )
                                     }
                                 }
@@ -3769,32 +3761,20 @@ class MusicService :
             togetherIsOnlineSession = true
 
             val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-            if (auth.currentUser == null) {
-                runCatching {
-                    com.google.android.gms.tasks.Tasks.await(auth.signInAnonymously())
-                }.onFailure { e ->
-                    Timber.tag("Together").e(e, "Anonymous sign in failed")
-                    scope.launch(SilentHandler) {
-                        togetherSessionState.value =
-                            moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                                message = getString(R.string.network_unavailable),
-                                recoverable = true,
-                            )
-                    }
-                    return@launch
-                }
-            }
-
-            val guestUid = auth.currentUser?.uid ?: run {
+            val user = auth.currentUser
+            if (user == null || user.isAnonymous) {
                 scope.launch(SilentHandler) {
                     togetherSessionState.value =
                         moe.rgsekai.sekaitune.together.TogetherSessionState.Error(
-                            message = getString(R.string.network_unavailable),
+                            message = getString(R.string.together_signin_required_message),
                             recoverable = true,
+                            isSignInRequired = true,
                         )
                 }
                 return@launch
             }
+
+            val guestUid = user.uid
 
             val guestName = displayName.trim().ifBlank { getString(R.string.together_role_guest) }
             val guest = moe.rgsekai.sekaitune.together.FirestoreTogetherGuest(
@@ -3840,6 +3820,7 @@ class MusicService :
                                                 repeatMode = 0,
                                                 shuffleEnabled = false,
                                                 sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime(),
+                                                code = trimmedCode,
                                             )
                                         togetherSessionState.value =
                                             moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
@@ -3847,6 +3828,7 @@ class MusicService :
                                                 sessionId = event.welcome.sessionId,
                                                 selfParticipantId = event.welcome.participantId,
                                                 roomState = initial,
+                                                code = trimmedCode,
                                             )
                                     }
                                 }
@@ -4121,7 +4103,26 @@ class MusicService :
             }
 
             is moe.rgsekai.sekaitune.together.TogetherServerEvent.RoomStateReceived -> {
-                if (event.state.hostId != togetherHostId) {
+                val onlineHost = togetherOnlineHost
+                if (onlineHost != null && event.state.hostId == onlineHost.hostUid) {
+                    val currentHosting = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.HostingOnline
+                    if (currentHosting != null) {
+                        togetherSessionState.value =
+                            currentHosting.copy(
+                                roomState = event.state.copy(code = onlineHost.code),
+                            )
+                    } else {
+                        val currentJoined = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
+                        if (currentJoined != null) {
+                            togetherSessionState.value =
+                                currentJoined.copy(
+                                    role = moe.rgsekai.sekaitune.together.TogetherRole.Host,
+                                    roomState = event.state.copy(code = onlineHost.code),
+                                    code = onlineHost.code,
+                                )
+                        }
+                    }
+                } else if (event.state.hostId != togetherHostId) {
                     togetherSelfParticipantId = togetherHostId
                     applyRemoteRoomState(event.state, force = true)
                 }
@@ -4235,6 +4236,8 @@ class MusicService :
     private suspend fun buildTogetherRoomState(
         sessionId: String,
         hostId: String,
+        code: String? = null,
+        joinLink: String? = null,
     ): moe.rgsekai.sekaitune.together.TogetherRoomState =
         withContext(Dispatchers.Main) {
             val tracks =
@@ -4267,6 +4270,8 @@ class MusicService :
                 repeatMode = player.repeatMode,
                 shuffleEnabled = player.shuffleModeEnabled,
                 sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime(),
+                code = code,
+                joinLink = joinLink,
             )
         }
 
@@ -4290,7 +4295,7 @@ class MusicService :
         scope.launch(SilentHandler) {
             when (val current = togetherSessionState.value) {
                 is moe.rgsekai.sekaitune.together.TogetherSessionState.Hosting -> {
-                    val roomState = current.roomState?.let { markTogetherHostParticipant(it, participantId) }
+                    val roomState = current.roomState?.let { markTogetherHostParticipant(it, participantId) }?.copy(joinLink = current.joinLink)
                     togetherSessionState.value =
                         moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
                             role =
@@ -4306,12 +4311,14 @@ class MusicService :
                                     ?: moe.rgsekai.sekaitune.together.TogetherRoomState(
                                         sessionId = current.sessionId,
                                         hostId = participantId,
+                                        joinLink = current.joinLink,
                                     ),
+                            joinLink = current.joinLink,
                         )
                 }
 
                 is moe.rgsekai.sekaitune.together.TogetherSessionState.HostingOnline -> {
-                    val roomState = current.roomState?.let { markTogetherHostParticipant(it, participantId) }
+                    val roomState = current.roomState?.let { markTogetherHostParticipant(it, participantId) }?.copy(code = current.code)
                     togetherSessionState.value =
                         moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
                             role =
@@ -4327,11 +4334,15 @@ class MusicService :
                                     ?: moe.rgsekai.sekaitune.together.TogetherRoomState(
                                         sessionId = current.sessionId,
                                         hostId = participantId,
+                                        code = current.code,
                                     ),
+                            code = current.code,
                         )
                 }
 
                 is moe.rgsekai.sekaitune.together.TogetherSessionState.Joined -> {
+                    val preservedCode = current.code ?: current.roomState.code
+                    val preservedLink = current.joinLink ?: current.roomState.joinLink
                     togetherSessionState.value =
                         current.copy(
                             role =
@@ -4340,7 +4351,12 @@ class MusicService :
                                 } else {
                                     moe.rgsekai.sekaitune.together.TogetherRole.Guest
                                 },
-                            roomState = markTogetherHostParticipant(current.roomState, participantId),
+                            roomState = markTogetherHostParticipant(current.roomState, participantId).copy(
+                                code = preservedCode,
+                                joinLink = preservedLink,
+                            ),
+                            code = preservedCode,
+                            joinLink = preservedLink,
                         )
                 }
 
@@ -4504,12 +4520,23 @@ class MusicService :
                 togetherLastRemoteAppliedPlayWhenReady = state.isPlaying
                 togetherLastAppliedRoomStateSentAtElapsedMs = sentAt
 
+                val currentJoined = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
+                val currentHostingOnline = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.HostingOnline
+                val currentHostingLan = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Hosting
+                val resolvedCode = state.code ?: currentJoined?.code ?: currentHostingOnline?.code
+                val resolvedLink = state.joinLink ?: currentJoined?.joinLink ?: currentHostingLan?.joinLink
+                val isHost = currentJoined?.role is moe.rgsekai.sekaitune.together.TogetherRole.Host ||
+                    currentHostingOnline != null ||
+                    currentHostingLan != null ||
+                    pid == state.hostId
                 togetherSessionState.value =
                     moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
-                        role = moe.rgsekai.sekaitune.together.TogetherRole.Guest,
+                        role = if (isHost) moe.rgsekai.sekaitune.together.TogetherRole.Host else (currentJoined?.role ?: moe.rgsekai.sekaitune.together.TogetherRole.Guest),
                         sessionId = state.sessionId,
                         selfParticipantId = pid,
-                        roomState = state,
+                        roomState = state.copy(code = resolvedCode, joinLink = resolvedLink),
+                        code = resolvedCode,
+                        joinLink = resolvedLink,
                     )
             } finally {
                 togetherApplyingRemote = false
@@ -5627,7 +5654,7 @@ class MusicService :
                 )
             ) {
                 ioScope.launch(SilentHandler) {
-                    val state = buildTogetherRoomState(sessionId = onlineHost.sessionId, hostId = togetherHostId)
+                    val state = buildTogetherRoomState(sessionId = onlineHost.sessionId, hostId = onlineHost.hostUid, code = onlineHost.code)
                     onlineHost.broadcastRoomState(state)
                     scope.launch(SilentHandler) {
                         val hosting = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.HostingOnline
@@ -5638,6 +5665,7 @@ class MusicService :
                                     roomState = state.copy(
                                         participants = onlineHost.currentParticipants(),
                                         settings = onlineHost.currentSettings(),
+                                        code = onlineHost.code,
                                     ),
                                 )
                         }

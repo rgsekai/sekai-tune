@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,6 +55,7 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +63,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -71,9 +74,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -230,6 +237,7 @@ fun MusicTogetherScreen(
                         model = state.model,
                         useSupportingPane = useSupportingPane,
                         viewModel = viewModel,
+                        onNavigateToSignIn = { navController.navigate("settings/ai_integration") },
                     )
                 }
             }
@@ -242,7 +250,17 @@ private fun MusicTogetherContent(
     model: MusicTogetherUiModel,
     useSupportingPane: Boolean,
     viewModel: MusicTogetherViewModel,
+    onNavigateToSignIn: () -> Unit,
 ) {
+    val listState = rememberLazyListState()
+    var showActivityLogSheet by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(model.status.showSignInAction) {
+        if (model.status.showSignInAction) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     if (useSupportingPane) {
         Row(
             modifier =
@@ -252,6 +270,7 @@ private fun MusicTogetherContent(
             horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.md),
         ) {
             LazyColumn(
+                state = listState,
                 modifier =
                     Modifier
                         .weight(1.25f)
@@ -267,6 +286,7 @@ private fun MusicTogetherContent(
                         onCopy = viewModel::copySessionValue,
                         onShare = viewModel::shareSessionValue,
                         onLeave = viewModel::leaveSession,
+                        onNavigateToSignIn = onNavigateToSignIn,
                     )
                 }
                 item(contentType = "playback") {
@@ -317,6 +337,7 @@ private fun MusicTogetherContent(
         }
     } else {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(
@@ -334,6 +355,7 @@ private fun MusicTogetherContent(
                     onCopy = viewModel::copySessionValue,
                     onShare = viewModel::shareSessionValue,
                     onLeave = viewModel::leaveSession,
+                    onNavigateToSignIn = onNavigateToSignIn,
                 )
             }
             item(contentType = "playback") {
@@ -353,9 +375,19 @@ private fun MusicTogetherContent(
                 ParticipantsCard(participants = model.participants, viewModel = viewModel)
             }
             item(contentType = "activity") {
-                ActivityLogCard(activityLog = model.activityLog)
+                ActivityLogSummaryCard(
+                    activityLog = model.activityLog,
+                    onOpen = { showActivityLogSheet = true },
+                )
             }
         }
+    }
+
+    if (showActivityLogSheet) {
+        ActivityLogBottomSheet(
+            activityLog = model.activityLog,
+            onDismiss = { showActivityLogSheet = false },
+        )
     }
 }
 
@@ -470,6 +502,8 @@ private fun StatusCard(
     onCopy: (Int, String) -> Unit,
     onShare: (String) -> Unit,
     onLeave: () -> Unit,
+    onNavigateToSignIn: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     val accent =
         when {
@@ -479,7 +513,7 @@ private fun StatusCard(
         }
     Card(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
         shape = MaterialTheme.shapes.extraLarge,
@@ -495,16 +529,23 @@ private fun StatusCard(
                 horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
             ) {
                 AccentIcon(iconResId = status.iconResId, accent = accent)
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
                     Text(
                         text = stringResource(status.titleResId),
                         style = MaterialTheme.typography.labelLarge,
                         color = accent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = stringResource(status.stateLabelResId),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (status.active) {
@@ -516,18 +557,26 @@ private fun StatusCard(
                                 .background(accent),
                     )
                 }
+                if (sessionShare != null) {
+                    FilledTonalIconButton(
+                        onClick = { onShare(sessionShare.value) },
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.share),
+                            contentDescription = stringResource(R.string.share),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
                 if (status.canLeave) {
-                    FilledTonalButton(
+                    FilledTonalIconButton(
                         onClick = onLeave,
-                        shapes = ButtonDefaults.shapes(),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.leave),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            contentDescription = stringResource(R.string.leave),
+                            modifier = Modifier.size(20.dp),
                         )
-                        Spacer(Modifier.width(MusicTogetherSpacing.xs))
-                        Text(text = stringResource(R.string.leave))
                     }
                 }
             }
@@ -538,12 +587,30 @@ private fun StatusCard(
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.errorContainer,
                 ) {
-                    Text(
-                        text = status.errorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    Column(
                         modifier = Modifier.padding(MusicTogetherSpacing.sm),
-                    )
+                        verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xs),
+                    ) {
+                        Text(
+                            text = status.errorMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        if (status.showSignInAction && onNavigateToSignIn != null) {
+                            FilledTonalButton(
+                                onClick = onNavigateToSignIn,
+                                shapes = ButtonDefaults.shapes(),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.person),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(MusicTogetherSpacing.xs))
+                                Text(text = stringResource(R.string.go_to_signin))
+                            }
+                        }
+                    }
                 }
             }
 
@@ -976,6 +1043,137 @@ private fun ParticipantRow(
             androidx.compose.material3.ListItemDefaults
                 .colors(containerColor = Color.Transparent),
     )
+}
+
+@Composable
+private fun ActivityLogSummaryCard(
+    activityLog: MusicTogetherActivityLogUiModels,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        onClick = onOpen,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(MusicTogetherSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
+        ) {
+            AccentIcon(
+                iconResId = R.drawable.history,
+                accent = MaterialTheme.colorScheme.tertiary,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.together_activity_log),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text =
+                        if (activityLog.isEmpty) {
+                            stringResource(R.string.together_activity_log_empty)
+                        } else {
+                            stringResource(R.string.together_activity_log_subtitle)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            FilledTonalButton(
+                onClick = onOpen,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(text = stringResource(R.string.view_all))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActivityLogBottomSheet(
+    activityLog: MusicTogetherActivityLogUiModels,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MusicTogetherSpacing.md)
+                    .padding(bottom = MusicTogetherSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
+            ) {
+                AccentIcon(
+                    iconResId = R.drawable.history,
+                    accent = MaterialTheme.colorScheme.tertiary,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.together_activity_log),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = stringResource(R.string.together_activity_log_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = MusicTogetherSpacing.xs))
+
+            if (activityLog.isEmpty) {
+                EmptyPanel(
+                    iconResId = R.drawable.history,
+                    titleResId = R.string.together_activity_log_empty,
+                    bodyResId = R.string.together_activity_log_empty_body,
+                )
+            } else {
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 480.dp),
+                    verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xs),
+                ) {
+                    items(
+                        count = activityLog.size,
+                        key = { index -> activityLog[index].id },
+                        contentType = { "activity_log_item" },
+                    ) { index ->
+                        ActivityLogRow(item = activityLog[index])
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

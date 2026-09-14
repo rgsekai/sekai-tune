@@ -21,7 +21,7 @@ class FirestoreTogetherHost(
     private val scope: CoroutineScope,
     val sessionId: String,
     val code: String,
-    private val hostUid: String,
+    val hostUid: String,
     private val hostDisplayName: String,
     private var settings: TogetherRoomSettings,
 ) {
@@ -182,6 +182,7 @@ class FirestoreTogetherHost(
                 val shuffleEnabled = rawPlayback["shuffleEnabled"] as? Boolean ?: false
                 val queueHash = rawPlayback["queueHash"] as? String ?: ""
 
+                val sessionCode = snapshot.getString("code") ?: code
                 val roomState = TogetherRoomState(
                     sessionId = sessionId,
                     hostId = hostUid,
@@ -194,7 +195,8 @@ class FirestoreTogetherHost(
                     positionMs = positionMs,
                     repeatMode = repeatMode,
                     shuffleEnabled = shuffleEnabled,
-                    sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime()
+                    sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime(),
+                    code = sessionCode,
                 )
 
                 onEvent?.invoke(TogetherServerEvent.RoomStateReceived(roomState))
