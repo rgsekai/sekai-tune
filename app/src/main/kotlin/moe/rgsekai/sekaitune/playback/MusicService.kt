@@ -2902,7 +2902,9 @@ class MusicService :
                     } else {
                         savedOnlineQueueSnapshot = snap
                     }
-                    scope.launch(Dispatchers.IO) { saveQueueToDisk(explicitType = outgoingType) }
+                    scope.launch(Dispatchers.IO) {
+                        saveQueueToDisk(explicitType = outgoingType, explicitSnapshot = snap)
+                    }
                 }
             }
             activeQueueType.value = targetQueueType
@@ -2942,18 +2944,6 @@ class MusicService :
             } ?: false
             val resolvedTargetType = if (isLocalQueue || firstItemIsLocal) ActiveQueueType.LOCAL else ActiveQueueType.ONLINE
             if (activeQueueType.value != resolvedTargetType) {
-                val outgoingType = activeQueueType.value
-                if (player.mediaItemCount > 0) {
-                    val snap = withContext(Dispatchers.Main) { takePlayerSnapshot() }
-                    if (snap != null) {
-                        if (outgoingType == ActiveQueueType.LOCAL) {
-                            savedLocalQueueSnapshot = snap
-                        } else {
-                            savedOnlineQueueSnapshot = snap
-                        }
-                        saveQueueToDisk(explicitType = outgoingType)
-                    }
-                }
                 withContext(Dispatchers.Main) {
                     activeQueueType.value = resolvedTargetType
                 }
@@ -7014,11 +7004,14 @@ class MusicService :
         return persistQueue to persistPlayerState
     }
 
-    private suspend fun saveQueueToDisk(explicitType: ActiveQueueType? = null) {
+    private suspend fun saveQueueToDisk(
+        explicitType: ActiveQueueType? = null,
+        explicitSnapshot: Pair<PersistQueue, PersistPlayerState>? = null,
+    ) {
         val saveGeneration = persistenceManager.incrementGeneration()
         val targetType = explicitType ?: activeQueueType.value
         val snapshot =
-            withContext(Dispatchers.Main.immediate) {
+            explicitSnapshot ?: withContext(Dispatchers.Main.immediate) {
                 if (
                     saveGeneration != persistenceManager.getGeneration() ||
                     isRestoringPersistentState ||
@@ -7075,7 +7068,9 @@ class MusicService :
                     } else {
                         savedOnlineQueueSnapshot = outgoingSnap
                     }
-                    saveQueueToDisk(explicitType = outgoingType)
+                    scope.launch(Dispatchers.IO) {
+                        saveQueueToDisk(explicitType = outgoingType, explicitSnapshot = outgoingSnap)
+                    }
                 }
             }
 
