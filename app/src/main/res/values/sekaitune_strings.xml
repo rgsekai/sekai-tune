@@ -600,6 +600,9 @@
     <string name="together_signin_required">Sign-in required</string>
     <string name="together_signin_required_message">Please sign in with Google to use Online sessions.</string>
     <string name="go_to_signin">Go to sign-in</string>
+    <string name="search_settings">Search settings</string>
+    <string name="no_settings_found">No settings found</string>
+    <string name="no_settings_found_desc">Try searching with different keywords</string>
 </resources>
 
 

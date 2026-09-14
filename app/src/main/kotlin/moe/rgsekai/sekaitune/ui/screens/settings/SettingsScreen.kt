@@ -36,17 +36,18 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -75,6 +76,11 @@ fun SettingsScreen(
     val context = LocalContext.current
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val listState = rememberLazyListState()
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val isSearching = searchQuery.isNotBlank()
+
+    val searchIndex = remember(context) { SettingsSearchRepository.buildSearchIndex(context) }
+    val searchResults = remember(searchQuery, searchIndex) { SettingsSearchRepository.search(searchQuery, searchIndex) }
 
     // SharedPreferences setup for saving the audio format choice (MP3 by default)
     val sharedPrefs = remember {
@@ -148,13 +154,8 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            LargeFlexibleTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings),
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
+            TopAppBar(
+                title = { },
                 navigationIcon = {
                     IconButton(
                         onClick = navController::navigateUp,
@@ -167,7 +168,7 @@ fun SettingsScreen(
                     }
                 },
                 colors =
-                    TopAppBarDefaults.largeTopAppBarColors(
+                    TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     ),
@@ -192,54 +193,88 @@ fun SettingsScreen(
                     bottom = SettingsDimensions.ScreenBottomPadding,
                 ),
         ) {
-            if (hasUpdate && !isUpdateDismissed) {
-                item(key = "update", contentType = "settings_banner") {
-                    SettingsUpdateBanner(
-                        latestVersion = latestVersionName,
-                        onClick = { navController.navigate("settings/update") },
-                        onDismiss = { isUpdateDismissed = true },
-                        modifier =
-                            Modifier
-                                .padding(horizontal = SettingsDimensions.ScreenHorizontalPadding)
-                                .padding(bottom = SettingsDimensions.SectionSpacing),
-                    )
-                }
+            item(key = "search_bar", contentType = "settings_search_bar") {
+                SettingsSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 26.dp)
+                            .padding(bottom = 10.dp),
+                )
             }
 
-            if (shouldShowPermissionHint) {
-                item(key = "permission", contentType = "settings_banner") {
-                    SettingsPermissionBanner(
-                        onRequestPermission = {
-                            val toRequest =
-                                buildList {
-                                    if (!isStorageGranted) add(storagePermission)
-                                    if (!isNotificationGranted && notificationPermission != null) {
-                                        add(notificationPermission)
+            if (isSearching) {
+                if (searchResults.isEmpty()) {
+                    item(key = "empty_search", contentType = "settings_empty_search") {
+                        SettingsSearchEmptyState(query = searchQuery)
+                    }
+                } else {
+                    itemsIndexed(
+                        items = searchResults,
+                        key = { _, item -> item.id },
+                        contentType = { _, _ -> "settings_search_result" },
+                    ) { index, entry ->
+                        SettingsSearchResultItem(
+                            entry = entry,
+                            index = index,
+                            count = searchResults.size,
+                            onClick = { navController.navigate(entry.route) },
+                            modifier = Modifier.padding(horizontal = 26.dp),
+                        )
+                    }
+                }
+            } else {
+                if (hasUpdate && !isUpdateDismissed) {
+                    item(key = "update", contentType = "settings_banner") {
+                        SettingsUpdateBanner(
+                            latestVersion = latestVersionName,
+                            onClick = { navController.navigate("settings/update") },
+                            onDismiss = { isUpdateDismissed = true },
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = SettingsDimensions.ScreenHorizontalPadding)
+                                    .padding(bottom = SettingsDimensions.SectionSpacing),
+                        )
+                    }
+                }
+
+                if (shouldShowPermissionHint) {
+                    item(key = "permission", contentType = "settings_banner") {
+                        SettingsPermissionBanner(
+                            onRequestPermission = {
+                                val toRequest =
+                                    buildList {
+                                        if (!isStorageGranted) add(storagePermission)
+                                        if (!isNotificationGranted && notificationPermission != null) {
+                                            add(notificationPermission)
+                                        }
                                     }
+                                if (toRequest.isNotEmpty()) {
+                                    permissionLauncher.launch(toRequest.toTypedArray())
                                 }
-                            if (toRequest.isNotEmpty()) {
-                                permissionLauncher.launch(toRequest.toTypedArray())
-                            }
-                        },
-                        modifier =
-                            Modifier
-                                .padding(horizontal = SettingsDimensions.ScreenHorizontalPadding)
-                                .padding(bottom = SettingsDimensions.SectionSpacing),
+                            },
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = SettingsDimensions.ScreenHorizontalPadding)
+                                    .padding(bottom = SettingsDimensions.SectionSpacing),
+                        )
+                    }
+                }
+
+                // 2. THE NATIVE SETTINGS LIST (Make sure there is only ONE of these!)
+                itemsIndexed(
+                    items = settingsItems,
+                    key = { _, item -> item.key },
+                    contentType = { _, _ -> "settings_segment" },
+                ) { index, settingsItem ->
+                    SettingsSegmentedItem(
+                        item = settingsItem,
+                        index = index,
+                        count = settingsItems.size,
+                        modifier = Modifier.padding(horizontal = 26.dp),
                     )
                 }
-            }
-            // 2. THE NATIVE SETTINGS LIST (Make sure there is only ONE of these!)
-            itemsIndexed(
-                items = settingsItems,
-                key = { _, item -> item.key },
-                contentType = { _, _ -> "settings_segment" },
-            ) { index, settingsItem ->
-                SettingsSegmentedItem(
-                    item = settingsItem,
-                    index = index,
-                    count = settingsItems.size,
-                    modifier = Modifier.padding(horizontal = 26.dp),
-                )
             }
         }
     }
