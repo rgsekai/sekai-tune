@@ -6582,33 +6582,48 @@ class MusicService :
             val authority = originalUri.authority ?: return candidates
             val docId =
                 runCatching {
-                    if (DocumentsContract.isDocumentUri(context, originalUri) || DocumentsContract.isTreeUri(originalUri)) {
+                    if (DocumentsContract.isDocumentUri(context, originalUri)) {
                         DocumentsContract.getDocumentId(originalUri)
+                    } else if (DocumentsContract.isTreeUri(originalUri)) {
+                        runCatching { DocumentsContract.getDocumentId(originalUri) }.getOrNull()
+                            ?: DocumentsContract.getTreeDocumentId(originalUri)
                     } else {
-                        null
+                        val pathSegments = originalUri.pathSegments
+                        val docIndex = pathSegments.indexOf("document")
+                        if (docIndex != -1 && docIndex + 1 < pathSegments.size) {
+                            pathSegments[docIndex + 1]
+                        } else {
+                            null
+                        }
                     }
                 }.getOrNull()
 
             if (docId != null) {
-                // 1. Direct document URI candidate
-                val directDocUri = runCatching { DocumentsContract.buildDocumentUri(authority, docId) }.getOrNull()
-                if (directDocUri != null && directDocUri != originalUri) {
-                    candidates += dataSpec.buildUpon().setUri(directDocUri).build()
-                }
-
-                // 2. Tree URI candidate with self docId
-                val selfTreeUri = runCatching { DocumentsContract.buildDocumentUriUsingTree(DocumentsContract.buildTreeDocumentUri(authority, docId), docId) }.getOrNull()
-                if (selfTreeUri != null && selfTreeUri != originalUri && !candidates.any { it.uri == selfTreeUri }) {
-                    candidates += dataSpec.buildUpon().setUri(selfTreeUri).build()
-                }
-
-                // 3. Persisted permissions candidate trees
+                // 1. Prioritize persisted tree URI permissions for this authority (SAF grants)
                 runCatching {
                     val persisted = context.contentResolver.persistedUriPermissions
                     for (perm in persisted) {
                         if (!perm.isReadPermission || perm.uri.authority != authority) continue
                         val candidateTreeUri = runCatching { DocumentsContract.buildDocumentUriUsingTree(perm.uri, docId) }.getOrNull()
-                        if (candidateTreeUri != null && candidateTreeUri != originalUri && !candidates.any { it.uri == candidateTreeUri }) {
+                        if (candidateTreeUri != null && !candidates.any { it.uri == candidateTreeUri }) {
+                            candidates += dataSpec.buildUpon().setUri(candidateTreeUri).build()
+                        }
+                    }
+                }
+
+                // 2. Direct document URI candidate
+                val directDocUri = runCatching { DocumentsContract.buildDocumentUri(authority, docId) }.getOrNull()
+                if (directDocUri != null && !candidates.any { it.uri == directDocUri }) {
+                    candidates += dataSpec.buildUpon().setUri(directDocUri).build()
+                }
+
+                // 3. Fallback: all persisted read tree permissions
+                runCatching {
+                    val persisted = context.contentResolver.persistedUriPermissions
+                    for (perm in persisted) {
+                        if (!perm.isReadPermission || perm.uri.authority == authority) continue
+                        val candidateTreeUri = runCatching { DocumentsContract.buildDocumentUriUsingTree(perm.uri, docId) }.getOrNull()
+                        if (candidateTreeUri != null && !candidates.any { it.uri == candidateTreeUri }) {
                             candidates += dataSpec.buildUpon().setUri(candidateTreeUri).build()
                         }
                     }

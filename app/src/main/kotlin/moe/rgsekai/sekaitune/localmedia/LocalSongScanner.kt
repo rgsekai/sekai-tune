@@ -712,7 +712,7 @@ class LocalSongScanner
             unknownTitle: String,
         ): List<LocalTrackRecord> {
             val results = mutableListOf<LocalTrackRecord>()
-            val folderQueue = ArrayDeque<Pair<String, Uri>>()
+            val folderQueue = ArrayDeque<String>()
 
             val rootDocId =
                 runCatching {
@@ -726,18 +726,18 @@ class LocalSongScanner
                 }.getOrNull()
 
             if (rootDocId != null) {
-                folderQueue.add(rootDocId to treeUri)
+                folderQueue.add(rootDocId)
             }
 
             val visitedDocIds = mutableSetOf<String>()
             var queriedViaDirectContract = false
 
             while (folderQueue.isNotEmpty()) {
-                val (currentDocId, currentTreeUri) = folderQueue.removeFirst()
+                val currentDocId = folderQueue.removeFirst()
                 if (!visitedDocIds.add(currentDocId)) continue
 
                 try {
-                    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(currentTreeUri, currentDocId)
+                    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, currentDocId)
                     val projection =
                         arrayOf(
                             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -765,14 +765,10 @@ class LocalSongScanner
                             if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
                                 val folderName = displayName.lowercase(Locale.ROOT)
                                 if (!shouldExcludeFolder(folderName, sanitizedExcludedFolders)) {
-                                    val subTreeUri =
-                                        runCatching {
-                                            DocumentsContract.buildTreeDocumentUri(treeUri.authority, docId)
-                                        }.getOrNull() ?: currentTreeUri
-                                    folderQueue.add(docId to subTreeUri)
+                                    folderQueue.add(docId)
                                 }
                             } else if (SupportedLocalAudio.isSupported(displayName, mimeType) || mimeType.startsWith("audio/")) {
-                                val docUri = DocumentsContract.buildDocumentUriUsingTree(currentTreeUri, docId)
+                                val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
                                 results +=
                                     extractFastCloudTrackRecord(
                                         docUri = docUri,
@@ -788,7 +784,7 @@ class LocalSongScanner
                     }
                 } catch (error: Throwable) {
                     if (error is CancellationException) throw error
-                    Timber.tag(LogTag).w(error, "Failed to query child documents for docId: %s in tree: %s", currentDocId, currentTreeUri)
+                    Timber.tag(LogTag).w(error, "Failed to query child documents for docId: %s in tree: %s", currentDocId, treeUri)
                 }
             }
 
