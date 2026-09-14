@@ -160,6 +160,7 @@ import moe.rgsekai.sekaitune.constants.MediaSessionConstants.CommandToggleLike
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants.CommandToggleRepeatMode
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants.CommandToggleShuffle
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants.CommandToggleStartRadio
+import moe.rgsekai.sekaitune.constants.ActiveQueueTypeKey
 import moe.rgsekai.sekaitune.constants.PauseListenHistoryKey
 import moe.rgsekai.sekaitune.constants.PauseOnDeviceMuteKey
 import moe.rgsekai.sekaitune.constants.PermanentShuffleKey
@@ -169,7 +170,11 @@ import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
 import moe.rgsekai.sekaitune.constants.PlayerVolumeKey
 import moe.rgsekai.sekaitune.constants.RepeatModeKey
 import moe.rgsekai.sekaitune.models.QueueFilter
+import moe.rgsekai.sekaitune.playback.queues.ActiveQueueType
+import moe.rgsekai.sekaitune.playback.queues.LocalAlbumRadio
+import moe.rgsekai.sekaitune.playback.queues.LocalMixQueue
 import moe.rgsekai.sekaitune.playback.queues.QueueFilterProvider
+import androidx.datastore.preferences.core.edit
 import moe.rgsekai.sekaitune.constants.ShowLyricsKey
 import moe.rgsekai.sekaitune.constants.SkipSilenceKey
 import moe.rgsekai.sekaitune.constants.SmartTrimmerKey
@@ -419,6 +424,9 @@ class MusicService :
     val queueRestoreCompleted = MutableStateFlow(false)
     val infiniteQueueLoading = MutableStateFlow(false)
     val currentQueueFilter = MutableStateFlow(QueueFilter.ALL)
+    val activeQueueType = MutableStateFlow(ActiveQueueType.ONLINE)
+    private var savedOnlineQueueSnapshot: Pair<PersistQueue, PersistPlayerState>? = null
+    private var savedLocalQueueSnapshot: Pair<PersistQueue, PersistPlayerState>? = null
     private val playerInitialized = MutableStateFlow(false)
     private val currentSong =
         currentMediaMetadata
@@ -1286,8 +1294,24 @@ class MusicService :
             runCatching {
                 if (dataStore.get(PersistentQueueKey, true)) {
                     playerInitialized.first { it }
-                    val persistedQueue = persistenceManager.readPersistentObject<PersistQueue>(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE)
-                    val persistedPlayerState = persistenceManager.readPersistentObject<PersistPlayerState>(PlaybackPersistenceManager.PERSISTENT_PLAYER_STATE_FILE)
+                    val savedQueueTypeName = dataStore.get(ActiveQueueTypeKey, ActiveQueueType.ONLINE.name)
+                    val initialQueueType = if (savedQueueTypeName == ActiveQueueType.LOCAL.name) ActiveQueueType.LOCAL else ActiveQueueType.ONLINE
+                    withContext(Dispatchers.Main) {
+                        activeQueueType.value = initialQueueType
+                    }
+                    val onlineQueue = persistenceManager.readPersistentObject<PersistQueue>(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE)
+                    val onlineState = persistenceManager.readPersistentObject<PersistPlayerState>(PlaybackPersistenceManager.PERSISTENT_PLAYER_STATE_FILE)
+                    if (onlineQueue != null && onlineState != null) {
+                        savedOnlineQueueSnapshot = onlineQueue to onlineState
+                    }
+                    val localQueue = persistenceManager.readPersistentObject<PersistQueue>(PlaybackPersistenceManager.PERSISTENT_LOCAL_QUEUE_FILE)
+                    val localState = persistenceManager.readPersistentObject<PersistPlayerState>(PlaybackPersistenceManager.PERSISTENT_LOCAL_PLAYER_STATE_FILE)
+                    if (localQueue != null && localState != null) {
+                        savedLocalQueueSnapshot = localQueue to localState
+                    }
+
+                    val persistedQueue = if (initialQueueType == ActiveQueueType.LOCAL) localQueue else onlineQueue
+                    val persistedPlayerState = if (initialQueueType == ActiveQueueType.LOCAL) localState else onlineState
 
                     if (persistedQueue != null || persistedPlayerState != null) {
                         isRestoringPersistentState = true
@@ -2866,6 +2890,23 @@ class MusicService :
             promoteToStartedService()
             ensureStartedAsForeground()
         }
+        val isLocalQueue = queue.isLocalQueueType()
+        val targetQueueType = if (isLocalQueue) ActiveQueueType.LOCAL else ActiveQueueType.ONLINE
+        if (activeQueueType.value != targetQueueType) {
+            val outgoingType = activeQueueType.value
+            if (player.mediaItemCount > 0) {
+                val snap = takePlayerSnapshot()
+                if (snap != null) {
+                    if (outgoingType == ActiveQueueType.LOCAL) {
+                        savedLocalQueueSnapshot = snap
+                    } else {
+                        savedOnlineQueueSnapshot = snap
+                    }
+                    scope.launch(Dispatchers.IO) { saveQueueToDisk(explicitType = outgoingType) }
+                }
+            }
+            activeQueueType.value = targetQueueType
+        }
         cancelRestoredQueueHydration()
         ensureScopesActive()
         cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
@@ -2896,6 +2937,27 @@ class MusicService :
                         .filterExplicit(hideExplicit)
                         .filterVideo(hideVideo)
                 }
+            val firstItemIsLocal = initialStatus.items.firstOrNull()?.let {
+                it.metadata?.id?.isLocalMediaId() == true || it.mediaId.isLocalMediaId() || it.localConfiguration?.uri?.toString()?.isLocalMediaId() == true
+            } ?: false
+            val resolvedTargetType = if (isLocalQueue || firstItemIsLocal) ActiveQueueType.LOCAL else ActiveQueueType.ONLINE
+            if (activeQueueType.value != resolvedTargetType) {
+                val outgoingType = activeQueueType.value
+                if (player.mediaItemCount > 0) {
+                    val snap = withContext(Dispatchers.Main) { takePlayerSnapshot() }
+                    if (snap != null) {
+                        if (outgoingType == ActiveQueueType.LOCAL) {
+                            savedLocalQueueSnapshot = snap
+                        } else {
+                            savedOnlineQueueSnapshot = snap
+                        }
+                        saveQueueToDisk(explicitType = outgoingType)
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    activeQueueType.value = resolvedTargetType
+                }
+            }
             if (!autoLoadMoreEnabled && queue.shouldExpandToFullQueueWhenAutoLoadMoreDisabled() && queue.hasNextPage()) {
                 val expandedItems = initialStatus.items.toMutableList()
                 var pagesLoaded = 0
@@ -6893,8 +6955,53 @@ class MusicService :
         )
     }
 
-    private suspend fun saveQueueToDisk() {
+    private fun Queue.isLocalQueueType(): Boolean {
+        if (this is LocalAlbumRadio || this is LocalMixQueue) return true
+        if (this is ListQueue) {
+            val firstItem = items.firstOrNull()
+            if (firstItem != null) {
+                val isLocal =
+                    firstItem.metadata?.id?.isLocalMediaId() == true ||
+                        firstItem.mediaId.isLocalMediaId() ||
+                        firstItem.localConfiguration?.uri?.toString()?.isLocalMediaId() == true
+                if (isLocal) return true
+            }
+        }
+        if (preloadItem?.id?.isLocalMediaId() == true) return true
+        return false
+    }
+
+    private fun takePlayerSnapshot(): Pair<PersistQueue, PersistPlayerState>? {
+        if (player.mediaItemCount == 0) return null
+        val mediaItemsSnapshot = player.mediaItems.mapNotNull { it.toPersistableMetadata() }
+        if (mediaItemsSnapshot.isEmpty()) return null
+
+        val currentMediaItemIndex = player.currentMediaItemIndex
+        val currentPosition = player.currentPosition
+        val persistQueue =
+            currentQueue.toPersistQueue(
+                title = queueTitle,
+                items = mediaItemsSnapshot,
+                mediaItemIndex = currentMediaItemIndex,
+                position = currentPosition,
+            )
+        val persistPlayerState =
+            PersistPlayerState(
+                playWhenReady = player.playWhenReady,
+                repeatMode = player.repeatMode,
+                shuffleModeEnabled = player.shuffleModeEnabled,
+                volume = playerVolume.value,
+                currentPosition = currentPosition,
+                currentMediaItemIndex = currentMediaItemIndex,
+                playbackState = player.playbackState,
+            )
+
+        return persistQueue to persistPlayerState
+    }
+
+    private suspend fun saveQueueToDisk(explicitType: ActiveQueueType? = null) {
         val saveGeneration = persistenceManager.incrementGeneration()
+        val targetType = explicitType ?: activeQueueType.value
         val snapshot =
             withContext(Dispatchers.Main.immediate) {
                 if (
@@ -6905,37 +7012,120 @@ class MusicService :
                     return@withContext null
                 }
 
-                val mediaItemsSnapshot = player.mediaItems.mapNotNull { it.toPersistableMetadata() }
-                if (mediaItemsSnapshot.isEmpty()) return@withContext null
-
-                val currentMediaItemIndex = player.currentMediaItemIndex
-                val currentPosition = player.currentPosition
-                val persistQueue =
-                    currentQueue.toPersistQueue(
-                        title = queueTitle,
-                        items = mediaItemsSnapshot,
-                        mediaItemIndex = currentMediaItemIndex,
-                        position = currentPosition,
-                    )
-                val persistPlayerState =
-                    PersistPlayerState(
-                        playWhenReady = player.playWhenReady,
-                        repeatMode = player.repeatMode,
-                        shuffleModeEnabled = player.shuffleModeEnabled,
-                        volume = playerVolume.value,
-                        currentPosition = currentPosition,
-                        currentMediaItemIndex = currentMediaItemIndex,
-                        playbackState = player.playbackState,
-                    )
-
-                persistQueue to persistPlayerState
+                val snap = takePlayerSnapshot() ?: return@withContext null
+                if (targetType == ActiveQueueType.LOCAL) {
+                    savedLocalQueueSnapshot = snap
+                } else {
+                    savedOnlineQueueSnapshot = snap
+                }
+                snap
             } ?: return
 
+        val queueFile =
+            if (targetType == ActiveQueueType.LOCAL) {
+                PlaybackPersistenceManager.PERSISTENT_LOCAL_QUEUE_FILE
+            } else {
+                PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE
+            }
+        val playerStateFile =
+            if (targetType == ActiveQueueType.LOCAL) {
+                PlaybackPersistenceManager.PERSISTENT_LOCAL_PLAYER_STATE_FILE
+            } else {
+                PlaybackPersistenceManager.PERSISTENT_PLAYER_STATE_FILE
+            }
+
         withContext(Dispatchers.IO) {
+            runCatching { dataStore.edit { it[ActiveQueueTypeKey] = activeQueueType.value.name } }
             if (saveGeneration != persistenceManager.getGeneration()) return@withContext
-            persistenceManager.writePersistentObject(PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE, snapshot.first)
+            persistenceManager.writePersistentObject(queueFile, snapshot.first)
             if (saveGeneration != persistenceManager.getGeneration()) return@withContext
-            persistenceManager.writePersistentObject(PlaybackPersistenceManager.PERSISTENT_PLAYER_STATE_FILE, snapshot.second)
+            persistenceManager.writePersistentObject(playerStateFile, snapshot.second)
+        }
+    }
+
+    fun switchToQueue(targetType: ActiveQueueType) {
+        if (activeQueueType.value == targetType) return
+        ensureScopesActive()
+        scope.launch(Dispatchers.Main) {
+            cancelRestoredQueueHydration()
+            cancelInfiniteQueueBootstrap()
+            cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
+
+            val outgoingType = activeQueueType.value
+            if (player.mediaItemCount > 0) {
+                val outgoingSnap = takePlayerSnapshot()
+                if (outgoingSnap != null) {
+                    if (outgoingType == ActiveQueueType.LOCAL) {
+                        savedLocalQueueSnapshot = outgoingSnap
+                    } else {
+                        savedOnlineQueueSnapshot = outgoingSnap
+                    }
+                    saveQueueToDisk(explicitType = outgoingType)
+                }
+            }
+
+            activeQueueType.value = targetType
+            withContext(Dispatchers.IO) {
+                runCatching { dataStore.edit { it[ActiveQueueTypeKey] = targetType.name } }
+            }
+
+            val inMemorySnapshot =
+                if (targetType == ActiveQueueType.LOCAL) {
+                    savedLocalQueueSnapshot
+                } else {
+                    savedOnlineQueueSnapshot
+                }
+
+            if (inMemorySnapshot != null && inMemorySnapshot.first.items.isNotEmpty()) {
+                restorePersistentQueue(inMemorySnapshot.first)
+                restorePersistentPlayerState(inMemorySnapshot.second, true)
+                if (inMemorySnapshot.second.playWhenReady) {
+                    player.play()
+                }
+            } else {
+                val queueFile =
+                    if (targetType == ActiveQueueType.LOCAL) {
+                        PlaybackPersistenceManager.PERSISTENT_LOCAL_QUEUE_FILE
+                    } else {
+                        PlaybackPersistenceManager.PERSISTENT_QUEUE_FILE
+                    }
+                val playerStateFile =
+                    if (targetType == ActiveQueueType.LOCAL) {
+                        PlaybackPersistenceManager.PERSISTENT_LOCAL_PLAYER_STATE_FILE
+                    } else {
+                        PlaybackPersistenceManager.PERSISTENT_PLAYER_STATE_FILE
+                    }
+
+                val persistedQueue =
+                    withContext(Dispatchers.IO) {
+                        persistenceManager.readPersistentObject<PersistQueue>(queueFile)
+                    }
+                val persistedPlayerState =
+                    withContext(Dispatchers.IO) {
+                        persistenceManager.readPersistentObject<PersistPlayerState>(playerStateFile)
+                    }
+
+                if (persistedQueue != null && persistedQueue.items.isNotEmpty()) {
+                    val defaultState = PersistPlayerState(false, 0, false, 1f, 0L, 0, 1)
+                    val restoredState = persistedPlayerState ?: defaultState
+                    if (targetType == ActiveQueueType.LOCAL) {
+                        savedLocalQueueSnapshot = persistedQueue to restoredState
+                    } else {
+                        savedOnlineQueueSnapshot = persistedQueue to restoredState
+                    }
+                    restorePersistentQueue(persistedQueue)
+                    persistedPlayerState?.let { restorePersistentPlayerState(it, true) }
+                    if (persistedPlayerState?.playWhenReady == true) {
+                        player.play()
+                    }
+                } else {
+                    currentQueue = EmptyQueue
+                    queueTitle = null
+                    player.clearMediaItems()
+                    currentMediaMetadata.value = null
+                    updateNotification()
+                }
+            }
         }
     }
 

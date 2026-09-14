@@ -97,6 +97,8 @@ class PlaybackPersistenceManager
                 listOf(
                     PERSISTENT_QUEUE_FILE,
                     PERSISTENT_PLAYER_STATE_FILE,
+                    PERSISTENT_LOCAL_QUEUE_FILE,
+                    PERSISTENT_LOCAL_PLAYER_STATE_FILE,
                     PERSISTENT_AUTOMIX_FILE,
                 ).forEach { fileName ->
                     val persistentFile = context.filesDir.resolve(fileName)
@@ -120,5 +122,7 @@ class PlaybackPersistenceManager
             const val PERSISTENT_QUEUE_FILE = "persistent_queue.data"
             const val PERSISTENT_AUTOMIX_FILE = "persistent_automix.data"
             const val PERSISTENT_PLAYER_STATE_FILE = "persistent_player_state.data"
+            const val PERSISTENT_LOCAL_QUEUE_FILE = "persistent_local_queue.data"
+            const val PERSISTENT_LOCAL_PLAYER_STATE_FILE = "persistent_local_player_state.data"
         }
     }

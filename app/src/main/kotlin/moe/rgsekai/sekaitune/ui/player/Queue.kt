@@ -299,6 +299,7 @@ fun Queue(
     }
 
     val queueWindows by playerConnection.queueWindows.collectAsState()
+    val activeQueueType by playerConnection.activeQueueType.collectAsState()
     val currentWindow =
         remember(currentWindowIndex, queueWindows) {
             queueWindows.getOrNull(currentWindowIndex)
@@ -819,8 +820,12 @@ fun Queue(
                     infiniteQueueEnabled = infiniteQueueEnabled,
                     infiniteQueueLoading = infiniteQueueLoading,
                     selectedFilter = currentQueueFilter,
+                    activeQueueType = activeQueueType,
                     backgroundColor = backgroundColor,
                     onBackgroundColor = onBackgroundColor,
+                    onToggleActiveQueue = {
+                        playerConnection.toggleActiveQueue()
+                    },
                     onToggleLike = {
                         playerConnection.service.toggleLike()
                     },

@@ -86,6 +86,7 @@ class PlayerConnection(
     val waitingForNetworkConnection = service.waitingForNetworkConnection
     val queueRestoreCompleted = service.queueRestoreCompleted
     val currentQueueFilter = service.currentQueueFilter
+    val activeQueueType = service.activeQueueType
 
     init {
         player.addListener(this)
@@ -102,6 +103,20 @@ class PlayerConnection(
         if (player.mediaItemCount > 0 && service.currentMediaMetadata.value == null) {
             service.currentMediaMetadata.value = player.currentMetadata
         }
+    }
+
+    fun switchToQueue(type: moe.rgsekai.sekaitune.playback.queues.ActiveQueueType) {
+        service.switchToQueue(type)
+    }
+
+    fun toggleActiveQueue() {
+        val nextType =
+            if (service.activeQueueType.value == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.ONLINE) {
+                moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL
+            } else {
+                moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.ONLINE
+            }
+        service.switchToQueue(nextType)
     }
 
     fun setQueueFilter(filter: moe.rgsekai.sekaitune.models.QueueFilter) {

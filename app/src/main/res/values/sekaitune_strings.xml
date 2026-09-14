@@ -603,6 +603,10 @@
     <string name="search_settings">Search settings</string>
     <string name="no_settings_found">No settings found</string>
     <string name="no_settings_found_desc">Try searching with different keywords</string>
+    <string name="queue_online">Online Queue</string>
+    <string name="queue_local">Local Device Queue</string>
+    <string name="switch_to_online_queue">Switch to Online Queue</string>
+    <string name="switch_to_local_queue">Switch to Local Queue</string>
 </resources>
 
 

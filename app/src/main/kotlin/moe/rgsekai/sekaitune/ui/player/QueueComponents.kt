@@ -110,6 +110,7 @@ fun CurrentSongHeader(
     infiniteQueueEnabled: Boolean,
     infiniteQueueLoading: Boolean,
     selectedFilter: moe.rgsekai.sekaitune.models.QueueFilter,
+    activeQueueType: moe.rgsekai.sekaitune.playback.queues.ActiveQueueType = moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.ONLINE,
     backgroundColor: Color,
     onBackgroundColor: Color,
     onToggleLike: () -> Unit,
@@ -119,6 +120,7 @@ fun CurrentSongHeader(
     onShuffleClick: () -> Unit,
     onLockClick: () -> Unit,
     onInfiniteQueueClick: () -> Unit,
+    onToggleActiveQueue: () -> Unit = {},
     onFilterSelected: (moe.rgsekai.sekaitune.models.QueueFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -409,6 +411,83 @@ fun CurrentSongHeader(
                     uncheckedTrackColor = onBackgroundColor.copy(alpha = 0.12f),
                     uncheckedBorderColor = onBackgroundColor.copy(alpha = 0.2f),
                 ),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Dual Queue Selector (Online vs Local)
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(onBackgroundColor.copy(alpha = 0.05f))
+                    .clickable {
+                        if (enableHapticFeedback) {
+                            view.performHapticFeedback(
+                                android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                                android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                            )
+                        }
+                        onToggleActiveQueue()
+                    }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    painter =
+                        painterResource(
+                            if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                R.drawable.storage
+                            } else {
+                                R.drawable.language
+                            },
+                        ),
+                    contentDescription = null,
+                    tint = onBackgroundColor,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column {
+                    Text(
+                        text =
+                            stringResource(
+                                if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                    R.string.queue_local
+                                } else {
+                                    R.string.queue_online
+                                },
+                            ),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onBackgroundColor,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                    R.string.switch_to_online_queue
+                                } else {
+                                    R.string.switch_to_local_queue
+                                },
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onBackgroundColor.copy(alpha = 0.55f),
+                    )
+                }
+            }
+
+            Icon(
+                painter = painterResource(R.drawable.swipe),
+                contentDescription = null,
+                tint = onBackgroundColor.copy(alpha = 0.6f),
+                modifier = Modifier.size(18.dp),
             )
         }
 

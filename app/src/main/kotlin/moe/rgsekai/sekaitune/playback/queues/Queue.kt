@@ -12,6 +12,11 @@ import moe.rgsekai.sekaitune.extensions.ExtraIsMusicVideo
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.models.MediaMetadata
 
+enum class ActiveQueueType {
+    ONLINE,
+    LOCAL,
+}
+
 interface Queue {
     val preloadItem: MediaMetadata?
 
