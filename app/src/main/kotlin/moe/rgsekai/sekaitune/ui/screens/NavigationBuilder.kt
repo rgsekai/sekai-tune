@@ -385,6 +385,12 @@ fun NavGraphBuilder.navigationBuilder(
     composable("settings/music_together") {
         MusicTogetherScreen(navController)
     }
+    composable("settings/buddies") {
+        moe.rgsekai.sekaitune.buddy.BuddyListScreen(navController)
+    }
+    composable("buddies") {
+        moe.rgsekai.sekaitune.buddy.BuddyListScreen(navController)
+    }
     composable("settings/misc") {
         DebugSettings(navController)
     }

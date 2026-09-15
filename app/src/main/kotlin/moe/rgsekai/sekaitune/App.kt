@@ -126,6 +126,7 @@ class App :
         )
         MoriCipherUpdateScheduler.schedule(this)
         CanvasArtworkPlaybackCache.init(this)
+        moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.createNotificationChannel(this)
         PaxsenixLyrics.setUserAgent("SekaiTune", BuildConfig.VERSION_NAME)
 
         YouTube.onStageReached = { name -> ColdStartTimer.addStage(name) }

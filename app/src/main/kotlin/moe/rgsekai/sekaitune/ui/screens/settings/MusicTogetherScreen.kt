@@ -193,6 +193,24 @@ fun MusicTogetherScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(
+                        onClick = { navController.navigate("settings/buddies") },
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 4.dp)
+                                .size(40.dp),
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            ),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.multi_user),
+                            contentDescription = stringResource(R.string.buddies),
+                        )
+                    }
+                },
                 colors =
                     TopAppBarDefaults.largeTopAppBarColors(
                         containerColor = Color.Transparent,
@@ -298,6 +316,14 @@ private fun MusicTogetherContent(
                     }
                 }
                 if (!model.status.active) {
+                    if (model.invitedSessions.isNotEmpty()) {
+                        item(contentType = "invited_sessions") {
+                            InvitedSessionsCard(
+                                sessions = model.invitedSessions,
+                                onJoinSession = viewModel::joinInvitedSession,
+                            )
+                        }
+                    }
                     item(contentType = "join") {
                         JoinControlsCard(join = model.join, viewModel = viewModel)
                     }
@@ -367,6 +393,14 @@ private fun MusicTogetherContent(
                 }
             }
             if (!model.status.active) {
+                if (model.invitedSessions.isNotEmpty()) {
+                    item(contentType = "invited_sessions") {
+                        InvitedSessionsCard(
+                            sessions = model.invitedSessions,
+                            onJoinSession = viewModel::joinInvitedSession,
+                        )
+                    }
+                }
                 item(contentType = "join") {
                     JoinControlsCard(join = model.join, viewModel = viewModel)
                 }
@@ -490,6 +524,32 @@ private fun MusicTogetherDialogs(
                 destructive = false,
                 onConfirm = { viewModel.confirmTransferHost(dialog.participantId) },
                 onDismiss = viewModel::dismissDialog,
+            )
+        }
+
+        is MusicTogetherDialogUiState.SendBuddyRequest -> {
+            AlertDialog(
+                onDismissRequest = viewModel::dismissDialog,
+                title = { Text(text = stringResource(R.string.send_buddy_request)) },
+                text = { Text("Send buddy request to ${dialog.participantName}?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.confirmSendBuddyRequest(
+                                participantId = dialog.participantId,
+                                fromDisplayName = dialog.fromDisplayName,
+                                participantName = dialog.participantName,
+                            )
+                        },
+                    ) {
+                        Text(stringResource(R.string.send_buddy_request))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = viewModel::dismissDialog) {
+                        Text(stringResource(R.string.dismiss))
+                    }
+                },
             )
         }
     }
@@ -832,6 +892,68 @@ private fun HostControlsCard(
 }
 
 @Composable
+private fun InvitedSessionsCard(
+    sessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
+    onJoinSession: (moe.rgsekai.sekaitune.buddy.TogetherSessionSummary) -> Unit,
+) {
+    SectionCard(
+        iconResId = R.drawable.multi_user,
+        titleResId = R.string.together_invited_sessions,
+        subtitleResId = R.string.together_online,
+        accent = MaterialTheme.colorScheme.primary,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xs),
+        ) {
+            sessions.forEach { session ->
+                ListItem(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.large)
+                            .clickable { onJoinSession(session) },
+                    colors =
+                        androidx.compose.material3.ListItemDefaults
+                            .colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                    leadingContent = {
+                        AccentIcon(
+                            iconResId = R.drawable.person,
+                            accent = MaterialTheme.colorScheme.primary,
+                            size = 40.dp,
+                        )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = session.hostDisplayName.ifBlank { stringResource(R.string.buddies) },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = "${stringResource(R.string.together_join_code)}: ${session.code}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingContent = {
+                        FilledTonalButton(
+                            onClick = { onJoinSession(session) },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(R.string.together_join_section))
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun JoinControlsCard(
     join: MusicTogetherJoinUiModel,
     viewModel: MusicTogetherViewModel,
@@ -1001,6 +1123,14 @@ private fun ParticipantRow(
         },
         trailingContent = {
             Row(horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xxs)) {
+                if (participant.showAddBuddyAction) {
+                    IconButton(onClick = { viewModel.requestSendBuddy(participant.id, participant.name) }) {
+                        Icon(
+                            painter = painterResource(R.drawable.add),
+                            contentDescription = stringResource(R.string.send_buddy_request),
+                        )
+                    }
+                }
                 if (participant.showApproveActions) {
                     IconButton(onClick = { viewModel.approveParticipant(participant.id) }) {
                         Icon(

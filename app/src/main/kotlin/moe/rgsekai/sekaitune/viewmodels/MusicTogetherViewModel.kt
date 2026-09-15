@@ -74,6 +74,7 @@ data class MusicTogetherUiModel(
     val join: MusicTogetherJoinUiModel,
     val participants: MusicTogetherParticipantUiModels,
     val activityLog: MusicTogetherActivityLogUiModels,
+    val invitedSessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary> = emptyList(),
 )
 
 @Immutable
@@ -107,6 +108,12 @@ sealed interface MusicTogetherDialogUiState {
     data class TransferHost(
         val participantId: String,
         val participantName: String,
+    ) : MusicTogetherDialogUiState
+
+    data class SendBuddyRequest(
+        val participantId: String,
+        val participantName: String,
+        val fromDisplayName: String,
     ) : MusicTogetherDialogUiState
 }
 
@@ -174,6 +181,7 @@ data class MusicTogetherParticipantUiModels(
     val isEmpty: Boolean get() = values.isEmpty()
 
     operator fun get(index: Int): MusicTogetherParticipantUiModel = values[index]
+    fun find(id: String): MusicTogetherParticipantUiModel? = values.firstOrNull { it.id == id }
 }
 
 @Immutable
@@ -186,6 +194,7 @@ data class MusicTogetherParticipantUiModel(
     val showApproveActions: Boolean,
     val showModerationActions: Boolean,
     val showTransferHostAction: Boolean,
+    val showAddBuddyAction: Boolean = false,
 )
 
 @Immutable
@@ -227,10 +236,11 @@ class MusicTogetherViewModel
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-        observeMusicTogetherState: ObserveMusicTogetherStateUseCase,
+        private val observeMusicTogetherState: ObserveMusicTogetherStateUseCase,
         private val attachMusicTogetherService: AttachMusicTogetherServiceUseCase,
         private val updatePreferences: UpdateMusicTogetherPreferencesUseCase,
         private val sessionActions: MusicTogetherSessionActionsUseCase,
+        private val buddyRepository: moe.rgsekai.sekaitune.buddy.BuddyRepository,
     ) : ViewModel() {
         private val hostModeOnline = MutableStateFlow(false)
         private val joinModeOnline = MutableStateFlow(false)
@@ -253,6 +263,9 @@ class MusicTogetherViewModel
             val joinOnline: Boolean,
             val dialogState: MusicTogetherDialogUiState,
             val welcomeDismissed: Boolean,
+            val buddies: List<moe.rgsekai.sekaitune.buddy.Buddy>,
+            val outgoingRequests: List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
+            val invitedSessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
         )
 
         private val snapshots =
@@ -283,13 +296,20 @@ class MusicTogetherViewModel
                 joinModeOnline,
                 dialog,
                 welcomeDismissedThisSession,
-            ) { snapshot, hostOnline, joinOnline, dialogState, welcomeDismissed ->
+                buddyRepository.observeBuddies(),
+                buddyRepository.observeOutgoingRequests(),
+                buddyRepository.observeInvitedSessions(),
+            ) { args: Array<Any?> ->
+                @Suppress("UNCHECKED_CAST")
                 StateInputs(
-                    snapshot = snapshot,
-                    hostOnline = hostOnline,
-                    joinOnline = joinOnline,
-                    dialogState = dialogState,
-                    welcomeDismissed = welcomeDismissed,
+                    snapshot = args[0] as MusicTogetherSnapshot,
+                    hostOnline = args[1] as Boolean,
+                    joinOnline = args[2] as Boolean,
+                    dialogState = args[3] as MusicTogetherDialogUiState,
+                    welcomeDismissed = args[4] as Boolean,
+                    buddies = args[5] as List<moe.rgsekai.sekaitune.buddy.Buddy>,
+                    outgoingRequests = args[6] as List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
+                    invitedSessions = args[7] as List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
                 )
             }.let { inputs ->
                 combine(inputs, welcomeDontShowAgain, activityLog) { stateInputs, dontShowAgain, log ->
@@ -302,6 +322,9 @@ class MusicTogetherViewModel
                                 welcomeDismissed = stateInputs.welcomeDismissed,
                                 dontShowAgain = dontShowAgain,
                                 log = log,
+                                buddies = stateInputs.buddies,
+                                outgoingRequests = stateInputs.outgoingRequests,
+                                invitedSessions = stateInputs.invitedSessions,
                             ),
                         )
                     screenState
@@ -455,6 +478,18 @@ class MusicTogetherViewModel
             submitJoinInput(model.join.input)
         }
 
+        fun joinInvitedSession(session: moe.rgsekai.sekaitune.buddy.TogetherSessionSummary) {
+            val model = successModel() ?: return
+            viewModelScope.launch(Dispatchers.IO) {
+                updatePreferences.setLastJoinLink(session.code)
+            }
+            sessionActions.joinSession(
+                mode = MusicTogetherConnectionMode.ONLINE,
+                rawInput = session.code,
+                displayName = model.host.displayName,
+            )
+        }
+
         fun leaveSession() {
             sessionActions.leaveSession()
         }
@@ -509,6 +544,37 @@ class MusicTogetherViewModel
             sessionActions.banParticipant(participantId)
         }
 
+        fun requestSendBuddy(participantId: String, participantName: String) {
+            val model = successModel() ?: return
+            val myUid = buddyRepository.currentUid
+            val selfParticipant = myUid?.let { model.participants.find(it) }
+            val selfDisplayName = selfParticipant?.name ?: model.host.displayName
+
+            dialog.value = MusicTogetherDialogUiState.SendBuddyRequest(
+                participantId = participantId,
+                participantName = participantName,
+                fromDisplayName = selfDisplayName,
+            )
+        }
+
+        fun confirmSendBuddyRequest(
+            participantId: String,
+            fromDisplayName: String,
+            participantName: String,
+        ) {
+            dismissDialog()
+            viewModelScope.launch {
+                val result = buddyRepository.sendBuddyRequest(
+                    toUid = participantId,
+                    fromDisplayName = fromDisplayName,
+                    toDisplayName = participantName,
+                )
+                if (result.isSuccess) {
+                    effectsFlow.emit(MusicTogetherEffect.ToastMessage(R.string.together_buddy_request_sent))
+                }
+            }
+        }
+
         private fun successModel(): MusicTogetherUiModel? = (state.value as? MusicTogetherScreenState.Success)?.model
 
         private fun pushSettingsToActiveSession(
@@ -534,6 +600,9 @@ class MusicTogetherViewModel
             welcomeDismissed: Boolean,
             dontShowAgain: Boolean,
             log: MusicTogetherActivityLogUiModels,
+            buddies: List<moe.rgsekai.sekaitune.buddy.Buddy>,
+            outgoingRequests: List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
+            invitedSessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
         ): MusicTogetherUiModel {
             val state = sessionState
             val roomState = state.roomStateOrNull()
@@ -684,12 +753,27 @@ class MusicTogetherViewModel
             val showModerationActions =
                 state is TogetherSessionState.HostingOnline ||
                     (state is TogetherSessionState.Joined && state.role is TogetherRole.Host && (state.code != null || roomState?.code != null))
+
+            val currentAuthUid = buddyRepository.currentUid
+            val selfParticipantId = when (state) {
+                is TogetherSessionState.Joined -> state.selfParticipantId
+                is TogetherSessionState.HostingOnline -> state.roomState?.hostId ?: currentAuthUid
+                is TogetherSessionState.Hosting -> state.roomState?.hostId ?: currentAuthUid
+                else -> currentAuthUid
+            }
+            val isOnlineSession = state is TogetherSessionState.HostingOnline || (state is TogetherSessionState.Joined && state.code != null)
+
             val participantModels =
                 MusicTogetherParticipantUiModels(
                     roomState
                         ?.participants
                         .orEmpty()
                         .map { participant ->
+                            val isSelf = participant.id == selfParticipantId || (isHostRole && participant.isHost)
+                            val isBuddy = buddies.any { it.uid == participant.id }
+                            val hasOutgoingRequest = outgoingRequests.any { it.toUid == participant.id }
+                            val showAddBuddy = isOnlineSession && !isSelf && !isBuddy && !hasOutgoingRequest && !participant.isPending
+
                             MusicTogetherParticipantUiModel(
                                 id = participant.id,
                                 name = participant.name,
@@ -701,6 +785,7 @@ class MusicTogetherViewModel
                                         roomState?.settings?.requireHostApprovalToJoin == true,
                                 showModerationActions = isHostRole && showModerationActions && !participant.isHost,
                                 showTransferHostAction = isHostRole && !participant.isHost && !participant.isPending,
+                                showAddBuddyAction = showAddBuddy,
                             )
                         },
                 )
@@ -715,6 +800,7 @@ class MusicTogetherViewModel
                 join = join,
                 participants = participantModels,
                 activityLog = log,
+                invitedSessions = invitedSessions,
             )
         }
 

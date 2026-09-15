@@ -265,6 +265,14 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".buddy.BuddyMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name="androidx.media3.session.MediaButtonReceiver"
             android:exported="true">

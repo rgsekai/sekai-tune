@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="home">Home</string>
     <string name="songs">Songs</string>
@@ -919,6 +919,13 @@
     <string name="hidden_playlists_description">Playlists hidden from library appear here</string>
     <string name="no_hidden_playlists">No hidden playlists</string>
     <string name="unhide">Unhide</string>
+    <string name="buddies">Buddies</string>
+    <string name="send_buddy_request">Send buddy request</string>
+    <string name="together_buddy_request_sent">Buddy request sent</string>
+    <string name="together_invited_sessions">Invited Sessions</string>
+    <string name="invite_buddy">Invite</string>
+    <string name="invite_buddy_desc">Invite to session</string>
+    <string name="invited_buddy_message">Invited %1$s</string>
 </resources>
 
 

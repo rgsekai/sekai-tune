@@ -22,6 +22,39 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------
+    // User FCM Tokens (Buddy List & Push Notifications)
+    // ----------------------------------------------------
+    match /users/{userId}/fcmTokens/{tokenId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ----------------------------------------------------
+    // Buddy Requests
+    // ----------------------------------------------------
+    match /buddy_requests/{requestId} {
+      allow read: if isAuthenticated() &&
+        request.auth.uid in [resource.data.fromUid, resource.data.toUid];
+      allow create: if isAuthenticated() &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.fromUid != request.resource.data.toUid &&
+        request.resource.data.status == "pending" &&
+        request.resource.data.toUid is string &&
+        request.resource.data.fromDisplayName is string;
+      allow update: if false; // Cloud Functions (Admin SDK) only — accept/reject
+      allow delete: if isAuthenticated() &&
+        resource.data.fromUid == request.auth.uid &&
+        resource.data.status == "pending";
+    }
+
+    // ----------------------------------------------------
+    // Buddies List
+    // ----------------------------------------------------
+    match /buddies/{userId}/list/{buddyId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false; // Cloud Functions (Admin SDK) only
+    }
+
+    // ----------------------------------------------------
     // Together Online Sessions (Feature 1)
     // ----------------------------------------------------
     match /together_sessions/{sessionId} {
@@ -38,18 +71,19 @@ service cloud.firestore {
 
       // Session Updates
       allow update: if isAuthenticated() && (
-        // Host has full update authority
+        // Host has full update authority (including modifying invitedUids)
         isHost(resource.data) ||
 
         // Guest updates under strict independent constraints:
         (
-          // 1. Immutable session metadata for guests
+          // 1. Immutable session metadata for guests (including invitedUids)
           request.resource.data.sessionId == resource.data.sessionId &&
           request.resource.data.hostId == resource.data.hostId &&
           request.resource.data.code == resource.data.code &&
           request.resource.data.createdAt == resource.data.createdAt &&
           request.resource.data.active == resource.data.active &&
           request.resource.data.settings == resource.data.settings &&
+          request.resource.data.get('invitedUids', []) == resource.data.get('invitedUids', []) &&
 
           // 2. Guests can ONLY add, update, or remove their OWN entry in the participants map
           request.resource.data.participants.diff(resource.data.participants).affectedKeys().hasOnly([request.auth.uid]) &&
