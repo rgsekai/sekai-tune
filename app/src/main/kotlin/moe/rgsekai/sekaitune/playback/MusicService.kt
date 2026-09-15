@@ -226,6 +226,8 @@ import moe.rgsekai.sekaitune.storage.StorageFolderKind
 import moe.rgsekai.sekaitune.storage.StorageLocationRepository
 import moe.rgsekai.sekaitune.together.TogetherPlaybackSync
 import moe.rgsekai.sekaitune.ui.player.resolveCanvasArtworkForPlayback
+import moe.rgsekai.sekaitune.ui.utils.YTThumbQuality
+import moe.rgsekai.sekaitune.ui.utils.buildYTThumbnailUrl
 import moe.rgsekai.sekaitune.utils.AuthScopedCacheValue
 import moe.rgsekai.sekaitune.utils.CoilBitmapLoader
 import moe.rgsekai.sekaitune.utils.ColdStartTimer
@@ -1419,6 +1421,7 @@ class MusicService :
             player.playWhenReady = false
             currentMediaMetadata.value = player.currentMetadata
             updateNotification()
+            resolveArtworkIfMissing(player.currentMediaItem)
 
             if (items.size > initialChunk.size) {
                 restoredQueueBackfillJob =
@@ -1482,6 +1485,7 @@ class MusicService :
 
             currentMediaMetadata.value = player.currentMetadata.takeIf { player.mediaItemCount > 0 }
             updateNotification()
+            resolveArtworkIfMissing(player.currentMediaItem)
         }
     }
 
@@ -5430,42 +5434,8 @@ class MusicService :
 
         widgetUpdater.update()
 
-        val trackId = mediaItem?.mediaId?.trim().orEmpty()
-        val currentMeta = currentMediaMetadata.value
-        if (!timelineEmpty && trackId.isNotBlank() && trackId.isLocalMediaId() && (currentMeta == null || currentMeta.thumbnailUrl.isNullOrBlank())) {
-            scope.launch(Dispatchers.IO + SilentHandler) {
-                val localUri = runCatching { Uri.parse(trackId) }.getOrNull() ?: return@launch
-                var resolvedThumbUrl: String? =
-                    LocalSongScanner.extractArtworkForUri(this@MusicService, localUri)
-
-                if (resolvedThumbUrl.isNullOrBlank()) {
-                    val title = mediaItem?.mediaMetadata?.title?.toString().orEmpty()
-                    val artist = mediaItem?.mediaMetadata?.artist?.toString().orEmpty()
-                    val albumTitle = mediaItem?.mediaMetadata?.albumTitle?.toString()
-                    val canvas =
-                        resolveCanvasArtworkForPlayback(
-                            mediaId = trackId,
-                            songTitleRaw = title,
-                            artistNameRaw = artist,
-                            albumTitleRaw = albumTitle,
-                            storefront = "us",
-                            requireVertical = false,
-                            allowNetwork = true,
-                        )
-                    resolvedThumbUrl = canvas?.static ?: canvas?.preferredAnimationUrl ?: canvas?.preferredVerticalAnimationUrl
-                }
-
-                if (!resolvedThumbUrl.isNullOrBlank()) {
-                    val existing = database.song(trackId).first()?.song
-                    if (existing != null && existing.thumbnailUrl == null) {
-                        database.update(existing.copy(thumbnailUrl = resolvedThumbUrl))
-                    }
-                    if (player.currentMediaItem?.mediaId == trackId) {
-                        currentMediaMetadata.value = currentMediaMetadata.value?.copy(thumbnailUrl = resolvedThumbUrl)
-                        widgetUpdater.update()
-                    }
-                }
-            }
+        if (!timelineEmpty) {
+            resolveArtworkIfMissing(mediaItem ?: player.currentMediaItem)
         }
 
         if (!timelineEmpty &&
@@ -6893,9 +6863,101 @@ class MusicService :
         )
     }
 
+    private fun resolveArtworkIfMissing(mediaItem: MediaItem?) {
+        val trackId = mediaItem?.mediaId?.trim().orEmpty()
+        if (trackId.isBlank()) return
+        val currentMeta = currentMediaMetadata.value
+
+        if (trackId.isLocalMediaId()) {
+            if (currentMeta == null || currentMeta.thumbnailUrl.isNullOrBlank()) {
+                scope.launch(Dispatchers.IO + SilentHandler) {
+                    val dbSong = database.song(trackId).first()?.song
+                    var resolvedThumbUrl = dbSong?.thumbnailUrl
+
+                    if (resolvedThumbUrl.isNullOrBlank()) {
+                        val localUri = runCatching { Uri.parse(trackId) }.getOrNull()
+                        if (localUri != null) {
+                            resolvedThumbUrl = LocalSongScanner.extractArtworkForUri(this@MusicService, localUri)
+                        }
+                    }
+
+                    if (resolvedThumbUrl.isNullOrBlank()) {
+                        val title = mediaItem?.mediaMetadata?.title?.toString().orEmpty()
+                        val artist = mediaItem?.mediaMetadata?.artist?.toString().orEmpty()
+                        val albumTitle = mediaItem?.mediaMetadata?.albumTitle?.toString()
+                        val canvas =
+                            resolveCanvasArtworkForPlayback(
+                                mediaId = trackId,
+                                songTitleRaw = title,
+                                artistNameRaw = artist,
+                                albumTitleRaw = albumTitle,
+                                storefront = "us",
+                                requireVertical = false,
+                                allowNetwork = true,
+                            )
+                        resolvedThumbUrl = canvas?.static ?: canvas?.preferredAnimationUrl ?: canvas?.preferredVerticalAnimationUrl
+                    }
+
+                    if (!resolvedThumbUrl.isNullOrBlank()) {
+                        if (dbSong != null && dbSong.thumbnailUrl == null) {
+                            database.update(dbSong.copy(thumbnailUrl = resolvedThumbUrl))
+                        }
+                        withContext(Dispatchers.Main) {
+                            if (player.currentMediaItem?.mediaId == trackId) {
+                                currentMediaMetadata.value = currentMediaMetadata.value?.copy(thumbnailUrl = resolvedThumbUrl)
+                                widgetUpdater.update()
+                                val currentIdx = player.currentMediaItemIndex
+                                val curItem = player.currentMediaItem
+                                if (curItem != null && currentIdx != androidx.media3.common.C.INDEX_UNSET && curItem.mediaId == trackId) {
+                                    val updatedMeta = (curItem.metadata ?: currentMediaMetadata.value)?.copy(thumbnailUrl = resolvedThumbUrl)
+                                    if (updatedMeta != null) {
+                                        runCatching {
+                                            player.replaceMediaItem(currentIdx, updatedMeta.toMediaItem())
+                                        }
+                                    }
+                                }
+                                refreshPlaybackNotification()
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            if (currentMeta != null && currentMeta.thumbnailUrl.isNullOrBlank()) {
+                val fallbackThumb = buildYTThumbnailUrl(trackId, YTThumbQuality.HQ)
+                currentMediaMetadata.value = currentMeta.copy(thumbnailUrl = fallbackThumb)
+                widgetUpdater.update()
+                val currentIdx = player.currentMediaItemIndex
+                val curItem = player.currentMediaItem
+                if (curItem != null && currentIdx != androidx.media3.common.C.INDEX_UNSET && curItem.mediaId == trackId) {
+                    val updatedMeta = (curItem.metadata ?: currentMediaMetadata.value)?.copy(thumbnailUrl = fallbackThumb)
+                    if (updatedMeta != null) {
+                        runCatching {
+                            player.replaceMediaItem(currentIdx, updatedMeta.toMediaItem())
+                        }
+                    }
+                }
+                refreshPlaybackNotification()
+            }
+        }
+    }
+
     private fun MediaItem.toPersistableMetadata(): moe.rgsekai.sekaitune.models.MediaMetadata? {
         val tagged = metadata
-        if (tagged != null) return tagged
+        val curMeta = currentMediaMetadata.value
+        val liveThumb = if (curMeta?.id == (tagged?.id ?: mediaId)) curMeta.thumbnailUrl else null
+
+        if (tagged != null) {
+            val resolvedThumb = tagged.thumbnailUrl
+                ?: liveThumb
+                ?: mediaMetadata.artworkUri?.toString()
+                ?: if (!tagged.id.isLocalMediaId()) buildYTThumbnailUrl(tagged.id, YTThumbQuality.HQ) else null
+            return if (resolvedThumb != tagged.thumbnailUrl && !resolvedThumb.isNullOrBlank()) {
+                tagged.copy(thumbnailUrl = resolvedThumb)
+            } else {
+                tagged
+            }
+        }
 
         val id =
             mediaId
@@ -6934,7 +6996,11 @@ class MusicService :
                         .Artist(id = null, name = name)
                 }.orEmpty()
 
-        val thumbnailUrl = mediaMetadata.artworkUri?.toString()
+        val thumbnailUrl =
+            mediaMetadata.artworkUri?.toString()
+                ?: liveThumb
+                ?: if (!id.isLocalMediaId()) buildYTThumbnailUrl(id, YTThumbQuality.HQ) else null
+
         val albumTitle =
             mediaMetadata.albumTitle
                 ?.toString()
@@ -7196,9 +7262,10 @@ class MusicService :
         val result = super.onBind(intent) ?: binder
         if (player.mediaItemCount > 0 && player.currentMediaItem != null) {
             currentMediaMetadata.value = player.currentMetadata
+            resolveArtworkIfMissing(player.currentMediaItem)
             scope.launch {
                 delay(50)
-                updateNotification()
+                refreshPlaybackNotification()
             }
         }
         return result

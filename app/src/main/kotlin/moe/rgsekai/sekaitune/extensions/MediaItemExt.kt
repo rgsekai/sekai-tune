@@ -7,6 +7,7 @@
 
 package moe.rgsekai.sekaitune.extensions
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
@@ -28,7 +29,16 @@ private const val NotificationArtworkSizePx = 1080
 val MediaItem.metadata: MediaMetadata?
     get() = localConfiguration?.tag as? MediaMetadata
 
-private fun String?.toNotificationArtworkUri() = this?.resize(NotificationArtworkSizePx, NotificationArtworkSizePx)?.toUri()
+private fun String?.toNotificationArtworkUri(): Uri? {
+    if (this.isNullOrBlank()) return null
+    return runCatching {
+        if (startsWith("content://") || startsWith("file://") || startsWith("android.resource://")) {
+            toUri()
+        } else {
+            resize(NotificationArtworkSizePx, NotificationArtworkSizePx).toUri()
+        }
+    }.getOrNull()
+}
 
 private fun MediaItem.Builder.setCacheKeyIfRemote(mediaId: String): MediaItem.Builder {
     if (!mediaId.isLocalMediaId()) {
@@ -50,7 +60,10 @@ fun Song.toMediaItem() =
                 .setTitle(song.title)
                 .setSubtitle(artists.joinToString { it.name })
                 .setArtist(artists.joinToString { it.name })
-                .setArtworkUri(song.thumbnailUrl.toNotificationArtworkUri())
+                .setArtworkUri(
+                    song.thumbnailUrl.toNotificationArtworkUri()
+                        ?: if (!song.id.isLocalMediaId()) buildYTThumbnailUrl(song.id, YTThumbQuality.HQ).toUri() else null,
+                )
                 .setAlbumTitle(song.albumName)
                 .setIsPlayable(true)
                 .setMediaType(MEDIA_TYPE_MUSIC)
@@ -76,6 +89,7 @@ fun SongItem.toMediaItem() =
                         buildYTThumbnailUrl(id, YTThumbQuality.HQ).toUri()
                     } else {
                         thumbnail.toNotificationArtworkUri()
+                            ?: if (!id.isLocalMediaId()) buildYTThumbnailUrl(id, YTThumbQuality.HQ).toUri() else null
                     },
                 ).setAlbumTitle(album?.name)
                 .setIsPlayable(true)
@@ -102,6 +116,7 @@ fun MediaMetadata.toMediaItem() =
                         buildYTThumbnailUrl(id, YTThumbQuality.HQ).toUri()
                     } else {
                         thumbnailUrl.toNotificationArtworkUri()
+                            ?: if (!id.isLocalMediaId()) buildYTThumbnailUrl(id, YTThumbQuality.HQ).toUri() else null
                     },
                 ).setAlbumTitle(album?.title)
                 .setIsPlayable(true)

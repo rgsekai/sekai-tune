@@ -13,7 +13,10 @@ import moe.rgsekai.sekaitune.db.entities.SongEntity
 import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_OMV
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_UGC
+import moe.rgsekai.sekaitune.ui.utils.YTThumbQuality
+import moe.rgsekai.sekaitune.ui.utils.buildYTThumbnailUrl
 import moe.rgsekai.sekaitune.ui.utils.resize
+import moe.rgsekai.sekaitune.utils.isLocalMediaId
 import java.io.Serializable
 import java.time.LocalDateTime
 
@@ -84,7 +87,7 @@ fun Song.toMediaMetadata() =
                 )
             },
         duration = song.duration,
-        thumbnailUrl = song.thumbnailUrl,
+        thumbnailUrl = song.thumbnailUrl ?: if (!song.id.isLocalMediaId()) buildYTThumbnailUrl(song.id, YTThumbQuality.HQ) else null,
         album =
             album?.let {
                 MediaMetadata.Album(
@@ -113,7 +116,7 @@ fun SongItem.toMediaMetadata() =
                 )
             },
         duration = duration ?: -1,
-        thumbnailUrl = thumbnail.resize(1080, 1080),
+        thumbnailUrl = thumbnail?.resize(1080, 1080) ?: if (!id.isLocalMediaId()) buildYTThumbnailUrl(id, YTThumbQuality.HQ) else null,
         album =
             album?.let {
                 MediaMetadata.Album(
