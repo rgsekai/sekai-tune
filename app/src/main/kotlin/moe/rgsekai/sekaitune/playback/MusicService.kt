@@ -24,6 +24,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.content.res.AssetFileDescriptor
 import android.database.ContentObserver
 import android.database.SQLException
 import android.media.AudioDeviceCallback
@@ -38,12 +39,16 @@ import android.media.audiofx.LoudnessEnhancer
 import android.media.audiofx.Virtualizer
 import android.net.ConnectivityManager
 import android.net.Uri
-import android.provider.DocumentsContract
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
+import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.provider.DocumentsContract
 import android.widget.Toast
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.InputStream
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
@@ -1378,6 +1383,38 @@ class MusicService :
         isHydratingRestoredQueue = false
     }
 
+    private fun resolveLocalContentUri(uri: Uri): Uri {
+        if (uri.scheme?.lowercase(Locale.US) != "content") return uri
+        val authority = uri.authority ?: return uri
+        val docId =
+            runCatching {
+                if (DocumentsContract.isDocumentUri(this, uri)) {
+                    DocumentsContract.getDocumentId(uri)
+                } else if (DocumentsContract.isTreeUri(uri)) {
+                    runCatching { DocumentsContract.getDocumentId(uri) }.getOrNull()
+                        ?: DocumentsContract.getTreeDocumentId(uri)
+                } else {
+                    val pathSegments = uri.pathSegments
+                    val docIndex = pathSegments.indexOf("document")
+                    if (docIndex != -1 && docIndex + 1 < pathSegments.size) {
+                        pathSegments[docIndex + 1]
+                    } else {
+                        null
+                    }
+                }
+            }.getOrNull() ?: return uri
+
+        val persisted = runCatching { contentResolver.persistedUriPermissions }.getOrNull().orEmpty()
+        for (perm in persisted) {
+            if (!perm.isReadPermission || perm.uri.authority != authority) continue
+            val treeDocUri = runCatching { DocumentsContract.buildDocumentUriUsingTree(perm.uri, docId) }.getOrNull()
+            if (treeDocUri != null) {
+                return treeDocUri
+            }
+        }
+        return uri
+    }
+
     private suspend fun restorePersistentQueue(persistedQueue: PersistQueue) {
         cancelRestoredQueueHydration()
         val hydrationGeneration = restoredQueueHydrationGeneration.incrementAndGet()
@@ -1397,12 +1434,26 @@ class MusicService :
             currentQueue = continuationQueue
             queueTitle = initialStatus.title
 
-            val items = initialStatus.items
-            if (items.isEmpty()) {
+            val rawItems = initialStatus.items
+            if (rawItems.isEmpty()) {
                 if (hydrationGeneration == restoredQueueHydrationGeneration.get()) {
                     isHydratingRestoredQueue = false
                 }
                 return@withContext
+            }
+
+            val items = rawItems.map { mediaItem ->
+                val currentUri = mediaItem.localConfiguration?.uri
+                if (currentUri != null && currentUri.scheme?.lowercase(Locale.US) == "content") {
+                    val resolvedUri = resolveLocalContentUri(currentUri)
+                    if (resolvedUri != currentUri) {
+                        mediaItem.buildUpon().setUri(resolvedUri).build()
+                    } else {
+                        mediaItem
+                    }
+                } else {
+                    mediaItem
+                }
             }
 
             val fullIndex = initialStatus.mediaItemIndex.coerceIn(0, items.lastIndex)
@@ -5844,6 +5895,25 @@ class MusicService :
         val currentMediaId = player.currentMediaItem?.mediaId ?: return
         val isLocalMedia = currentMediaId.isLocalMediaId()
 
+        if (isLocalMedia) {
+            val currentItem = player.currentMediaItem
+            val currentUri = currentItem?.localConfiguration?.uri
+            if (currentUri != null) {
+                val resolvedUri = resolveLocalContentUri(currentUri)
+                val currentIdx = player.currentMediaItemIndex
+                if (resolvedUri != currentUri && currentIdx in 0 until player.mediaItemCount) {
+                    Timber.tag("MusicService").i("Recovering local media item with resolved tree URI: %s", resolvedUri)
+                    val repairedItem = currentItem.buildUpon().setUri(resolvedUri).build()
+                    player.replaceMediaItem(currentIdx, repairedItem)
+                    player.prepare()
+                    if (player.playWhenReady) {
+                        player.play()
+                    }
+                    return
+                }
+            }
+        }
+
         val isFullyDownloadedMedia =
             runCatching {
                 val contentLength =
@@ -6502,6 +6572,7 @@ class MusicService :
 
             var lastException: Exception? = null
             for (candidate in candidateDataSpecs) {
+                // First try standard Media3 DataSource
                 val selectedDataSource = selectedFactory.createDataSource()
                 transferListeners.forEach(selectedDataSource::addTransferListener)
                 try {
@@ -6511,55 +6582,57 @@ class MusicService :
                 } catch (e: Exception) {
                     lastException = e
                     runCatching { selectedDataSource.close() }
-                    if (!isSecurityOrDescendantError(e)) {
-                        throw e
+                    Timber.tag("MusicService").w(e, "Standard DataSource open failed for candidate %s, trying direct stream fallback...", candidate.uri)
+                }
+
+                // For content:// URIs, try DirectContentStreamDataSource
+                if (candidate.uri.scheme?.lowercase(Locale.US) == "content") {
+                    val directDataSource = DirectContentStreamDataSource(context)
+                    transferListeners.forEach(directDataSource::addTransferListener)
+                    try {
+                        val openResult = directDataSource.open(candidate)
+                        delegate = directDataSource
+                        return openResult
+                    } catch (e: Exception) {
+                        lastException = e
+                        runCatching { directDataSource.close() }
+                        Timber.tag("MusicService").w(e, "DirectContentStreamDataSource failed for %s, trying next candidate...", candidate.uri)
                     }
-                    Timber.tag("MusicService").w(e, "Security/descendant error on candidate URI %s, trying next candidate...", candidate.uri)
                 }
             }
 
             throw lastException ?: IOException("Failed to open data source for ${dataSpec.uri}")
         }
 
-        private fun isSecurityOrDescendantError(throwable: Throwable?): Boolean {
-            var current: Throwable? = throwable
-            while (current != null) {
-                if (current is SecurityException) return true
-                val msg = current.message
-                if (msg != null && (msg.contains("descendant", ignoreCase = true) || msg.contains("permission", ignoreCase = true))) {
-                    return true
-                }
-                current = current.cause
-            }
-            return false
-        }
-
         private fun resolveContentUriCandidates(dataSpec: DataSpec): List<DataSpec> {
             val originalUri = dataSpec.uri
             val candidates = mutableListOf<DataSpec>()
-            candidates += dataSpec
 
-            val authority = originalUri.authority ?: return candidates
+            val authority = originalUri.authority
             val docId =
-                runCatching {
-                    if (DocumentsContract.isDocumentUri(context, originalUri)) {
-                        DocumentsContract.getDocumentId(originalUri)
-                    } else if (DocumentsContract.isTreeUri(originalUri)) {
-                        runCatching { DocumentsContract.getDocumentId(originalUri) }.getOrNull()
-                            ?: DocumentsContract.getTreeDocumentId(originalUri)
-                    } else {
-                        val pathSegments = originalUri.pathSegments
-                        val docIndex = pathSegments.indexOf("document")
-                        if (docIndex != -1 && docIndex + 1 < pathSegments.size) {
-                            pathSegments[docIndex + 1]
+                if (authority != null) {
+                    runCatching {
+                        if (DocumentsContract.isDocumentUri(context, originalUri)) {
+                            DocumentsContract.getDocumentId(originalUri)
+                        } else if (DocumentsContract.isTreeUri(originalUri)) {
+                            runCatching { DocumentsContract.getDocumentId(originalUri) }.getOrNull()
+                                ?: DocumentsContract.getTreeDocumentId(originalUri)
                         } else {
-                            null
+                            val pathSegments = originalUri.pathSegments
+                            val docIndex = pathSegments.indexOf("document")
+                            if (docIndex != -1 && docIndex + 1 < pathSegments.size) {
+                                pathSegments[docIndex + 1]
+                            } else {
+                                null
+                            }
                         }
-                    }
-                }.getOrNull()
+                    }.getOrNull()
+                } else {
+                    null
+                }
 
-            if (docId != null) {
-                // 1. Prioritize persisted tree URI permissions for this authority (SAF grants)
+            // 1. High priority: persisted tree URI permissions for this authority (survives app restart)
+            if (authority != null && docId != null) {
                 runCatching {
                     val persisted = context.contentResolver.persistedUriPermissions
                     for (perm in persisted) {
@@ -6570,14 +6643,21 @@ class MusicService :
                         }
                     }
                 }
+            }
 
-                // 2. Direct document URI candidate
+            // 2. If original URI was already a tree URI, or next best candidate, add original dataSpec
+            if (!candidates.any { it.uri == originalUri }) {
+                candidates += dataSpec
+            }
+
+            // 3. Direct document URI candidate
+            if (authority != null && docId != null) {
                 val directDocUri = runCatching { DocumentsContract.buildDocumentUri(authority, docId) }.getOrNull()
                 if (directDocUri != null && !candidates.any { it.uri == directDocUri }) {
                     candidates += dataSpec.buildUpon().setUri(directDocUri).build()
                 }
 
-                // 3. Fallback: all persisted read tree permissions
+                // 4. Fallback: all persisted read tree permissions across all authorities
                 runCatching {
                     val persisted = context.contentResolver.persistedUriPermissions
                     for (perm in persisted) {
@@ -6606,6 +6686,165 @@ class MusicService :
         override fun close() {
             delegate?.close()
             delegate = null
+        }
+    }
+
+    private class DirectContentStreamDataSource(
+        private val context: Context,
+    ) : DataSource {
+        private val transferListeners = mutableListOf<TransferListener>()
+        private var uri: Uri? = null
+        private var pfd: ParcelFileDescriptor? = null
+        private var afd: AssetFileDescriptor? = null
+        private var inputStream: InputStream? = null
+        private var bytesRemaining: Long = C.LENGTH_UNSET.toLong()
+        private var opened = false
+
+        override fun addTransferListener(transferListener: TransferListener) {
+            transferListeners += transferListener
+        }
+
+        override fun open(dataSpec: DataSpec): Long {
+            uri = dataSpec.uri
+            opened = false
+            transferListeners.forEach { it.onTransferInitializing(this, dataSpec, false) }
+
+            val contentResolver = context.contentResolver
+            var stream: InputStream? = null
+            var totalLength: Long = C.LENGTH_UNSET.toLong()
+
+            // Strategy 1: Try openFileDescriptor (best performance + channel seeking)
+            try {
+                val fd = contentResolver.openFileDescriptor(dataSpec.uri, "r")
+                if (fd != null) {
+                    pfd = fd
+                    val fis = FileInputStream(fd.fileDescriptor)
+                    if (dataSpec.position > 0) {
+                        fis.channel.position(dataSpec.position)
+                    }
+                    val statSize = fd.statSize
+                    if (statSize >= 0) {
+                        totalLength = (statSize - dataSpec.position).coerceAtLeast(0L)
+                    }
+                    stream = fis
+                }
+            } catch (e: Exception) {
+                Timber.tag("DirectContentStreamDataSource").d(e, "openFileDescriptor failed for %s, trying next stream strategy", dataSpec.uri)
+            }
+
+            // Strategy 2: Try openAssetFileDescriptor
+            if (stream == null) {
+                try {
+                    val assetFd = contentResolver.openAssetFileDescriptor(dataSpec.uri, "r")
+                    if (assetFd != null) {
+                        afd = assetFd
+                        val fis = FileInputStream(assetFd.fileDescriptor)
+                        val startOffset = assetFd.startOffset
+                        val targetPos = startOffset + dataSpec.position
+                        fis.channel.position(targetPos)
+                        val declaredLength = assetFd.declaredLength
+                        if (declaredLength != AssetFileDescriptor.UNKNOWN_LENGTH) {
+                            totalLength = (declaredLength - dataSpec.position).coerceAtLeast(0L)
+                        }
+                        stream = fis
+                    }
+                } catch (e: Exception) {
+                    Timber.tag("DirectContentStreamDataSource").d(e, "openAssetFileDescriptor failed for %s, trying openInputStream", dataSpec.uri)
+                }
+            }
+
+            // Strategy 3: Try openInputStream directly (universal fallback)
+            if (stream == null) {
+                val isStream = contentResolver.openInputStream(dataSpec.uri)
+                    ?: throw FileNotFoundException("Could not open content stream for ${dataSpec.uri}")
+                if (dataSpec.position > 0) {
+                    var skipped = 0L
+                    while (skipped < dataSpec.position) {
+                        val n = isStream.skip(dataSpec.position - skipped)
+                        if (n <= 0) {
+                            if (isStream.read() == -1) break
+                            skipped++
+                        } else {
+                            skipped += n
+                        }
+                    }
+                }
+                stream = isStream
+            }
+
+            inputStream = stream
+            opened = true
+
+            bytesRemaining =
+                if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
+                    dataSpec.length
+                } else if (totalLength != C.LENGTH_UNSET.toLong()) {
+                    totalLength
+                } else {
+                    C.LENGTH_UNSET.toLong()
+                }
+
+            transferListeners.forEach { it.onTransferStart(this, dataSpec, false) }
+            return bytesRemaining
+        }
+
+        override fun read(
+            buffer: ByteArray,
+            offset: Int,
+            length: Int,
+        ): Int {
+            if (length == 0) return 0
+            if (bytesRemaining == 0L) return C.RESULT_END_OF_INPUT
+
+            val bytesToRead =
+                if (bytesRemaining == C.LENGTH_UNSET.toLong()) {
+                    length
+                } else {
+                    length.toLong().coerceAtMost(bytesRemaining).toInt()
+                }
+
+            val stream = inputStream ?: return C.RESULT_END_OF_INPUT
+            val bytesRead = stream.read(buffer, offset, bytesToRead)
+            if (bytesRead == -1) {
+                return C.RESULT_END_OF_INPUT
+            }
+
+            if (bytesRemaining != C.LENGTH_UNSET.toLong()) {
+                bytesRemaining -= bytesRead
+            }
+            val spec = DataSpec(uri ?: Uri.EMPTY)
+            transferListeners.forEach { it.onBytesTransferred(this, spec, false, bytesRead) }
+            return bytesRead
+        }
+
+        override fun getUri(): Uri? = uri
+
+        override fun getResponseHeaders(): Map<String, List<String>> = emptyMap()
+
+        override fun close() {
+            uri = null
+            try {
+                inputStream?.close()
+            } catch (_: Exception) {
+            } finally {
+                inputStream = null
+            }
+            try {
+                pfd?.close()
+            } catch (_: Exception) {
+            } finally {
+                pfd = null
+            }
+            try {
+                afd?.close()
+            } catch (_: Exception) {
+            } finally {
+                afd = null
+            }
+            if (opened) {
+                opened = false
+                transferListeners.forEach { it.onTransferEnd(this, DataSpec(Uri.EMPTY), false) }
+            }
         }
     }
 
