@@ -89,9 +89,7 @@ class BuddyRepository @Inject constructor() {
                 val buddies = snapshot?.documents?.mapNotNull { doc ->
                     val uid = doc.getString("uid") ?: doc.id
                     val displayName = doc.getString("displayName") ?: ""
-                    val addedAt = doc.getTimestamp("addedAt")?.toDate()?.time
-                        ?: doc.getLong("addedAt")
-                        ?: 0L
+                    val addedAt = doc.extractTimestampMs("addedAt")
                     Buddy(
                         uid = uid,
                         displayName = displayName,
@@ -131,9 +129,7 @@ class BuddyRepository @Inject constructor() {
                     val fromDisplayName = doc.getString("fromDisplayName") ?: ""
                     val toDisplayName = doc.getString("toDisplayName") ?: ""
                     val status = doc.getString("status") ?: "pending"
-                    val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
-                        ?: doc.getLong("createdAt")
-                        ?: 0L
+                    val createdAt = doc.extractTimestampMs("createdAt")
 
                     BuddyRequest(
                         id = doc.id,
@@ -178,9 +174,7 @@ class BuddyRepository @Inject constructor() {
                     val fromDisplayName = doc.getString("fromDisplayName") ?: ""
                     val toDisplayName = doc.getString("toDisplayName") ?: ""
                     val status = doc.getString("status") ?: "pending"
-                    val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
-                        ?: doc.getLong("createdAt")
-                        ?: 0L
+                    val createdAt = doc.extractTimestampMs("createdAt")
 
                     BuddyRequest(
                         id = doc.id,
@@ -201,15 +195,62 @@ class BuddyRepository @Inject constructor() {
         }
     }.flowOn(Dispatchers.IO)
 
-    suspend fun acceptRequest(requestId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun acceptRequest(
+        requestId: String,
+        toDisplayName: String? = null,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val myUid = auth.currentUser?.uid
+            ?: return@withContext Result.failure(IllegalStateException("User is not authenticated"))
+
         try {
-            val payload = mapOf(
-                "requestId" to requestId
+            val reqDoc = firestore.collection("buddy_requests").document(requestId).get().await()
+            if (!reqDoc.exists()) {
+                return@withContext Result.failure(IllegalStateException("Buddy request does not exist"))
+            }
+
+            val fromUid = reqDoc.getString("fromUid")
+                ?: return@withContext Result.failure(IllegalStateException("Invalid request data: missing sender UID"))
+            val fromDisplayName = reqDoc.getString("fromDisplayName")?.ifBlank { null } ?: "Buddy"
+            val resolvedMyName = toDisplayName?.ifBlank { null }
+                ?: auth.currentUser?.displayName?.ifBlank { null }
+                ?: reqDoc.getString("toDisplayName")?.ifBlank { null }
+                ?: "Buddy"
+
+            val batch = firestore.batch()
+
+            // 1. Add sender to my buddy list: /buddies/{myUid}/list/{fromUid}
+            val myBuddyRef = firestore.collection("buddies")
+                .document(myUid)
+                .collection("list")
+                .document(fromUid)
+            batch.set(
+                myBuddyRef,
+                mapOf(
+                    "uid" to fromUid,
+                    "displayName" to fromDisplayName,
+                    "addedAt" to FieldValue.serverTimestamp()
+                )
             )
 
-            functions.getHttpsCallable("acceptBuddyRequest")
-                .call(payload)
-                .await()
+            // 2. Add myself to sender's buddy list: /buddies/{fromUid}/list/{myUid}
+            val otherBuddyRef = firestore.collection("buddies")
+                .document(fromUid)
+                .collection("list")
+                .document(myUid)
+            batch.set(
+                otherBuddyRef,
+                mapOf(
+                    "uid" to myUid,
+                    "displayName" to resolvedMyName,
+                    "addedAt" to FieldValue.serverTimestamp()
+                )
+            )
+
+            // 3. Atomically delete the buddy_requests document
+            val reqRef = firestore.collection("buddy_requests").document(requestId)
+            batch.delete(reqRef)
+
+            batch.commit().await()
 
             Timber.tag("BuddyRepository").d("Successfully accepted buddy request $requestId")
             Result.success(Unit)
@@ -220,13 +261,13 @@ class BuddyRepository @Inject constructor() {
     }
 
     suspend fun rejectRequest(requestId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val payload = mapOf(
-                "requestId" to requestId
-            )
+        val myUid = auth.currentUser?.uid
+            ?: return@withContext Result.failure(IllegalStateException("User is not authenticated"))
 
-            functions.getHttpsCallable("rejectBuddyRequest")
-                .call(payload)
+        try {
+            firestore.collection("buddy_requests")
+                .document(requestId)
+                .delete()
                 .await()
 
             Timber.tag("BuddyRepository").d("Successfully rejected buddy request $requestId")
@@ -238,14 +279,27 @@ class BuddyRepository @Inject constructor() {
     }
 
     suspend fun removeBuddy(buddyUid: String): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val payload = mapOf(
-                "buddyUid" to buddyUid
-            )
+        val myUid = auth.currentUser?.uid
+            ?: return@withContext Result.failure(IllegalStateException("User is not authenticated"))
 
-            functions.getHttpsCallable("removeBuddy")
-                .call(payload)
-                .await()
+        try {
+            val batch = firestore.batch()
+
+            // Delete buddies/{myUid}/list/{buddyUid}
+            val myBuddyRef = firestore.collection("buddies")
+                .document(myUid)
+                .collection("list")
+                .document(buddyUid)
+            batch.delete(myBuddyRef)
+
+            // Delete buddies/{buddyUid}/list/{myUid}
+            val otherBuddyRef = firestore.collection("buddies")
+                .document(buddyUid)
+                .collection("list")
+                .document(myUid)
+            batch.delete(otherBuddyRef)
+
+            batch.commit().await()
 
             Timber.tag("BuddyRepository").d("Successfully removed buddy $buddyUid")
             Result.success(Unit)
@@ -318,7 +372,7 @@ class BuddyRepository @Inject constructor() {
                     val sessionId = doc.getString("sessionId") ?: doc.id
                     val code = doc.getString("code") ?: return@mapNotNull null
                     val hostId = doc.getString("hostId") ?: ""
-                    val createdAt = doc.getLong("createdAt") ?: 0L
+                    val createdAt = doc.extractTimestampMs("createdAt")
 
                     val rawParticipants = doc.get("participants") as? Map<*, *>
                     val hostData = rawParticipants?.get(hostId) as? Map<*, *>
@@ -343,3 +397,14 @@ class BuddyRepository @Inject constructor() {
         }
     }.flowOn(Dispatchers.IO)
 }
+
+private fun com.google.firebase.firestore.DocumentSnapshot.extractTimestampMs(field: String): Long {
+    val raw = get(field) ?: return 0L
+    return when (raw) {
+        is com.google.firebase.Timestamp -> raw.toDate().time
+        is Number -> raw.toLong()
+        is java.util.Date -> raw.time
+        else -> 0L
+    }
+}
+

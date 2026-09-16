@@ -32,18 +32,21 @@ service cloud.firestore {
     // Buddy Requests
     // ----------------------------------------------------
     match /buddy_requests/{requestId} {
-      allow read: if isAuthenticated() &&
-        request.auth.uid in [resource.data.fromUid, resource.data.toUid];
+      allow read: if isAuthenticated() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid
+      );
       allow create: if isAuthenticated() &&
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.fromUid != request.resource.data.toUid &&
         request.resource.data.status == "pending" &&
         request.resource.data.toUid is string &&
         request.resource.data.fromDisplayName is string;
-      allow update: if false; // Cloud Functions (Admin SDK) only — accept/reject
-      allow delete: if isAuthenticated() &&
-        resource.data.fromUid == request.auth.uid &&
-        resource.data.status == "pending";
+      allow update: if false;
+      allow delete: if isAuthenticated() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid
+      );
     }
 
     // ----------------------------------------------------
@@ -51,7 +54,14 @@ service cloud.firestore {
     // ----------------------------------------------------
     match /buddies/{userId}/list/{buddyId} {
       allow read: if isAuthenticated() && request.auth.uid == userId;
-      allow write: if false; // Cloud Functions (Admin SDK) only
+      allow create: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        request.auth.uid == buddyId
+      );
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        request.auth.uid == buddyId
+      );
     }
 
     // ----------------------------------------------------
