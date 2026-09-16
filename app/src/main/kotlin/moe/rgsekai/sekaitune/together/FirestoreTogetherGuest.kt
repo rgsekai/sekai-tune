@@ -32,6 +32,8 @@ class FirestoreTogetherGuest(
     private var listenerRegistration: ListenerRegistration? = null
     private var currentSessionId: String? = null
     private var currentCode: String? = null
+    @Volatile
+    private var lastRoomState: TogetherRoomState? = null
 
     private val _events = MutableSharedFlow<TogetherClientEvent>(
         extraBufferCapacity = 64,
@@ -163,7 +165,9 @@ class FirestoreTogetherGuest(
             val queueHash = rawPlayback?.get("queueHash") as? String ?: ""
             val hostId = snapshot.getString("hostId") ?: ""
             val sessionId = snapshot.getString("sessionId") ?: currentSessionId.orEmpty()
-            val sessionCode = snapshot.getString("code") ?: currentCode
+            val sessionCode = snapshot.getString("code") ?: currentCode.orEmpty()
+            val isPromoted = hostId.isNotBlank() && hostId == guestUid
+            Timber.tag("Together").i("FirestoreTogetherGuest snapshot: guestUid=$guestUid, live hostId=$hostId, isPromoted=$isPromoted")
 
             val roomState = TogetherRoomState(
                 sessionId = sessionId,
@@ -181,8 +185,18 @@ class FirestoreTogetherGuest(
                 code = sessionCode,
             )
 
+            if (isPromoted) {
+                Timber.tag("Together").i("FirestoreTogetherGuest firing HostPromoted(sessionId=$sessionId, code=$sessionCode)")
+                _events.tryEmit(TogetherClientEvent.HostPromoted(sessionId = sessionId, code = sessionCode))
+            }
+            lastRoomState = roomState
             _events.tryEmit(TogetherClientEvent.RoomState(roomState))
         }
+    }
+
+    fun detach() {
+        listenerRegistration?.remove()
+        listenerRegistration = null
     }
 
     suspend fun requestControl(action: ControlAction) {
@@ -229,13 +243,45 @@ class FirestoreTogetherGuest(
                         ).await()
                     }
                     is ControlAction.SeekToTrack -> {
-                        // Will be handled via currentIndex
+                        val state = lastRoomState
+                        val targetIndex = state?.queue?.indexOfFirst { it.id == action.trackId }?.takeIf { it >= 0 }
+                        if (targetIndex != null) {
+                            docRef.update(
+                                mapOf(
+                                    "playback.currentIndex" to targetIndex,
+                                    "playback.positionMs" to action.positionMs,
+                                    "playback.positionUpdatedAt" to now,
+                                    "lastUpdatedAt" to now,
+                                ),
+                            ).await()
+                        }
                     }
                     ControlAction.SkipNext -> {
-                        // Handled via seekToIndex
+                        val state = lastRoomState
+                        val currentIdx = state?.currentIndex ?: 0
+                        val maxIdx = (state?.queue?.size ?: 1) - 1
+                        val nextIndex = (currentIdx + 1).coerceAtMost(maxIdx.coerceAtLeast(0))
+                        docRef.update(
+                            mapOf(
+                                "playback.currentIndex" to nextIndex,
+                                "playback.positionMs" to 0L,
+                                "playback.positionUpdatedAt" to now,
+                                "lastUpdatedAt" to now,
+                            ),
+                        ).await()
                     }
                     ControlAction.SkipPrevious -> {
-                        // Handled via seekToIndex
+                        val state = lastRoomState
+                        val currentIdx = state?.currentIndex ?: 0
+                        val prevIndex = (currentIdx - 1).coerceAtLeast(0)
+                        docRef.update(
+                            mapOf(
+                                "playback.currentIndex" to prevIndex,
+                                "playback.positionMs" to 0L,
+                                "playback.positionUpdatedAt" to now,
+                                "lastUpdatedAt" to now,
+                            ),
+                        ).await()
                     }
                     is ControlAction.SetRepeatMode -> {
                         docRef.update(

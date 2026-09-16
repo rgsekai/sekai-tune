@@ -57,6 +57,10 @@ sealed interface TogetherServerEvent {
         val participantId: String,
     ) : TogetherServerEvent
 
+    data class HostDemoted(
+        val newHostUid: String,
+    ) : TogetherServerEvent
+
     data class Error(
         val message: String,
         val throwable: Throwable? = null,

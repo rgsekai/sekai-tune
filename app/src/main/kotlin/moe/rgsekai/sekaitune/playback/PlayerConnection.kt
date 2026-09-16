@@ -32,6 +32,7 @@ import moe.rgsekai.sekaitune.extensions.getQueueWindows
 import moe.rgsekai.sekaitune.playback.MusicService.MusicBinder
 import moe.rgsekai.sekaitune.playback.queues.Queue
 import moe.rgsekai.sekaitune.utils.reportException
+import timber.log.Timber
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayerConnection(
@@ -153,6 +154,7 @@ class PlayerConnection(
 
     fun seekToNext() {
         val state = service.togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
+        Timber.tag("Together").i("PlayerConnection.seekToNext: state=$state, role=${state?.role}")
         if (state?.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest) {
             service.requestTogetherControl(moe.rgsekai.sekaitune.together.ControlAction.SkipNext)
             return
@@ -164,6 +166,7 @@ class PlayerConnection(
 
     fun seekToPrevious() {
         val state = service.togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
+        Timber.tag("Together").i("PlayerConnection.seekToPrevious: state=$state, role=${state?.role}")
         if (state?.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest) {
             service.requestTogetherControl(moe.rgsekai.sekaitune.together.ControlAction.SkipPrevious)
             return

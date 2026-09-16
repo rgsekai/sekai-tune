@@ -13,6 +13,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.view.ViewTreeObserver
 import android.widget.Toast
+import timber.log.Timber
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -1049,8 +1050,10 @@ fun Queue(
                                                                 val joined =
                                                                     togetherSessionState as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
                                                                 val isGuest = joined?.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest
+                                                                Timber.tag("Together").i("Queue track clicked: togetherSessionState=$togetherSessionState, joined=$joined, role=${joined?.role}, isGuest=$isGuest, allowGuestsToControlPlayback=${joined?.roomState?.settings?.allowGuestsToControlPlayback}")
                                                                 if (isGuest) {
                                                                     if (joined?.roomState?.settings?.allowGuestsToControlPlayback != true) {
+                                                                        Timber.tag("Together").w("Queue track click blocked: allowGuestsToControlPlayback is false")
                                                                         Toast
                                                                             .makeText(
                                                                                 context,

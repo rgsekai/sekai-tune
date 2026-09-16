@@ -102,7 +102,7 @@ class FirestoreTogetherHost(
         }
     }
 
-    private fun startListening() {
+    fun startListening() {
         listenerRegistration = sessionDoc.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 Timber.tag("Together").e(error, "Firestore host listener error")
@@ -173,6 +173,10 @@ class FirestoreTogetherHost(
                 )
             }
 
+            val currentHostId = snapshot.getString("hostId") ?: hostUid
+            val isDemoted = currentHostId.isNotBlank() && currentHostId != hostUid
+            Timber.tag("Together").i("FirestoreTogetherHost snapshot: hostUid=$hostUid, live hostId=$currentHostId, isDemoted=$isDemoted")
+
             val rawPlayback = snapshot.get("playback") as? Map<String, Any?>
             if (rawPlayback != null) {
                 val isPlaying = rawPlayback["isPlaying"] as? Boolean ?: false
@@ -185,7 +189,7 @@ class FirestoreTogetherHost(
                 val sessionCode = snapshot.getString("code") ?: code
                 val roomState = TogetherRoomState(
                     sessionId = sessionId,
-                    hostId = hostUid,
+                    hostId = currentHostId,
                     participants = parsedParticipants,
                     settings = settings,
                     queue = parsedQueue,
@@ -199,9 +203,18 @@ class FirestoreTogetherHost(
                     code = sessionCode,
                 )
 
+                if (isDemoted) {
+                    Timber.tag("Together").i("FirestoreTogetherHost firing HostDemoted(newHostUid=$currentHostId)")
+                    onEvent?.invoke(TogetherServerEvent.HostDemoted(currentHostId))
+                }
                 onEvent?.invoke(TogetherServerEvent.RoomStateReceived(roomState))
             }
         }
+    }
+
+    fun detach() {
+        listenerRegistration?.remove()
+        listenerRegistration = null
     }
 
     suspend fun broadcastRoomState(state: TogetherRoomState) {

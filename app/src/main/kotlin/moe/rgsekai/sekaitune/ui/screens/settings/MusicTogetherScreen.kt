@@ -52,6 +52,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -79,6 +81,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -1091,6 +1094,8 @@ private fun ParticipantRow(
     participant: MusicTogetherParticipantUiModel,
     viewModel: MusicTogetherViewModel,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     ListItem(
         headlineContent = {
             Text(
@@ -1145,26 +1150,62 @@ private fun ParticipantRow(
                         )
                     }
                 }
-                if (participant.showTransferHostAction) {
-                    IconButton(onClick = { viewModel.requestTransferHost(participant.id) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.sync),
-                            contentDescription = stringResource(R.string.together_transfer_host),
-                        )
-                    }
-                }
-                if (participant.showModerationActions) {
-                    IconButton(onClick = { viewModel.requestKickParticipant(participant.id) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.kick),
-                            contentDescription = stringResource(R.string.together_kick),
-                        )
-                    }
-                    IconButton(onClick = { viewModel.requestBanParticipant(participant.id) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.block),
-                            contentDescription = stringResource(R.string.together_ban),
-                        )
+                if (participant.showTransferHostAction || participant.showModerationActions) {
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                painter = painterResource(R.drawable.more_vert),
+                                contentDescription = stringResource(R.string.together_more_actions),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                        ) {
+                            if (participant.showTransferHostAction) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.together_transfer_host)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.sync),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.requestTransferHost(participant.id)
+                                    },
+                                )
+                            }
+                            if (participant.showModerationActions) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.together_kick)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.kick),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.requestKickParticipant(participant.id)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.together_ban)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.block),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.requestBanParticipant(participant.id)
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }

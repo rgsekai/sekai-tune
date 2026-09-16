@@ -49,6 +49,11 @@ sealed interface TogetherClientEvent {
         val transfer: moe.rgsekai.sekaitune.together.HostTransferred,
     ) : TogetherClientEvent
 
+    data class HostPromoted(
+        val sessionId: String,
+        val code: String,
+    ) : TogetherClientEvent
+
     data class ControlRequested(
         val request: ControlRequest,
     ) : TogetherClientEvent
