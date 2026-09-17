@@ -44,23 +44,10 @@ fun BuddyInviteObserver(
 
     val observerStartTime = remember { System.currentTimeMillis() }
     val promptedSessionIds = remember { mutableSetOf<String>() }
-    val notifiedSessionIds = remember { mutableSetOf<String>() }
     var activeInvite by remember { mutableStateOf<TogetherSessionSummary?>(null) }
 
     LaunchedEffect(invitedSessions) {
         val currentSessionIds = invitedSessions.map { it.sessionId }.toSet()
-
-        for (session in invitedSessions) {
-            if (session.sessionId !in notifiedSessionIds) {
-                BuddyNotificationManager.showInviteNotification(
-                    context = context,
-                    sessionId = session.sessionId,
-                    hostDisplayName = session.hostDisplayName,
-                    sessionCode = session.code,
-                )
-                notifiedSessionIds.add(session.sessionId)
-            }
-        }
 
         // Only prompt in-app popup dialog for fresh invites that arrived during or right before this session
         if (activeInvite == null) {

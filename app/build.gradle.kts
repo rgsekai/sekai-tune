@@ -59,6 +59,22 @@ android {
         buildConfigField("String", "NIGHTLY_BUILD_HASH", "\"$nightlyBuildHash\"")
         buildConfigField("String", "DISTRIBUTION", "\"gms\"")
         buildConfigField("boolean", "UPDATER_AVAILABLE", "true")
+
+        // Self-hosted FCM notification relay service config (Render free tier)
+        val relayServiceUrl =
+            (
+                localProperties.getProperty("RELAY_SERVICE_URL")
+                    ?: System.getenv("RELAY_SERVICE_URL")
+                    ?: ""
+                ).trim()
+        val relayServiceApiKey =
+            (
+                localProperties.getProperty("RELAY_SERVICE_API_KEY")
+                    ?: System.getenv("RELAY_SERVICE_API_KEY")
+                    ?: ""
+                ).trim()
+        buildConfigField("String", "RELAY_SERVICE_URL", "\"$relayServiceUrl\"")
+        buildConfigField("String", "RELAY_SERVICE_API_KEY", "\"$relayServiceApiKey\"")
     }
 
     flavorDimensions += listOf("distribution", "device", "abi")

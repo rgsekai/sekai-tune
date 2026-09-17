@@ -4512,6 +4512,7 @@ class MusicService :
                 currentIndex = player.currentMediaItemIndex.coerceAtLeast(0),
                 isPlaying = player.playWhenReady && player.playbackState != Player.STATE_ENDED,
                 positionMs = player.currentPosition.coerceAtLeast(0L),
+                positionUpdatedAtMs = System.currentTimeMillis(),
                 repeatMode = player.repeatMode,
                 shuffleEnabled = player.shuffleModeEnabled,
                 sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime(),
@@ -4743,13 +4744,23 @@ class MusicService :
                 } else {
                     val indexChanged = player.mediaItemCount > 0 && targetIndex != player.currentMediaItemIndex
 
-                    if (indexChanged) {
+                    val isNearEndPendingHostTransition =
+                        indexChanged &&
+                            player.currentMediaItemIndex == targetIndex + 1 &&
+                            state.isPlaying &&
+                            targetIndex in desiredItems.indices &&
+                            run {
+                                val durationMs = (state.queue.getOrNull(targetIndex)?.durationSec ?: -1) * 1000L
+                                durationMs > 0L && targetPos >= (durationMs - 4000L)
+                            }
+
+                    if (indexChanged && !isNearEndPendingHostTransition) {
                         if (player.repeatMode != state.repeatMode) player.repeatMode = state.repeatMode
                         if (player.shuffleModeEnabled != state.shuffleEnabled) player.shuffleModeEnabled = state.shuffleEnabled
                         player.seekTo(targetIndex, targetPos)
                         player.prepare()
                         player.playWhenReady = state.isPlaying
-                    } else {
+                    } else if (!isNearEndPendingHostTransition) {
                         val playbackStateChanged = player.playWhenReady != state.isPlaying
                         if (player.repeatMode != state.repeatMode) player.repeatMode = state.repeatMode
                         if (player.shuffleModeEnabled != state.shuffleEnabled) player.shuffleModeEnabled = state.shuffleEnabled

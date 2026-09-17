@@ -51,6 +51,7 @@ data class TogetherRoomState(
     val currentIndex: Int = 0,
     val isPlaying: Boolean = false,
     val positionMs: Long = 0L,
+    val positionUpdatedAtMs: Long? = null,
     val repeatMode: Int = 0,
     val shuffleEnabled: Boolean = false,
     val sentAtElapsedRealtimeMs: Long = 0L,

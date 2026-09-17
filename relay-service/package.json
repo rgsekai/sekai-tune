@@ -1,0 +1,17 @@
+{
+  "name": "sekai-tune-relay-service",
+  "version": "1.0.0",
+  "description": "FCM Push Notification Relay Service for Sekai Tune Together & Buddy",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "firebase-admin": "^13.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

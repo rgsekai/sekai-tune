@@ -225,6 +225,8 @@ class FirestoreTogetherHost(
             if (rawPlayback != null) {
                 val isPlaying = rawPlayback["isPlaying"] as? Boolean ?: false
                 val positionMs = (rawPlayback["positionMs"] as? Number)?.toLong() ?: 0L
+                val positionUpdatedAt = (rawPlayback["positionUpdatedAt"] as? Number)?.toLong()
+                    ?: (snapshot.get("lastUpdatedAt") as? Number)?.toLong()
                 val currentIndex = (rawPlayback["currentIndex"] as? Number)?.toInt() ?: 0
                 val repeatMode = (rawPlayback["repeatMode"] as? Number)?.toInt() ?: 0
                 val shuffleEnabled = rawPlayback["shuffleEnabled"] as? Boolean ?: false
@@ -241,6 +243,7 @@ class FirestoreTogetherHost(
                     currentIndex = currentIndex,
                     isPlaying = isPlaying,
                     positionMs = positionMs,
+                    positionUpdatedAtMs = positionUpdatedAt,
                     repeatMode = repeatMode,
                     shuffleEnabled = shuffleEnabled,
                     sentAtElapsedRealtimeMs = android.os.SystemClock.elapsedRealtime(),

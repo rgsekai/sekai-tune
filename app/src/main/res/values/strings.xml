@@ -924,6 +924,7 @@
     <string name="buddies">Buddies</string>
     <string name="send_buddy_request">Send buddy request</string>
     <string name="together_buddy_request_sent">Buddy request sent</string>
+    <string name="together_buddy_request_received">You have a new buddy request</string>
     <string name="together_invited_sessions">Invited Sessions</string>
     <string name="invite_buddy">Invite</string>
     <string name="invite_buddy_desc">Invite to session</string>

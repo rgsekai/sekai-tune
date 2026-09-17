@@ -1,6 +1,6 @@
-/*
+ï»¿/*
  * Sekai Tune (2026)
- * (c) Sekai Tune — github.com/rgsekai/sekai-tune
+ * (c) Sekai Tune - github.com/rgsekai/sekai-tune
  * GPL-3.0 License | Contributors: see git history
  * Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
  */
@@ -42,7 +42,12 @@ internal object TogetherPlaybackSync {
 
         val deliveryAgeMs =
             if (isOnlineSession) {
-                OnlineEstimatedDeliveryMs
+                val updateTime = state.positionUpdatedAtMs
+                if (updateTime != null && updateTime > 0L) {
+                    (System.currentTimeMillis() - updateTime).coerceAtLeast(0L)
+                } else {
+                    OnlineEstimatedDeliveryMs
+                }
             } else {
                 val correctedSentAt =
                     state.sentAtElapsedRealtimeMs +
@@ -60,11 +65,13 @@ internal object TogetherPlaybackSync {
         localIds: List<String>,
     ): Boolean =
         desiredIds.isNotEmpty() &&
-            if (desiredHash.isNotBlank()) {
-                desiredHash != localHash
-            } else {
-                desiredIds != localIds
-            }
+            (
+                if (desiredHash.isNotBlank()) {
+                    desiredHash != localHash
+                } else {
+                    desiredIds != localIds
+                }
+            )
 
     fun shouldSeekForDrift(
         currentPositionMs: Long,
@@ -81,6 +88,3 @@ internal object TogetherPlaybackSync {
         return abs(currentPositionMs - targetPositionMs) > threshold
     }
 }
-
-
-

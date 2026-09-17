@@ -36,6 +36,7 @@ import javax.inject.Singleton
 @Singleton
 class BuddyRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val relayClient: BuddyNotificationRelayClient,
 ) {
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
@@ -98,6 +99,12 @@ class BuddyRepository @Inject constructor(
 
             docRef.set(requestData).await()
             Timber.tag("BuddyRepository").d("Successfully sent buddy request to $toUid with doc ID ${docRef.id}")
+
+            // Asynchronously dispatch FCM push notification via self-hosted relay (fire-and-forget)
+            launch {
+                relayClient.notifyBuddyRequest(toUid)
+            }
+
             Result.success(Unit)
         } catch (t: Throwable) {
             Timber.tag("BuddyRepository").e(t, "Failed to send buddy request to $toUid")
@@ -464,12 +471,24 @@ class BuddyRepository @Inject constructor(
 
         try {
             // 1. Add buddyUid to together_sessions/{sessionId}.invitedUids (array union, additive)
-            firestore.collection("together_sessions")
-                .document(sessionId)
-                .update("invitedUids", FieldValue.arrayUnion(buddyUid))
-                .await()
-
+            val sessionDocRef = firestore.collection("together_sessions").document(sessionId)
+            sessionDocRef.update("invitedUids", FieldValue.arrayUnion(buddyUid)).await()
             Timber.tag("BuddyRepository").d("Successfully invited buddy $buddyUid to session $sessionId")
+
+            // 2. Asynchronously dispatch FCM push notification via self-hosted relay (fire-and-forget)
+            launch {
+                val hostName = auth.currentUser?.displayName?.ifBlank { null } ?: "A buddy"
+                val sessionCode = runCatching {
+                    sessionDocRef.get().await().getString("code")
+                }.getOrNull().orEmpty()
+
+                relayClient.notifySessionInvite(
+                    targetUid = buddyUid,
+                    hostDisplayName = hostName,
+                    sessionCode = sessionCode,
+                )
+            }
+
             Result.success(Unit)
         } catch (t: Throwable) {
             Timber.tag("BuddyRepository").e(t, "Failed to invite buddy $buddyUid to session $sessionId")

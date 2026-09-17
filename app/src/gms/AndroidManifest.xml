@@ -18,6 +18,14 @@
             android:foregroundServiceType="mediaProjection|microphone"
             android:stopWithTask="false" />
 
+        <service
+            android:name=".buddy.BuddyMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="moe.rgsekai.sekaitune.cast.SekaiTuneCastOptionsProvider" />
