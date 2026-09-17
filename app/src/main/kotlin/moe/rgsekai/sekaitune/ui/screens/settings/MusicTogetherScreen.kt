@@ -179,7 +179,7 @@ fun MusicTogetherScreen(
     Scaffold(
         topBar = {
             LargeFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.music_together)) },
+                title = { Text(stringResource(R.string.together_title)) },
                 navigationIcon = {
                     AtIconButton(
                         onClick = navController::navigateUp,
@@ -306,6 +306,9 @@ private fun MusicTogetherContent(
                 contentPadding = PaddingValues(bottom = MusicTogetherSpacing.lg),
                 verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
             ) {
+                item(contentType = "mode_note") {
+                    ModeTipCard()
+                }
                 item(contentType = "status") {
                     StatusCard(
                         status = model.status,
@@ -384,6 +387,9 @@ private fun MusicTogetherContent(
                 ),
             verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
         ) {
+            item(contentType = "mode_note") {
+                ModeTipCard()
+            }
             item(contentType = "status") {
                 StatusCard(
                     status = model.status,
@@ -561,6 +567,35 @@ private fun MusicTogetherDialogs(
                         Text(stringResource(R.string.dismiss))
                     }
                 },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModeTipCard(
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = MusicTogetherSpacing.sm, vertical = MusicTogetherSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
+        ) {
+            AccentIcon(
+                iconResId = R.drawable.info,
+                accent = MaterialTheme.colorScheme.primary,
+                size = 36.dp,
+            )
+            Text(
+                text = stringResource(R.string.together_mode_note),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

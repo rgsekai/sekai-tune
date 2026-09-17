@@ -607,6 +607,8 @@
     <string name="queue_local">Local Device Queue</string>
     <string name="switch_to_online_queue">Switch to Online Queue</string>
     <string name="switch_to_local_queue">Switch to Local Queue</string>
+    <string name="together_title">Together</string>
+    <string name="together_mode_note">Note: Use LAN mode when on same Wi-Fi. For different networks, use Online mode.</string>
 </resources>
 
 
