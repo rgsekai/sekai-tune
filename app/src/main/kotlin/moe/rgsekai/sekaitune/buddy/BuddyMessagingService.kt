@@ -43,14 +43,15 @@ class BuddyMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Timber.tag("BuddyFCM").d("FCM message received from: ${remoteMessage.from}, data: ${remoteMessage.data}")
+        val data = remoteMessage.data
+        val isFg = moe.rgsekai.sekaitune.utils.AppLifecycleTracker.isForeground
+        Timber.tag("BuddyFCM").d("onMessageReceived fired: from=${remoteMessage.from}, data=$data, isForeground=$isFg")
 
-        if (moe.rgsekai.sekaitune.utils.AppLifecycleTracker.isForeground) {
-            Timber.tag("BuddyFCM").d("App is in foreground. Skipping system notification to prevent duplicates.")
+        if (isFg) {
+            Timber.tag("BuddyFCM").d("App is currently in foreground (isForeground=true). Skipping system tray notification to avoid duplicates.")
             return
         }
 
-        val data = remoteMessage.data
         val messageType = data["type"]
 
         when (messageType) {

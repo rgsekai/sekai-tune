@@ -98,6 +98,7 @@ setInterval(() => {
 // 3. Helper: Fetch Tokens & Dispatch FCM
 // ==========================================
 async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
+  console.log(`[Relay] Fetching FCM tokens from users/${targetUid}/fcmTokens...`);
   const tokensSnapshot = await db
     .collection("users")
     .doc(targetUid)
@@ -106,10 +107,19 @@ async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
 
   if (tokensSnapshot.empty) {
     console.log(`[Relay] No registered FCM tokens found for targetUid: ${targetUid}`);
-    return { sentCount: 0, removedCount: 0 };
+    return { sentCount: 0, removedCount: 0, warning: "No tokens found for user" };
   }
 
   const tokenDocs = tokensSnapshot.docs;
+  console.log(`[Relay] Found ${tokenDocs.length} FCM token(s) for targetUid: ${targetUid}`);
+  tokenDocs.forEach((doc, idx) => {
+    const rawToken = doc.data().token || "";
+    const truncated = rawToken.length > 14
+      ? `${rawToken.substring(0, 7)}...${rawToken.substring(rawToken.length - 7)}`
+      : rawToken;
+    console.log(`[Relay]   Token #${idx + 1} (docId: ${doc.id}): ${truncated}`);
+  });
+
   const messages = tokenDocs.map(doc => {
     const token = doc.data().token;
     return {
@@ -128,6 +138,7 @@ async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
     };
   });
 
+  console.log(`[Relay] Dispatching data-only FCM payload via messaging.sendEach (${messages.length} message(s))...`);
   const response = await messaging.sendEach(messages);
   let sentCount = 0;
   const deadDocIds = [];
@@ -135,9 +146,11 @@ async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
   response.responses.forEach((resp, idx) => {
     if (resp.success) {
       sentCount++;
+      console.log(`[Relay]   Message #${idx + 1} sent successfully. MessageId: ${resp.messageId}`);
     } else {
       const errCode = resp.error?.code;
-      console.warn(`[Relay] Failed sending to token doc ${tokenDocs[idx].id}:`, errCode);
+      const errMsg = resp.error?.message;
+      console.warn(`[Relay]   Message #${idx + 1} FAILED (docId: ${tokenDocs[idx].id}): [${errCode}] ${errMsg}`);
       if (
         errCode === "messaging/registration-token-not-registered" ||
         errCode === "messaging/invalid-registration-token"
@@ -158,7 +171,7 @@ async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
     batch.commit().catch(err => console.error("[Relay] Error pruning dead tokens:", err));
   }
 
-  return { sentCount, removedCount: deadDocIds.length };
+  return { sentCount, totalCount: messages.length, removedCount: deadDocIds.length };
 }
 
 // ==========================================

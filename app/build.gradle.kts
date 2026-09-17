@@ -64,13 +64,17 @@ android {
         val relayServiceUrl =
             (
                 localProperties.getProperty("RELAY_SERVICE_URL")
+                    ?: localProperties.getProperty("RELAY_URL")
                     ?: System.getenv("RELAY_SERVICE_URL")
+                    ?: System.getenv("RELAY_URL")
                     ?: ""
                 ).trim()
         val relayServiceApiKey =
             (
                 localProperties.getProperty("RELAY_SERVICE_API_KEY")
+                    ?: localProperties.getProperty("RELAY_API_KEY")
                     ?: System.getenv("RELAY_SERVICE_API_KEY")
+                    ?: System.getenv("RELAY_API_KEY")
                     ?: ""
                 ).trim()
         buildConfigField("String", "RELAY_SERVICE_URL", "\"$relayServiceUrl\"")

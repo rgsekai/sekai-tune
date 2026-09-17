@@ -42,88 +42,94 @@ class BuddyNotificationRelayClient @Inject constructor() {
     /**
      * Dispatches an FCM push notification to targetUid notifying them of a new incoming buddy request.
      */
-    suspend fun notifyBuddyRequest(targetUid: String): Result<Unit> = withContext(Dispatchers.IO) {
-        if (baseUrl.isBlank() || apiKey.isBlank()) {
-            Timber.tag("BuddyRelay").d("Relay service not configured (RELAY_SERVICE_URL or RELAY_SERVICE_API_KEY is empty). Skipping push.")
-            return@withContext Result.success(Unit)
-        }
+     suspend fun notifyBuddyRequest(targetUid: String): Result<Unit> = withContext(Dispatchers.IO) {
+         if (baseUrl.isBlank() || apiKey.isBlank()) {
+             Timber.tag("BuddyRelay").w("Relay service not configured (baseUrl='$baseUrl', apiKey is blank? ${apiKey.isBlank()}). Skipping push.")
+             return@withContext Result.success(Unit)
+         }
 
-        if (targetUid.isBlank()) {
-            return@withContext Result.failure(IllegalArgumentException("targetUid cannot be blank"))
-        }
+         if (targetUid.isBlank()) {
+             return@withContext Result.failure(IllegalArgumentException("targetUid cannot be blank"))
+         }
 
-        try {
-            val jsonPayload = JSONObject().apply {
-                put("targetUid", targetUid)
-            }.toString()
+         try {
+             val jsonPayload = JSONObject().apply {
+                 put("targetUid", targetUid)
+             }.toString()
 
-            val request = Request.Builder()
-                .url("$baseUrl/notify/buddy-request")
-                .addHeader("X-Relay-Key", apiKey)
-                .post(jsonPayload.toRequestBody(jsonMediaType))
-                .build()
+             val targetUrl = "$baseUrl/notify/buddy-request"
+             Timber.tag("BuddyRelay").d("Dispatching buddy request push to $targetUrl for targetUid=$targetUid")
 
-            httpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    Timber.tag("BuddyRelay").d("Successfully relayed buddy request push notification to $targetUid")
-                    Result.success(Unit)
-                } else {
-                    val code = response.code
-                    val errorBody = response.body?.string().orEmpty()
-                    Timber.tag("BuddyRelay").w("Relay push notification failed ($code): $errorBody")
-                    Result.failure(RuntimeException("Relay returned HTTP $code: $errorBody"))
-                }
-            }
-        } catch (t: Throwable) {
-            Timber.tag("BuddyRelay").w(t, "Failed to send buddy request notification via relay")
-            Result.failure(t)
-        }
-    }
+             val request = Request.Builder()
+                 .url(targetUrl)
+                 .addHeader("X-Relay-Key", apiKey)
+                 .post(jsonPayload.toRequestBody(jsonMediaType))
+                 .build()
+
+             httpClient.newCall(request).execute().use { response ->
+                 val code = response.code
+                 val respBody = response.body?.string().orEmpty()
+                 if (response.isSuccessful) {
+                     Timber.tag("BuddyRelay").d("Successfully relayed buddy request push to $targetUid (HTTP $code): $respBody")
+                     Result.success(Unit)
+                 } else {
+                     Timber.tag("BuddyRelay").w("Relay push notification failed (HTTP $code): $respBody")
+                     Result.failure(RuntimeException("Relay returned HTTP $code: $respBody"))
+                 }
+             }
+         } catch (t: Throwable) {
+             Timber.tag("BuddyRelay").w(t, "Failed to send buddy request notification via relay")
+             Result.failure(t)
+         }
+     }
 
     /**
      * Dispatches an FCM push notification to targetUid notifying them of an invite to a Together session.
      */
-    suspend fun notifySessionInvite(
-        targetUid: String,
-        hostDisplayName: String,
-        sessionCode: String,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        if (baseUrl.isBlank() || apiKey.isBlank()) {
-            Timber.tag("BuddyRelay").d("Relay service not configured (RELAY_SERVICE_URL or RELAY_SERVICE_API_KEY is empty). Skipping push.")
-            return@withContext Result.success(Unit)
-        }
+     suspend fun notifySessionInvite(
+         targetUid: String,
+         hostDisplayName: String,
+         sessionCode: String,
+     ): Result<Unit> = withContext(Dispatchers.IO) {
+         if (baseUrl.isBlank() || apiKey.isBlank()) {
+             Timber.tag("BuddyRelay").w("Relay service not configured (baseUrl='$baseUrl', apiKey is blank? ${apiKey.isBlank()}). Skipping push.")
+             return@withContext Result.success(Unit)
+         }
 
-        if (targetUid.isBlank()) {
-            return@withContext Result.failure(IllegalArgumentException("targetUid cannot be blank"))
-        }
+         if (targetUid.isBlank()) {
+             return@withContext Result.failure(IllegalArgumentException("targetUid cannot be blank"))
+         }
 
-        try {
-            val jsonPayload = JSONObject().apply {
-                put("targetUid", targetUid)
-                put("hostDisplayName", hostDisplayName.trim().ifBlank { "A buddy" })
-                put("sessionCode", sessionCode.trim())
-            }.toString()
+         try {
+             val jsonPayload = JSONObject().apply {
+                 put("targetUid", targetUid)
+                 put("hostDisplayName", hostDisplayName.trim().ifBlank { "A buddy" })
+                 put("sessionCode", sessionCode.trim())
+             }.toString()
 
-            val request = Request.Builder()
-                .url("$baseUrl/notify/invite")
-                .addHeader("X-Relay-Key", apiKey)
-                .post(jsonPayload.toRequestBody(jsonMediaType))
-                .build()
+             val targetUrl = "$baseUrl/notify/invite"
+             Timber.tag("BuddyRelay").d("Dispatching Together session invite push to $targetUrl for targetUid=$targetUid, host=$hostDisplayName, code=$sessionCode")
 
-            httpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    Timber.tag("BuddyRelay").d("Successfully relayed Together session invite push notification to $targetUid")
-                    Result.success(Unit)
-                } else {
-                    val code = response.code
-                    val errorBody = response.body?.string().orEmpty()
-                    Timber.tag("BuddyRelay").w("Relay invite push notification failed ($code): $errorBody")
-                    Result.failure(RuntimeException("Relay returned HTTP $code: $errorBody"))
-                }
-            }
-        } catch (t: Throwable) {
-            Timber.tag("BuddyRelay").w(t, "Failed to send session invite notification via relay")
-            Result.failure(t)
-        }
-    }
+             val request = Request.Builder()
+                 .url(targetUrl)
+                 .addHeader("X-Relay-Key", apiKey)
+                 .post(jsonPayload.toRequestBody(jsonMediaType))
+                 .build()
+
+             httpClient.newCall(request).execute().use { response ->
+                 val code = response.code
+                 val respBody = response.body?.string().orEmpty()
+                 if (response.isSuccessful) {
+                     Timber.tag("BuddyRelay").d("Successfully relayed Together session invite push to $targetUid (HTTP $code): $respBody")
+                     Result.success(Unit)
+                 } else {
+                     Timber.tag("BuddyRelay").w("Relay invite push notification failed (HTTP $code): $respBody")
+                     Result.failure(RuntimeException("Relay returned HTTP $code: $respBody"))
+                 }
+             }
+         } catch (t: Throwable) {
+             Timber.tag("BuddyRelay").w(t, "Failed to send session invite notification via relay")
+             Result.failure(t)
+         }
+     }
 }
