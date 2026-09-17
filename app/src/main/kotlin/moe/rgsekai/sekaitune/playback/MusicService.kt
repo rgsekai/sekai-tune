@@ -1248,6 +1248,18 @@ class MusicService :
                 }
             }
 
+        com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            if (user != null && !user.isAnonymous) {
+                val current = togetherSessionState.value
+                if (current is moe.rgsekai.sekaitune.together.TogetherSessionState.Error && current.isSignInRequired) {
+                    scope.launch(SilentHandler) {
+                        togetherSessionState.value = moe.rgsekai.sekaitune.together.TogetherSessionState.Idle
+                    }
+                }
+            }
+        }
+
         dataStore.data
             .map { it[WakelockKey] ?: false }
             .distinctUntilChanged()

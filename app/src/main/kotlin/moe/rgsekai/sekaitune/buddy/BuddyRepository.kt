@@ -62,6 +62,8 @@ class BuddyRepository @Inject constructor(
         toUid: String,
         fromDisplayName: String,
         toDisplayName: String = "",
+        fromPhotoUrl: String? = null,
+        toPhotoUrl: String? = null,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val myUid = auth.currentUser?.uid
             ?: return@withContext Result.failure(IllegalStateException("User is not authenticated"))
@@ -75,8 +77,11 @@ class BuddyRepository @Inject constructor(
         }
 
         try {
+            val resolvedFromPhotoUrl = fromPhotoUrl?.ifBlank { null }
+                ?: auth.currentUser?.photoUrl?.toString()?.ifBlank { null }
+
             val docRef = firestore.collection("buddy_requests").document()
-            val requestData = mapOf(
+            val requestData = mutableMapOf<String, Any?>(
                 "fromUid" to myUid,
                 "toUid" to toUid,
                 "fromDisplayName" to fromDisplayName,
@@ -84,6 +89,12 @@ class BuddyRepository @Inject constructor(
                 "status" to "pending",
                 "createdAt" to System.currentTimeMillis()
             )
+            if (resolvedFromPhotoUrl != null) {
+                requestData["fromPhotoUrl"] = resolvedFromPhotoUrl
+            }
+            if (!toPhotoUrl.isNullOrBlank()) {
+                requestData["toPhotoUrl"] = toPhotoUrl
+            }
 
             docRef.set(requestData).await()
             Timber.tag("BuddyRepository").d("Successfully sent buddy request to $toUid with doc ID ${docRef.id}")
@@ -116,14 +127,53 @@ class BuddyRepository @Inject constructor(
                     val uid = doc.getString("uid") ?: doc.id
                     val displayName = doc.getString("displayName") ?: ""
                     val addedAt = doc.extractTimestampMs("addedAt")
+                    val photoUrl = doc.getString("photoUrl")?.ifBlank { null }
                     Buddy(
                         uid = uid,
                         displayName = displayName,
-                        addedAt = addedAt
+                        addedAt = addedAt,
+                        photoUrl = photoUrl,
                     )
                 } ?: emptyList()
 
                 trySend(buddies)
+
+                // Asynchronously fetch photoUrl for any legacy buddy with missing photo
+                val missingPhotoBuddies = buddies.filter { it.photoUrl.isNullOrBlank() }
+                if (missingPhotoBuddies.isNotEmpty()) {
+                    launch {
+                        var hasUpdates = false
+                        val updatedList = buddies.map { b ->
+                            if (b.photoUrl.isNullOrBlank()) {
+                                val fetchedPhoto = try {
+                                    val userDoc = firestore.collection("users").document(b.uid).get().await()
+                                    userDoc.getString("photoUrl")?.ifBlank { null }
+                                } catch (_: Throwable) {
+                                    null
+                                }
+                                if (fetchedPhoto != null) {
+                                    hasUpdates = true
+                                    try {
+                                        firestore.collection("buddies")
+                                            .document(myUid)
+                                            .collection("list")
+                                            .document(b.uid)
+                                            .update("photoUrl", fetchedPhoto)
+                                            .await()
+                                    } catch (_: Throwable) {}
+                                    b.copy(photoUrl = fetchedPhoto)
+                                } else {
+                                    b
+                                }
+                            } else {
+                                b
+                            }
+                        }
+                        if (hasUpdates) {
+                            trySend(updatedList)
+                        }
+                    }
+                }
             }
 
         awaitClose {
@@ -156,6 +206,8 @@ class BuddyRepository @Inject constructor(
                     val toDisplayName = doc.getString("toDisplayName") ?: ""
                     val status = doc.getString("status") ?: "pending"
                     val createdAt = doc.extractTimestampMs("createdAt")
+                    val fromPhotoUrl = doc.getString("fromPhotoUrl")?.ifBlank { null }
+                    val toPhotoUrl = doc.getString("toPhotoUrl")?.ifBlank { null }
 
                     BuddyRequest(
                         id = doc.id,
@@ -164,11 +216,42 @@ class BuddyRepository @Inject constructor(
                         fromDisplayName = fromDisplayName,
                         toDisplayName = toDisplayName,
                         status = status,
-                        createdAt = createdAt
+                        createdAt = createdAt,
+                        fromPhotoUrl = fromPhotoUrl,
+                        toPhotoUrl = toPhotoUrl,
                     )
                 } ?: emptyList()
 
                 trySend(requests)
+
+                // Asynchronously resolve missing fromPhotoUrl for incoming requests
+                val missingRequests = requests.filter { it.fromPhotoUrl.isNullOrBlank() }
+                if (missingRequests.isNotEmpty()) {
+                    launch {
+                        var hasUpdates = false
+                        val updatedList = requests.map { req ->
+                            if (req.fromPhotoUrl.isNullOrBlank()) {
+                                val fetchedPhoto = try {
+                                    val userDoc = firestore.collection("users").document(req.fromUid).get().await()
+                                    userDoc.getString("photoUrl")?.ifBlank { null }
+                                } catch (_: Throwable) {
+                                    null
+                                }
+                                if (fetchedPhoto != null) {
+                                    hasUpdates = true
+                                    req.copy(fromPhotoUrl = fetchedPhoto)
+                                } else {
+                                    req
+                                }
+                            } else {
+                                req
+                            }
+                        }
+                        if (hasUpdates) {
+                            trySend(updatedList)
+                        }
+                    }
+                }
             }
 
         awaitClose {
@@ -201,6 +284,8 @@ class BuddyRepository @Inject constructor(
                     val toDisplayName = doc.getString("toDisplayName") ?: ""
                     val status = doc.getString("status") ?: "pending"
                     val createdAt = doc.extractTimestampMs("createdAt")
+                    val fromPhotoUrl = doc.getString("fromPhotoUrl")?.ifBlank { null }
+                    val toPhotoUrl = doc.getString("toPhotoUrl")?.ifBlank { null }
 
                     BuddyRequest(
                         id = doc.id,
@@ -209,7 +294,9 @@ class BuddyRepository @Inject constructor(
                         fromDisplayName = fromDisplayName,
                         toDisplayName = toDisplayName,
                         status = status,
-                        createdAt = createdAt
+                        createdAt = createdAt,
+                        fromPhotoUrl = fromPhotoUrl,
+                        toPhotoUrl = toPhotoUrl,
                     )
                 } ?: emptyList()
 
@@ -237,10 +324,22 @@ class BuddyRepository @Inject constructor(
             val fromUid = reqDoc.getString("fromUid")
                 ?: return@withContext Result.failure(IllegalStateException("Invalid request data: missing sender UID"))
             val fromDisplayName = reqDoc.getString("fromDisplayName")?.ifBlank { null } ?: "Buddy"
+            var fromPhotoUrl = reqDoc.getString("fromPhotoUrl")?.ifBlank { null }
+            if (fromPhotoUrl == null) {
+                // Fallback to reading sender's public users/{uid} document
+                try {
+                    val userDoc = firestore.collection("users").document(fromUid).get().await()
+                    fromPhotoUrl = userDoc.getString("photoUrl")?.ifBlank { null }
+                } catch (_: Throwable) {
+                    // Ignore fallback failure
+                }
+            }
+
             val resolvedMyName = toDisplayName?.ifBlank { null }
                 ?: auth.currentUser?.displayName?.ifBlank { null }
                 ?: reqDoc.getString("toDisplayName")?.ifBlank { null }
                 ?: "Buddy"
+            val myPhotoUrl = auth.currentUser?.photoUrl?.toString()?.ifBlank { null }
 
             val batch = firestore.batch()
 
@@ -249,28 +348,30 @@ class BuddyRepository @Inject constructor(
                 .document(myUid)
                 .collection("list")
                 .document(fromUid)
-            batch.set(
-                myBuddyRef,
-                mapOf(
-                    "uid" to fromUid,
-                    "displayName" to fromDisplayName,
-                    "addedAt" to FieldValue.serverTimestamp()
-                )
+            val myBuddyData = mutableMapOf<String, Any?>(
+                "uid" to fromUid,
+                "displayName" to fromDisplayName,
+                "addedAt" to FieldValue.serverTimestamp(),
             )
+            if (fromPhotoUrl != null) {
+                myBuddyData["photoUrl"] = fromPhotoUrl
+            }
+            batch.set(myBuddyRef, myBuddyData)
 
             // 2. Add myself to sender's buddy list: /buddies/{fromUid}/list/{myUid}
             val otherBuddyRef = firestore.collection("buddies")
                 .document(fromUid)
                 .collection("list")
                 .document(myUid)
-            batch.set(
-                otherBuddyRef,
-                mapOf(
-                    "uid" to myUid,
-                    "displayName" to resolvedMyName,
-                    "addedAt" to FieldValue.serverTimestamp()
-                )
+            val otherBuddyData = mutableMapOf<String, Any?>(
+                "uid" to myUid,
+                "displayName" to resolvedMyName,
+                "addedAt" to FieldValue.serverTimestamp(),
             )
+            if (myPhotoUrl != null) {
+                otherBuddyData["photoUrl"] = myPhotoUrl
+            }
+            batch.set(otherBuddyRef, otherBuddyData)
 
             // 3. Atomically delete the buddy_requests document
             val reqRef = firestore.collection("buddy_requests").document(requestId)

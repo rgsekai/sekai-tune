@@ -22,6 +22,14 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------
+    // Public User Profiles (Profile Pictures & Display Names)
+    // ----------------------------------------------------
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ----------------------------------------------------
     // User FCM Tokens (Buddy List & Push Notifications)
     // ----------------------------------------------------
     match /users/{userId}/fcmTokens/{tokenId} {
@@ -54,11 +62,7 @@ service cloud.firestore {
     // ----------------------------------------------------
     match /buddies/{userId}/list/{buddyId} {
       allow read: if isAuthenticated() && request.auth.uid == userId;
-      allow create: if isAuthenticated() && (
-        request.auth.uid == userId ||
-        request.auth.uid == buddyId
-      );
-      allow delete: if isAuthenticated() && (
+      allow create, update, delete: if isAuthenticated() && (
         request.auth.uid == userId ||
         request.auth.uid == buddyId
       );

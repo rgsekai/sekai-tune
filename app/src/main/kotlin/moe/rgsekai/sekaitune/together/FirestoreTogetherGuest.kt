@@ -28,6 +28,7 @@ class FirestoreTogetherGuest(
     private val displayName: String,
 ) {
     private val firestore = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
     private var sessionDocRef: DocumentReference? = null
     private var listenerRegistration: ListenerRegistration? = null
     private var currentSessionId: String? = null
@@ -75,7 +76,8 @@ class FirestoreTogetherGuest(
                 )
 
                 // Add self to participants
-                val selfParticipantData = mapOf(
+                val guestPhotoUrl = auth.currentUser?.photoUrl?.toString()?.ifBlank { null }
+                val selfParticipantData = mutableMapOf<String, Any?>(
                     "id" to guestUid,
                     "name" to displayName,
                     "isHost" to false,
@@ -83,6 +85,9 @@ class FirestoreTogetherGuest(
                     "isConnected" to true,
                     "joinedAt" to System.currentTimeMillis()
                 )
+                if (guestPhotoUrl != null) {
+                    selfParticipantData["photoUrl"] = guestPhotoUrl
+                }
 
                 docRef.update("participants.$guestUid", selfParticipantData).await()
 
@@ -143,7 +148,15 @@ class FirestoreTogetherGuest(
                 val isHost = p["isHost"] as? Boolean ?: false
                 val isPending = p["isPending"] as? Boolean ?: false
                 val isConnected = p["isConnected"] as? Boolean ?: true
-                TogetherParticipant(id = id, name = name, isHost = isHost, isPending = isPending, isConnected = isConnected)
+                val photoUrl = p["photoUrl"] as? String
+                TogetherParticipant(
+                    id = id,
+                    name = name,
+                    isHost = isHost,
+                    isPending = isPending,
+                    isConnected = isConnected,
+                    photoUrl = photoUrl?.ifBlank { null }
+                )
             }
 
             val rawQueue = snapshot.get("queue") as? List<Map<String, Any?>> ?: emptyList()

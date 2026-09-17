@@ -159,6 +159,7 @@ data class MusicTogetherHostUiModel(
     val visible: Boolean,
     val startEnabled: Boolean,
     val loading: Boolean,
+    val photoUrl: String? = null,
 )
 
 @Immutable
@@ -195,6 +196,7 @@ data class MusicTogetherParticipantUiModel(
     val showModerationActions: Boolean,
     val showTransferHostAction: Boolean,
     val showAddBuddyAction: Boolean = false,
+    val photoUrl: String? = null,
 )
 
 @Immutable
@@ -241,6 +243,7 @@ class MusicTogetherViewModel
         private val updatePreferences: UpdateMusicTogetherPreferencesUseCase,
         private val sessionActions: MusicTogetherSessionActionsUseCase,
         private val buddyRepository: moe.rgsekai.sekaitune.buddy.BuddyRepository,
+        private val userProfileManager: moe.rgsekai.sekaitune.auth.UserProfileManager,
     ) : ViewModel() {
         private val hostModeOnline = MutableStateFlow(false)
         private val joinModeOnline = MutableStateFlow(false)
@@ -256,6 +259,15 @@ class MusicTogetherViewModel
         private var lastSessionId: String? = null
         private var lastRoomState: TogetherRoomState? = null
         private var lastStateWasError = false
+
+        init {
+            com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
+                val user = firebaseAuth.currentUser
+                if (user != null && !user.isAnonymous) {
+                    sessionActions.leaveSession()
+                }
+            }
+        }
 
         private data class StateInputs(
             val snapshot: MusicTogetherSnapshot,
@@ -381,6 +393,7 @@ class MusicTogetherViewModel
             if (trimmed.isBlank()) return
             viewModelScope.launch(Dispatchers.IO) {
                 updatePreferences.setDisplayName(trimmed)
+                userProfileManager.updateDisplayName(trimmed)
             }
         }
 
@@ -423,6 +436,10 @@ class MusicTogetherViewModel
 
         fun dismissDialog() {
             dialog.value = MusicTogetherDialogUiState.None
+        }
+
+        fun clearError() {
+            sessionActions.leaveSession()
         }
 
         fun setHostModeOnline(value: Boolean) {
@@ -641,7 +658,13 @@ class MusicTogetherViewModel
             val isJoinedAsAcceptedGuest = isJoinedAsGuest && !isWaitingApproval
             val disableJoinUi = isHostRole || isCreatingSessionLoading || isJoinedAsGuest
             val isActive = isHosting || (state is TogetherSessionState.Joined)
-            val isSignInRequired = (state as? TogetherSessionState.Error)?.isSignInRequired == true
+            val isSignedIn = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.isAnonymous == false
+            val rawIsSignInRequired = (state as? TogetherSessionState.Error)?.isSignInRequired == true
+            val isSignInRequired = rawIsSignInRequired && !isSignedIn
+            val isActualError = state is TogetherSessionState.Error && (!rawIsSignInRequired || isSignInRequired)
+            if (rawIsSignInRequired && isSignedIn) {
+                sessionActions.leaveSession()
+            }
             val status =
                 MusicTogetherStatusUiModel(
                     titleResId = R.string.together_status,
@@ -668,22 +691,24 @@ class MusicTogetherViewModel
                             }
 
                             is TogetherSessionState.Error -> {
-                                if (state.isSignInRequired) {
+                                if (isSignInRequired) {
                                     R.string.together_signin_required
+                                } else if (!isActualError) {
+                                    R.string.together_idle
                                 } else {
                                     R.string.together_error_state
                                 }
                             }
                         },
-                    errorMessage = (state as? TogetherSessionState.Error)?.message,
+                    errorMessage = if (isActualError) (state as? TogetherSessionState.Error)?.message else null,
                     iconResId =
                         when {
                             isSignInRequired -> R.drawable.person
-                            state is TogetherSessionState.Error -> R.drawable.error
+                            isActualError -> R.drawable.error
                             else -> R.drawable.fire
                         },
                     active = isActive,
-                    error = state is TogetherSessionState.Error,
+                    error = isActualError,
                     waitingApproval = isWaitingApproval,
                     canLeave = isActive || isJoining,
                     showSignInAction = isSignInRequired,
@@ -738,6 +763,7 @@ class MusicTogetherViewModel
                     visible = !isJoinedAsGuest,
                     startEnabled = !isCreatingSessionLoading && !isJoining && !isHosting && state !is TogetherSessionState.Joined,
                     loading = isCreatingSessionLoading,
+                    photoUrl = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()?.ifBlank { null },
                 )
             val joinInput = preferences.lastJoinLink
             val canJoin =
@@ -793,6 +819,7 @@ class MusicTogetherViewModel
                                 showModerationActions = isHostRole && showModerationActions && !participant.isHost,
                                 showTransferHostAction = isHostRole && !participant.isHost && !participant.isPending,
                                 showAddBuddyAction = showAddBuddy,
+                                photoUrl = participant.photoUrl,
                             )
                         },
                 )

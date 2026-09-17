@@ -15,12 +15,15 @@ data class BuddyRequest(
     val toDisplayName: String = "",
     val status: String = "pending",
     val createdAt: Long = 0L,
+    val fromPhotoUrl: String? = null,
+    val toPhotoUrl: String? = null,
 )
 
 data class Buddy(
     val uid: String = "",
     val displayName: String = "",
     val addedAt: Long = 0L,
+    val photoUrl: String? = null,
 )
 
 data class TogetherSessionSummary(

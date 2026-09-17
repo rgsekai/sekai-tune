@@ -88,7 +88,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -100,6 +102,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import coil3.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.window.core.layout.WindowSizeClass
@@ -258,7 +261,10 @@ fun MusicTogetherScreen(
                         model = state.model,
                         useSupportingPane = useSupportingPane,
                         viewModel = viewModel,
-                        onNavigateToSignIn = { navController.navigate("settings/ai_integration") },
+                        onNavigateToSignIn = {
+                            viewModel.clearError()
+                            navController.navigate("settings/ai_integration")
+                        },
                     )
                 }
             }
@@ -842,6 +848,7 @@ private fun HostControlsCard(
             iconResId = R.drawable.person,
             titleResId = R.string.together_display_name,
             subtitle = host.displayName,
+            photoUrl = host.photoUrl,
             onClick = viewModel::openDisplayNameDialog,
         )
         if (!host.onlineMode) {
@@ -1136,11 +1143,25 @@ private fun ParticipantRow(
             )
         },
         leadingContent = {
-            AccentIcon(
-                iconResId = if (participant.host) R.drawable.fire else R.drawable.person,
-                accent = if (participant.host) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                size = 40.dp,
-            )
+            if (!participant.photoUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = participant.photoUrl,
+                    placeholder = painterResource(if (participant.host) R.drawable.fire else R.drawable.person),
+                    error = painterResource(if (participant.host) R.drawable.fire else R.drawable.person),
+                    fallback = painterResource(if (participant.host) R.drawable.fire else R.drawable.person),
+                    contentDescription = participant.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                )
+            } else {
+                AccentIcon(
+                    iconResId = if (participant.host) R.drawable.fire else R.drawable.person,
+                    accent = if (participant.host) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    size = 40.dp,
+                )
+            }
         },
         trailingContent = {
             Row(horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xxs)) {
@@ -1517,6 +1538,7 @@ private fun SettingsRow(
     @StringRes titleResId: Int,
     subtitle: String,
     subtitleMaxLines: Int = 1,
+    photoUrl: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
     ListItem(
@@ -1534,7 +1556,21 @@ private fun SettingsRow(
             )
         },
         leadingContent = {
-            AccentIcon(iconResId = iconResId, accent = MaterialTheme.colorScheme.primary, size = 40.dp)
+            if (!photoUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = photoUrl,
+                    placeholder = painterResource(iconResId),
+                    error = painterResource(iconResId),
+                    fallback = painterResource(iconResId),
+                    contentDescription = subtitle,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                )
+            } else {
+                AccentIcon(iconResId = iconResId, accent = MaterialTheme.colorScheme.primary, size = 40.dp)
+            }
         },
         trailingContent = {
             if (onClick != null) {

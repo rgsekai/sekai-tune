@@ -76,6 +76,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -198,7 +199,11 @@ fun AiIntegrationSettings(
                             if (firebaseUser.photoUrl != null) {
                                 AsyncImage(
                                     model = firebaseUser.photoUrl,
+                                    placeholder = painterResource(R.drawable.person),
+                                    error = painterResource(R.drawable.person),
+                                    fallback = painterResource(R.drawable.person),
                                     contentDescription = "Profile Picture",
+                                    contentScale = ContentScale.Crop,
                                     modifier = Modifier.size(32.dp).clip(CircleShape)
                                 )
                             } else {

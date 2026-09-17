@@ -28,6 +28,7 @@ data class TogetherParticipant(
     val isHost: Boolean = false,
     val isPending: Boolean = false,
     val isConnected: Boolean = true,
+    val photoUrl: String? = null,
 )
 
 @Serializable

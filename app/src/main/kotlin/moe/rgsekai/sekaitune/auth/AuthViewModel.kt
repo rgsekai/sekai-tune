@@ -24,6 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val settingsSyncRepository: SettingsSyncRepository,
+    private val userProfileManager: UserProfileManager,
 ) : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
 
@@ -40,6 +41,7 @@ class AuthViewModel @Inject constructor(
             if (user != null && !user.isAnonymous && user.uid != previousUser?.uid) {
                 viewModelScope.launch {
                     settingsSyncRepository.syncOnSignIn(user.uid)
+                    userProfileManager.syncUserProfile(user)
                 }
             }
         }

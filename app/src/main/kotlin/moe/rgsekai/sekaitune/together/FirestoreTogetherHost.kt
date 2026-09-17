@@ -29,6 +29,7 @@ class FirestoreTogetherHost(
     private var settings: TogetherRoomSettings,
 ) {
     private val firestore = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
     private val sessionDoc = firestore.collection("together_sessions").document(sessionId)
     private var listenerRegistration: ListenerRegistration? = null
     private var heartbeatJob: kotlinx.coroutines.Job? = null
@@ -40,7 +41,8 @@ class FirestoreTogetherHost(
             name = hostDisplayName,
             isHost = true,
             isPending = false,
-            isConnected = true
+            isConnected = true,
+            photoUrl = auth.currentUser?.photoUrl?.toString()?.ifBlank { null },
         )
     )
 
@@ -54,17 +56,15 @@ class FirestoreTogetherHost(
             try {
                 val now = System.currentTimeMillis()
 
-                // 1. Deactivate any previous active sessions created by this host
+                // Deactivate any previous active sessions for this host
                 try {
-                    val previousSessions = firestore.collection("together_sessions")
+                    val prevSessions = firestore.collection("together_sessions")
                         .whereEqualTo("hostId", hostUid)
                         .whereEqualTo("active", true)
                         .get()
                         .await()
-                    for (doc in previousSessions.documents) {
-                        if (doc.id != sessionId) {
-                            doc.reference.update(mapOf("active" to false, "lastUpdatedAt" to now))
-                        }
+                    for (doc in prevSessions.documents) {
+                        doc.reference.update("active", false).await()
                     }
                 } catch (t: Throwable) {
                     Timber.tag("Together").w(t, "Non-fatal: failed to deactivate previous sessions for host $hostUid")
@@ -79,6 +79,19 @@ class FirestoreTogetherHost(
                         "thumbnailUrl" to track.thumbnailUrl
                     )
                 } ?: emptyList<Map<String, Any?>>()
+
+                val hostPhotoUrl = auth.currentUser?.photoUrl?.toString()?.ifBlank { null }
+                val hostParticipantMap = mutableMapOf<String, Any?>(
+                    "id" to hostUid,
+                    "name" to hostDisplayName,
+                    "isHost" to true,
+                    "isPending" to false,
+                    "isConnected" to true,
+                    "joinedAt" to now,
+                )
+                if (hostPhotoUrl != null) {
+                    hostParticipantMap["photoUrl"] = hostPhotoUrl
+                }
 
                 val initialData = mapOf(
                     "sessionId" to sessionId,
@@ -103,14 +116,7 @@ class FirestoreTogetherHost(
                     ),
                     "queue" to queueData,
                     "participants" to mapOf(
-                        hostUid to mapOf(
-                            "id" to hostUid,
-                            "name" to hostDisplayName,
-                            "isHost" to true,
-                            "isPending" to false,
-                            "isConnected" to true,
-                            "joinedAt" to now,
-                        )
+                        hostUid to hostParticipantMap
                     )
                 )
                 sessionDoc.set(initialData).await()
@@ -158,12 +164,14 @@ class FirestoreTogetherHost(
                 val isHost = p["isHost"] as? Boolean ?: false
                 val isPending = p["isPending"] as? Boolean ?: false
                 val isConnected = p["isConnected"] as? Boolean ?: true
+                val photoUrl = p["photoUrl"] as? String
                 TogetherParticipant(
                     id = id,
                     name = name,
                     isHost = isHost,
                     isPending = isPending,
-                    isConnected = isConnected
+                    isConnected = isConnected,
+                    photoUrl = photoUrl?.ifBlank { null },
                 )
             }
 
