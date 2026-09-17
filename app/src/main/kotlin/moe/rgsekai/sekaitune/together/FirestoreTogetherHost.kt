@@ -13,6 +13,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -28,6 +31,7 @@ class FirestoreTogetherHost(
     private val firestore = FirebaseFirestore.getInstance()
     private val sessionDoc = firestore.collection("together_sessions").document(sessionId)
     private var listenerRegistration: ListenerRegistration? = null
+    private var heartbeatJob: kotlinx.coroutines.Job? = null
 
     @Volatile
     private var lastParticipants: List<TogetherParticipant> = listOf(
@@ -49,6 +53,23 @@ class FirestoreTogetherHost(
         return withContext(Dispatchers.IO) {
             try {
                 val now = System.currentTimeMillis()
+
+                // 1. Deactivate any previous active sessions created by this host
+                try {
+                    val previousSessions = firestore.collection("together_sessions")
+                        .whereEqualTo("hostId", hostUid)
+                        .whereEqualTo("active", true)
+                        .get()
+                        .await()
+                    for (doc in previousSessions.documents) {
+                        if (doc.id != sessionId) {
+                            doc.reference.update(mapOf("active" to false, "lastUpdatedAt" to now))
+                        }
+                    }
+                } catch (t: Throwable) {
+                    Timber.tag("Together").w(t, "Non-fatal: failed to deactivate previous sessions for host $hostUid")
+                }
+
                 val queueData = initialState?.queue?.map { track ->
                     mapOf(
                         "id" to track.id,
@@ -94,10 +115,25 @@ class FirestoreTogetherHost(
                 )
                 sessionDoc.set(initialData).await()
                 startListening()
+                startHeartbeat()
                 true
             } catch (t: Throwable) {
                 Timber.tag("Together").e(t, "Failed to create Firestore together session")
                 false
+            }
+        }
+    }
+
+    private fun startHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(30_000L)
+                try {
+                    sessionDoc.update("lastUpdatedAt", System.currentTimeMillis())
+                } catch (t: Throwable) {
+                    // Ignore non-fatal heartbeat errors
+                }
             }
         }
     }
@@ -314,6 +350,8 @@ class FirestoreTogetherHost(
     }
 
     suspend fun close() {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
         listenerRegistration?.remove()
         listenerRegistration = null
         withContext(Dispatchers.IO) {

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.together.ObserveMusicTogetherStateUseCase
+import moe.rgsekai.sekaitune.together.TogetherRole
 import moe.rgsekai.sekaitune.together.TogetherSessionState
 import javax.inject.Inject
 
@@ -37,8 +38,10 @@ data class BuddyListUiState(
     val incomingRequests: List<BuddyRequest> = emptyList(),
     val outgoingRequests: List<BuddyRequest> = emptyList(),
     val pendingRemoveBuddy: Buddy? = null,
+    val pendingInviteBuddy: Buddy? = null,
     val isLoading: Boolean = false,
     val activeHostingSessionId: String? = null,
+    val activeParticipantIds: Set<String> = emptySet(),
 ) {
     val isHosting: Boolean get() = activeHostingSessionId != null
 }
@@ -56,6 +59,7 @@ class BuddyListViewModel @Inject constructor(
 
     private val currentTabFlow = MutableStateFlow(BuddyTab.BUDDIES)
     private val pendingRemoveBuddyFlow = MutableStateFlow<Buddy?>(null)
+    private val pendingInviteBuddyFlow = MutableStateFlow<Buddy?>(null)
     private val isLoadingFlow = MutableStateFlow(false)
 
     private val effectsFlow = MutableSharedFlow<BuddyListEffect>(extraBufferCapacity = 8)
@@ -68,8 +72,27 @@ class BuddyListViewModel @Inject constructor(
         }
     }
 
-    private val activeHostingSessionIdFlow = observeMusicTogetherState().map { snapshot ->
-        (snapshot.sessionState as? TogetherSessionState.HostingOnline)?.sessionId
+    private data class SessionInfo(
+        val sessionId: String?,
+        val participantIds: Set<String>,
+    )
+
+    private val activeSessionInfoFlow = observeMusicTogetherState().map { snapshot ->
+        when (val sessionState = snapshot.sessionState) {
+            is TogetherSessionState.HostingOnline -> {
+                val participantIds = sessionState.roomState?.participants?.map { it.id }?.toSet() ?: emptySet()
+                SessionInfo(sessionState.sessionId, participantIds)
+            }
+            is TogetherSessionState.Joined -> {
+                if (sessionState.role is TogetherRole.Host && (sessionState.code != null || sessionState.roomState.code != null)) {
+                    val participantIds = sessionState.roomState.participants.map { it.id }.toSet()
+                    SessionInfo(sessionState.sessionId, participantIds)
+                } else {
+                    SessionInfo(null, emptySet())
+                }
+            }
+            else -> SessionInfo(null, emptySet())
+        }
     }
 
     val state: StateFlow<BuddyListUiState> = combine(
@@ -78,9 +101,11 @@ class BuddyListViewModel @Inject constructor(
         buddyRepository.observeIncomingRequests(),
         buddyRepository.observeOutgoingRequests(),
         pendingRemoveBuddyFlow,
+        pendingInviteBuddyFlow,
         isLoadingFlow,
-        activeHostingSessionIdFlow,
+        activeSessionInfoFlow,
     ) { args: Array<Any?> ->
+        val sessionInfo = args[7] as SessionInfo
         @Suppress("UNCHECKED_CAST")
         BuddyListUiState(
             currentTab = args[0] as BuddyTab,
@@ -88,8 +113,10 @@ class BuddyListViewModel @Inject constructor(
             incomingRequests = args[2] as List<BuddyRequest>,
             outgoingRequests = args[3] as List<BuddyRequest>,
             pendingRemoveBuddy = args[4] as Buddy?,
-            isLoading = args[5] as Boolean,
-            activeHostingSessionId = args[6] as String?,
+            pendingInviteBuddy = args[5] as Buddy?,
+            isLoading = args[6] as Boolean,
+            activeHostingSessionId = sessionInfo.sessionId,
+            activeParticipantIds = sessionInfo.participantIds,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -107,6 +134,20 @@ class BuddyListViewModel @Inject constructor(
 
     fun dismissRemoveBuddyDialog() {
         pendingRemoveBuddyFlow.value = null
+    }
+
+    fun requestInviteBuddy(buddy: Buddy) {
+        pendingInviteBuddyFlow.value = buddy
+    }
+
+    fun dismissInviteBuddyDialog() {
+        pendingInviteBuddyFlow.value = null
+    }
+
+    fun confirmInviteBuddy() {
+        val buddy = pendingInviteBuddyFlow.value ?: return
+        pendingInviteBuddyFlow.value = null
+        inviteBuddy(buddy)
     }
 
     fun confirmRemoveBuddy() {
@@ -171,6 +212,12 @@ class BuddyListViewModel @Inject constructor(
 
     fun inviteBuddy(buddy: Buddy) {
         val sessionId = state.value.activeHostingSessionId ?: return
+        if (buddy.uid in state.value.activeParticipantIds) {
+            viewModelScope.launch {
+                effectsFlow.emit(BuddyListEffect.ShowMessage("${buddy.displayName.ifBlank { "Buddy" }} is already in the session"))
+            }
+            return
+        }
         viewModelScope.launch {
             val result = buddyRepository.inviteBuddyToSession(
                 sessionId = sessionId,

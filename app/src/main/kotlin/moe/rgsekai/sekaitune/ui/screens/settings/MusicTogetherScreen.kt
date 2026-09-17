@@ -324,6 +324,7 @@ private fun MusicTogetherContent(
                             InvitedSessionsCard(
                                 sessions = model.invitedSessions,
                                 onJoinSession = viewModel::joinInvitedSession,
+                                onDismissSession = viewModel::dismissInvitedSession,
                             )
                         }
                     }
@@ -401,6 +402,7 @@ private fun MusicTogetherContent(
                         InvitedSessionsCard(
                             sessions = model.invitedSessions,
                             onJoinSession = viewModel::joinInvitedSession,
+                            onDismissSession = viewModel::dismissInvitedSession,
                         )
                     }
                 }
@@ -898,6 +900,7 @@ private fun HostControlsCard(
 private fun InvitedSessionsCard(
     sessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
     onJoinSession: (moe.rgsekai.sekaitune.buddy.TogetherSessionSummary) -> Unit,
+    onDismissSession: (moe.rgsekai.sekaitune.buddy.TogetherSessionSummary) -> Unit,
 ) {
     SectionCard(
         iconResId = R.drawable.multi_user,
@@ -914,8 +917,7 @@ private fun InvitedSessionsCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.large)
-                            .clickable { onJoinSession(session) },
+                            .clip(MaterialTheme.shapes.large),
                     colors =
                         androidx.compose.material3.ListItemDefaults
                             .colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
@@ -943,11 +945,25 @@ private fun InvitedSessionsCard(
                         )
                     },
                     trailingContent = {
-                        FilledTonalButton(
-                            onClick = { onJoinSession(session) },
-                            shapes = ButtonDefaults.shapes(),
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xs),
                         ) {
-                            Text(stringResource(R.string.together_join_section))
+                            FilledTonalButton(
+                                onClick = { onJoinSession(session) },
+                                shapes = ButtonDefaults.shapes(),
+                            ) {
+                                Text(stringResource(R.string.together_join_section))
+                            }
+                            IconButton(
+                                onClick = { onDismissSession(session) },
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.close),
+                                    contentDescription = stringResource(R.string.together_decline_action),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     },
                 )

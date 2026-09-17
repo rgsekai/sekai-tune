@@ -29,4 +29,5 @@ data class TogetherSessionSummary(
     val hostId: String = "",
     val hostDisplayName: String = "",
     val createdAt: Long = 0L,
+    val lastUpdatedAt: Long = 0L,
 )

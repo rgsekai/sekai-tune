@@ -155,6 +155,37 @@ fun BuddyListScreen(
         )
     }
 
+    // Confirmation dialog for inviting a buddy to active session
+    state.pendingInviteBuddy?.let { buddy ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissInviteBuddyDialog,
+            title = {
+                Text(
+                    text = "Invite Buddy",
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Text(
+                    text = "Invite ${buddy.displayName.ifBlank { "your buddy" }} to your active Together Online session?",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = viewModel::confirmInviteBuddy,
+                ) {
+                    Text("Invite")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissInviteBuddyDialog) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -241,7 +272,8 @@ fun BuddyListScreen(
                     BuddiesTabContent(
                         buddies = state.buddies,
                         isHosting = state.isHosting,
-                        onInviteBuddy = viewModel::inviteBuddy,
+                        activeParticipantIds = state.activeParticipantIds,
+                        onInviteBuddy = viewModel::requestInviteBuddy,
                         onRemoveBuddy = viewModel::requestRemoveBuddy,
                     )
                 }
@@ -264,6 +296,7 @@ fun BuddyListScreen(
 private fun BuddiesTabContent(
     buddies: List<Buddy>,
     isHosting: Boolean,
+    activeParticipantIds: Set<String>,
     onInviteBuddy: (Buddy) -> Unit,
     onRemoveBuddy: (Buddy) -> Unit,
 ) {
@@ -283,6 +316,7 @@ private fun BuddiesTabContent(
                 items = buddies,
                 key = { it.uid },
             ) { buddy ->
+                val isInSession = buddy.uid in activeParticipantIds
                 Card(
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = CardDefaults.cardColors(
@@ -319,9 +353,9 @@ private fun BuddiesTabContent(
                         },
                         supportingContent = {
                             Text(
-                                text = "Mutual Buddy",
+                                text = if (isInSession) "In this session" else "Mutual Buddy",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (isInSession) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         },
                         trailingContent = {
@@ -331,7 +365,7 @@ private fun BuddiesTabContent(
                             ) {
                                 FilledTonalIconButton(
                                     onClick = { onInviteBuddy(buddy) },
-                                    enabled = isHosting,
+                                    enabled = isHosting && !isInSession,
                                     colors = IconButtonDefaults.filledTonalIconButtonColors(
                                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,

@@ -311,6 +311,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var syncUtils: SyncUtils
 
+    @Inject
+    lateinit var buddyRepository: moe.rgsekai.sekaitune.buddy.BuddyRepository
+
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
     private var pendingDeepLinkQueue: Queue? = null
@@ -319,6 +322,7 @@ class MainActivity : ComponentActivity() {
     private var pendingAodModeJob: Job? = null
     private var aodModeLaunchRequestCount by mutableIntStateOf(0)
     private var pendingTogetherJoinLink: String? = null
+    private var pendingTogetherOnlineCode: String? = null
     private var pendingBackupRestoreUri by mutableStateOf<Uri?>(null)
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
 
@@ -340,6 +344,7 @@ class MainActivity : ComponentActivity() {
                     playPendingVoiceSearchIfReady()
                     openPendingAodModeIfReady()
                     joinPendingTogetherIfReady()
+                    joinPendingTogetherOnlineIfReady()
                 }
             }
 
@@ -399,6 +404,23 @@ class MainActivity : ComponentActivity() {
                     .ifBlank { Build.MODEL ?: getString(R.string.app_name) }
             withContext(Dispatchers.Main) {
                 connection.service.joinTogether(pending, displayName)
+            }
+        }
+    }
+
+    private fun joinPendingTogetherOnlineIfReady() {
+        val pendingCode = pendingTogetherOnlineCode ?: return
+        val connection = playerConnection ?: return
+        pendingTogetherOnlineCode = null
+        lifecycleScope.launch(Dispatchers.IO) {
+            val displayName =
+                runCatching { dataStore.data.first()[moe.rgsekai.sekaitune.constants.TogetherDisplayNameKey] }
+                    .getOrNull()
+                    ?.trim()
+                    .orEmpty()
+                    .ifBlank { Build.MODEL ?: getString(R.string.app_name) }
+            withContext(Dispatchers.Main) {
+                connection.service.joinTogetherOnline(pendingCode, displayName)
             }
         }
     }
@@ -2313,6 +2335,12 @@ class MainActivity : ComponentActivity() {
                         BackupRestoreFromIntentDialog(uri = uri)
                     }
 
+                    moe.rgsekai.sekaitune.buddy.BuddyInviteObserver(
+                        buddyRepository = buddyRepository,
+                        playerConnection = playerConnection,
+                        navController = navController,
+                    )
+
                     LaunchedEffect(shouldShowSearchBar, openSearchImmediately) {
                         if (shouldShowSearchBar && openSearchImmediately) {
                             onActiveChange(true)
@@ -2353,6 +2381,28 @@ class MainActivity : ComponentActivity() {
         navController: NavHostController,
     ) {
         if (intent == null) return
+
+        val togetherCode = intent.getStringExtra(moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.EXTRA_JOIN_TOGETHER_CODE)
+        val togetherSessionId = intent.getStringExtra(moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.EXTRA_JOIN_TOGETHER_SESSION_ID)
+        if (!togetherCode.isNullOrBlank()) {
+            if (!togetherSessionId.isNullOrBlank()) {
+                moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.cancelInviteNotification(this, togetherSessionId)
+                lifecycleScope.launch(Dispatchers.IO) {
+                    buddyRepository.dismissSessionInvite(togetherSessionId)
+                }
+            }
+            intent.removeExtra(moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.EXTRA_JOIN_TOGETHER_CODE)
+            intent.removeExtra(moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.EXTRA_JOIN_TOGETHER_SESSION_ID)
+
+            pendingTogetherOnlineCode = togetherCode
+            startMusicServiceSafely()
+            joinPendingTogetherOnlineIfReady()
+            navController.navigate("settings/music_together") {
+                launchSingleTop = true
+            }
+            return
+        }
+
         intent.getStringExtra("navigate_to")?.takeIf { it.isNotBlank() }?.let { route ->
             navController.navigate(route) {
                 launchSingleTop = true

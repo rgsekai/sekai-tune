@@ -482,12 +482,19 @@ class MusicTogetherViewModel
             val model = successModel() ?: return
             viewModelScope.launch(Dispatchers.IO) {
                 updatePreferences.setLastJoinLink(session.code)
+                buddyRepository.dismissSessionInvite(session.sessionId)
             }
             sessionActions.joinSession(
                 mode = MusicTogetherConnectionMode.ONLINE,
                 rawInput = session.code,
                 displayName = model.host.displayName,
             )
+        }
+
+        fun dismissInvitedSession(session: moe.rgsekai.sekaitune.buddy.TogetherSessionSummary) {
+            viewModelScope.launch(Dispatchers.IO) {
+                buddyRepository.dismissSessionInvite(session.sessionId)
+            }
         }
 
         fun leaveSession() {

@@ -4,30 +4,56 @@
  * GPL-3.0 License | Contributors: see git history
  * Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
  */
-
 package moe.rgsekai.sekaitune.buddy
 
+import android.content.Context
+import androidx.datastore.preferences.core.edit
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.functions.FirebaseFunctions
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.constants.DismissedTogetherInviteIdsKey
+import moe.rgsekai.sekaitune.utils.dataStore
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class BuddyRepository @Inject constructor() {
+class BuddyRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
-    private val functions = FirebaseFunctions.getInstance()
+    private val localDismissed = MutableStateFlow<Set<String>>(emptySet())
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                context.dataStore.data
+                    .map { it[DismissedTogetherInviteIdsKey] ?: emptySet() }
+                    .collect { dismissed ->
+                        localDismissed.value = dismissed
+                    }
+            } catch (t: Throwable) {
+                Timber.tag("BuddyRepository").w(t, "Failed to load dismissed invites from DataStore")
+            }
+        }
+    }
 
     val currentUid: String?
         get() = auth.currentUser?.uid
@@ -350,52 +376,115 @@ class BuddyRepository @Inject constructor() {
         }
     }
 
-    fun observeInvitedSessions(): Flow<List<TogetherSessionSummary>> = callbackFlow {
+    suspend fun dismissSessionInvite(
+        sessionId: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val myUid = auth.currentUser?.uid
+            ?: return@withContext Result.failure(IllegalStateException("User is not authenticated"))
+
+        if (sessionId.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Session ID cannot be blank"))
+        }
+
+        // 1. Immediately drop from local reactive state so UI drops it instantly
+        localDismissed.update { it + sessionId }
+
+        // 2. Persist to DataStore so it survives app restarts
+        try {
+            context.dataStore.edit { prefs ->
+                val current = prefs[DismissedTogetherInviteIdsKey] ?: emptySet()
+                prefs[DismissedTogetherInviteIdsKey] = current + sessionId
+            }
+        } catch (t: Throwable) {
+            Timber.tag("BuddyRepository").w(t, "Failed to persist dismissed invite to DataStore")
+        }
+
+        // 3. Best-effort Firestore update to remove UID from doc
+        try {
+            firestore.collection("together_sessions")
+                .document(sessionId)
+                .update("invitedUids", FieldValue.arrayRemove(myUid))
+                .await()
+            Timber.tag("BuddyRepository").d("Successfully dismissed session invite $sessionId for user $myUid")
+        } catch (t: Throwable) {
+            Timber.tag("BuddyRepository").w(t, "Non-fatal: could not remove invitedUid from Firestore doc $sessionId")
+        }
+
+        Result.success(Unit)
+    }
+
+    fun observeInvitedSessions(): Flow<List<TogetherSessionSummary>> {
         val myUid = auth.currentUser?.uid
         if (myUid == null) {
-            trySend(emptyList())
-            close()
-            return@callbackFlow
+            return flowOf(emptyList())
         }
 
-        val listener: ListenerRegistration = firestore.collection("together_sessions")
-            .whereArrayContains("invitedUids", myUid)
-            .whereEqualTo("active", true)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Timber.tag("BuddyRepository").e(error, "Error listening to invited sessions for $myUid")
-                    trySend(emptyList())
-                    return@addSnapshotListener
+        val firestoreFlow = callbackFlow {
+            val listener: ListenerRegistration = firestore.collection("together_sessions")
+                .whereArrayContains("invitedUids", myUid)
+                .whereEqualTo("active", true)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Timber.tag("BuddyRepository").e(error, "Error listening to invited sessions for $myUid")
+                        trySend(emptyList())
+                        return@addSnapshotListener
+                    }
+
+                    val now = System.currentTimeMillis()
+                    val rawSessions = snapshot?.documents?.mapNotNull { doc ->
+                        val sessionId = doc.getString("sessionId") ?: doc.id
+                        val code = doc.getString("code") ?: return@mapNotNull null
+                        val hostId = doc.getString("hostId") ?: ""
+                        val createdAt = doc.extractTimestampMs("createdAt")
+                        val lastUpdatedAt = doc.extractTimestampMs("lastUpdatedAt").takeIf { it > 0 } ?: createdAt
+                        val activeTime = if (lastUpdatedAt > 0) lastUpdatedAt else createdAt
+
+                        // If a session has not had any heartbeat/update in 10 minutes, or is older than 2 hours total, it's expired!
+                        if (activeTime > 0 && (now - activeTime) > 10 * 60 * 1000L) {
+                            return@mapNotNull null
+                        }
+
+                        val rawParticipants = doc.get("participants") as? Map<*, *>
+                        val hostData = rawParticipants?.get(hostId) as? Map<*, *>
+                        val hostDisplayName = (hostData?.get("name") as? String)
+                            ?.takeIf { it.isNotBlank() }
+                            ?: "Host"
+
+                        TogetherSessionSummary(
+                            sessionId = sessionId,
+                            code = code,
+                            hostId = hostId,
+                            hostDisplayName = hostDisplayName,
+                            createdAt = createdAt,
+                            lastUpdatedAt = lastUpdatedAt,
+                        )
+                    } ?: emptyList()
+
+                    // If a host has multiple active session docs, keep ONLY the newest one
+                    val newestPerHost = rawSessions
+                        .groupBy { it.hostId.ifBlank { it.sessionId } }
+                        .mapNotNull { (_, hostSessions) ->
+                            hostSessions.maxByOrNull { maxOf(it.lastUpdatedAt, it.createdAt) }
+                        }
+
+                    // Automatically mark older superseded sessions of that host as dismissed
+                    val supersededIds = rawSessions.map { it.sessionId }.toSet() - newestPerHost.map { it.sessionId }.toSet()
+                    if (supersededIds.isNotEmpty()) {
+                        localDismissed.update { it + supersededIds }
+                    }
+
+                    trySend(newestPerHost)
                 }
 
-                val sessions = snapshot?.documents?.mapNotNull { doc ->
-                    val sessionId = doc.getString("sessionId") ?: doc.id
-                    val code = doc.getString("code") ?: return@mapNotNull null
-                    val hostId = doc.getString("hostId") ?: ""
-                    val createdAt = doc.extractTimestampMs("createdAt")
-
-                    val rawParticipants = doc.get("participants") as? Map<*, *>
-                    val hostData = rawParticipants?.get(hostId) as? Map<*, *>
-                    val hostDisplayName = (hostData?.get("name") as? String)
-                        ?.takeIf { it.isNotBlank() }
-                        ?: "Host"
-
-                    TogetherSessionSummary(
-                        sessionId = sessionId,
-                        code = code,
-                        hostId = hostId,
-                        hostDisplayName = hostDisplayName,
-                        createdAt = createdAt,
-                    )
-                } ?: emptyList()
-
-                trySend(sessions)
+            awaitClose {
+                listener.remove()
             }
-
-        awaitClose {
-            listener.remove()
         }
-    }.flowOn(Dispatchers.IO)
+
+        return firestoreFlow.combine(localDismissed) { sessions, dismissed ->
+            sessions.filter { it.sessionId !in dismissed }
+        }.flowOn(Dispatchers.IO)
+    }
 }
 
 private fun com.google.firebase.firestore.DocumentSnapshot.extractTimestampMs(field: String): Long {

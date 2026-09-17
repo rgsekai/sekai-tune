@@ -84,16 +84,33 @@ service cloud.firestore {
         // Host has full update authority (including modifying invitedUids)
         isHost(resource.data) ||
 
-        // Guest updates under strict independent constraints:
+        // Guest dismissing/declining invite (removes own UID from invitedUids)
         (
-          // 1. Immutable session metadata for guests (including invitedUids)
           request.resource.data.sessionId == resource.data.sessionId &&
           request.resource.data.hostId == resource.data.hostId &&
           request.resource.data.code == resource.data.code &&
           request.resource.data.createdAt == resource.data.createdAt &&
           request.resource.data.active == resource.data.active &&
           request.resource.data.settings == resource.data.settings &&
-          request.resource.data.get('invitedUids', []) == resource.data.get('invitedUids', []) &&
+          request.resource.data.playback == resource.data.playback &&
+          request.resource.data.queue == resource.data.queue &&
+          request.resource.data.participants == resource.data.participants &&
+          !request.resource.data.get('invitedUids', []).hasAny([request.auth.uid])
+        ) ||
+
+        // Guest updates under strict independent constraints:
+        (
+          // 1. Immutable session metadata for guests
+          request.resource.data.sessionId == resource.data.sessionId &&
+          request.resource.data.hostId == resource.data.hostId &&
+          request.resource.data.code == resource.data.code &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.active == resource.data.active &&
+          request.resource.data.settings == resource.data.settings &&
+          (
+            request.resource.data.get('invitedUids', []) == resource.data.get('invitedUids', []) ||
+            !request.resource.data.get('invitedUids', []).hasAny([request.auth.uid])
+          ) &&
 
           // 2. Guests can ONLY add, update, or remove their OWN entry in the participants map
           request.resource.data.participants.diff(resource.data.participants).affectedKeys().hasOnly([request.auth.uid]) &&

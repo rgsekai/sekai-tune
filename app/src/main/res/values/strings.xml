@@ -928,6 +928,12 @@
     <string name="invite_buddy">Invite</string>
     <string name="invite_buddy_desc">Invite to session</string>
     <string name="invited_buddy_message">Invited %1$s</string>
+    <string name="together_invite_notification_title">Together Online Invite</string>
+    <string name="together_invite_notification_text">%1$s invited you to join a Together Online session (%2$s)</string>
+    <string name="together_invite_dialog_title">Together Online Invite</string>
+    <string name="together_invite_dialog_text">%1$s invited you to join their Together Online session (%2$s).</string>
+    <string name="together_join_action">Join</string>
+    <string name="together_decline_action">Decline</string>
 </resources>
 
 
