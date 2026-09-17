@@ -100,7 +100,7 @@ setInterval(() => {
 async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
   const tokensSnapshot = await db
     .collection("users")
-    .document(targetUid)
+    .doc(targetUid)
     .collection("fcmTokens")
     .get();
 
@@ -158,7 +158,7 @@ async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
     console.log(`[Relay] Cleaning up ${deadDocIds.length} invalid FCM tokens for user ${targetUid}`);
     const batch = db.batch();
     deadDocIds.forEach(id => {
-      const ref = db.collection("users").document(targetUid).collection("fcmTokens").document(id);
+      const ref = db.collection("users").doc(targetUid).collection("fcmTokens").doc(id);
       batch.delete(ref);
     });
     batch.commit().catch(err => console.error("[Relay] Error pruning dead tokens:", err));
