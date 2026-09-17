@@ -93,6 +93,7 @@ class App :
         ColdStartTimer.start()
         super.onCreate()
         instance = this
+        moe.rgsekai.sekaitune.utils.AppLifecycleTracker.register(this)
         if (currentProcessName()?.endsWith(":crash") == true) {
             Timber.plant(Timber.DebugTree())
             return

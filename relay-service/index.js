@@ -114,22 +114,16 @@ async function sendNotificationToUser(targetUid, { title, body, data = {} }) {
     const token = doc.data().token;
     return {
       token,
-      notification: {
+      // DATA-ONLY payload: No top-level notification object.
+      // This ensures message routing is always delivered directly to BuddyMessagingService.onMessageReceived()
+      // in both foreground and background, preventing duplicate OS notifications while the app is active.
+      data: {
         title,
         body,
-      },
-      data: {
         ...data,
-        click_action: "FLUTTER_NOTIFICATION_CLICK", // Standard notification click action
       },
       android: {
         priority: "high",
-        notification: {
-          channelId: "channel_buddy_requests",
-          priority: "high",
-          defaultSound: true,
-          defaultVibrateTimings: true,
-        },
       },
     };
   });

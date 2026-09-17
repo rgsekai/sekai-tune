@@ -45,6 +45,11 @@ class BuddyMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         Timber.tag("BuddyFCM").d("FCM message received from: ${remoteMessage.from}, data: ${remoteMessage.data}")
 
+        if (moe.rgsekai.sekaitune.utils.AppLifecycleTracker.isForeground) {
+            Timber.tag("BuddyFCM").d("App is in foreground. Skipping system notification to prevent duplicates.")
+            return
+        }
+
         val data = remoteMessage.data
         val messageType = data["type"]
 
