@@ -190,7 +190,7 @@ app.get("/", (req, res) => {
 // Notify: New Buddy Request
 app.post("/notify/buddy-request", requireRelayKey, async (req, res) => {
   try {
-    const { targetUid } = req.body || {};
+    const { targetUid, fromDisplayName } = req.body || {};
     if (!targetUid || typeof targetUid !== "string") {
       return res.status(400).json({ error: "Missing or invalid targetUid" });
     }
@@ -199,12 +199,16 @@ app.post("/notify/buddy-request", requireRelayKey, async (req, res) => {
       return res.status(429).json({ error: "Too many notifications sent to this recipient. Please try again later." });
     }
 
-    console.log(`[Relay] Sending buddy request push to targetUid: ${targetUid}`);
+    const senderName = fromDisplayName && typeof fromDisplayName === "string" ? fromDisplayName.trim() : null;
+    const bodyText = senderName ? `${senderName} sent you a buddy request` : "You have a new buddy request";
+
+    console.log(`[Relay] Sending buddy request push to targetUid: ${targetUid} from: ${senderName}`);
     const result = await sendNotificationToUser(targetUid, {
       title: "Sekai Tune",
-      body: "You have a new buddy request",
+      body: bodyText,
       data: {
         type: "buddy_request",
+        fromDisplayName: senderName || "",
       },
     });
 

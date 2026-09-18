@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.constants.DismissedTogetherInviteIdsKey
+import moe.rgsekai.sekaitune.constants.TogetherDisplayNameKey
 import moe.rgsekai.sekaitune.utils.dataStore
 import timber.log.Timber
 import javax.inject.Inject
@@ -78,6 +80,15 @@ class BuddyRepository @Inject constructor(
         }
 
         try {
+            val localSettledName = runCatching {
+                context.dataStore.data.first()[TogetherDisplayNameKey]
+            }.getOrNull()?.trim()?.ifBlank { null }
+
+            val resolvedFromDisplayName = fromDisplayName.trim().ifBlank { null }
+                ?: localSettledName
+                ?: auth.currentUser?.displayName?.trim()?.ifBlank { null }
+                ?: "Buddy"
+
             val resolvedFromPhotoUrl = fromPhotoUrl?.ifBlank { null }
                 ?: auth.currentUser?.photoUrl?.toString()?.ifBlank { null }
 
@@ -85,7 +96,7 @@ class BuddyRepository @Inject constructor(
             val requestData = mutableMapOf<String, Any?>(
                 "fromUid" to myUid,
                 "toUid" to toUid,
-                "fromDisplayName" to fromDisplayName,
+                "fromDisplayName" to resolvedFromDisplayName,
                 "toDisplayName" to toDisplayName,
                 "status" to "pending",
                 "createdAt" to System.currentTimeMillis()
@@ -102,7 +113,10 @@ class BuddyRepository @Inject constructor(
 
             // Asynchronously dispatch FCM push notification via self-hosted relay (fire-and-forget)
             launch {
-                relayClient.notifyBuddyRequest(toUid)
+                relayClient.notifyBuddyRequest(
+                    targetUid = toUid,
+                    fromDisplayName = resolvedFromDisplayName,
+                )
             }
 
             Result.success(Unit)
@@ -145,30 +159,42 @@ class BuddyRepository @Inject constructor(
 
                 trySend(buddies)
 
-                // Asynchronously fetch photoUrl for any legacy buddy with missing photo
-                val missingPhotoBuddies = buddies.filter { it.photoUrl.isNullOrBlank() }
-                if (missingPhotoBuddies.isNotEmpty()) {
+                // Asynchronously synchronize displayName and photoUrl with public /users/{uid} profile
+                if (buddies.isNotEmpty()) {
                     launch {
                         var hasUpdates = false
                         val updatedList = buddies.map { b ->
-                            if (b.photoUrl.isNullOrBlank()) {
-                                val fetchedPhoto = try {
-                                    val userDoc = firestore.collection("users").document(b.uid).get().await()
-                                    userDoc.getString("photoUrl")?.ifBlank { null }
-                                } catch (_: Throwable) {
-                                    null
-                                }
-                                if (fetchedPhoto != null) {
+                            val userDoc = try {
+                                firestore.collection("users").document(b.uid).get().await()
+                            } catch (_: Throwable) {
+                                null
+                            }
+
+                            if (userDoc != null && userDoc.exists()) {
+                                val fetchedName = userDoc.getString("displayName")?.trim()?.ifBlank { null }
+                                val fetchedPhoto = userDoc.getString("photoUrl")?.trim()?.ifBlank { null }
+
+                                val nameChanged = fetchedName != null && fetchedName != b.displayName
+                                val photoChanged = fetchedPhoto != null && fetchedPhoto != b.photoUrl
+
+                                if (nameChanged || photoChanged) {
                                     hasUpdates = true
                                     try {
+                                        val updates = mutableMapOf<String, Any>()
+                                        if (nameChanged) updates["displayName"] = fetchedName!!
+                                        if (photoChanged) updates["photoUrl"] = fetchedPhoto!!
                                         firestore.collection("buddies")
                                             .document(myUid)
                                             .collection("list")
                                             .document(b.uid)
-                                            .update("photoUrl", fetchedPhoto)
+                                            .update(updates)
                                             .await()
                                     } catch (_: Throwable) {}
-                                    b.copy(photoUrl = fetchedPhoto)
+
+                                    b.copy(
+                                        displayName = if (nameChanged) fetchedName!! else b.displayName,
+                                        photoUrl = if (photoChanged) fetchedPhoto else b.photoUrl,
+                                    )
                                 } else {
                                     b
                                 }
@@ -231,22 +257,30 @@ class BuddyRepository @Inject constructor(
 
                 trySend(requests)
 
-                // Asynchronously resolve missing fromPhotoUrl for incoming requests
-                val missingRequests = requests.filter { it.fromPhotoUrl.isNullOrBlank() }
-                if (missingRequests.isNotEmpty()) {
+                // Asynchronously resolve settled displayName and photoUrl for incoming requests
+                if (requests.isNotEmpty()) {
                     launch {
                         var hasUpdates = false
                         val updatedList = requests.map { req ->
-                            if (req.fromPhotoUrl.isNullOrBlank()) {
-                                val fetchedPhoto = try {
-                                    val userDoc = firestore.collection("users").document(req.fromUid).get().await()
-                                    userDoc.getString("photoUrl")?.ifBlank { null }
-                                } catch (_: Throwable) {
-                                    null
-                                }
-                                if (fetchedPhoto != null) {
+                            val userDoc = try {
+                                firestore.collection("users").document(req.fromUid).get().await()
+                            } catch (_: Throwable) {
+                                null
+                            }
+
+                            if (userDoc != null && userDoc.exists()) {
+                                val fetchedName = userDoc.getString("displayName")?.trim()?.ifBlank { null }
+                                val fetchedPhoto = userDoc.getString("photoUrl")?.trim()?.ifBlank { null }
+
+                                val nameChanged = fetchedName != null && fetchedName != req.fromDisplayName
+                                val photoChanged = fetchedPhoto != null && fetchedPhoto != req.fromPhotoUrl
+
+                                if (nameChanged || photoChanged) {
                                     hasUpdates = true
-                                    req.copy(fromPhotoUrl = fetchedPhoto)
+                                    req.copy(
+                                        fromDisplayName = if (nameChanged) fetchedName!! else req.fromDisplayName,
+                                        fromPhotoUrl = if (photoChanged) fetchedPhoto else req.fromPhotoUrl,
+                                    )
                                 } else {
                                     req
                                 }
@@ -308,6 +342,43 @@ class BuddyRepository @Inject constructor(
                 } ?: emptyList()
 
                 trySend(requests)
+
+                // Asynchronously resolve settled displayName and photoUrl for outgoing requests
+                if (requests.isNotEmpty()) {
+                    launch {
+                        var hasUpdates = false
+                        val updatedList = requests.map { req ->
+                            val userDoc = try {
+                                firestore.collection("users").document(req.toUid).get().await()
+                            } catch (_: Throwable) {
+                                null
+                            }
+
+                            if (userDoc != null && userDoc.exists()) {
+                                val fetchedName = userDoc.getString("displayName")?.trim()?.ifBlank { null }
+                                val fetchedPhoto = userDoc.getString("photoUrl")?.trim()?.ifBlank { null }
+
+                                val nameChanged = fetchedName != null && fetchedName != req.toDisplayName
+                                val photoChanged = fetchedPhoto != null && fetchedPhoto != req.toPhotoUrl
+
+                                if (nameChanged || photoChanged) {
+                                    hasUpdates = true
+                                    req.copy(
+                                        toDisplayName = if (nameChanged) fetchedName!! else req.toDisplayName,
+                                        toPhotoUrl = if (photoChanged) fetchedPhoto else req.toPhotoUrl,
+                                    )
+                                } else {
+                                    req
+                                }
+                            } else {
+                                req
+                            }
+                        }
+                        if (hasUpdates) {
+                            trySend(updatedList)
+                        }
+                    }
+                }
             }
 
         awaitClose {
@@ -330,22 +401,45 @@ class BuddyRepository @Inject constructor(
 
             val fromUid = reqDoc.getString("fromUid")
                 ?: return@withContext Result.failure(IllegalStateException("Invalid request data: missing sender UID"))
-            val fromDisplayName = reqDoc.getString("fromDisplayName")?.ifBlank { null } ?: "Buddy"
-            var fromPhotoUrl = reqDoc.getString("fromPhotoUrl")?.ifBlank { null }
-            if (fromPhotoUrl == null) {
-                // Fallback to reading sender's public users/{uid} document
-                try {
-                    val userDoc = firestore.collection("users").document(fromUid).get().await()
-                    fromPhotoUrl = userDoc.getString("photoUrl")?.ifBlank { null }
-                } catch (_: Throwable) {
-                    // Ignore fallback failure
-                }
-            }
 
-            val resolvedMyName = toDisplayName?.ifBlank { null }
-                ?: auth.currentUser?.displayName?.ifBlank { null }
-                ?: reqDoc.getString("toDisplayName")?.ifBlank { null }
+            // 1. Resolve sender's display name and photo from their public profile / users doc first
+            var fromDisplayName = reqDoc.getString("fromDisplayName")?.trim()?.ifBlank { null }
+            var fromPhotoUrl = reqDoc.getString("fromPhotoUrl")?.trim()?.ifBlank { null }
+
+            try {
+                val senderUserDoc = firestore.collection("users").document(fromUid).get().await()
+                if (senderUserDoc.exists()) {
+                    senderUserDoc.getString("displayName")?.trim()?.ifBlank { null }?.let {
+                        fromDisplayName = it
+                    }
+                    senderUserDoc.getString("photoUrl")?.trim()?.ifBlank { null }?.let {
+                        fromPhotoUrl = it
+                    }
+                }
+            } catch (_: Throwable) {}
+
+            val finalFromDisplayName = fromDisplayName ?: "Buddy"
+
+            // 2. Resolve receiver's (my) display name and photo from local DataStore or users/{myUid} profile
+            val localMySettledName = runCatching {
+                context.dataStore.data.first()[TogetherDisplayNameKey]
+            }.getOrNull()?.trim()?.ifBlank { null }
+
+            var myPublicProfileName: String? = null
+            try {
+                val myUserDoc = firestore.collection("users").document(myUid).get().await()
+                if (myUserDoc.exists()) {
+                    myPublicProfileName = myUserDoc.getString("displayName")?.trim()?.ifBlank { null }
+                }
+            } catch (_: Throwable) {}
+
+            val resolvedMyName = toDisplayName?.trim()?.ifBlank { null }
+                ?: localMySettledName
+                ?: myPublicProfileName
+                ?: reqDoc.getString("toDisplayName")?.trim()?.ifBlank { null }
+                ?: auth.currentUser?.displayName?.trim()?.ifBlank { null }
                 ?: "Buddy"
+
             val myPhotoUrl = auth.currentUser?.photoUrl?.toString()?.ifBlank { null }
 
             val batch = firestore.batch()
@@ -357,7 +451,7 @@ class BuddyRepository @Inject constructor(
                 .document(fromUid)
             val myBuddyData = mutableMapOf<String, Any?>(
                 "uid" to fromUid,
-                "displayName" to fromDisplayName,
+                "displayName" to finalFromDisplayName,
                 "addedAt" to FieldValue.serverTimestamp(),
             )
             if (fromPhotoUrl != null) {
@@ -477,7 +571,13 @@ class BuddyRepository @Inject constructor(
 
             // 2. Asynchronously dispatch FCM push notification via self-hosted relay (fire-and-forget)
             launch {
-                val hostName = auth.currentUser?.displayName?.ifBlank { null } ?: "A buddy"
+                val localSettledName = runCatching {
+                    context.dataStore.data.first()[TogetherDisplayNameKey]
+                }.getOrNull()?.trim()?.ifBlank { null }
+
+                val hostName = localSettledName
+                    ?: auth.currentUser?.displayName?.ifBlank { null }
+                    ?: "A buddy"
                 val sessionCode = runCatching {
                     sessionDocRef.get().await().getString("code")
                 }.getOrNull().orEmpty()

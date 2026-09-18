@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -211,10 +212,23 @@ fun MusicTogetherScreen(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             ),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.multi_user),
-                            contentDescription = stringResource(R.string.buddies),
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(R.drawable.multi_user),
+                                contentDescription = stringResource(R.string.buddies),
+                            )
+                            if (model?.hasPendingBuddyRequests == true) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .size(8.dp)
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 2.dp, y = (-2).dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.error),
+                                )
+                            }
+                        }
                     }
                 },
                 colors =

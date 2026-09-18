@@ -935,6 +935,9 @@
     <string name="together_invite_dialog_text">%1$s invited you to join their Together Online session (%2$s).</string>
     <string name="together_join_action">Join</string>
     <string name="together_decline_action">Decline</string>
+    <string name="together_buddy_request_title">New Buddy Request</string>
+    <string name="together_buddy_request_received_from">%1$s sent you a buddy request.</string>
+    <string name="together_buddy_view_requests">View</string>
 </resources>
 
 

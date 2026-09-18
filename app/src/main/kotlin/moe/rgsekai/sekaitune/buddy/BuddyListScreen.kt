@@ -258,13 +258,26 @@ fun BuddyListScreen(
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                     label = {
                         val totalRequests = state.incomingRequests.size + state.outgoingRequests.size
-                        Text(
-                            if (totalRequests > 0) {
-                                "Requests ($totalRequests)"
-                            } else {
-                                "Requests"
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                if (totalRequests > 0) {
+                                    "Requests ($totalRequests)"
+                                } else {
+                                    "Requests"
+                                }
+                            )
+                            if (state.incomingRequests.isNotEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.error)
+                                )
                             }
-                        )
+                        }
                     },
                 )
             }

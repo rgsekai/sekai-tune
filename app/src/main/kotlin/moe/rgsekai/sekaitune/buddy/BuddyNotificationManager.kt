@@ -25,6 +25,7 @@ object BuddyNotificationManager {
 
     const val EXTRA_JOIN_TOGETHER_CODE = "JOIN_TOGETHER_CODE"
     const val EXTRA_JOIN_TOGETHER_SESSION_ID = "JOIN_TOGETHER_SESSION_ID"
+    const val NOTIFICATION_ID_BUDDY_REQUEST = 1001
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -34,6 +35,49 @@ object BuddyNotificationManager {
             }
             val notificationManager = context.getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
+        }
+    }
+
+    fun showBuddyRequestNotification(
+        context: Context,
+        fromDisplayName: String,
+        fromUid: String = "",
+    ) {
+        createNotificationChannel(context)
+
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("navigate_to", "settings/buddies")
+        }
+
+        val openAppPendingIntent = PendingIntent.getActivity(
+            context,
+            NOTIFICATION_ID_BUDDY_REQUEST,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val title = context.getString(R.string.together_buddy_request_title)
+        val text = context.getString(R.string.together_buddy_request_received_from, fromDisplayName)
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.small_icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openAppPendingIntent)
+            .setAutoCancel(true)
+            .addAction(
+                R.drawable.multi_user,
+                context.getString(R.string.together_buddy_view_requests),
+                openAppPendingIntent,
+            )
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_BUDDY_REQUEST, notification)
+        } catch (e: SecurityException) {
+            // Missing POST_NOTIFICATIONS permission
         }
     }
 

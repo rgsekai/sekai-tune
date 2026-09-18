@@ -41,10 +41,13 @@ fun BuddyInviteObserver(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val invitedSessions by buddyRepository.observeInvitedSessions().collectAsStateWithLifecycle(initialValue = emptyList())
+    val incomingRequests by buddyRepository.observeIncomingRequests().collectAsStateWithLifecycle(initialValue = emptyList())
 
     val observerStartTime = remember { System.currentTimeMillis() }
     val promptedSessionIds = remember { mutableSetOf<String>() }
+    val promptedRequestIds = remember { mutableSetOf<String>() }
     var activeInvite by remember { mutableStateOf<TogetherSessionSummary?>(null) }
+    var activeRequest by remember { mutableStateOf<BuddyRequest?>(null) }
 
     LaunchedEffect(invitedSessions) {
         val currentSessionIds = invitedSessions.map { it.sessionId }.toSet()
@@ -65,6 +68,77 @@ fun BuddyInviteObserver(
                 activeInvite = null
             }
         }
+    }
+
+    LaunchedEffect(incomingRequests) {
+        val currentRequestIds = incomingRequests.map { it.id }.toSet()
+
+        if (activeRequest == null) {
+            val freshRequest = incomingRequests.firstOrNull { req ->
+                req.id !in promptedRequestIds &&
+                (req.createdAt == 0L || req.createdAt >= observerStartTime - 60_000L)
+            }
+            if (freshRequest != null) {
+                promptedRequestIds.add(freshRequest.id)
+                activeRequest = freshRequest
+
+                // Post system tray notification so user gets notified on device
+                BuddyNotificationManager.showBuddyRequestNotification(
+                    context = context,
+                    fromDisplayName = freshRequest.fromDisplayName.ifBlank { "A user" },
+                    fromUid = freshRequest.fromUid,
+                )
+            }
+        } else {
+            if (activeRequest?.id !in currentRequestIds) {
+                activeRequest = null
+            }
+        }
+    }
+
+    activeRequest?.let { request ->
+        AlertDialog(
+            onDismissRequest = {
+                promptedRequestIds.add(request.id)
+                activeRequest = null
+            },
+            title = {
+                Text(text = stringResource(R.string.together_buddy_request_title))
+            },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.together_buddy_request_received_from,
+                        request.fromDisplayName.ifBlank { "A user" },
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        promptedRequestIds.add(request.id)
+                        activeRequest = null
+                        navController.navigate("settings/buddies") {
+                            launchSingleTop = true
+                        }
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(R.string.together_buddy_view_requests))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        promptedRequestIds.add(request.id)
+                        activeRequest = null
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(R.string.together_decline_action))
+                }
+            },
+        )
     }
 
     activeInvite?.let { invite ->

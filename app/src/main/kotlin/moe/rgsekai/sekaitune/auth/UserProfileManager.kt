@@ -7,15 +7,21 @@
 
 package moe.rgsekai.sekaitune.auth
 
+import android.content.Context
+import androidx.datastore.preferences.core.edit
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.constants.TogetherDisplayNameKey
+import moe.rgsekai.sekaitune.utils.dataStore
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,7 +33,9 @@ data class PublicUserProfile(
 )
 
 @Singleton
-class UserProfileManager @Inject constructor() {
+class UserProfileManager @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -61,8 +69,15 @@ class UserProfileManager @Inject constructor() {
                 null
             }
 
+            val localSettledName = runCatching {
+                context.dataStore.data.first()[TogetherDisplayNameKey]
+            }.getOrNull()?.trim()?.ifBlank { null }
+
             val existingDisplayName = existingDoc?.getString("displayName")?.ifBlank { null }
-            val resolvedDisplayName = existingDisplayName ?: user.displayName?.ifBlank { null } ?: "User"
+            val resolvedDisplayName = existingDisplayName
+                ?: localSettledName
+                ?: user.displayName?.ifBlank { null }
+                ?: "User"
 
             val data = mutableMapOf<String, Any?>(
                 "uid" to uid,
@@ -72,6 +87,15 @@ class UserProfileManager @Inject constructor() {
             )
 
             docRef.set(data, SetOptions.merge()).await()
+
+            // Restore the resolved display name back into local DataStore so that after logout & login,
+            // the user's custom settled name is immediately restored!
+            runCatching {
+                context.dataStore.edit { prefs ->
+                    prefs[TogetherDisplayNameKey] = resolvedDisplayName
+                }
+            }
+
             Timber.tag("UserProfileManager").d("Synced public user profile for $uid (name: $resolvedDisplayName, photo: $photoUrl)")
             Result.success(Unit)
         } catch (t: Throwable) {
@@ -83,18 +107,26 @@ class UserProfileManager @Inject constructor() {
     suspend fun updateDisplayName(newDisplayName: String): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = auth.currentUser?.uid
             ?: return@withContext Result.failure(IllegalStateException("User is not authenticated"))
-        if (newDisplayName.isBlank()) {
+        val trimmed = newDisplayName.trim()
+        if (trimmed.isBlank()) {
             return@withContext Result.failure(IllegalArgumentException("Display name cannot be blank"))
         }
 
         try {
             val docRef = firestore.collection("users").document(uid)
             val data = mapOf(
-                "displayName" to newDisplayName,
+                "displayName" to trimmed,
                 "updatedAt" to System.currentTimeMillis(),
             )
             docRef.set(data, SetOptions.merge()).await()
-            Timber.tag("UserProfileManager").d("Updated public displayName for $uid: $newDisplayName")
+
+            runCatching {
+                context.dataStore.edit { prefs ->
+                    prefs[TogetherDisplayNameKey] = trimmed
+                }
+            }
+
+            Timber.tag("UserProfileManager").d("Updated public displayName for $uid: $trimmed")
             Result.success(Unit)
         } catch (t: Throwable) {
             Timber.tag("UserProfileManager").e(t, "Failed to update public displayName for $uid")

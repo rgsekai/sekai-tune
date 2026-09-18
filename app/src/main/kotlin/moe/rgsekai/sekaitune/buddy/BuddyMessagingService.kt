@@ -69,14 +69,16 @@ class BuddyMessagingService : FirebaseMessagingService() {
                 )
             }
             "buddy_request" -> {
-                val title = remoteMessage.notification?.title
-                    ?: data["title"]
-                    ?: getString(R.string.app_name)
-                val body = remoteMessage.notification?.body
-                    ?: data["body"]
+                val fromDisplayName = data["fromDisplayName"]?.ifBlank { null }
+                    ?: remoteMessage.notification?.body?.substringBefore(" sent")
                     ?: getString(R.string.together_buddy_request_received)
+                val fromUid = data["fromUid"].orEmpty()
 
-                showBuddyRequestNotification(title, body)
+                BuddyNotificationManager.showBuddyRequestNotification(
+                    context = this,
+                    fromDisplayName = fromDisplayName,
+                    fromUid = fromUid,
+                )
             }
             else -> {
                 val title = remoteMessage.notification?.title
@@ -88,36 +90,6 @@ class BuddyMessagingService : FirebaseMessagingService() {
 
                 showGenericNotification(title, body)
             }
-        }
-    }
-
-    private fun showBuddyRequestNotification(title: String, body: String) {
-        BuddyNotificationManager.createNotificationChannel(this)
-
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("navigate_to", "settings/buddy_list")
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            1001,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-
-        val notification = NotificationCompat.Builder(this, BuddyNotificationManager.CHANNEL_ID)
-            .setSmallIcon(R.drawable.small_icon)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
-
-        try {
-            NotificationManagerCompat.from(this).notify(1001, notification)
-        } catch (_: SecurityException) {
-            // Missing POST_NOTIFICATIONS permission
         }
     }
 

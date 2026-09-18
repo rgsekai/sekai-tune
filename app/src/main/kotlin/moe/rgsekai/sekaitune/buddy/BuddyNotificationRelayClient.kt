@@ -42,22 +42,28 @@ class BuddyNotificationRelayClient @Inject constructor() {
     /**
      * Dispatches an FCM push notification to targetUid notifying them of a new incoming buddy request.
      */
-     suspend fun notifyBuddyRequest(targetUid: String): Result<Unit> = withContext(Dispatchers.IO) {
-         if (baseUrl.isBlank() || apiKey.isBlank()) {
-             Timber.tag("BuddyRelay").w("Relay service not configured (baseUrl='$baseUrl', apiKey is blank? ${apiKey.isBlank()}). Skipping push.")
-             return@withContext Result.success(Unit)
-         }
+    suspend fun notifyBuddyRequest(
+        targetUid: String,
+        fromDisplayName: String? = null,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        if (baseUrl.isBlank() || apiKey.isBlank()) {
+            Timber.tag("BuddyRelay").w("Relay service not configured (baseUrl='$baseUrl', apiKey is blank? ${apiKey.isBlank()}). Skipping push.")
+            return@withContext Result.success(Unit)
+        }
 
-         if (targetUid.isBlank()) {
-             return@withContext Result.failure(IllegalArgumentException("targetUid cannot be blank"))
-         }
+        if (targetUid.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("targetUid cannot be blank"))
+        }
 
-         try {
-             val jsonPayload = JSONObject().apply {
-                 put("targetUid", targetUid)
-             }.toString()
+        try {
+            val jsonPayload = JSONObject().apply {
+                put("targetUid", targetUid)
+                if (!fromDisplayName.isNullOrBlank()) {
+                    put("fromDisplayName", fromDisplayName.trim())
+                }
+            }.toString()
 
-             val targetUrl = "$baseUrl/notify/buddy-request"
+            val targetUrl = "$baseUrl/notify/buddy-request"
              Timber.tag("BuddyRelay").d("Dispatching buddy request push to $targetUrl for targetUid=$targetUid")
 
              val request = Request.Builder()

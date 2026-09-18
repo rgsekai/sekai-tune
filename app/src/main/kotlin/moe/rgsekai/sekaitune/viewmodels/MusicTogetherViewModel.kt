@@ -75,6 +75,7 @@ data class MusicTogetherUiModel(
     val participants: MusicTogetherParticipantUiModels,
     val activityLog: MusicTogetherActivityLogUiModels,
     val invitedSessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary> = emptyList(),
+    val hasPendingBuddyRequests: Boolean = false,
 )
 
 @Immutable
@@ -277,6 +278,7 @@ class MusicTogetherViewModel
             val welcomeDismissed: Boolean,
             val buddies: List<moe.rgsekai.sekaitune.buddy.Buddy>,
             val outgoingRequests: List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
+            val incomingRequests: List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
             val invitedSessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
         )
 
@@ -310,6 +312,7 @@ class MusicTogetherViewModel
                 welcomeDismissedThisSession,
                 buddyRepository.observeBuddies(),
                 buddyRepository.observeOutgoingRequests(),
+                buddyRepository.observeIncomingRequests(),
                 buddyRepository.observeInvitedSessions(),
             ) { args: Array<Any?> ->
                 @Suppress("UNCHECKED_CAST")
@@ -321,7 +324,8 @@ class MusicTogetherViewModel
                     welcomeDismissed = args[4] as Boolean,
                     buddies = args[5] as List<moe.rgsekai.sekaitune.buddy.Buddy>,
                     outgoingRequests = args[6] as List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
-                    invitedSessions = args[7] as List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
+                    incomingRequests = args[7] as List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
+                    invitedSessions = args[8] as List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
                 )
             }.let { inputs ->
                 combine(inputs, welcomeDontShowAgain, activityLog) { stateInputs, dontShowAgain, log ->
@@ -336,6 +340,7 @@ class MusicTogetherViewModel
                                 log = log,
                                 buddies = stateInputs.buddies,
                                 outgoingRequests = stateInputs.outgoingRequests,
+                                incomingRequests = stateInputs.incomingRequests,
                                 invitedSessions = stateInputs.invitedSessions,
                             ),
                         )
@@ -626,6 +631,7 @@ class MusicTogetherViewModel
             log: MusicTogetherActivityLogUiModels,
             buddies: List<moe.rgsekai.sekaitune.buddy.Buddy>,
             outgoingRequests: List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
+            incomingRequests: List<moe.rgsekai.sekaitune.buddy.BuddyRequest>,
             invitedSessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
         ): MusicTogetherUiModel {
             val state = sessionState
@@ -835,6 +841,7 @@ class MusicTogetherViewModel
                 participants = participantModels,
                 activityLog = log,
                 invitedSessions = invitedSessions,
+                hasPendingBuddyRequests = incomingRequests.isNotEmpty(),
             )
         }
 

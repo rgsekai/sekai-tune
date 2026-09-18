@@ -28,6 +28,9 @@ import moe.rgsekai.sekaitune.constants.TogetherRequireHostApprovalToJoinKey
 import moe.rgsekai.sekaitune.constants.TogetherWelcomeShownKey
 import moe.rgsekai.sekaitune.playback.MusicService
 import moe.rgsekai.sekaitune.utils.dataStore
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -87,8 +90,21 @@ class MusicTogetherRepository
         }
 
         suspend fun setDisplayName(displayName: String) {
+            val trimmed = displayName.trim()
             context.dataStore.edit { preferences ->
-                preferences[TogetherDisplayNameKey] = displayName
+                preferences[TogetherDisplayNameKey] = trimmed
+            }
+            val uid = FirebaseAuth.getInstance().currentUser?.uid
+            if (!uid.isNullOrBlank() && trimmed.isNotBlank()) {
+                runCatching {
+                    FirebaseFirestore.getInstance().collection("users").document(uid).set(
+                        mapOf(
+                            "displayName" to trimmed,
+                            "updatedAt" to System.currentTimeMillis(),
+                        ),
+                        SetOptions.merge(),
+                    )
+                }
             }
         }
 

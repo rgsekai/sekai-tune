@@ -85,6 +85,29 @@ class SettingsSyncRepository @Inject constructor(
             "remind_after",
             "last_cloud_sync_timestamp",
         )
+
+        val INT_KEYS = setOf(
+            "aodThumbnailShapeRotation",
+            "aodTitleMaxLines",
+            "backdropBlurAmount",
+            "miniPlayerLastAnchor",
+            "proxyPort",
+            "local_songs_min_duration_seconds",
+            "together_default_port",
+            "deviceMutePlaybackRecoveryVolume",
+            "equalizerOutputGainMb",
+            "equalizerBassBoostStrength",
+            "equalizerVirtualizerStrength",
+            "maxImageCacheSize",
+            "maxSongCacheSize",
+            "maxCanvasCacheSize",
+            "historyDuration",
+            "queue_lyrics_preload_count",
+            "repeatMode",
+            "launch_count",
+            "remind_after",
+            "widget_dominant_color",
+        )
     }
 
     suspend fun pushSettings(userId: String): Result<Unit> = withContext(Dispatchers.IO) {
@@ -201,8 +224,11 @@ class SettingsSyncRepository @Inject constructor(
                             prefs[stringPreferencesKey(keyName)] = value
                         }
                         is Long -> {
-                            // Check if might be an Int in local DataStore or store as Long
-                            prefs[longPreferencesKey(keyName)] = value
+                            if (keyName in INT_KEYS) {
+                                prefs[intPreferencesKey(keyName)] = value.toInt()
+                            } else {
+                                prefs[longPreferencesKey(keyName)] = value
+                            }
                         }
                         is Number -> {
                             prefs[floatPreferencesKey(keyName)] = value.toFloat()
