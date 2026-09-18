@@ -36,6 +36,7 @@ import moe.rgsekai.sekaitune.innertube.models.YouTubeClient.Companion.WEB
 import moe.rgsekai.sekaitune.innertube.models.YouTubeClient.Companion.WEB_CREATOR
 import moe.rgsekai.sekaitune.innertube.models.YouTubeClient.Companion.WEB_REMIX
 import moe.rgsekai.sekaitune.innertube.models.response.PlayerResponse
+import moe.rgsekai.sekaitune.playback.stream.PersistentVideoClientCache
 import moe.rgsekai.sekaitune.utils.potoken.BotGuardTokenGenerator
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import timber.log.Timber
@@ -331,6 +332,10 @@ object YTPlayerUtils {
         if (normalizedClientKey.isEmpty()) return
         failedStreamClientsUntil[buildFailedClientKey(videoId, normalizedClientKey, authFingerprint)] =
             System.currentTimeMillis() + FAILED_CLIENT_BACKOFF_MS
+        val winningKey = PersistentVideoClientCache.getWinningClientKey(videoId)
+        if (winningKey != null && normalizeStreamClientKey(winningKey) == normalizedClientKey) {
+            PersistentVideoClientCache.invalidate(videoId)
+        }
     }
 
     fun markPreferredClientFailed(
@@ -402,8 +407,22 @@ object YTPlayerUtils {
     internal fun buildStreamClientOrder(
         preferredStreamClient: PlayerStreamClient,
         authState: PlaybackAuthState,
+        videoId: String? = null,
     ): List<YouTubeClient> {
         val preferredYouTubeClient = resolvePreferredPlaybackClient(preferredStreamClient, authState)
+        val winningClientKey = videoId?.let { PersistentVideoClientCache.getWinningClientKey(it) }
+        val allKnownClients = (listOf(
+            preferredYouTubeClient,
+            MAIN_CLIENT,
+            YouTubeClient.ANDROID_VR_1_43_32,
+            YouTubeClient.ANDROID_VR_1_61_48,
+            YouTubeClient.ANDROID_VR_NO_AUTH,
+        ) + STREAM_FALLBACK_CLIENTS).distinct()
+
+        val winningClient = winningClientKey?.let { key ->
+            allKnownClients.find { StreamClientUtils.buildClientKey(it) == key }
+        }
+
         val lastSuccessfulClient =
             lastSuccessfulClientKey?.let { key ->
                 STREAM_FALLBACK_CLIENTS.find { StreamClientUtils.buildClientKey(it) == key }
@@ -418,6 +437,7 @@ object YTPlayerUtils {
             }
 
         return buildList {
+            winningClient?.let { add(it) }
             lastSuccessfulClient?.let { add(it) }
             if (authState.hasPlaybackLoginContext && hasCompleteWebPlaybackPoToken(authState)) {
                 add(WEB_REMIX)
@@ -700,8 +720,10 @@ object YTPlayerUtils {
         preferredStreamClient: PlayerStreamClient,
         networkMetered: Boolean?,
     ): PlaybackData {
+        val startResolveMs = System.currentTimeMillis()
         Timber.tag(logTag).i("Fetching player response for videoId: $videoId, playlistId: $playlistId")
         val signatureTimestamp = getSignatureTimestampOrNull(videoId)
+
         Timber.tag(logTag).v("Signature timestamp: $signatureTimestamp")
 
         var authState = YouTube.currentPlaybackAuthState()
@@ -825,7 +847,7 @@ object YTPlayerUtils {
                 ?.times(1000L)
 
         val streamClients =
-            buildStreamClientOrder(preferredStreamClient, authState).filterNot { client ->
+            buildStreamClientOrder(preferredStreamClient, authState, videoId).filterNot { client ->
                 val blocked =
                     isStreamClientTemporarilyBlocked(
                         videoId = videoId,
@@ -1172,12 +1194,17 @@ object YTPlayerUtils {
                 "No resolved stream client for validated playback URL"
             }
 
-        streamUrlCache[buildStreamCacheKey(videoId, format.itag, resolvedStreamClient, authState.fingerprint)] =
-            CachedStreamUrl(
-                url = streamUrl,
-                expiresAtMs = System.currentTimeMillis() + (streamExpiresInSeconds * 1000L),
-                authFingerprint = authState.fingerprint,
-            )
+        PersistentVideoClientCache.putWinningClient(videoId, resolvedStreamClient)
+
+        val resolveDurationMs = System.currentTimeMillis() - startResolveMs
+        Timber.tag("TrackTelemetry").i(
+            "[TrackTelemetry:YTPlayerUtils] videoId=%s, client=%s, botGuardUsed=%b, format=%s, durationMs=%d",
+            videoId,
+            resolvedStreamClient.clientName,
+            metadataPoToken != null,
+            format.mimeType,
+            resolveDurationMs,
+        )
 
         return PlaybackData(
             metadataPlayerResponse.playerConfig?.audioConfig,
@@ -1188,6 +1215,7 @@ object YTPlayerUtils {
             streamExpiresInSeconds,
             authState.fingerprint,
         )
+
     }
 
     /**

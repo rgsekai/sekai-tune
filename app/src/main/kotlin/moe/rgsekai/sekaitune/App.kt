@@ -127,7 +127,9 @@ class App :
         )
         MoriCipherUpdateScheduler.schedule(this)
         CanvasArtworkPlaybackCache.init(this)
+        moe.rgsekai.sekaitune.playback.stream.PersistentVideoClientCache.initialize(this)
         moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.createNotificationChannel(this)
+
         PaxsenixLyrics.setUserAgent("SekaiTune", BuildConfig.VERSION_NAME)
 
         YouTube.onStageReached = { name -> ColdStartTimer.addStage(name) }
@@ -150,9 +152,14 @@ class App :
 
     private fun initializeDeferredAsync() {
         applicationScope.launch(Dispatchers.IO) {
+            val preWarmStart = System.currentTimeMillis()
+            Timber.tag("MoriPreWarm").i("MoriCipherRuntime.preWarm() START at timestamp: %d ms", preWarmStart)
             runCatching {
                 MoriCipherRuntime.preWarm()
-            }.onFailure { Timber.w(it, "Mori cipher runtime prewarm failed") }
+            }.onSuccess {
+                val preWarmEnd = System.currentTimeMillis()
+                Timber.tag("MoriPreWarm").i("MoriCipherRuntime.preWarm() COMPLETED in %d ms (at %d ms)", preWarmEnd - preWarmStart, preWarmEnd)
+            }.onFailure { Timber.tag("MoriPreWarm").w(it, "Mori cipher runtime prewarm failed") }
             MoriCipherRuntime
                 .refresh(force = false)
                 .onFailure { Timber.w(it, "Mori cipher background initialization failed") }

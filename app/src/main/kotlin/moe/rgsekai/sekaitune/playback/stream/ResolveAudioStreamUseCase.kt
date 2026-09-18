@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.ensureActive
+import moe.rgsekai.sekaitune.di.StreamResolutionScope
 import moe.rgsekai.sekaitune.utils.YTPlayerUtils
 import moe.rgsekai.sekaitune.utils.retryWithoutPlaybackLoginContext
 import timber.log.Timber
@@ -32,6 +33,7 @@ class ResolveAudioStreamUseCase
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
+        @StreamResolutionScope private val scope: CoroutineScope,
     ) {
         private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
 
@@ -68,7 +70,6 @@ class ResolveAudioStreamUseCase
             ) : ResolutionLease
         }
 
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private val cache = ConcurrentHashMap<CacheKey, ResolvedAudioStream>()
         private val inFlightLock = Any()
         private val inFlight = mutableMapOf<InFlightKey, InFlightResolution>()
@@ -84,15 +85,33 @@ class ResolveAudioStreamUseCase
             request: AudioStreamRequest,
             consumer: ResolutionConsumer,
         ): ResolvedAudioStream {
+            val resolveStartMs = System.currentTimeMillis()
             val key = request.cacheKey()
             val priority = request.resolutionPriority(consumer)
             val lease = acquireResolution(key, request, consumer, priority)
-            if (lease is ResolutionLease.Cached) return lease.stream
+            if (lease is ResolutionLease.Cached) {
+                Timber.tag("TrackTelemetry").i(
+                    "[TrackTelemetry:Resolve] videoId=%s, consumer=%s, status=PRELOAD_CACHE_HIT, resolveDurationMs=%d",
+                    key.mediaId,
+                    consumer,
+                    System.currentTimeMillis() - resolveStartMs,
+                )
+                return lease.stream
+            }
 
             val activeLease = lease as ResolutionLease.Active
             val resolution = activeLease.resolution
+            val isJoin = activeLease.key.priority != priority || activeLease.resolution.playbackOwners > 1 || activeLease.resolution.preloadOwners > 1
             return try {
-                resolution.deferred.await()
+                val stream = resolution.deferred.await()
+                Timber.tag("TrackTelemetry").i(
+                    "[TrackTelemetry:Resolve] videoId=%s, consumer=%s, status=%s, resolveDurationMs=%d",
+                    key.mediaId,
+                    consumer,
+                    if (isJoin) "PRELOAD_IN_FLIGHT_JOIN" else "COLD_RESOLVE",
+                    System.currentTimeMillis() - resolveStartMs,
+                )
+                stream
             } catch (cancellation: CancellationException) {
                 coroutineContext.ensureActive()
                 throw cancellation
@@ -100,6 +119,7 @@ class ResolveAudioStreamUseCase
                 releaseResolution(activeLease.key, consumer)
             }
         }
+
 
         private fun acquireResolution(
             cacheKey: CacheKey,
@@ -111,6 +131,7 @@ class ResolveAudioStreamUseCase
                 val cached = cache[cacheKey]
                 if (cached != null) {
                     if (isFresh(cached)) {
+                        Timber.tag(TAG).i("[StreamResolution] CACHE HIT (already resolved/preloaded) for %s (consumer=%s)", cacheKey.mediaId, consumer)
                         return ResolutionLease.Cached(cached)
                     }
                     cache.remove(cacheKey, cached)
@@ -131,6 +152,7 @@ class ResolveAudioStreamUseCase
                         ResolutionConsumer.PRELOAD -> existing.preloadOwners += 1
                     }
                     val activeKey = if (inFlight.containsKey(foregroundKey)) foregroundKey else backgroundKey
+                    Timber.tag(TAG).i("[StreamResolution] IN-FLIGHT JOIN (deduplicating with active resolution) for %s (consumer=%s)", cacheKey.mediaId, consumer)
                     return ResolutionLease.Active(activeKey, existing)
                 }
 
@@ -140,11 +162,14 @@ class ResolveAudioStreamUseCase
                 }
 
                 val targetKey = InFlightKey(cacheKey, priority)
+                Timber.tag(TAG).i("[StreamResolution] COLD RESOLUTION START for %s (consumer=%s, priority=%s)", cacheKey.mediaId, consumer, priority)
                 val deferred =
                     scope.async {
+                        val startMs = System.currentTimeMillis()
                         try {
                             val resolved = resolveUncached(request)
                             storeResolvedStream(cacheKey, resolved)
+                            Timber.tag(TAG).i("[StreamResolution] COLD RESOLUTION COMPLETED for %s in %d ms", cacheKey.mediaId, System.currentTimeMillis() - startMs)
                             resolved
                         } finally {
                             synchronized(inFlightLock) {

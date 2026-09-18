@@ -74,12 +74,16 @@ import kotlinx.coroutines.isActive
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.PlayerStreamClient
+import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
 import moe.rgsekai.sekaitune.ui.component.IconButton
+import moe.rgsekai.sekaitune.ui.component.ListPreference
 import moe.rgsekai.sekaitune.ui.component.PreferenceEntry
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
 import moe.rgsekai.sekaitune.ui.component.SwitchPreference
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.makeTimeString
+import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import kotlin.math.roundToInt
 
@@ -97,6 +101,25 @@ fun DebugSettings(navController: NavController) {
             key = booleanPreferencesKey("show_codec_on_player"),
             defaultValue = false,
         )
+
+    val (playerStreamClient, onPlayerStreamClientChange) =
+        rememberEnumPreference(
+            PlayerStreamClientKey,
+            defaultValue = PlayerStreamClient.ANDROID_VR,
+        )
+    val playerStreamClients =
+        remember {
+            listOf(
+                PlayerStreamClient.ANDROID_VR,
+                PlayerStreamClient.WEB_REMIX,
+            )
+        }
+    val selectedPlayerStreamClient =
+        if (playerStreamClient in playerStreamClients) {
+            playerStreamClient
+        } else {
+            PlayerStreamClient.ANDROID_VR
+        }
 
     val playerConnection = LocalPlayerConnection.current
 
@@ -152,6 +175,47 @@ fun DebugSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.graphic_eq), null) },
                         checked = showCodecOnPlayer,
                         onCheckedChange = onShowCodecOnPlayerChange,
+                    )
+                }
+
+                item {
+                    ListPreference(
+                        title = { Text(stringResource(R.string.player_stream_client)) },
+                        description = stringResource(R.string.player_stream_client_desc),
+                        icon = { Icon(painterResource(R.drawable.integration), null) },
+                        selectedValue = selectedPlayerStreamClient,
+                        values = playerStreamClients,
+                        onValueSelected = onPlayerStreamClientChange,
+                        valueText = {
+                            when (it) {
+                                PlayerStreamClient.WEB_REMIX -> {
+                                    stringResource(R.string.player_stream_client_web_remix)
+                                }
+
+                                PlayerStreamClient.ANDROID_VR -> {
+                                    "Android VR"
+                                }
+
+                                else -> {
+                                    stringResource(R.string.player_stream_client_web_remix)
+                                }
+                            }
+                        },
+                        valueDescription = {
+                            when (it) {
+                                PlayerStreamClient.ANDROID_VR -> {
+                                    stringResource(R.string.player_stream_client_android_vr_desc)
+                                }
+
+                                PlayerStreamClient.WEB_REMIX -> {
+                                    stringResource(R.string.player_stream_client_web_remix_desc)
+                                }
+
+                                else -> {
+                                    stringResource(R.string.player_stream_client_web_remix_desc)
+                                }
+                            }
+                        },
                     )
                 }
 

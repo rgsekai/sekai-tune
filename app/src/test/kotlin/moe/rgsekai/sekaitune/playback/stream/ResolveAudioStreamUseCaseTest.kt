@@ -93,4 +93,38 @@ class ResolveAudioStreamUseCaseTest {
         assertNotNull(playbackResult)
         assertEquals("https://googlevideo.com/videoplayback?id=track_cancel_test", playbackResult)
     }
+
+    @Test
+    fun testDeferredIsNotCancelledWhenCallerScopeCancels() = runBlocking {
+        val useCaseScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        val inFlight = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<String>>()
+
+        val sharedDeferred = useCaseScope.async {
+            kotlinx.coroutines.delay(100)
+            "stream_url_resolved"
+        }
+        inFlight["test_key"] = sharedDeferred
+
+        val caller1Scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        val caller1Job = caller1Scope.launch {
+            try {
+                sharedDeferred.await()
+            } catch (c: kotlinx.coroutines.CancellationException) {
+                // Caller 1 cancelled
+            }
+        }
+
+        kotlinx.coroutines.delay(20)
+        // Cancel caller 1
+        caller1Job.cancel()
+        caller1Job.join()
+
+        // Verify the underlying Deferred is NOT cancelled
+        org.junit.Assert.assertFalse("Shared deferred must remain active after caller cancellation", sharedDeferred.isCancelled)
+        org.junit.Assert.assertTrue("Shared deferred must remain active", sharedDeferred.isActive)
+
+        // Caller 2 awaits the same shared deferred
+        val caller2Result = sharedDeferred.await()
+        assertEquals("stream_url_resolved", caller2Result)
+    }
 }

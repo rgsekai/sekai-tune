@@ -18,8 +18,6 @@ import org.mozilla.javascript.Script
 import java.util.concurrent.ConcurrentHashMap
 
 internal class RhinoTransformExecutor {
-    private val scriptCache = ConcurrentHashMap<String, Script>()
-
     fun preWarm(plan: TransformPlan? = null) {
         runCatching {
             factory.call(
@@ -78,6 +76,12 @@ internal class RhinoTransformExecutor {
         if (input.length !in 1..MAX_INPUT_LENGTH) {
             throw MoriCipherException("Cipher input length was invalid")
         }
+        val isHit = scriptCache.containsKey(cacheKey)
+        val hits = if (isHit) cacheHits.incrementAndGet() else cacheHits.get()
+        val misses = if (!isHit) cacheMisses.incrementAndGet() else cacheMisses.get()
+        val total = hits + misses
+        val rate = if (total > 0) (hits * 100.0) / total else 0.0
+        println("[RhinoScriptCache] key=$cacheKey isHit=$isHit -> Stats: $hits hits / $misses misses (Hit rate: ${String.format(java.util.Locale.US, "%.1f", rate)}%) | CachedKeys=${scriptCache.keys().toList()}")
         return try {
             factory.call(
                 ContextAction { context ->
@@ -85,10 +89,12 @@ internal class RhinoTransformExecutor {
                     context.languageVersion = Context.VERSION_ES6
                     context.setClassShutter(ClassShutter { false })
                     val scope = context.initSafeStandardObjects(null, true)
-                    val script =
-                        scriptCache.computeIfAbsent(cacheKey) {
-                            context.compileString(program, "mori-player", 1, null)
-                        }
+                    var script = scriptCache[cacheKey]
+                    if (script == null) {
+                        val compiled = context.compileString(program, "mori-player", 1, null)
+                        scriptCache[cacheKey] = compiled
+                        script = compiled
+                    }
                     script.exec(context, scope)
                     val function =
                         scope.get(functionName, scope) as? Function
@@ -106,6 +112,7 @@ internal class RhinoTransformExecutor {
             throw MoriCipherException("JavaScript transform execution failed", error)
         }
     }
+
 
     private class BoundedContextFactory : ContextFactory() {
         override fun makeContext(): Context =
@@ -133,6 +140,9 @@ internal class RhinoTransformExecutor {
         val DEADLINE_KEY = Any()
         val SAFE_OUTPUT = Regex("""^[A-Za-z0-9._~!$&'()*+,;=:@/?%-]+$""")
         val factory = BoundedContextFactory()
+        val scriptCache = ConcurrentHashMap<String, Script>()
+        val cacheHits = java.util.concurrent.atomic.AtomicLong(0)
+        val cacheMisses = java.util.concurrent.atomic.AtomicLong(0)
     }
 }
 

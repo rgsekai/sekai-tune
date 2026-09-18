@@ -226,10 +226,39 @@ class PlayerConnection(
 
     override fun onPlayerErrorChanged(playbackError: PlaybackException?) {
         if (playbackError != null) {
+            if (isBenignCancellation(playbackError)) {
+                Timber.tag("PlayerConnection").d("Suppressing benign cancellation from UI error state: %s", playbackError.message)
+                error.value = null
+                return
+            }
             reportException(playbackError)
         }
         error.value = playbackError
     }
+
+    private fun isBenignCancellation(error: PlaybackException): Boolean {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is java.net.SocketTimeoutException) {
+                return false
+            }
+            if (current is kotlinx.coroutines.CancellationException ||
+                current.javaClass.name.contains("CancellationException") ||
+                current.message?.contains("Stream resolution cancelled", ignoreCase = true) == true ||
+                current.message?.contains("DeferredCoroutine was cancelled", ignoreCase = true) == true
+            ) {
+                return true
+            }
+            if (current is java.io.InterruptedIOException &&
+                current.message?.contains("Stream resolution cancelled", ignoreCase = true) == true
+            ) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
+    }
+
 
     private fun updateCanSkipPreviousAndNext() {
         if (!player.currentTimeline.isEmpty) {

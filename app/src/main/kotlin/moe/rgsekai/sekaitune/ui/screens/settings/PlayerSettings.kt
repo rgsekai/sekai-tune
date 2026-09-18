@@ -37,9 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import android.widget.Toast
 import androidx.navigation.NavController
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.playback.stream.PersistentVideoClientCache
+import moe.rgsekai.sekaitune.utils.YTPlayerUtils
 import moe.rgsekai.sekaitune.constants.ArtistSeparatorsKey
 import moe.rgsekai.sekaitune.constants.AudioNormalizationKey
 import moe.rgsekai.sekaitune.constants.AudioOffload
@@ -89,11 +92,6 @@ fun PlayerSettings(navController: NavController) {
         rememberEnumPreference(
             AudioQualityKey,
             defaultValue = AudioQuality.AUTO,
-        )
-    val (playerStreamClient, onPlayerStreamClientChange) =
-        rememberEnumPreference(
-            PlayerStreamClientKey,
-            defaultValue = PlayerStreamClient.ANDROID_VR,
         )
     val (lowDataMode, onLowDataModeChange) =
         rememberPreference(
@@ -208,29 +206,9 @@ fun PlayerSettings(navController: NavController) {
             WakelockKey,
             defaultValue = false,
         )
-    val playerStreamClients =
-        remember {
-            listOf(
-                PlayerStreamClient.ANDROID_VR,
-                PlayerStreamClient.WEB_REMIX,
-            )
-        }
-    val selectedPlayerStreamClient =
-        if (playerStreamClient in playerStreamClients) {
-            playerStreamClient
-        } else {
-            PlayerStreamClient.ANDROID_VR
-        }
-
     var showArtistSeparatorsDialog by remember { mutableStateOf(false) }
     var showTagsManagementDialog by remember { mutableStateOf(false) }
     var showExternalDownloaderPackageDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(playerStreamClient) {
-        if (playerStreamClient !in playerStreamClients) {
-            onPlayerStreamClientChange(PlayerStreamClient.ANDROID_VR)
-        }
-    }
 
     if (showArtistSeparatorsDialog) {
         ArtistSeparatorsDialog(
@@ -310,42 +288,15 @@ fun PlayerSettings(navController: NavController) {
                 }
 
                 item {
-                    ListPreference(
-                        title = { Text(stringResource(R.string.player_stream_client)) },
-                        description = stringResource(R.string.player_stream_client_desc),
-                        icon = { Icon(painterResource(R.drawable.integration), null) },
-                        selectedValue = selectedPlayerStreamClient,
-                        values = playerStreamClients,
-                        onValueSelected = onPlayerStreamClientChange,
-                        valueText = {
-                            when (it) {
-                                PlayerStreamClient.WEB_REMIX -> {
-                                    stringResource(R.string.player_stream_client_web_remix)
-                                }
-
-                                PlayerStreamClient.ANDROID_VR -> {
-                                    "Android VR"
-                                }
-
-                                else -> {
-                                    stringResource(R.string.player_stream_client_web_remix)
-                                }
-                            }
-                        },
-                        valueDescription = {
-                            when (it) {
-                                PlayerStreamClient.ANDROID_VR -> {
-                                    stringResource(R.string.player_stream_client_android_vr_desc)
-                                }
-
-                                PlayerStreamClient.WEB_REMIX -> {
-                                    stringResource(R.string.player_stream_client_web_remix_desc)
-                                }
-
-                                else -> {
-                                    stringResource(R.string.player_stream_client_web_remix_desc)
-                                }
-                            }
+                    val context = LocalContext.current
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.reset_playback_client_cache_title)) },
+                        description = stringResource(R.string.reset_playback_client_cache_desc),
+                        icon = { Icon(painterResource(R.drawable.cached), null) },
+                        onClick = {
+                            PersistentVideoClientCache.clearAll()
+                            YTPlayerUtils.clearPlaybackAuthCaches()
+                            Toast.makeText(context, R.string.reset_playback_client_cache_done, Toast.LENGTH_SHORT).show()
                         },
                     )
                 }

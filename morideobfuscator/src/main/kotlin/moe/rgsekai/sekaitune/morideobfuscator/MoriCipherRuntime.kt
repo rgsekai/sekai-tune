@@ -72,7 +72,7 @@ object MoriCipherRuntime : MoriCipherResolver {
         if (!ownsRefresh) return shared.await()
 
         val result =
-            try {
+            withContext(kotlinx.coroutines.NonCancellable) {
                 runCatching {
                     val current = currentEngine.artifact
                     val now = System.currentTimeMillis()
@@ -130,6 +130,7 @@ object MoriCipherRuntime : MoriCipherResolver {
                     withContext(Dispatchers.IO) { currentEngine.store.write(artifact) }
                     updateRefreshProgress(REFRESH_PERSISTED_PROGRESS)
                     currentEngine.artifact = artifact
+                    currentEngine.executor.preWarm(completedPlan)
                     mutableSnapshot.value =
                         CipherSnapshot(
                             status = completedPlan.runtimeStatus(),
@@ -155,12 +156,6 @@ object MoriCipherRuntime : MoriCipherResolver {
                             lastFailure = failure.message,
                         )
                 }
-            } catch (cancellation: CancellationException) {
-                shared.cancel(cancellation)
-                refreshMutex.withLock {
-                    if (activeRefresh === shared) activeRefresh = null
-                }
-                throw cancellation
             }
         shared.complete(result)
         refreshMutex.withLock {

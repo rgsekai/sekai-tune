@@ -398,12 +398,15 @@
     <string name="audio_crossfade_seconds">%1$s s</string>
     <string name="crossfade_gapless_title">Skip gapless albums</string>
     <string name="crossfade_gapless_description">Do not crossfade consecutive songs from the same album.</string>
-    <string name="player_stream_client">Playback client</string>
-    <string name="player_stream_client_desc">Controls which playback source is used to fetch streams</string>
+    <string name="player_stream_client">Playback client (Debug Override)</string>
+    <string name="player_stream_client_desc">Forces a specific playback client (overriding automatic per-track detection)</string>
     <string name="player_stream_client_android_vr">Android VR</string>
     <string name="player_stream_client_android_vr_desc">Streams directly without signature decryption, providing maximum speed. Suitable for the majority of users.</string>
     <string name="player_stream_client_web_remix">Web Remix</string>
     <string name="player_stream_client_web_remix_desc">Extended format support at the cost of speed. JavaScript signature decryption introduces a ~5–10 second startup delay.</string>
+    <string name="reset_playback_client_cache_title">Reset playback client cache</string>
+    <string name="reset_playback_client_cache_desc">Clear automatically detected winning clients and force fresh stream discovery</string>
+    <string name="reset_playback_client_cache_done">Playback client cache cleared</string>
     <string name="settings_section_player_content">Player &amp; Content</string>
     <string name="settings_appearance_subtitle">Themes, layout, and visual styles</string>
     <string name="settings_playback_title">Playback</string>

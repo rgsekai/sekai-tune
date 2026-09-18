@@ -307,6 +307,10 @@ class MusicService :
     @Inject
     lateinit var nextStreamPreloader: moe.rgsekai.sekaitune.playback.preload.NextStreamPreloader
 
+    private var lastTransitionTimeMs = 0L
+    private var lastTransitionMediaId: String? = null
+    private var firstPlaybackLogged = false
+
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
     private var lastAudioFocusState = AudioManager.AUDIOFOCUS_NONE
@@ -5597,11 +5601,12 @@ class MusicService :
 
     private fun updateNextStreamPreload() {
         if (!::nextStreamPreloader.isInitialized) return
+        val currentMediaId = player.currentMediaItem?.mediaId?.trim()
         val nextIndex = player.currentMediaItemIndex + 1
-        if (nextIndex < player.mediaItemCount) {
+        if (nextIndex in 0 until player.mediaItemCount) {
             val nextItem = player.getMediaItemAt(nextIndex)
-            val nextVideoId = nextItem.mediaId
-            if (nextVideoId.isNotBlank()) {
+            val nextVideoId = nextItem.mediaId.trim()
+            if (nextVideoId.isNotEmpty() && nextVideoId != currentMediaId) {
                 val isNetworkMetered = isLowDataModeActive()
                 val quality = if (isNetworkMetered) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality
                 nextStreamPreloader.preloadNext(
@@ -5614,10 +5619,14 @@ class MusicService :
         }
     }
 
+
     override fun onMediaItemTransition(
         mediaItem: MediaItem?,
         reason: Int,
     ) {
+        lastTransitionTimeMs = android.os.SystemClock.elapsedRealtime()
+        lastTransitionMediaId = mediaItem?.mediaId
+        Timber.tag("PlaybackTiming").i("[PlaybackTiming] onMediaItemTransition for %s (reason=%d) at elapsedRealtime=%d", lastTransitionMediaId, reason, lastTransitionTimeMs)
         super.onMediaItemTransition(mediaItem, reason)
 
         beginHistorySession(mediaItem?.mediaId, forceNew = true)
@@ -5740,6 +5749,16 @@ class MusicService :
     ) {
         if (playbackState == Player.STATE_READY) {
             ColdStartTimer.addStage("Player State: READY")
+            if (lastTransitionTimeMs > 0L) {
+                val elapsedMs = android.os.SystemClock.elapsedRealtime() - lastTransitionTimeMs
+                val currentId = player.currentMediaItem?.mediaId
+                Timber.tag("PlaybackTiming").i(
+                    "[PlaybackTiming] End-to-end transition-to-ready for %s: %d ms (matchCurrent=%b)",
+                    currentId,
+                    elapsedMs,
+                    currentId == lastTransitionMediaId,
+                )
+            }
         }
         super.onPlaybackStateChanged(playbackState)
 
@@ -6111,6 +6130,10 @@ class MusicService :
     }
 
     override fun onPlayerError(error: PlaybackException) {
+        if (isBenignCancellation(error)) {
+            Timber.tag("MusicService").d("Ignoring benign cancellation error in onPlayerError: %s", error.message)
+            return
+        }
         super.onPlayerError(error)
 
         val currentMediaId = player.currentMediaItem?.mediaId ?: return
@@ -6298,6 +6321,30 @@ class MusicService :
             stopOnError()
         }
     }
+
+    private fun isBenignCancellation(error: PlaybackException): Boolean {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is java.net.SocketTimeoutException) {
+                return false
+            }
+            if (current is kotlinx.coroutines.CancellationException ||
+                current.javaClass.name.contains("CancellationException") ||
+                current.message?.contains("Stream resolution cancelled", ignoreCase = true) == true ||
+                current.message?.contains("DeferredCoroutine was cancelled", ignoreCase = true) == true
+            ) {
+                return true
+            }
+            if (current is java.io.InterruptedIOException &&
+                current.message?.contains("Stream resolution cancelled", ignoreCase = true) == true
+            ) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
+    }
+
 
     private suspend fun trimPlayerCacheToBytes(limitBytes: Long) {
         if (limitBytes <= 0L) return
@@ -6533,6 +6580,11 @@ class MusicService :
                 }
         }
 
+        if (!firstPlaybackLogged) {
+            firstPlaybackLogged = true
+            Timber.tag("MoriPreWarm").i("First playback stream requested at timestamp: %d ms for mediaId=%s", System.currentTimeMillis(), mediaId)
+        }
+
         val resolvedPlaybackStream: moe.rgsekai.sekaitune.playback.stream.ResolvedAudioStream =
             runBlocking(Dispatchers.IO) {
                 ColdStartTimer.addStage("PlaybackData Resolution Start")
@@ -6623,6 +6675,14 @@ class MusicService :
 
                     throwable is PlaybackException -> {
                         throw throwable
+                    }
+
+                    throwable is CancellationException -> {
+                        throw java.io.InterruptedIOException("Stream resolution cancelled").apply { initCause(throwable) }
+                    }
+
+                    throwable is InterruptedException || throwable is java.io.InterruptedIOException -> {
+                        throw (throwable as? java.io.InterruptedIOException) ?: java.io.InterruptedIOException(throwable.message).apply { initCause(throwable) }
                     }
 
                     throwable.isNetworkConnectionFailure() -> {

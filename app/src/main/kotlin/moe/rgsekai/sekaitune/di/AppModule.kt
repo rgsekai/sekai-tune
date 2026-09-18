@@ -43,6 +43,10 @@ annotation class PlayerCache
 @Retention(AnnotationRetention.BINARY)
 annotation class DownloadCache
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class StreamResolutionScope
+
 private class LazyCache(
     private val create: () -> SimpleCache,
 ) : Cache {
@@ -187,6 +191,12 @@ object AppModule {
                 databaseProvider,
             )
         }
+
+    @Singleton
+    @Provides
+    @StreamResolutionScope
+    fun provideStreamResolutionScope(): kotlinx.coroutines.CoroutineScope =
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 }
 
 private const val CacheSizeBytesPerMegabyte = 1024L * 1024L

@@ -23,6 +23,8 @@ class NextStreamPreloader @Inject constructor(
     private var currentJob: Job? = null
     @Volatile
     private var currentPreloadVideoId: String? = null
+    @Volatile
+    private var lastSuccessfulPreloadVideoId: String? = null
 
     fun preloadNext(
         videoId: String,
@@ -34,14 +36,21 @@ class NextStreamPreloader @Inject constructor(
         if (trimmedId.isEmpty()) return
 
         synchronized(this) {
-            if (currentPreloadVideoId == trimmedId && currentJob?.isActive == true) {
-                Timber.tag(TAG).d("Preload already active for %s", trimmedId)
-                return
+            if (currentPreloadVideoId == trimmedId) {
+                if (currentJob?.isActive == true) {
+                    Timber.tag(TAG).d("Preload already active for %s", trimmedId)
+                    return
+                }
+                if (lastSuccessfulPreloadVideoId == trimmedId) {
+                    Timber.tag(TAG).d("Preload already succeeded and cached for %s", trimmedId)
+                    return
+                }
             }
             currentJob?.cancel()
             currentPreloadVideoId = trimmedId
             currentJob = scope.launch {
-                Timber.tag(TAG).d("Starting background stream preload for %s", trimmedId)
+                val startMs = System.currentTimeMillis()
+                Timber.tag(TAG).i("[Preload] Starting background stream preload for %s at %d ms", trimmedId, startMs)
                 runCatching {
                     resolveAudioStreamUseCase.preload(
                         AudioStreamRequest(
@@ -54,9 +63,15 @@ class NextStreamPreloader @Inject constructor(
                         ),
                     )
                 }.onSuccess {
-                    Timber.tag(TAG).d("Preload succeeded for %s", trimmedId)
+                    val durationMs = System.currentTimeMillis() - startMs
+                    lastSuccessfulPreloadVideoId = trimmedId
+                    Timber.tag(TAG).i("[Preload] Preload succeeded for %s in %d ms", trimmedId, durationMs)
                 }.onFailure { error ->
-                    Timber.tag(TAG).w(error, "Preload failed for %s", trimmedId)
+                    if (error is kotlinx.coroutines.CancellationException || error is java.io.InterruptedIOException) {
+                        Timber.tag(TAG).d("[Preload] Preload cancelled for %s (superseded)", trimmedId)
+                    } else {
+                        Timber.tag(TAG).w(error, "[Preload] Preload failed for %s", trimmedId)
+                    }
                 }
             }
         }
@@ -67,6 +82,7 @@ class NextStreamPreloader @Inject constructor(
             currentJob?.cancel()
             currentJob = null
             currentPreloadVideoId = null
+            lastSuccessfulPreloadVideoId = null
         }
     }
 
@@ -76,3 +92,4 @@ class NextStreamPreloader @Inject constructor(
         private const val TAG = "NextStreamPreloader"
     }
 }
+
