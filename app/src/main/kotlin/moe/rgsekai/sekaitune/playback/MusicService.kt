@@ -301,6 +301,12 @@ class MusicService :
     @Inject
     internal lateinit var loadWidgetInsightsUseCase: LoadWidgetInsightsUseCase
 
+    @Inject
+    lateinit var resolveAudioStreamUseCase: moe.rgsekai.sekaitune.playback.stream.ResolveAudioStreamUseCase
+
+    @Inject
+    lateinit var nextStreamPreloader: moe.rgsekai.sekaitune.playback.preload.NextStreamPreloader
+
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
     private var lastAudioFocusState = AudioManager.AUDIOFOCUS_NONE
@@ -2764,6 +2770,10 @@ class MusicService :
                 )
 
         playbackUrlCache.remove(mediaId)
+        if (::resolveAudioStreamUseCase.isInitialized) {
+            resolveAudioStreamUseCase.invalidate(mediaId)
+            resolveAudioStreamUseCase.invalidateUrl(failedUrl)
+        }
         YTPlayerUtils.invalidateCachedStreamUrls(mediaId)
         if (!failedExpiredUrl && requestProfile.clientKey.isNotEmpty()) {
             YTPlayerUtils.markStreamClientFailed(mediaId, requestProfile.clientKey, responseException.responseCode)
@@ -5585,6 +5595,25 @@ class MusicService :
         return false
     }
 
+    private fun updateNextStreamPreload() {
+        if (!::nextStreamPreloader.isInitialized) return
+        val nextIndex = player.currentMediaItemIndex + 1
+        if (nextIndex < player.mediaItemCount) {
+            val nextItem = player.getMediaItemAt(nextIndex)
+            val nextVideoId = nextItem.mediaId
+            if (nextVideoId.isNotBlank()) {
+                val isNetworkMetered = isLowDataModeActive()
+                val quality = if (isNetworkMetered) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality
+                nextStreamPreloader.preloadNext(
+                    videoId = nextVideoId,
+                    audioQuality = quality,
+                    preferredStreamClient = preferredStreamClient,
+                    networkMetered = isNetworkMetered,
+                )
+            }
+        }
+    }
+
     override fun onMediaItemTransition(
         mediaItem: MediaItem?,
         reason: Int,
@@ -5600,6 +5629,7 @@ class MusicService :
         if (queue.isNotEmpty()) {
             lyricsPreloadManager?.onSongChanged(currentIndex, queue)
         }
+        updateNextStreamPreload()
 
         val joined = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
         if (joined?.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest &&
@@ -5822,6 +5852,10 @@ class MusicService :
                 ?.url
                 ?.let(YTPlayerUtils::markStreamUrlSuccessful)
             ensureAudiblePlaybackVolume("player_event")
+            updateNextStreamPreload()
+        }
+        if (events.contains(Player.EVENT_TIMELINE_CHANGED)) {
+            updateNextStreamPreload()
         }
         if (events.containsAny(
                 Player.EVENT_PLAYBACK_STATE_CHANGED,
@@ -6152,6 +6186,7 @@ class MusicService :
             )
 
             playbackUrlCache.remove(currentMediaId)
+            if (::resolveAudioStreamUseCase.isInitialized) resolveAudioStreamUseCase.invalidate(currentMediaId)
             contentLengthCache.remove(currentMediaId)
             YTPlayerUtils.invalidateCachedStreamUrls(currentMediaId)
 
@@ -6186,6 +6221,7 @@ class MusicService :
 
         if (!isLocalMedia && !isFullyDownloadedMedia && YTPlayerUtils.isBotDetectionException(error)) {
             playbackUrlCache.remove(currentMediaId)
+            if (::resolveAudioStreamUseCase.isInitialized) resolveAudioStreamUseCase.invalidate(currentMediaId)
             YTPlayerUtils.invalidateCachedStreamUrls(currentMediaId)
             YTPlayerUtils.clearPlaybackAuthCaches()
             if (playbackStreamRecoveryTracker.registerRetryAttempt(currentMediaId)) {
@@ -6197,6 +6233,7 @@ class MusicService :
 
         if (!isLocalMedia && !isFullyDownloadedMedia && YTPlayerUtils.isBadStreamPlayerResponseException(error)) {
             playbackUrlCache.remove(currentMediaId)
+            if (::resolveAudioStreamUseCase.isInitialized) resolveAudioStreamUseCase.invalidate(currentMediaId)
             YTPlayerUtils.invalidateCachedStreamUrls(currentMediaId)
             if (playbackStreamRecoveryTracker.registerRetryAttempt(currentMediaId)) {
                 scope.launch(Dispatchers.IO) {
@@ -6227,6 +6264,10 @@ class MusicService :
         if (!isLocalMedia && !isFullyDownloadedMedia && isRetryableRemoteParserFailure(error)) {
             val failedUrl = playbackUrlCache[currentMediaId]?.url
             playbackUrlCache.remove(currentMediaId)
+            if (::resolveAudioStreamUseCase.isInitialized) {
+                resolveAudioStreamUseCase.invalidate(currentMediaId)
+                failedUrl?.let(resolveAudioStreamUseCase::invalidateUrl)
+            }
             contentLengthCache.remove(currentMediaId)
             YTPlayerUtils.invalidateCachedStreamUrls(currentMediaId)
             failedUrl
@@ -6439,50 +6480,109 @@ class MusicService :
 
         val lowDataModeActive = isLowDataModeActive()
         val authFingerprint = YouTube.currentPlaybackAuthState().fingerprint
-        playbackUrlCache[mediaId]
-            ?.takeUnless { lowDataModeActive }
-            ?.takeIf {
-                it.isValidFor(
-                    authFingerprint = authFingerprint,
-                    minimumRemainingMs = YTPlayerUtils.STREAM_URL_EXPIRY_SAFETY_MS,
-                )
-            }?.let {
-                scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
-                val resolvedDataSpec = dataSpec.withUri(it.url.toUri())
-                val length =
-                    resolveStreamChunkLength(
-                        requestedLength = dataSpec.length,
-                        position = dataSpec.position,
-                        knownContentLength = knownContentLength,
-                        chunkLength = CHUNK_LENGTH,
-                        mimeType = storedFormat?.mimeType,
-                    )
-                return length?.let { nonNullLength ->
-                    resolvedDataSpec.subrange(0L, nonNullLength)
-                } ?: resolvedDataSpec
-            }
+        val streamRequest =
+            moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest(
+                mediaId = mediaId,
+                quality = if (lowDataModeActive) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality,
+                networkMetered = lowDataModeActive,
+                purpose = moe.rgsekai.sekaitune.playback.stream.StreamPurpose.PLAYBACK,
+                preferredStreamClient = preferredStreamClient,
+                authState = YouTube.currentPlaybackAuthState(),
+            )
 
-        val playbackData =
+        if (::resolveAudioStreamUseCase.isInitialized) {
+            resolveAudioStreamUseCase.peek(streamRequest)
+                ?.takeUnless { lowDataModeActive }
+                ?.let { cached ->
+                    scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+                    val resolvedDataSpec = dataSpec.withUri(cached.url.toUri())
+                    val length =
+                        resolveStreamChunkLength(
+                            requestedLength = dataSpec.length,
+                            position = dataSpec.position,
+                            knownContentLength = knownContentLength,
+                            chunkLength = CHUNK_LENGTH,
+                            mimeType = storedFormat?.mimeType,
+                        )
+                    return length?.let { nonNullLength ->
+                        resolvedDataSpec.subrange(0L, nonNullLength)
+                    } ?: resolvedDataSpec
+                }
+        } else {
+            playbackUrlCache[mediaId]
+                ?.takeUnless { lowDataModeActive }
+                ?.takeIf {
+                    it.isValidFor(
+                        authFingerprint = authFingerprint,
+                        minimumRemainingMs = YTPlayerUtils.STREAM_URL_EXPIRY_SAFETY_MS,
+                    )
+                }?.let {
+                    scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+                    val resolvedDataSpec = dataSpec.withUri(it.url.toUri())
+                    val length =
+                        resolveStreamChunkLength(
+                            requestedLength = dataSpec.length,
+                            position = dataSpec.position,
+                            knownContentLength = knownContentLength,
+                            chunkLength = CHUNK_LENGTH,
+                            mimeType = storedFormat?.mimeType,
+                        )
+                    return length?.let { nonNullLength ->
+                        resolvedDataSpec.subrange(0L, nonNullLength)
+                    } ?: resolvedDataSpec
+                }
+        }
+
+        val resolvedPlaybackStream: moe.rgsekai.sekaitune.playback.stream.ResolvedAudioStream =
             runBlocking(Dispatchers.IO) {
                 ColdStartTimer.addStage("PlaybackData Resolution Start")
-                val result =
-                    retryWithoutPlaybackLoginContext {
-                        YTPlayerUtils.playerResponseForPlayback(
-                            mediaId,
-                            audioQuality = if (lowDataModeActive) AudioQuality.LOW else audioQuality,
-                            connectivityManager = connectivityManager,
-                            preferredStreamClient = preferredStreamClient,
-                            networkMetered = lowDataModeActive,
-                        )
-                    }.recoverCatching { youtubeFailure ->
-                        if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
+                val result: Result<moe.rgsekai.sekaitune.playback.stream.ResolvedAudioStream> =
+                    if (::resolveAudioStreamUseCase.isInitialized) {
+                        retryWithoutPlaybackLoginContext {
+                            runCatching {
+                                resolveAudioStreamUseCase(streamRequest)
+                            }
+                        }.recoverCatching { youtubeFailure ->
+                            if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
 
-                        Timber.tag("MusicService").w(
-                            youtubeFailure,
-                            "YouTube stream clients hit bot detection for %s; trying external audio fallback",
-                            mediaId,
-                        )
-                        throw youtubeFailure
+                            Timber.tag("MusicService").w(
+                                youtubeFailure,
+                                "YouTube stream clients hit bot detection for %s; trying external audio fallback",
+                                mediaId,
+                            )
+                            throw youtubeFailure
+                        }
+                    } else {
+                        retryWithoutPlaybackLoginContext {
+                            runCatching {
+                                val pb =
+                                    YTPlayerUtils.playerResponseForPlayback(
+                                        mediaId,
+                                        audioQuality = if (lowDataModeActive) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality,
+                                        connectivityManager = connectivityManager,
+                                        preferredStreamClient = preferredStreamClient,
+                                        networkMetered = lowDataModeActive,
+                                    ).getOrThrow()
+                                moe.rgsekai.sekaitune.playback.stream.ResolvedAudioStream(
+                                    url = pb.streamUrl,
+                                    format = pb.format,
+                                    audioConfig = pb.audioConfig,
+                                    videoDetails = pb.videoDetails,
+                                    playbackTracking = pb.playbackTracking,
+                                    expiresAtMs = System.currentTimeMillis() + (pb.streamExpiresInSeconds * 1000L),
+                                    authFingerprint = pb.authFingerprint,
+                                )
+                            }
+                        }.recoverCatching { youtubeFailure ->
+                            if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
+
+                            Timber.tag("MusicService").w(
+                                youtubeFailure,
+                                "YouTube stream clients hit bot detection for %s; trying external audio fallback",
+                                mediaId,
+                            )
+                            throw youtubeFailure
+                        }
                     }
                 ColdStartTimer.addStage("PlaybackData Resolution End")
                 result
@@ -6552,7 +6652,7 @@ class MusicService :
             }
 
         val nonNullPlayback =
-            requireNotNull(playbackData) {
+            requireNotNull(resolvedPlaybackStream) {
                 getString(R.string.error_unknown)
             }
         nonNullPlayback.playbackTracking
@@ -6605,11 +6705,10 @@ class MusicService :
                 formatEntity,
             )
         }
-        scope.launch(Dispatchers.IO) { recoverSong(mediaId, nonNullPlayback) }
+        scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
 
-        val streamUrl = nonNullPlayback.streamUrl
-
-        val trackingExpiryMs = System.currentTimeMillis() + (nonNullPlayback.streamExpiresInSeconds * 1000L)
+        val streamUrl = nonNullPlayback.url
+        val trackingExpiryMs = nonNullPlayback.expiresAtMs
 
         if (!lowDataModeActive) {
             playbackUrlCache[mediaId] =
@@ -6619,6 +6718,7 @@ class MusicService :
                     authFingerprint = nonNullPlayback.authFingerprint,
                 )
         }
+
         val resolvedDataSpec = dataSpec.withUri(streamUrl.toUri())
         val length =
             resolveStreamChunkLength(
