@@ -78,7 +78,28 @@ object SekaiTuneCanvas {
             cache.remove(key)
         }
 
-        val result = getBySongArtist(song, artistStr, storefront)
+        val result =
+            when (policy.preferredSource) {
+                CanvasSource.OFF -> null
+                CanvasSource.TIDAL -> {
+                    val tidalResult = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                    if (tidalResult != null) {
+                        tidalResult
+                    } else if (policy.allowFallback) {
+                        getBySongArtist(song, artistStr, storefront)
+                    } else {
+                        null
+                    }
+                }
+                CanvasSource.SPOTIFY -> {
+                    // Will be wired in Step 8
+                    if (policy.allowFallback) {
+                        getBySongArtist(song, artistStr, storefront)
+                    } else {
+                        null
+                    }
+                }
+            }
 
         cache[key] =
             CacheEntry(
