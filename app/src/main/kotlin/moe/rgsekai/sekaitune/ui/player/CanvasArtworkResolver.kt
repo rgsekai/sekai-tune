@@ -9,6 +9,8 @@ package moe.rgsekai.sekaitune.ui.player
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.canvas.CanvasRequestPolicy
+import moe.rgsekai.sekaitune.canvas.CanvasSource
 import moe.rgsekai.sekaitune.canvas.SekaiTuneCanvas
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
 import moe.rgsekai.sekaitune.innertube.YouTube
@@ -25,6 +27,7 @@ internal suspend fun resolveCanvasArtworkForPlayback(
     storefront: String,
     requireVertical: Boolean,
     allowNetwork: Boolean,
+    canvasPolicy: CanvasRequestPolicy = CanvasRequestPolicy(),
 ): CanvasArtwork? {
     withContext(Dispatchers.IO) {
         CanvasArtworkPlaybackCache.get(
@@ -34,7 +37,7 @@ internal suspend fun resolveCanvasArtworkForPlayback(
     }?.takeIf { artwork -> artwork.hasRequiredCanvasVariant(requireVertical) }
         ?.let { return it }
 
-    if (!allowNetwork || mediaId.isBlank()) {
+    if (!allowNetwork || mediaId.isBlank() || canvasPolicy.preferredSource == CanvasSource.OFF) {
         Timber.tag(CanvasArtworkLogTag).d("Skipping canvas network lookup for %s", mediaId)
         return null
     }
@@ -46,6 +49,7 @@ internal suspend fun resolveCanvasArtworkForPlayback(
                 artistNameRaw = artistNameRaw,
                 storefront = storefront,
                 requireVertical = requireVertical,
+                canvasPolicy = canvasPolicy,
             ) ?: fetchCanvasArtworkByAlbumFallback(
                 albumId = albumId,
                 albumTitleRaw = albumTitleRaw,
@@ -68,6 +72,7 @@ internal suspend fun fetchCanvasArtworkForPlayback(
     artistNameRaw: String,
     storefront: String,
     requireVertical: Boolean,
+    canvasPolicy: CanvasRequestPolicy = CanvasRequestPolicy(),
 ): CanvasArtwork? {
     val songTitle = normalizeCanvasSongTitle(songTitleRaw)
     val artistName = normalizeCanvasArtistName(artistNameRaw)
@@ -110,9 +115,11 @@ internal suspend fun fetchCanvasArtworkForPlayback(
     val primaryResolved =
         candidates.firstNotNullOfOrNull { (song, artist) ->
             SekaiTuneCanvas
-                .getBySongArtist(
+                .getCanvas(
                     song = song,
-                    artist = artist,
+                    artists = if (artist.isNotBlank()) listOf(artist) else emptyList(),
+                    durationMs = null,
+                    policy = canvasPolicy,
                     storefront = storefront,
                 )?.takeIf { artwork ->
                     artwork.hasRequiredCanvasVariant(requireVertical)

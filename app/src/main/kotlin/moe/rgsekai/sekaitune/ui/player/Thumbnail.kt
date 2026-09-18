@@ -89,6 +89,11 @@ import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
+import moe.rgsekai.sekaitune.canvas.CanvasRequestPolicy
+import moe.rgsekai.sekaitune.canvas.CanvasSource
+import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
+import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
+import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.BackdropBlurAmountKey
 import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
@@ -144,6 +149,9 @@ fun Thumbnail(
 
     val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
+    val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
+    val canvasMetered by rememberPreference(CanvasMeteredKey, true)
+    val canvasFallback by rememberPreference(CanvasFallbackKey, true)
     val lowDataModeActive = rememberLowDataModeActive()
     val playerDesignStyle by rememberEnumPreference(
         key = PlayerDesignStyleKey,
@@ -422,7 +430,14 @@ fun Thumbnail(
                                     playerDesignStyle != PlayerDesignStyle.V8 &&
                                     item.mediaId.isNotBlank() &&
                                     item.mediaId == currentMediaItem?.mediaId
-                            val shouldFetchCanvas = shouldUseCanvas && !lowDataModeActive
+                            val shouldFetchCanvas = shouldUseCanvas && (canvasMetered || !lowDataModeActive)
+                            val canvasPolicy = remember(SekaiTuneCanvasEnabled, canvasSource, canvasMetered, canvasFallback) {
+                                CanvasRequestPolicy(
+                                    preferredSource = if (SekaiTuneCanvasEnabled) canvasSource else CanvasSource.OFF,
+                                    allowMetered = canvasMetered,
+                                    allowFallback = canvasFallback,
+                                )
+                            }
                             var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }
                             var canvasFetchInFlight by remember(item.mediaId) { mutableStateOf(false) }
 
@@ -467,6 +482,7 @@ fun Thumbnail(
                                             storefront = storefront,
                                             requireVertical = false,
                                             allowNetwork = shouldFetchCanvas,
+                                            canvasPolicy = canvasPolicy,
                                         )
                                 } finally {
                                     canvasFetchInFlight = false
