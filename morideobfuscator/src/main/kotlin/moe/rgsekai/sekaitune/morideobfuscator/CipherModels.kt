@@ -56,6 +56,8 @@ interface MoriCipherResolver {
         signatureCipher: String,
     ): Result<String>
 
+    suspend fun preWarm()
+
     suspend fun transformNParameter(
         videoId: String,
         url: String,

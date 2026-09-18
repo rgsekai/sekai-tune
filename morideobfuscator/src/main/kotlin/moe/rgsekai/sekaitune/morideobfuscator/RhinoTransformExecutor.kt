@@ -15,6 +15,19 @@ import org.mozilla.javascript.EvaluatorException
 import org.mozilla.javascript.Function
 
 internal class RhinoTransformExecutor {
+    fun preWarm() {
+        runCatching {
+            factory.call(
+                ContextAction { context ->
+                    context.optimizationLevel = -1
+                    context.languageVersion = Context.VERSION_ES6
+                    context.setClassShutter(ClassShutter { false })
+                    context.initSafeStandardObjects(null, true)
+                },
+            )
+        }
+    }
+
     fun executeSignature(
         plan: TransformPlan,
         input: String,

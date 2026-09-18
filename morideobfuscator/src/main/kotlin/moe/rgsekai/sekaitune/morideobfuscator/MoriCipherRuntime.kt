@@ -51,6 +51,12 @@ object MoriCipherRuntime : MoriCipherResolver {
         }
     }
 
+    override suspend fun preWarm() {
+        val currentEngine = requireEngine()
+        ensureCacheLoaded(currentEngine)
+        currentEngine.executor.preWarm()
+    }
+
     override suspend fun refresh(
         force: Boolean,
         videoId: String?,

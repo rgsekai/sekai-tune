@@ -150,6 +150,9 @@ class App :
 
     private fun initializeDeferredAsync() {
         applicationScope.launch(Dispatchers.IO) {
+            runCatching {
+                MoriCipherRuntime.preWarm()
+            }.onFailure { Timber.w(it, "Mori cipher runtime prewarm failed") }
             MoriCipherRuntime
                 .refresh(force = false)
                 .onFailure { Timber.w(it, "Mori cipher background initialization failed") }
