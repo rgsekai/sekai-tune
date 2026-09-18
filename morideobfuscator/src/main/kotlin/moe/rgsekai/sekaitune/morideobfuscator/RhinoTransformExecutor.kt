@@ -14,8 +14,13 @@ import org.mozilla.javascript.ContextFactory
 import org.mozilla.javascript.EvaluatorException
 import org.mozilla.javascript.Function
 
+import org.mozilla.javascript.Script
+import java.util.concurrent.ConcurrentHashMap
+
 internal class RhinoTransformExecutor {
-    fun preWarm() {
+    private val scriptCache = ConcurrentHashMap<String, Script>()
+
+    fun preWarm(plan: TransformPlan? = null) {
         runCatching {
             factory.call(
                 ContextAction { context ->
@@ -23,6 +28,20 @@ internal class RhinoTransformExecutor {
                     context.languageVersion = Context.VERSION_ES6
                     context.setClassShutter(ClassShutter { false })
                     context.initSafeStandardObjects(null, true)
+                    plan?.let { nonNullPlan ->
+                        nonNullPlan.signatureProgram?.let { program ->
+                            val key = "${nonNullPlan.sourceSha256}:sig"
+                            scriptCache.computeIfAbsent(key) {
+                                context.compileString(program, "mori-player-sig", 1, null)
+                            }
+                        }
+                        nonNullPlan.nProgram?.let { program ->
+                            val key = "${nonNullPlan.sourceSha256}:n"
+                            scriptCache.computeIfAbsent(key) {
+                                context.compileString(program, "mori-player-n", 1, null)
+                            }
+                        }
+                    }
                 },
             )
         }
@@ -33,6 +52,7 @@ internal class RhinoTransformExecutor {
         input: String,
     ): String =
         execute(
+            cacheKey = "${plan.sourceSha256}:sig",
             program = plan.signatureProgram ?: throw MoriCipherCapabilityException("Signature transform is unavailable"),
             functionName = plan.signatureFunction ?: throw MoriCipherCapabilityException("Signature transform is unavailable"),
             input = input,
@@ -43,12 +63,14 @@ internal class RhinoTransformExecutor {
         input: String,
     ): String =
         execute(
+            cacheKey = "${plan.sourceSha256}:n",
             program = plan.nProgram ?: throw MoriCipherCapabilityException("Throttle transform is unavailable"),
             functionName = plan.nFunction ?: throw MoriCipherCapabilityException("Throttle transform is unavailable"),
             input = input,
         )
 
     private fun execute(
+        cacheKey: String,
         program: String,
         functionName: String,
         input: String,
@@ -63,7 +85,11 @@ internal class RhinoTransformExecutor {
                     context.languageVersion = Context.VERSION_ES6
                     context.setClassShutter(ClassShutter { false })
                     val scope = context.initSafeStandardObjects(null, true)
-                    context.evaluateString(scope, program, "mori-player", 1, null)
+                    val script =
+                        scriptCache.computeIfAbsent(cacheKey) {
+                            context.compileString(program, "mori-player", 1, null)
+                        }
+                    script.exec(context, scope)
                     val function =
                         scope.get(functionName, scope) as? Function
                             ?: throw MoriCipherException("Compiled transform was not callable")

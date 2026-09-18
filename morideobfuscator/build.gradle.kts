@@ -13,4 +13,5 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     implementation(libs.okhttp)
     implementation(libs.rhino)
+    testImplementation(libs.junit)
 }

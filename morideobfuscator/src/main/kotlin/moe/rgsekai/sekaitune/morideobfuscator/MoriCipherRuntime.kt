@@ -54,7 +54,7 @@ object MoriCipherRuntime : MoriCipherResolver {
     override suspend fun preWarm() {
         val currentEngine = requireEngine()
         ensureCacheLoaded(currentEngine)
-        currentEngine.executor.preWarm()
+        currentEngine.executor.preWarm(currentEngine.artifact?.plan)
     }
 
     override suspend fun refresh(
