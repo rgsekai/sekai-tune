@@ -92,7 +92,6 @@ class ResolveAudioStreamUseCase
             val activeLease = lease as ResolutionLease.Active
             val resolution = activeLease.resolution
             return try {
-                resolution.deferred.start()
                 resolution.deferred.await()
             } catch (cancellation: CancellationException) {
                 coroutineContext.ensureActive()
@@ -126,7 +125,7 @@ class ResolveAudioStreamUseCase
                         StreamResolutionPriority.BACKGROUND -> inFlight[backgroundKey] ?: inFlight[foregroundKey]
                     }
 
-                if (existing != null) {
+                if (existing != null && !existing.deferred.isCancelled) {
                     when (consumer) {
                         ResolutionConsumer.PLAYBACK -> existing.playbackOwners += 1
                         ResolutionConsumer.PRELOAD -> existing.preloadOwners += 1
@@ -135,12 +134,23 @@ class ResolveAudioStreamUseCase
                     return ResolutionLease.Active(activeKey, existing)
                 }
 
+                if (existing != null) {
+                    inFlight.remove(foregroundKey)
+                    inFlight.remove(backgroundKey)
+                }
+
                 val targetKey = InFlightKey(cacheKey, priority)
                 val deferred =
-                    scope.async(start = CoroutineStart.LAZY) {
-                        val resolved = resolveUncached(request)
-                        storeResolvedStream(cacheKey, resolved)
-                        resolved
+                    scope.async {
+                        try {
+                            val resolved = resolveUncached(request)
+                            storeResolvedStream(cacheKey, resolved)
+                            resolved
+                        } finally {
+                            synchronized(inFlightLock) {
+                                inFlight.remove(targetKey)
+                            }
+                        }
                     }
 
                 val resolution =
@@ -166,7 +176,7 @@ class ResolveAudioStreamUseCase
                     ResolutionConsumer.PLAYBACK -> resolution.playbackOwners = (resolution.playbackOwners - 1).coerceAtLeast(0)
                     ResolutionConsumer.PRELOAD -> resolution.preloadOwners = (resolution.preloadOwners - 1).coerceAtLeast(0)
                 }
-                if (resolution.playbackOwners == 0 && resolution.preloadOwners == 0) {
+                if (resolution.deferred.isCompleted) {
                     inFlight.remove(key)
                 }
             }

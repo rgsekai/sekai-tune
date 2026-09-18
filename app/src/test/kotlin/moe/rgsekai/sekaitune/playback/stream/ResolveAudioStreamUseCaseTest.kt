@@ -8,6 +8,7 @@ package moe.rgsekai.sekaitune.playback.stream
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -46,5 +47,50 @@ class ResolveAudioStreamUseCaseTest {
         assertEquals(res1, res2)
         assertEquals(1, resolutionCount.get())
         assertTrue(res1.contains("test_track_123"))
+    }
+
+    @Test
+    fun testPreloadCancellationDoesNotCancelForegroundPlayback() = runBlocking {
+        val useCaseScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        val inFlight = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<String>>()
+
+        suspend fun resolveStreamWithScopeIsolation(
+            mediaId: String,
+            workDelayMs: Long = 100,
+        ): String {
+            val deferred = synchronized(inFlight) {
+                inFlight.computeIfAbsent(mediaId) {
+                    useCaseScope.async {
+                        try {
+                            kotlinx.coroutines.delay(workDelayMs)
+                            "https://googlevideo.com/videoplayback?id=$mediaId"
+                        } finally {
+                            inFlight.remove(mediaId)
+                        }
+                    }
+                }
+            }
+            return deferred.await()
+        }
+
+        // Caller 1 (preload) starts in its own separate child scope
+        val preloadScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        val preloadJob = preloadScope.launch {
+            resolveStreamWithScopeIsolation("track_cancel_test", workDelayMs = 80)
+        }
+
+        // Let preload start and enter in-flight
+        kotlinx.coroutines.delay(20)
+
+        // Cancel the preload's scope while resolution is in-flight
+        preloadJob.cancel()
+
+        // Caller 2 (foreground playback) requests the same track ID immediately
+        val playbackResult = async(kotlinx.coroutines.Dispatchers.IO) {
+            resolveStreamWithScopeIsolation("track_cancel_test", workDelayMs = 80)
+        }.await()
+
+        assertNotNull(playbackResult)
+        assertEquals("https://googlevideo.com/videoplayback?id=track_cancel_test", playbackResult)
     }
 }
