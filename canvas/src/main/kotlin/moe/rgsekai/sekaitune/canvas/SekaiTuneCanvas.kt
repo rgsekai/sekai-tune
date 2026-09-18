@@ -62,6 +62,33 @@ object SekaiTuneCanvas {
     private val cache = ConcurrentHashMap<String, CacheEntry>()
     private val ttlMs = 60_000L
 
+    suspend fun getCanvas(
+        song: String,
+        artists: List<String> = emptyList(),
+        durationMs: Long? = null,
+        policy: CanvasRequestPolicy = CanvasRequestPolicy(),
+        storefront: String = "us",
+    ): CanvasArtwork? {
+        if (policy.preferredSource == CanvasSource.OFF) return null
+        val artistStr = artists.joinToString(", ")
+
+        val key = cacheKey("poly", policy.preferredSource.name, song, artistStr, storefront)
+        cache[key]?.let { entry ->
+            if (entry.expiresAtMs > System.currentTimeMillis()) return entry.value
+            cache.remove(key)
+        }
+
+        val result = getBySongArtist(song, artistStr, storefront)
+
+        cache[key] =
+            CacheEntry(
+                value = result,
+                expiresAtMs = System.currentTimeMillis() + ttlMs,
+            )
+
+        return result
+    }
+
     suspend fun getBySongArtist(
         song: String,
         artist: String,
