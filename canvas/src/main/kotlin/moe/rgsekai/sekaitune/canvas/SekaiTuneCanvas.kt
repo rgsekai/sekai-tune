@@ -92,9 +92,12 @@ object SekaiTuneCanvas {
                     }
                 }
                 CanvasSource.SPOTIFY -> {
-                    // Will be wired in Step 8
-                    if (policy.allowFallback) {
-                        getBySongArtist(song, artistStr, storefront)
+                    val spotifyResult = SpotifyCanvasProvider.getCanvas(song, artists, durationMs)
+                    if (spotifyResult != null) {
+                        spotifyResult
+                    } else if (policy.allowFallback) {
+                        TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                            ?: getBySongArtist(song, artistStr, storefront)
                     } else {
                         null
                     }
