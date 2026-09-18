@@ -63,7 +63,7 @@ import androidx.media3.datasource.cache.ContentMetadata
 class DownloadUtil
     @Inject
     constructor(
-        @ApplicationContext context: Context,
+        @ApplicationContext val context: Context,
         val database: MusicDatabase,
         val databaseProvider: DatabaseProvider,
         @DownloadCache val downloadCache: Cache,
@@ -108,13 +108,17 @@ class DownloadUtil
                     if (!isYouTubeMediaHost) return@addInterceptor chain.proceed(request)
 
                     val requestProfile = StreamClientUtils.resolveRequestProfile(request.url)
-                    chain.proceed(
+                    val configuredRequest =
                         StreamClientUtils
                             .applyRequestProfile(
                                 request.newBuilder(),
                                 requestProfile,
-                            ).build(),
-                    )
+                            ).build()
+                    val response = chain.proceed(configuredRequest)
+                    if (response.code == 403 || response.code == 410 || response.code == 416) {
+                        resolveAudioStreamUseCase.invalidateUrl(request.url.toString())
+                    }
+                    response
                 }.build()
         }
 
@@ -193,6 +197,15 @@ class DownloadUtil
                                     set(download.request.id, download)
                                 }
                             }
+                            if (download.state == Download.STATE_FAILED) {
+                                resolveAudioStreamUseCase.invalidate(download.request.id)
+                            }
+                            if (download.state == Download.STATE_DOWNLOADING ||
+                                download.state == Download.STATE_QUEUED ||
+                                download.state == Download.STATE_COMPLETED
+                            ) {
+                                preloadNextQueuedDownload(downloadManager)
+                            }
                         }
                     },
                 )
@@ -222,6 +235,32 @@ class DownloadUtil
         }
 
         fun getDownload(songId: String): Flow<Download?> = downloads.map { it[songId] }
+
+        private fun preloadNextQueuedDownload(downloadManager: DownloadManager) {
+            downloadScope.launch {
+                runCatching {
+                    val cursor = downloadManager.downloadIndex.getDownloads(Download.STATE_QUEUED)
+                    val queuedIds = mutableListOf<String>()
+                    while (cursor.moveToNext() && queuedIds.size < DEFAULT_MAX_PARALLEL_DOWNLOADS) {
+                        queuedIds.add(cursor.download.request.id)
+                    }
+                    cursor.close()
+
+                    val lowDataModeActive = context.isLowDataModeActive()
+                    val requestedAudioQuality = resolveDownloadAudioQuality(lowDataModeActive)
+                    for (queuedId in queuedIds) {
+                        resolveAudioStreamUseCase.preload(
+                            AudioStreamRequest(
+                                mediaId = queuedId,
+                                quality = requestedAudioQuality,
+                                networkMetered = lowDataModeActive,
+                                purpose = StreamPurpose.DOWNLOAD,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
 
         private fun resolveDownloadAudioQuality(lowDataModeActive: Boolean): AudioQuality =
             if (lowDataModeActive) AudioQuality.LOW else audioQuality
@@ -289,9 +328,9 @@ class DownloadUtil
         }
 
         companion object {
-            private const val DEFAULT_MAX_PARALLEL_DOWNLOADS = 6
-            private const val MAX_IDLE_DOWNLOAD_CONNECTIONS = 12
-            private const val MAX_DOWNLOAD_HTTP_REQUESTS = 24
+            private const val DEFAULT_MAX_PARALLEL_DOWNLOADS = 3
+            private const val MAX_IDLE_DOWNLOAD_CONNECTIONS = 6
+            private const val MAX_DOWNLOAD_HTTP_REQUESTS = 12
             private const val DOWNLOAD_CONNECTION_KEEP_ALIVE_MINUTES = 5L
             private const val DOWNLOAD_WRITE_BUFFER_SIZE = 256 * 1024
         }
