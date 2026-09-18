@@ -23,16 +23,24 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtworkIdentity
+import moe.rgsekai.sekaitune.spotify.SpotifyAuth
 import java.io.ByteArrayOutputStream
 
 object SpotifyCanvasProvider {
     private const val SPOTIFY_TOKEN_URL = "https://open.spotify.com/get_access_token?reason=transport&productType=web_player"
+    private const val SPOTIFY_CLIENT_TOKEN_URL = "https://clienttoken.spotify.com/v1/clienttoken"
     private const val SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search"
     private const val SPOTIFY_CANVAS_URL = "https://gew1-spclient.spotify.com/canvaz-cache/v0/canvases"
+    private const val DEFAULT_CLIENT_ID = "d8a5dee97f0c409e884d427966f30a64"
+    private const val PROBE_TRACK_URI = "spotify:track:4cOdK2wGLETKBW3PvgPWqT"
     private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
 
     private val json =
@@ -58,10 +66,51 @@ object SpotifyCanvasProvider {
         }
     }
 
+    data class SpotifySession(
+        val accessToken: String,
+        val clientId: String,
+        val clientToken: String,
+        val expiresAtMs: Long,
+        val spDc: String?,
+    )
+
     @Serializable
     private data class SpotifyTokenResponse(
         val accessToken: String? = null,
         val accessTokenExpirationTimestampMs: Long? = null,
+        val clientId: String? = null,
+    )
+
+    @Serializable
+    private data class ClientTokenRequest(
+        val client_data: ClientData,
+    )
+
+    @Serializable
+    private data class ClientData(
+        val client_id: String,
+        val js_sdk_data: JsSdkData = JsSdkData(),
+    )
+
+    @Serializable
+    private data class JsSdkData(
+        val device_brand: String = "unknown",
+        val device_model: String = "unknown",
+        val os: String = "windows",
+        val os_version: String = "NT 10.0",
+    )
+
+    @Serializable
+    private data class ClientTokenResponse(
+        val response_type: String? = null,
+        val granted_token_response: GrantedTokenResponse? = null,
+    )
+
+    @Serializable
+    private data class GrantedTokenResponse(
+        val token: String? = null,
+        val expires_after_seconds: Long? = null,
+        val refresh_after_seconds: Long? = null,
     )
 
     @Serializable
@@ -104,61 +153,139 @@ object SpotifyCanvasProvider {
         val width: Int? = null,
     )
 
-    private var cachedAccessToken: String? = null
-    private var tokenExpiryMs: Long = 0L
-    private val tokenLock = Any()
+    private val sessionMutex = Mutex()
+    private var cachedSession: SpotifySession? = null
 
-    private suspend fun getOrFetchAccessToken(): String? {
-        synchronized(tokenLock) {
-            val token = cachedAccessToken
-            if (token != null && System.currentTimeMillis() < tokenExpiryMs - 60_000L) {
-                return token
+    private suspend fun fetchClientToken(clientId: String): String? {
+        val payload = ClientTokenRequest(
+            client_data = ClientData(client_id = clientId)
+        )
+
+        val response = runCatching {
+            client.post(SPOTIFY_CLIENT_TOKEN_URL) {
+                header("User-Agent", USER_AGENT)
+                header("Accept", "application/json")
+                contentType(ContentType.Application.Json)
+                setBody(payload)
             }
-        }
-
-        val response =
-            runCatching {
-                client.get(SPOTIFY_TOKEN_URL) {
-                    header("User-Agent", USER_AGENT)
-                }
-            }.getOrNull() ?: return null
+        }.getOrNull() ?: return null
 
         if (response.status != HttpStatusCode.OK) return null
+        val body = runCatching { response.body<ClientTokenResponse>() }.getOrNull()
+        return body?.granted_token_response?.token
+    }
 
-        val tokenBody = runCatching { response.body<SpotifyTokenResponse>() }.getOrNull() ?: return null
-        val token = tokenBody.accessToken ?: return null
-        val expiry = tokenBody.accessTokenExpirationTimestampMs ?: (System.currentTimeMillis() + 3600_000L)
+    private suspend fun acquireSession(spDc: String?, forceRefresh: Boolean = false): SpotifySession? {
+        return sessionMutex.withLock {
+            val now = System.currentTimeMillis()
+            val cached = cachedSession
+            if (!forceRefresh && cached != null && cached.expiresAtMs > now + 60_000L && cached.spDc == spDc) {
+                return@withLock cached
+            }
 
-        synchronized(tokenLock) {
-            cachedAccessToken = token
-            tokenExpiryMs = expiry
+            var accessToken: String? = null
+            var clientId: String? = null
+            var expiresAtMs: Long = now + 3600_000L
+
+            // 1. Try authenticated session via sp_dc if available
+            if (!spDc.isNullOrBlank()) {
+                val authResult = runCatching { SpotifyAuth.fetchAccessToken(spDc) }.getOrNull()
+                val internalToken = authResult?.getOrNull()
+                if (internalToken != null && internalToken.accessToken.isNotBlank()) {
+                    accessToken = internalToken.accessToken
+                    clientId = internalToken.clientId.ifBlank { DEFAULT_CLIENT_ID }
+                    expiresAtMs = if (internalToken.accessTokenExpirationTimestampMs > 0L) {
+                        internalToken.accessTokenExpirationTimestampMs
+                    } else {
+                        now + 3600_000L
+                    }
+                }
+            }
+
+            // 2. Fallback to web player token endpoint
+            if (accessToken == null) {
+                val tokenResponse = runCatching {
+                    client.get(SPOTIFY_TOKEN_URL) {
+                        header("User-Agent", USER_AGENT)
+                    }
+                }.getOrNull()
+
+                if (tokenResponse?.status == HttpStatusCode.OK) {
+                    val tokenBody = runCatching { tokenResponse.body<SpotifyTokenResponse>() }.getOrNull()
+                    if (tokenBody?.accessToken != null) {
+                        accessToken = tokenBody.accessToken
+                        clientId = tokenBody.clientId?.ifBlank { DEFAULT_CLIENT_ID } ?: DEFAULT_CLIENT_ID
+                        expiresAtMs = tokenBody.accessTokenExpirationTimestampMs ?: (now + 3600_000L)
+                    }
+                }
+            }
+
+            if (accessToken == null) return@withLock null
+            val finalClientId = clientId ?: DEFAULT_CLIENT_ID
+
+            // 3. Obtain matching Client-Token
+            val clientToken = fetchClientToken(finalClientId) ?: ""
+
+            val session = SpotifySession(
+                accessToken = accessToken,
+                clientId = finalClientId,
+                clientToken = clientToken,
+                expiresAtMs = expiresAtMs,
+                spDc = spDc,
+            )
+            cachedSession = session
+            session
         }
-        return token
+    }
+
+    private suspend fun invalidateSession() {
+        sessionMutex.withLock {
+            cachedSession = null
+        }
     }
 
     suspend fun getCanvas(
         song: String,
         artists: List<String> = emptyList(),
         durationMs: Long? = null,
-    ): CanvasArtwork? {
-        return runCatching {
-            val token = getOrFetchAccessToken() ?: return null
+        spDc: String? = null,
+    ): CanvasArtwork? = withContext(Dispatchers.IO) {
+        runCatching {
+            var session = acquireSession(spDc) ?: return@withContext null
             val artistQuery = artists.firstOrNull() ?: ""
             val query = if (artistQuery.isNotBlank()) "track:$song artist:$artistQuery" else song
 
-            val searchResponse =
-                client.get(SPOTIFY_SEARCH_URL) {
-                    header("Authorization", "Bearer $token")
+            var searchResponse = client.get(SPOTIFY_SEARCH_URL) {
+                header("Authorization", "Bearer ${session.accessToken}")
+                if (session.clientToken.isNotBlank()) {
+                    header("client-token", session.clientToken)
+                }
+                header("User-Agent", USER_AGENT)
+                parameter("type", "track")
+                parameter("q", query)
+                parameter("limit", 5)
+            }
+
+            // Auth error recovery
+            if (searchResponse.status == HttpStatusCode.Unauthorized || searchResponse.status == HttpStatusCode.Forbidden) {
+                invalidateSession()
+                session = acquireSession(spDc, forceRefresh = true) ?: return@withContext null
+                searchResponse = client.get(SPOTIFY_SEARCH_URL) {
+                    header("Authorization", "Bearer ${session.accessToken}")
+                    if (session.clientToken.isNotBlank()) {
+                        header("client-token", session.clientToken)
+                    }
                     header("User-Agent", USER_AGENT)
                     parameter("type", "track")
                     parameter("q", query)
                     parameter("limit", 5)
                 }
+            }
 
-            if (searchResponse.status != HttpStatusCode.OK) return null
+            if (searchResponse.status != HttpStatusCode.OK) return@withContext null
 
             val searchBody = searchResponse.body<SpotifySearchResponse>()
-            val tracks = searchBody.tracks?.items ?: return null
+            val tracks = searchBody.tracks?.items ?: return@withContext null
 
             for (track in tracks) {
                 val trackTitle = track.name ?: continue
@@ -175,11 +302,20 @@ object SpotifyCanvasProvider {
                         durationMs2 = trackDuration,
                     )
                 ) {
-                    val canvasUrl = fetchCanvasUrlForTrackUri(trackUri, token)
+                    var canvasUrl = fetchCanvasUrlForTrackUri(trackUri, session)
+                    if (canvasUrl == null) {
+                        // In case of token rejection during canvas fetch
+                        invalidateSession()
+                        val refreshedSession = acquireSession(spDc, forceRefresh = true)
+                        if (refreshedSession != null) {
+                            canvasUrl = fetchCanvasUrlForTrackUri(trackUri, refreshedSession)
+                        }
+                    }
+
                     val staticCover = track.album?.images?.firstOrNull()?.url
 
                     if (canvasUrl != null || staticCover != null) {
-                        return CanvasArtwork(
+                        return@withContext CanvasArtwork(
                             name = trackTitle,
                             artist = trackArtists.joinToString(", "),
                             albumName = track.album?.name,
@@ -196,23 +332,58 @@ object SpotifyCanvasProvider {
         }.getOrNull()
     }
 
-    private suspend fun fetchCanvasUrlForTrackUri(trackUri: String, token: String): String? {
+    private suspend fun fetchCanvasUrlForTrackUri(trackUri: String, session: SpotifySession): String? {
         return runCatching {
             val requestBytes = buildCanvasProtobufRequest(trackUri)
 
-            val response =
-                client.post(SPOTIFY_CANVAS_URL) {
-                    header("Authorization", "Bearer $token")
-                    header("User-Agent", USER_AGENT)
-                    contentType(ContentType("application", "x-protobuf"))
-                    setBody(requestBytes)
+            val response = client.post(SPOTIFY_CANVAS_URL) {
+                header("Authorization", "Bearer ${session.accessToken}")
+                if (session.clientToken.isNotBlank()) {
+                    header("client-token", session.clientToken)
                 }
+                header("User-Agent", USER_AGENT)
+                contentType(ContentType("application", "x-protobuf"))
+                setBody(requestBytes)
+            }
 
             if (response.status != HttpStatusCode.OK) return null
 
             val responseBytes = response.readRawBytes()
             parseCanvasUrlFromProtobuf(responseBytes)
         }.getOrNull()
+    }
+
+    suspend fun isHealthy(spDc: String? = null): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            var session = acquireSession(spDc) ?: return@withContext false
+            val requestBytes = buildCanvasProtobufRequest(PROBE_TRACK_URI)
+
+            var response = client.post(SPOTIFY_CANVAS_URL) {
+                header("Authorization", "Bearer ${session.accessToken}")
+                if (session.clientToken.isNotBlank()) {
+                    header("client-token", session.clientToken)
+                }
+                header("User-Agent", USER_AGENT)
+                contentType(ContentType("application", "x-protobuf"))
+                setBody(requestBytes)
+            }
+
+            if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
+                invalidateSession()
+                session = acquireSession(spDc, forceRefresh = true) ?: return@withContext false
+                response = client.post(SPOTIFY_CANVAS_URL) {
+                    header("Authorization", "Bearer ${session.accessToken}")
+                    if (session.clientToken.isNotBlank()) {
+                        header("client-token", session.clientToken)
+                    }
+                    header("User-Agent", USER_AGENT)
+                    contentType(ContentType("application", "x-protobuf"))
+                    setBody(requestBytes)
+                }
+            }
+
+            response.status == HttpStatusCode.OK
+        }.getOrDefault(false)
     }
 
     private fun writeVarint(out: ByteArrayOutputStream, value: Long) {

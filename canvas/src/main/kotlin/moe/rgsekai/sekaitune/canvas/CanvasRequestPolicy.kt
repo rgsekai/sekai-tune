@@ -11,4 +11,5 @@ data class CanvasRequestPolicy(
     val preferredSource: CanvasSource = CanvasSource.TIDAL,
     val allowMetered: Boolean = true,
     val allowFallback: Boolean = true,
+    val spDc: String? = null,
 )

@@ -95,6 +95,7 @@ import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
+import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
 import moe.rgsekai.sekaitune.constants.BackdropBlurAmountKey
 import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
 import moe.rgsekai.sekaitune.constants.CropThumbnailToSquareKey
@@ -152,6 +153,7 @@ fun Thumbnail(
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
+    val spotifySpDc by rememberPreference(SpotifySpDcKey, "")
     val lowDataModeActive = rememberLowDataModeActive()
     val playerDesignStyle by rememberEnumPreference(
         key = PlayerDesignStyleKey,
@@ -431,11 +433,12 @@ fun Thumbnail(
                                     item.mediaId.isNotBlank() &&
                                     item.mediaId == currentMediaItem?.mediaId
                             val shouldFetchCanvas = shouldUseCanvas && (canvasMetered || !lowDataModeActive)
-                            val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback) {
+                            val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback, spotifySpDc) {
                                 CanvasRequestPolicy(
                                     preferredSource = canvasSource,
                                     allowMetered = canvasMetered,
                                     allowFallback = canvasFallback,
+                                    spDc = spotifySpDc.takeIf { it.isNotBlank() },
                                 )
                             }
                             var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }

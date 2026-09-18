@@ -123,7 +123,10 @@ class CanvasSettingsRepository @Inject constructor(
             CanvasSource.BETTER_LYRICS -> SekaiTuneCanvas.isHealthy()
             CanvasSource.APPLE_MUSIC -> AppleMusicProvider.isHealthy()
             CanvasSource.TIDAL -> TidalCanvasProvider.isHealthy()
-            CanvasSource.SPOTIFY -> spotifyConnected.first()
+            CanvasSource.SPOTIFY -> {
+                val spDc = context.dataStore.data.first()[SpotifySpDcKey]?.takeIf { it.isNotBlank() }
+                SpotifyCanvasProvider.isHealthy(spDc)
+            }
             CanvasSource.ALL -> error("Health checks require one provider")
         }
     }

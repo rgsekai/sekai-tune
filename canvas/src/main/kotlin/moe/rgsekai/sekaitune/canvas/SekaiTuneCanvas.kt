@@ -97,7 +97,7 @@ object SekaiTuneCanvas {
                     }
                 }
                 CanvasSource.SPOTIFY -> {
-                    val spotifyResult = SpotifyCanvasProvider.getCanvas(song, artists, durationMs)
+                    val spotifyResult = SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc)
                     if (spotifyResult != null) {
                         spotifyResult
                     } else if (policy.allowFallback) {
@@ -111,7 +111,7 @@ object SekaiTuneCanvas {
                     getBySongArtist(song, artistStr, storefront)
                         ?: AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
                         ?: TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
-                        ?: SpotifyCanvasProvider.getCanvas(song, artists, durationMs)
+                        ?: SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc)
                 }
             }
 
