@@ -7,9 +7,6 @@
 
 package moe.rgsekai.sekaitune.canvas
 
-import com.google.protobuf.CodedInputStream
-import com.google.protobuf.CodedOutputStream
-import com.google.protobuf.WireFormat
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -218,45 +215,113 @@ object SpotifyCanvasProvider {
         }.getOrNull()
     }
 
+    private fun writeVarint(out: ByteArrayOutputStream, value: Long) {
+        var v = value
+        while ((v and 0x7FL.inv()) != 0L) {
+            out.write(((v and 0x7F) or 0x80).toInt())
+            v = v ushr 7
+        }
+        out.write((v and 0x7F).toInt())
+    }
+
     private fun buildCanvasProtobufRequest(trackUri: String): ByteArray {
-        val itemStream = ByteArrayOutputStream()
-        val itemCos = CodedOutputStream.newInstance(itemStream)
-        itemCos.writeString(1, trackUri)
-        itemCos.flush()
+        val uriBytes = trackUri.toByteArray(Charsets.UTF_8)
+        val innerStream = ByteArrayOutputStream()
+        // Field 1 (track_uri), wire type 2 (length-delimited): tag = (1 shl 3) or 2 = 0x0A
+        writeVarint(innerStream, (1L shl 3) or 2L)
+        writeVarint(innerStream, uriBytes.size.toLong())
+        innerStream.write(uriBytes)
+        val innerBytes = innerStream.toByteArray()
 
-        val mainStream = ByteArrayOutputStream()
-        val mainCos = CodedOutputStream.newInstance(mainStream)
-        mainCos.writeByteArray(1, itemStream.toByteArray())
-        mainCos.flush()
+        val outerStream = ByteArrayOutputStream()
+        // Field 1 (tracks), wire type 2 (length-delimited): tag = (1 shl 3) or 2 = 0x0A
+        writeVarint(outerStream, (1L shl 3) or 2L)
+        writeVarint(outerStream, innerBytes.size.toLong())
+        outerStream.write(innerBytes)
+        return outerStream.toByteArray()
+    }
 
-        return mainStream.toByteArray()
+    private class SimpleProtoReader(
+        private val bytes: ByteArray,
+        offset: Int = 0,
+        private val limit: Int = bytes.size,
+    ) {
+        private var pos = offset
+
+        val isAtEnd: Boolean get() = pos >= limit
+
+        fun readVarint(): Long {
+            var result = 0L
+            var shift = 0
+            while (pos < limit && shift < 64) {
+                val b = bytes[pos++].toLong()
+                result = result or ((b and 0x7F) shl shift)
+                if ((b and 0x80L) == 0L) return result
+                shift += 7
+            }
+            return result
+        }
+
+        fun readTag(): Int = if (isAtEnd) 0 else readVarint().toInt()
+
+        fun readBytes(length: Int): ByteArray {
+            val safeLen = length.coerceAtMost(limit - pos).coerceAtLeast(0)
+            val copy = bytes.copyOfRange(pos, pos + safeLen)
+            pos += safeLen
+            return copy
+        }
+
+        fun readString(length: Int): String {
+            val safeLen = length.coerceAtMost(limit - pos).coerceAtLeast(0)
+            val str = String(bytes, pos, safeLen, Charsets.UTF_8)
+            pos += safeLen
+            return str
+        }
+
+        fun skipField(tag: Int) {
+            val wireType = tag and 7
+            when (wireType) {
+                0 -> readVarint()
+                1 -> pos = (pos + 8).coerceAtMost(limit)
+                2 -> {
+                    val len = readVarint().toInt()
+                    pos = (pos + len).coerceAtMost(limit)
+                }
+                5 -> pos = (pos + 4).coerceAtMost(limit)
+                else -> pos = limit
+            }
+        }
     }
 
     private fun parseCanvasUrlFromProtobuf(data: ByteArray): String? {
-        val cis = CodedInputStream.newInstance(data)
-        while (!cis.isAtEnd) {
-            val tag = cis.readTag()
-            val fieldNumber = WireFormat.getTagFieldNumber(tag)
-            val wireType = WireFormat.getTagWireType(tag)
-            if (fieldNumber == 1 && wireType == WireFormat.WIRETYPE_LENGTH_DELIMITED) {
-                val canvasBytes = cis.readByteArray()
-                val canvasCis = CodedInputStream.newInstance(canvasBytes)
+        val reader = SimpleProtoReader(data)
+        while (!reader.isAtEnd) {
+            val tag = reader.readTag()
+            if (tag == 0) break
+            val fieldNumber = tag ushr 3
+            val wireType = tag and 7
+            if (fieldNumber == 1 && wireType == 2) {
+                val len = reader.readVarint().toInt()
+                val canvasBytes = reader.readBytes(len)
+                val innerReader = SimpleProtoReader(canvasBytes)
                 var canvasUrl: String? = null
-                while (!canvasCis.isAtEnd) {
-                    val subTag = canvasCis.readTag()
-                    val subField = WireFormat.getTagFieldNumber(subTag)
-                    val subWire = WireFormat.getTagWireType(subTag)
-                    if (subField == 2 && subWire == WireFormat.WIRETYPE_LENGTH_DELIMITED) {
-                        canvasUrl = canvasCis.readString()
+                while (!innerReader.isAtEnd) {
+                    val innerTag = innerReader.readTag()
+                    if (innerTag == 0) break
+                    val innerField = innerTag ushr 3
+                    val innerWire = innerTag and 7
+                    if (innerField == 2 && innerWire == 2) {
+                        val strLen = innerReader.readVarint().toInt()
+                        canvasUrl = innerReader.readString(strLen)
                     } else {
-                        canvasCis.skipField(subTag)
+                        innerReader.skipField(innerTag)
                     }
                 }
                 if (!canvasUrl.isNullOrBlank()) {
                     return canvasUrl
                 }
             } else {
-                cis.skipField(tag)
+                reader.skipField(tag)
             }
         }
         return null
