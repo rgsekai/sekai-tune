@@ -149,4 +149,17 @@ object TidalCanvasProvider {
 
         return null
     }
+
+    suspend fun isHealthy(): Boolean =
+        runCatching {
+            val response =
+                client.get(TIDAL_SEARCH_URL) {
+                    header("x-tidal-token", TIDAL_TOKEN)
+                    parameter("query", "music")
+                    parameter("limit", 1)
+                    parameter("countryCode", "US")
+                }
+            response.status == HttpStatusCode.OK
+        }.getOrDefault(false)
 }
+

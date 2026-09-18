@@ -37,7 +37,7 @@ internal suspend fun resolveCanvasArtworkForPlayback(
     }?.takeIf { artwork -> artwork.hasRequiredCanvasVariant(requireVertical) }
         ?.let { return it }
 
-    if (!allowNetwork || mediaId.isBlank() || canvasPolicy.preferredSource == CanvasSource.OFF) {
+    if (!allowNetwork || mediaId.isBlank()) {
         Timber.tag(CanvasArtworkLogTag).d("Skipping canvas network lookup for %s", mediaId)
         return null
     }

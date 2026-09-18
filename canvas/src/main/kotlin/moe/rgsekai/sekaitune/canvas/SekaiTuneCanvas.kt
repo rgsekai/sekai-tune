@@ -16,6 +16,7 @@ import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -69,7 +70,6 @@ object SekaiTuneCanvas {
         policy: CanvasRequestPolicy = CanvasRequestPolicy(),
         storefront: String = "us",
     ): CanvasArtwork? {
-        if (policy.preferredSource == CanvasSource.OFF) return null
         val artistStr = artists.joinToString(", ")
 
         val key = cacheKey("poly", policy.preferredSource.name, song, artistStr, storefront)
@@ -80,7 +80,12 @@ object SekaiTuneCanvas {
 
         val result =
             when (policy.preferredSource) {
-                CanvasSource.OFF -> null
+                CanvasSource.BETTER_LYRICS -> {
+                    getBySongArtist(song, artistStr, storefront)
+                }
+                CanvasSource.APPLE_MUSIC -> {
+                    AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                }
                 CanvasSource.TIDAL -> {
                     val tidalResult = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
                     if (tidalResult != null) {
@@ -101,6 +106,12 @@ object SekaiTuneCanvas {
                     } else {
                         null
                     }
+                }
+                CanvasSource.ALL -> {
+                    getBySongArtist(song, artistStr, storefront)
+                        ?: AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                        ?: TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                        ?: SpotifyCanvasProvider.getCanvas(song, artists, durationMs)
                 }
             }
 
@@ -235,7 +246,17 @@ object SekaiTuneCanvas {
                 .joinToString("|")
         return "$prefix|$normalized"
     }
+
+    suspend fun isHealthy(): Boolean =
+        runCatching {
+            val response =
+                client.get("${BETTERLYRICS_URL}health") {
+                    header("Cache-Control", "no-cache")
+                }
+            response.status == HttpStatusCode.OK
+        }.getOrDefault(false)
 }
+
 
 
 

@@ -525,6 +525,21 @@ object AppleMusicProvider {
             animatedVertical = tall,
         )
     }
+
+    suspend fun isHealthy(): Boolean =
+        runCatching {
+            val response =
+                client.get("$AMP_BASE_URL/v1/catalog/us/charts") {
+                    header("Authorization", "Bearer $APPLE_MUSIC_TOKEN")
+                    header("Origin", "https://music.apple.com")
+                    header("Referer", "https://music.apple.com/")
+                    header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    parameter("types", "albums")
+                    parameter("limit", "1")
+                    header("Cache-Control", "no-cache")
+                }
+            response.status == HttpStatusCode.OK
+        }.getOrDefault(false)
 }
 
 

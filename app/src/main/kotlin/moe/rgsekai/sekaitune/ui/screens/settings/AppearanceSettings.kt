@@ -69,12 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
-import moe.rgsekai.sekaitune.canvas.CanvasSource
 import moe.rgsekai.sekaitune.constants.AppFontPreference
-import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
-import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
-import moe.rgsekai.sekaitune.constants.CanvasSourceKey
-import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.BackdropBlurAmountKey
 import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
 import moe.rgsekai.sekaitune.constants.BlurRadiusKey
@@ -164,26 +159,6 @@ fun AppearanceSettings(navController: NavController) {
         rememberPreference(
             HidePlayerThumbnailKey,
             defaultValue = false,
-        )
-    val (SekaiTuneCanvasEnabled, onSekaiTuneCanvasEnabledChange) =
-        rememberPreference(
-            SekaiTuneCanvasKey,
-            defaultValue = false,
-        )
-    val (canvasSource, onCanvasSourceChange) =
-        rememberEnumPreference(
-            CanvasSourceKey,
-            defaultValue = CanvasSource.TIDAL,
-        )
-    val (canvasMetered, onCanvasMeteredChange) =
-        rememberPreference(
-            CanvasMeteredKey,
-            defaultValue = true,
-        )
-    val (canvasFallback, onCanvasFallbackChange) =
-        rememberPreference(
-            CanvasFallbackKey,
-            defaultValue = true,
         )
     val (thumbnailCornerRadius, onThumbnailCornerRadiusChange) =
         rememberPreference(
@@ -740,52 +715,6 @@ fun AppearanceSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.hide_image), null) },
                         checked = hidePlayerThumbnail,
                         onCheckedChange = onHidePlayerThumbnailChange,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.SekaiTune_canvas)) },
-                        description = stringResource(R.string.SekaiTune_canvas_desc),
-                        icon = { Icon(painterResource(R.drawable.motion_photos_on), null) },
-                        checked = SekaiTuneCanvasEnabled,
-                        onCheckedChange = onSekaiTuneCanvasEnabledChange,
-                    )
-                }
-
-                item(visible = SekaiTuneCanvasEnabled) {
-                    EnumListPreference(
-                        title = { Text("Canvas provider") },
-                        icon = { Icon(painterResource(R.drawable.motion_photos_on), null) },
-                        selectedValue = canvasSource,
-                        onValueSelected = onCanvasSourceChange,
-                        valueText = {
-                            when (it) {
-                                CanvasSource.TIDAL -> "TIDAL (Default)"
-                                CanvasSource.SPOTIFY -> "Spotify"
-                                CanvasSource.OFF -> "Off"
-                            }
-                        },
-                    )
-                }
-
-                item(visible = SekaiTuneCanvasEnabled) {
-                    SwitchPreference(
-                        title = { Text("Load Canvas on mobile / metered data") },
-                        description = "Allow loading animated cover videos when using metered cellular network",
-                        icon = { Icon(painterResource(R.drawable.android_cell), null) },
-                        checked = canvasMetered,
-                        onCheckedChange = onCanvasMeteredChange,
-                    )
-                }
-
-                item(visible = SekaiTuneCanvasEnabled) {
-                    SwitchPreference(
-                        title = { Text("Fallback to alternative providers") },
-                        description = "Try secondary providers (TIDAL, Spotify, Apple Music) if preferred is unavailable",
-                        icon = { Icon(painterResource(R.drawable.sync), null) },
-                        checked = canvasFallback,
-                        onCheckedChange = onCanvasFallbackChange,
                     )
                 }
 

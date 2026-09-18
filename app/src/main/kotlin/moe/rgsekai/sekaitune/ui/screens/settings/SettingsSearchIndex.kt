@@ -473,7 +473,7 @@ object SettingsSearchRepository {
                 subtitle = "Enable looping video artwork canvas for supported tracks",
                 category = appearanceCategory,
                 iconRes = R.drawable.slow_motion_video,
-                route = "settings/appearance",
+                route = "settings/canvas",
                 keywords = listOf("canvas", "spotify canvas", "video loop", "animated artwork", "moving cover art"),
             ),
         )

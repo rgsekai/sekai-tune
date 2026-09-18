@@ -612,6 +612,31 @@
     <string name="switch_to_local_queue">Switch to Local Queue</string>
     <string name="together_title">Together</string>
     <string name="together_mode_note">Note: Use LAN mode when on same Wi-Fi. For different networks, use Online mode.</string>
+    <string name="canvas_enable">Use canvas</string>
+    <string name="canvas_settings_subtitle">Sources, mobile data and cache</string>
+    <string name="canvas_source">Canvas source</string>
+    <string name="canvas_better_lyrics">BetterLyrics</string>
+    <string name="canvas_apple_music">Apple Music</string>
+    <string name="canvas_tidal">TIDAL</string>
+    <string name="canvas_spotify">Spotify</string>
+    <string name="canvas_spotify_desc">Uses your connected Spotify account</string>
+    <string name="canvas_source_all">All</string>
+    <string name="canvas_source_all_desc">Try BetterLyrics, Apple Music, TIDAL, then Spotify</string>
+    <string name="canvas_wifi_only">Use Wi-Fi only</string>
+    <string name="canvas_wifi_only_desc">Turn off to allow mobile data. Downloaded canvases remain available offline.</string>
+    <string name="canvas_provider_health">Provider health</string>
+    <string name="canvas_health_not_checked">Not checked</string>
+    <string name="canvas_health_checking">Checking…</string>
+    <string name="canvas_health_available">Available</string>
+    <string name="canvas_health_unavailable">Unavailable</string>
+    <string name="canvas_health_not_selected">Not selected</string>
+    <string name="canvas_health_disabled">Canvas is off</string>
+    <string name="canvas_health_offline">Offline</string>
+    <string name="canvas_health_wifi_required">Waiting for Wi-Fi</string>
+    <string name="canvas_health_low_data">Paused by low data mode</string>
+    <string name="canvas_cache_desc">Videos play offline. Oldest videos are removed when the cache is full.</string>
+    <string name="canvas_settings_load_failed">Could not load canvas settings</string>
+    <string name="canvas_settings_update_failed">Could not update canvas settings</string>
 </resources>
 
 

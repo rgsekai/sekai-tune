@@ -431,9 +431,9 @@ fun Thumbnail(
                                     item.mediaId.isNotBlank() &&
                                     item.mediaId == currentMediaItem?.mediaId
                             val shouldFetchCanvas = shouldUseCanvas && (canvasMetered || !lowDataModeActive)
-                            val canvasPolicy = remember(SekaiTuneCanvasEnabled, canvasSource, canvasMetered, canvasFallback) {
+                            val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback) {
                                 CanvasRequestPolicy(
-                                    preferredSource = if (SekaiTuneCanvasEnabled) canvasSource else CanvasSource.OFF,
+                                    preferredSource = canvasSource,
                                     allowMetered = canvasMetered,
                                     allowFallback = canvasFallback,
                                 )

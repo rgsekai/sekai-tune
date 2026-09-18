@@ -83,6 +83,14 @@ fun buildSettingsGroups(
                             onClick = { navController.navigate("settings/lyrics") },
                         ),
                         SettingsItem(
+                            key = "canvas",
+                            icon = painterResource(R.drawable.slow_motion_video),
+                            title = stringResource(R.string.SekaiTune_canvas),
+                            subtitle = stringResource(R.string.canvas_settings_subtitle),
+                            accentColor = MaterialTheme.colorScheme.tertiary,
+                            onClick = { navController.navigate("settings/canvas") },
+                        ),
+                        SettingsItem(
                             key = "ai_integration",
                             icon = painterResource(R.drawable.ai),
                             title = stringResource(R.string.ai_integration),

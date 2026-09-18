@@ -50,6 +50,7 @@ import moe.rgsekai.sekaitune.ui.screens.settings.AiIntegrationSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.AodCustomizedScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AppearanceSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.BackupAndRestore
+import moe.rgsekai.sekaitune.ui.screens.settings.CanvasSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.ChangelogScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.ChiperSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.ContentSettings
@@ -360,6 +361,9 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/lyrics") {
         LyricsSettings(navController)
+    }
+    composable("settings/canvas") {
+        CanvasSettings(navController)
     }
     composable("settings/internet") {
         InternetSettings(navController)
