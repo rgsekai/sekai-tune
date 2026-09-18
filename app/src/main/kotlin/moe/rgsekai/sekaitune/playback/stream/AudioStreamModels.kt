@@ -10,6 +10,7 @@ package moe.rgsekai.sekaitune.playback.stream
 import moe.rgsekai.sekaitune.constants.AudioQuality
 import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.innertube.PlaybackAuthState
+import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.innertube.models.response.PlayerResponse
 
 enum class StreamPurpose {
@@ -28,7 +29,7 @@ data class AudioStreamRequest(
     val networkMetered: Boolean = false,
     val purpose: StreamPurpose = StreamPurpose.PLAYBACK,
     val preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
-    val authState: PlaybackAuthState,
+    val authState: PlaybackAuthState = YouTube.currentPlaybackAuthState(),
 )
 
 data class ResolvedAudioStream(

@@ -210,13 +210,25 @@ class ResolveAudioStreamUseCase
         private suspend fun resolveUncached(request: AudioStreamRequest): ResolvedAudioStream {
             val playbackData =
                 context.retryWithoutPlaybackLoginContext {
-                    YTPlayerUtils.playerResponseForPlayback(
-                        videoId = request.mediaId,
-                        audioQuality = request.quality,
-                        connectivityManager = connectivityManager,
-                        preferredStreamClient = request.preferredStreamClient,
-                        networkMetered = request.networkMetered,
-                    )
+                    when (request.purpose) {
+                        StreamPurpose.DOWNLOAD -> {
+                            YTPlayerUtils.playerResponseForDownload(
+                                videoId = request.mediaId,
+                                audioQuality = request.quality,
+                                connectivityManager = connectivityManager,
+                                networkMetered = request.networkMetered,
+                            )
+                        }
+                        StreamPurpose.PLAYBACK -> {
+                            YTPlayerUtils.playerResponseForPlayback(
+                                videoId = request.mediaId,
+                                audioQuality = request.quality,
+                                connectivityManager = connectivityManager,
+                                preferredStreamClient = request.preferredStreamClient,
+                                networkMetered = request.networkMetered,
+                            )
+                        }
+                    }
                 }.getOrThrow()
 
             return ResolvedAudioStream(
