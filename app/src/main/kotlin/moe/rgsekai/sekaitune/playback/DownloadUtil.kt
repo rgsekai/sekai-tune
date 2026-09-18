@@ -56,6 +56,9 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import androidx.media3.common.C
+import androidx.media3.datasource.cache.ContentMetadata
+
 @Singleton
 class DownloadUtil
     @Inject
@@ -117,6 +120,21 @@ class DownloadUtil
 
         val downloads = MutableStateFlow<Map<String, Download>>(emptyMap())
 
+        private fun isFullyCachedInPlayer(mediaId: String, position: Long, length: Long): Boolean {
+            if (length > 0 && playerCache.isCached(mediaId, position, length)) {
+                return true
+            }
+            val metadata = playerCache.getContentMetadata(mediaId)
+            val contentLength = ContentMetadata.getContentLength(metadata)
+            if (contentLength > 0 && position < contentLength) {
+                val requiredLength = if (length > 0) length else (contentLength - position)
+                if (playerCache.isCached(mediaId, position, requiredLength)) {
+                    return true
+                }
+            }
+            return false
+        }
+
         private val dataSourceFactory =
             ResolvingDataSource.Factory(
                 CacheDataSource
@@ -131,8 +149,7 @@ class DownloadUtil
                     ),
             ) { dataSpec ->
                 val mediaId = dataSpec.key ?: error("No media id")
-                val length = if (dataSpec.length >= 0) dataSpec.length else 1
-                if (playerCache.isCached(mediaId, dataSpec.position, length)) {
+                if (isFullyCachedInPlayer(mediaId, dataSpec.position, dataSpec.length)) {
                     return@Factory dataSpec
                 }
                 val lowDataModeActive = context.isLowDataModeActive()
