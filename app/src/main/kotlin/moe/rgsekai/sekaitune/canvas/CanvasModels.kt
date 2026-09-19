@@ -14,6 +14,7 @@ data class CanvasConfiguration(
     val enabled: Boolean = false,
     val source: CanvasSource = CanvasSource.ALL,
     val wifiOnly: Boolean = false,
+    val proceduralFallback: Boolean = true,
     val cacheLimitMb: Int = 256,
     val lowDataMode: Boolean = false,
 )

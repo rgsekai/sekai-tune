@@ -158,6 +158,7 @@ import moe.rgsekai.sekaitune.canvas.CanvasSource
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
 import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
+import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
@@ -2035,6 +2036,8 @@ private fun V7PlayerBackdrop(
     val canvasStatic = canvasStaticUrl?.takeIf { it.isNotBlank() }
     val coverArtworkUrl = thumbnailUrl?.takeIf { it.isNotBlank() }
     val hasCanvas = !canvasPrimary.isNullOrBlank() || !canvasFallback.isNullOrBlank()
+    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
+    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
     // When canvas is available, prefer its static image as the sharp-stage placeholder.
     // This prevents the jarring YTM thumbnail → canvas video flash on expand.
     val sharpArtworkUrl = if (hasCanvas) (canvasStatic ?: coverArtworkUrl) else (coverArtworkUrl ?: canvasStatic)
@@ -2045,6 +2048,42 @@ private fun V7PlayerBackdrop(
     var backdropPalette by remember(paletteSourceUrl, fallbackColor) {
         mutableStateOf(V7BackdropPalette.fromColors(emptyList(), fallbackColor))
     }
+
+    val proceduralBitmap by produceState<Bitmap?>(null, sharpArtworkUrl, SekaiTuneCanvasEnabled, hasCanvas, canvasProceduralFallback) {
+        if (!SekaiTuneCanvasEnabled || !canvasProceduralFallback || hasCanvas || sharpArtworkUrl.isNullOrBlank()) {
+            value = null
+            return@produceState
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val request =
+                    ImageRequest.Builder(context)
+                        .data(sharpArtworkUrl)
+                        .allowHardware(false)
+                        .build()
+                val result = context.imageLoader.execute(request)
+                if (result is SuccessResult) {
+                    value = result.image.toBitmap()
+                }
+            } catch (_: Exception) {
+                value = null
+            }
+        }
+    }
+
+    val canvasRenderMode =
+        remember(SekaiTuneCanvasEnabled, hasCanvas, canvasProceduralFallback, canvasPrimary, canvasFallback, proceduralBitmap, context) {
+            when {
+                !SekaiTuneCanvasEnabled -> CanvasRenderMode.None
+                hasCanvas ->
+                    CanvasRenderMode.Video(
+                        primaryUrl = canvasPrimary ?: canvasFallback!!,
+                        fallbackUrl = canvasFallback,
+                    )
+                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap)
+                else -> CanvasRenderMode.None
+            }
+        }
 
     LaunchedEffect(paletteSourceUrl, hasCanvas, fallbackColor) {
         backdropPalette = V7BackdropPalette.fromColors(emptyList(), fallbackColor)
@@ -2263,10 +2302,9 @@ private fun V7PlayerBackdrop(
                     )
                 }
 
-                if (hasCanvas) {
+                if (canvasRenderMode !is CanvasRenderMode.None) {
                     CanvasArtworkPlayer(
-                        primaryUrl = backdrop.canvasPrimaryUrl,
-                        fallbackUrl = backdrop.canvasFallbackUrl,
+                        renderMode = canvasRenderMode,
                         isPlaying = isPlaying,
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                         modifier = canvasStageModifier,

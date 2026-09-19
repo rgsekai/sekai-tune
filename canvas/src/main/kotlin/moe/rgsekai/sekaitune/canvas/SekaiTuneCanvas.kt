@@ -269,9 +269,9 @@ object SekaiTuneCanvas {
                                 } else {
                                     if (spotify?.static != null && fallbackStatic == null) fallbackStatic = spotify
                                     if (fallbackStatic != null) {
-                                        CanvasLogger.i("CanvasCascade", "Cascade ended: no provider had animated video, falling back to static artwork (static=${fallbackStatic.static})")
+                                        CanvasLogger.i("CanvasCascade", "Cascade ended: no provider had animated video, falling back to static artwork (static=${fallbackStatic.static}) -> Tier 5 Procedural Canvas active")
                                     } else {
-                                        CanvasLogger.w("CanvasCascade", "Cascade ended: no artwork found on any provider")
+                                        CanvasLogger.w("CanvasCascade", "Cascade ended: no artwork found on any provider -> base album art will be used for Tier 5 Procedural Canvas")
                                     }
                                     fallbackStatic
                                 }

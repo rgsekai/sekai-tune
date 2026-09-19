@@ -11,6 +11,7 @@ package moe.rgsekai.sekaitune.ui.player
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
@@ -62,6 +63,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,6 +79,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -101,11 +104,20 @@ import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.saket.squiggles.SquigglySlider
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
+import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.PlayerHorizontalPadding
 import moe.rgsekai.sekaitune.constants.SliderStyle
 import moe.rgsekai.sekaitune.db.entities.FormatEntity
@@ -2572,6 +2584,52 @@ private fun V8Artwork(
     isPlaying: Boolean,
     size: androidx.compose.ui.unit.Dp,
 ) {
+    val context = LocalContext.current
+    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
+    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
+
+    val primary = canvasPrimaryUrl?.takeIf { it.isNotBlank() }
+    val fallback = canvasFallbackUrl?.takeIf { it.isNotBlank() }
+    val hasAnimatedCanvas = primary != null || fallback != null
+
+    val shouldUseCanvas = SekaiTuneCanvasEnabled
+
+    val proceduralBitmap by produceState<Bitmap?>(null, artworkUrl, shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback) {
+        if (!shouldUseCanvas || !canvasProceduralFallback || hasAnimatedCanvas || artworkUrl.isNullOrBlank()) {
+            value = null
+            return@produceState
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val request =
+                    ImageRequest.Builder(context)
+                        .data(artworkUrl)
+                        .allowHardware(false)
+                        .build()
+                val result = context.imageLoader.execute(request)
+                if (result is SuccessResult) {
+                    value = result.image.toBitmap()
+                }
+            } catch (_: Exception) {
+                value = null
+            }
+        }
+    }
+
+    val canvasRenderMode =
+        remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, primary, fallback, proceduralBitmap, context) {
+            when {
+                !shouldUseCanvas -> CanvasRenderMode.None
+                hasAnimatedCanvas ->
+                    CanvasRenderMode.Video(
+                        primaryUrl = primary ?: fallback!!,
+                        fallbackUrl = fallback,
+                    )
+                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap)
+                else -> CanvasRenderMode.None
+            }
+        }
+
     val artworkRequest = rememberOfflineArtworkImageRequest(artworkUrl)
     Box(
         modifier =
@@ -2587,10 +2645,9 @@ private fun V8Artwork(
             modifier = Modifier.fillMaxSize(),
         )
 
-        if (!canvasPrimaryUrl.isNullOrBlank() || !canvasFallbackUrl.isNullOrBlank()) {
+        if (canvasRenderMode !is CanvasRenderMode.None) {
             CanvasArtworkPlayer(
-                primaryUrl = canvasPrimaryUrl,
-                fallbackUrl = canvasFallbackUrl,
+                renderMode = canvasRenderMode,
                 isPlaying = isPlaying,
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                 modifier = Modifier.fillMaxSize(),
@@ -3476,6 +3533,52 @@ private fun V9Artwork(
     size: Dp,
     placeholderColor: Color,
 ) {
+    val context = LocalContext.current
+    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
+    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
+
+    val primary = canvasPrimaryUrl?.takeIf { it.isNotBlank() }
+    val fallback = canvasFallbackUrl?.takeIf { it.isNotBlank() }
+    val hasAnimatedCanvas = primary != null || fallback != null
+
+    val shouldUseCanvas = SekaiTuneCanvasEnabled
+
+    val proceduralBitmap by produceState<Bitmap?>(null, artworkUrl, shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback) {
+        if (!shouldUseCanvas || !canvasProceduralFallback || hasAnimatedCanvas || artworkUrl.isNullOrBlank()) {
+            value = null
+            return@produceState
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val request =
+                    ImageRequest.Builder(context)
+                        .data(artworkUrl)
+                        .allowHardware(false)
+                        .build()
+                val result = context.imageLoader.execute(request)
+                if (result is SuccessResult) {
+                    value = result.image.toBitmap()
+                }
+            } catch (_: Exception) {
+                value = null
+            }
+        }
+    }
+
+    val canvasRenderMode =
+        remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, primary, fallback, proceduralBitmap, context) {
+            when {
+                !shouldUseCanvas -> CanvasRenderMode.None
+                hasAnimatedCanvas ->
+                    CanvasRenderMode.Video(
+                        primaryUrl = primary ?: fallback!!,
+                        fallbackUrl = fallback,
+                    )
+                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap)
+                else -> CanvasRenderMode.None
+            }
+        }
+
     val artworkRequest = rememberOfflineArtworkImageRequest(artworkUrl)
     Box(
         modifier =
@@ -3491,10 +3594,9 @@ private fun V9Artwork(
             modifier = Modifier.fillMaxSize(),
         )
 
-        if (!canvasPrimaryUrl.isNullOrBlank() || !canvasFallbackUrl.isNullOrBlank()) {
+        if (canvasRenderMode !is CanvasRenderMode.None) {
             CanvasArtworkPlayer(
-                primaryUrl = canvasPrimaryUrl,
-                fallbackUrl = canvasFallbackUrl,
+                renderMode = canvasRenderMode,
                 isPlaying = isPlaying,
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                 modifier = Modifier.fillMaxSize(),

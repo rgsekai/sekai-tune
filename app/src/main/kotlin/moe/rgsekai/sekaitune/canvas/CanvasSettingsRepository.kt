@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.CanvasWifiOnlyKey
 import moe.rgsekai.sekaitune.constants.LowDataModeKey
@@ -49,6 +50,7 @@ class CanvasSettingsRepository @Inject constructor(
             enabled = preferences[SekaiTuneCanvasKey] ?: false,
             source = CanvasSource.fromPreference(preferences[CanvasSourceKey]),
             wifiOnly = preferences[CanvasWifiOnlyKey] ?: false,
+            proceduralFallback = preferences[CanvasProceduralFallbackKey] ?: true,
             cacheLimitMb = (preferences[MaxCanvasCacheSizeKey] ?: 256).coerceAtLeast(-1),
             lowDataMode = preferences[LowDataModeKey] ?: false,
         )
@@ -95,6 +97,10 @@ class CanvasSettingsRepository @Inject constructor(
 
     suspend fun setWifiOnly(wifiOnly: Boolean) {
         context.dataStore.edit { it[CanvasWifiOnlyKey] = wifiOnly }
+    }
+
+    suspend fun setProceduralFallback(enabled: Boolean) {
+        context.dataStore.edit { it[CanvasProceduralFallbackKey] = enabled }
     }
 
     suspend fun setCacheLimit(limitMb: Int) {

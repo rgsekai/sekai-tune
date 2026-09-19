@@ -624,6 +624,8 @@
     <string name="canvas_source_all_desc">Try BetterLyrics, Apple Music, TIDAL, then Spotify</string>
     <string name="canvas_wifi_only">Use Wi-Fi only</string>
     <string name="canvas_wifi_only_desc">Turn off to allow mobile data. Downloaded canvases remain available offline.</string>
+    <string name="canvas_procedural_fallback">Animate static album art</string>
+    <string name="canvas_procedural_fallback_desc">Apply fluid on-device motion to album art when no animated Canvas video is available.</string>
     <string name="canvas_provider_health">Provider health</string>
     <string name="canvas_health_not_checked">Not checked</string>
     <string name="canvas_health_checking">Checking…</string>

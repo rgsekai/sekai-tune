@@ -93,6 +93,7 @@ import moe.rgsekai.sekaitune.canvas.CanvasRequestPolicy
 import moe.rgsekai.sekaitune.canvas.CanvasSource
 import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
+import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
@@ -153,6 +154,7 @@ fun Thumbnail(
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
+    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
     val spotifySpDc by rememberPreference(SpotifySpDcKey, "")
     val lowDataModeActive = rememberLowDataModeActive()
     val playerDesignStyle by rememberEnumPreference(
@@ -566,6 +568,7 @@ fun Thumbnail(
                                     } else {
                                         val primaryCanvasUrl = canvasArtwork?.animated
                                         val fallbackCanvasUrl = canvasArtwork?.videoUrl
+                                        val hasAnimatedCanvas = !primaryCanvasUrl.isNullOrBlank() || !fallbackCanvasUrl.isNullOrBlank()
 
                                         val shouldCropArtwork =
                                             cropThumbnailToSquare &&
@@ -588,6 +591,40 @@ fun Thumbnail(
                                             )
 
                                         val displayUrl = thumbnailSwapState.displayUrl
+
+                                        val proceduralBitmap by produceState<Bitmap?>(null, displayUrl, shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback) {
+                                            if (!shouldUseCanvas || !canvasProceduralFallback || hasAnimatedCanvas || displayUrl.isNullOrBlank()) {
+                                                value = null
+                                                return@produceState
+                                            }
+                                            withContext(Dispatchers.IO) {
+                                                try {
+                                                    val request =
+                                                        ImageRequest.Builder(context)
+                                                            .data(displayUrl)
+                                                            .allowHardware(false)
+                                                            .build()
+                                                    val result = context.imageLoader.execute(request)
+                                                    if (result is SuccessResult) {
+                                                        value = result.image.toBitmap()
+                                                    }
+                                                } catch (_: Exception) {
+                                                    value = null
+                                                }
+                                            }
+                                        }
+
+                                        val canvasRenderMode = remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, primaryCanvasUrl, fallbackCanvasUrl, proceduralBitmap, context) {
+                                            when {
+                                                !shouldUseCanvas -> CanvasRenderMode.None
+                                                hasAnimatedCanvas -> CanvasRenderMode.Video(
+                                                    primaryUrl = primaryCanvasUrl ?: fallbackCanvasUrl!!,
+                                                    fallbackUrl = fallbackCanvasUrl,
+                                                )
+                                                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap)
+                                                else -> CanvasRenderMode.None
+                                            }
+                                        }
 
                                         val thumbnailBgRequest = rememberOfflineArtworkImageRequest(displayUrl)
                                         val thumbnailArtworkRequest = rememberOfflineArtworkImageRequest(displayUrl)
@@ -637,12 +674,9 @@ fun Thumbnail(
                                                     .let { if (shouldCropArtwork) it.aspectRatio(1f) else it },
                                         )
 
-                                        if (shouldUseCanvas &&
-                                            (!primaryCanvasUrl.isNullOrBlank() || !fallbackCanvasUrl.isNullOrBlank())
-                                        ) {
+                                        if (canvasRenderMode !is CanvasRenderMode.None) {
                                             CanvasArtworkPlayer(
-                                                primaryUrl = primaryCanvasUrl,
-                                                fallbackUrl = fallbackCanvasUrl,
+                                                renderMode = canvasRenderMode,
                                                 isPlaying = isPlaying,
                                                 modifier = Modifier.fillMaxSize(),
                                             )

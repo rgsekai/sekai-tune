@@ -9,8 +9,11 @@
 
 package moe.rgsekai.sekaitune.ui.player
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +24,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -38,8 +42,12 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import moe.rgsekai.sekaitune.canvas.KenBurnsCanvas
+import moe.rgsekai.sekaitune.canvas.ProceduralCanvas
+import moe.rgsekai.sekaitune.canvas.isProceduralShaderSupported
 import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.utils.StreamClientUtils
 import okhttp3.OkHttpClient
@@ -48,6 +56,99 @@ import java.util.Locale
 
 private const val CanvasPlaybackStallCheckIntervalMs = 1_000L
 private const val CanvasPlaybackStallTimeoutMs = 5_000L
+
+/**
+ * Represents the target rendering mode for Canvas artwork playback.
+ */
+sealed interface CanvasRenderMode {
+    data class Video(
+        val primaryUrl: String,
+        val fallbackUrl: String? = null,
+    ) : CanvasRenderMode
+
+    data class ProceduralShader(
+        val bitmap: Bitmap,
+    ) : CanvasRenderMode
+
+    data class KenBurns(
+        val bitmap: Bitmap,
+    ) : CanvasRenderMode
+
+    data class Static(
+        val bitmap: Bitmap? = null,
+        val url: String? = null,
+    ) : CanvasRenderMode
+
+    data object None : CanvasRenderMode
+}
+
+/**
+ * Resolves whether a static bitmap should be rendered using the AGSL Procedural Shader (API 33+)
+ * or the Ken Burns pan/zoom fallback.
+ */
+internal fun resolveProceduralRenderMode(context: Context, bitmap: Bitmap?): CanvasRenderMode {
+    if (bitmap == null) return CanvasRenderMode.None
+    return if (isProceduralShaderSupported(context)) {
+        CanvasRenderMode.ProceduralShader(bitmap)
+    } else {
+        CanvasRenderMode.KenBurns(bitmap)
+    }
+}
+
+@Composable
+internal fun CanvasArtworkPlayer(
+    renderMode: CanvasRenderMode,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
+    resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+) {
+    when (renderMode) {
+        is CanvasRenderMode.Video -> {
+            CanvasVideoPlayer(
+                primaryUrl = renderMode.primaryUrl,
+                fallbackUrl = renderMode.fallbackUrl,
+                isPlaying = isPlaying,
+                modifier = modifier,
+                resizeMode = resizeMode,
+            )
+        }
+        is CanvasRenderMode.ProceduralShader -> {
+            ProceduralCanvas(
+                bitmap = renderMode.bitmap,
+                modifier = modifier,
+                isPlaying = isPlaying,
+            )
+        }
+        is CanvasRenderMode.KenBurns -> {
+            KenBurnsCanvas(
+                bitmap = renderMode.bitmap,
+                modifier = modifier,
+                isPlaying = isPlaying,
+            )
+        }
+        is CanvasRenderMode.Static -> {
+            if (renderMode.bitmap != null) {
+                Image(
+                    bitmap = renderMode.bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = resizeMode.toContentScale(),
+                    modifier = modifier,
+                )
+            } else if (!renderMode.url.isNullOrBlank()) {
+                AsyncImage(
+                    model = rememberOfflineArtworkImageRequest(renderMode.url),
+                    contentDescription = null,
+                    contentScale = resizeMode.toContentScale(),
+                    modifier = modifier,
+                )
+            }
+        }
+        is CanvasRenderMode.None -> {
+            // No-op
+        }
+    }
+}
+
 @Composable
 internal fun CanvasArtworkPlayer(
     primaryUrl: String?,
@@ -56,11 +157,30 @@ internal fun CanvasArtworkPlayer(
     modifier: Modifier = Modifier,
     resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val primary = primaryUrl?.takeIf { it.isNotBlank() }
     val fallback = fallbackUrl?.takeIf { it.isNotBlank() }
-    val initial = primary ?: fallback ?: return
+    val initial = primary ?: fallback
+    if (initial == null) return
+    CanvasArtworkPlayer(
+        renderMode = CanvasRenderMode.Video(primaryUrl = initial, fallbackUrl = fallback),
+        isPlaying = isPlaying,
+        modifier = modifier,
+        resizeMode = resizeMode,
+    )
+}
+
+@Composable
+private fun CanvasVideoPlayer(
+    primaryUrl: String,
+    fallbackUrl: String?,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
+    resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val initial = primaryUrl
+    val fallback = fallbackUrl?.takeIf { it.isNotBlank() }
     var currentUrl by remember(initial) { mutableStateOf(initial) }
     var isVideoReady by remember(initial) { mutableStateOf(false) }
     val shouldPlay by rememberUpdatedState(isPlaying)
@@ -159,7 +279,7 @@ internal fun CanvasArtworkPlayer(
 
     Timber.tag(CanvasPlaybackLogTag).d(
         "CanvasArtworkPlayer composed: currentUrl=%s, primary=%s, fallback=%s, isPlaying=%s",
-        currentUrl, primary, fallback, isPlaying,
+        currentUrl, primaryUrl, fallback, isPlaying,
     )
 
     LaunchedEffect(isPlaying) {
@@ -202,14 +322,14 @@ internal fun CanvasArtworkPlayer(
         }
     }
 
-    DisposableEffect(exoPlayer, primary, fallback, watchdog) {
+    DisposableEffect(exoPlayer, primaryUrl, fallback, watchdog) {
         val listener =
             object : Player.Listener {
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     Timber.tag(CanvasPlaybackLogTag).w(error, "Canvas playback error on %s", currentUrl)
                     val next =
                         when (currentUrl) {
-                            primary -> fallback?.takeIf { it != currentUrl }
+                            primaryUrl -> fallback?.takeIf { it != currentUrl }
                             else -> null
                         }
                     if (!next.isNullOrBlank()) {

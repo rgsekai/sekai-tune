@@ -133,6 +133,7 @@ private fun CanvasSettingsBody(
 ) {
     val onEnabled: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetEnabled(it)) } }
     val onWifiOnly: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetWifiOnly(it)) } }
+    val onProceduralFallback: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetProceduralFallback(it)) } }
     val onRefresh = remember(onAction) { { onAction(CanvasSettingsAction.RefreshHealth) } }
     val onCacheLimit = remember(onAction) { { onAction(CanvasSettingsAction.ShowCacheLimit) } }
     val onClear = remember(onAction) { { onAction(CanvasSettingsAction.ShowClearCache) } }
@@ -209,35 +210,68 @@ private fun CanvasSettingsBody(
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .toggleable(
-                        value = model.configuration.wifiOnly,
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = model.configuration.wifiOnly,
+                            enabled = !model.busy,
+                            role = Role.Switch,
+                            onValueChange = onWifiOnly,
+                        )
+                        .padding(horizontal = SettingsDimensions.RowHorizontalPadding, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = remember { Arrangement.spacedBy(16.dp) },
+                ) {
+                    Column(modifier = remember { Modifier.weight(1f) }) {
+                        Text(
+                            text = stringResource(R.string.canvas_wifi_only),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.canvas_wifi_only_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = model.configuration.wifiOnly,
+                        onCheckedChange = null,
                         enabled = !model.busy,
-                        role = Role.Switch,
-                        onValueChange = onWifiOnly,
-                    )
-                    .padding(horizontal = SettingsDimensions.RowHorizontalPadding, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = remember { Arrangement.spacedBy(16.dp) },
-            ) {
-                Column(modifier = remember { Modifier.weight(1f) }) {
-                    Text(
-                        text = stringResource(R.string.canvas_wifi_only),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.canvas_wifi_only_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Switch(
-                    checked = model.configuration.wifiOnly,
-                    onCheckedChange = null,
-                    enabled = !model.busy,
-                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = model.configuration.proceduralFallback,
+                            enabled = !model.busy,
+                            role = Role.Switch,
+                            onValueChange = onProceduralFallback,
+                        )
+                        .padding(horizontal = SettingsDimensions.RowHorizontalPadding, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = remember { Arrangement.spacedBy(16.dp) },
+                ) {
+                    Column(modifier = remember { Modifier.weight(1f) }) {
+                        Text(
+                            text = stringResource(R.string.canvas_procedural_fallback),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.canvas_procedural_fallback_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = model.configuration.proceduralFallback,
+                        onCheckedChange = null,
+                        enabled = !model.busy,
+                    )
+                }
             }
         }
 
