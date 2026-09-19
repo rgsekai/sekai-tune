@@ -8,24 +8,48 @@
 package moe.rgsekai.sekaitune.canvas
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtworkIdentity
+import moe.rgsekai.sekaitune.canvas.tokens.TokenRejectedException
+import moe.rgsekai.sekaitune.canvas.tokens.WebToken
+import moe.rgsekai.sekaitune.canvas.tokens.WebTokenProvider
+import java.io.IOException
+import java.util.Base64
 
 object TidalCanvasProvider {
     private const val TIDAL_SEARCH_URL = "https://api.tidal.com/v1/search/tracks"
-    private const val TIDAL_TOKEN = "zU4XHVVkc2XDsqgn"
+    private const val TIDAL_AUTH_URL = "https://auth.tidal.com/v1/oauth2/token"
+
+    /*
+     * TIDAL Client Credentials for anonymous catalog querying (OAuth 2.0 client_credentials flow).
+     *
+     * In 2026, TIDAL deprecated static `x-tidal-token` API keys on `api.tidal.com/v1` (which returned
+     * 401 Invalid Token / subStatus 6004). Instead, public catalog reads require a dynamically minted
+     * Bearer token via `https://auth.tidal.com/v1/oauth2/token` using standard client credentials.
+     * Note: Direct web-scraping of `listen.tidal.com` is protected by DataDome antibot challenges
+     * (ct.captcha-delivery.com), so this first-party OAuth endpoint is the official public client path.
+     *
+     * These credentials are valid public client credentials utilized by open-source TIDAL integration
+     * clients (e.g. Android Automotive / tidal-dl community configurations). If TIDAL revokes these client
+     * credentials in the future, check active open-source TIDAL client repositories (such as
+     * yaronzz/Tidal-Media-Downloader or community Mopidy-Tidal forks) for updated OAuth client credentials.
+     */
+    private const val CLIENT_ID = "4N3n6Q1x95LL5K7p"
+    private const val CLIENT_SECRET = "oKOXfJW371cX6xaZ0PyhgGNBdNLlBZd4AKKYougMjik="
 
     private val json =
         Json {
@@ -51,12 +75,19 @@ object TidalCanvasProvider {
     }
 
     @Serializable
-    private data class TidalSearchResponse(
+    private data class TidalTokenResponse(
+        val access_token: String,
+        val token_type: String? = null,
+        val expires_in: Long = 14400L,
+    )
+
+    @Serializable
+    data class TidalSearchResponse(
         val items: List<TidalTrackItem>? = null,
     )
 
     @Serializable
-    private data class TidalTrackItem(
+    data class TidalTrackItem(
         val id: Long? = null,
         val title: String? = null,
         val duration: Long? = null,
@@ -66,42 +97,79 @@ object TidalCanvasProvider {
     )
 
     @Serializable
-    private data class TidalArtist(
+    data class TidalArtist(
         val id: Long? = null,
         val name: String? = null,
     )
 
     @Serializable
-    private data class TidalAlbum(
+    data class TidalAlbum(
         val id: Long? = null,
         val title: String? = null,
         val cover: String? = null,
         val videoCover: String? = null,
     )
 
+    val tokenProvider by lazy {
+        WebTokenProvider(
+            providerName = "TIDAL",
+            client = client,
+            fetcher = { httpClient, _ ->
+                val basicAuth = Base64.getEncoder().encodeToString("$CLIENT_ID:$CLIENT_SECRET".toByteArray())
+                val response = httpClient.submitForm(
+                    url = TIDAL_AUTH_URL,
+                    formParameters = Parameters.build {
+                        append("grant_type", "client_credentials")
+                    },
+                ) {
+                    header("Authorization", "Basic $basicAuth")
+                }
+
+                if (response.status != HttpStatusCode.OK) {
+                    throw IOException("TIDAL token endpoint returned status ${response.status.value}: ${response.bodyAsText()}")
+                }
+
+                val rawBody = response.bodyAsText()
+                val tokenBody = json.decodeFromString<TidalTokenResponse>(rawBody)
+                val expiresAtSeconds = (System.currentTimeMillis() / 1000L) + tokenBody.expires_in
+                WebToken(
+                    token = tokenBody.access_token,
+                    expiresAtEpochSeconds = expiresAtSeconds,
+                )
+            },
+        )
+    }
+
     suspend fun getCanvas(
         song: String,
         artists: List<String> = emptyList(),
         durationMs: Long? = null,
         countryCode: String = "US",
-    ): CanvasArtwork? {
+    ): CanvasArtwork? = tokenProvider.executeWithTokenRetry { token ->
         val artistQuery = artists.firstOrNull() ?: ""
         val query = if (artistQuery.isNotBlank()) "$song $artistQuery" else song
 
-        val response =
-            runCatching {
-                client.get(TIDAL_SEARCH_URL) {
-                    header("x-tidal-token", TIDAL_TOKEN)
-                    parameter("query", query)
-                    parameter("limit", 10)
-                    parameter("countryCode", countryCode)
-                }
-            }.getOrNull() ?: return null
+        val response = client.get(TIDAL_SEARCH_URL) {
+            header("Authorization", "Bearer $token")
+            parameter("query", query)
+            parameter("limit", 10)
+            parameter("countryCode", countryCode)
+        }
 
-        if (response.status != HttpStatusCode.OK) return null
+        if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
+            throw TokenRejectedException(
+                provider = "TIDAL",
+                statusCode = response.status.value,
+                message = response.bodyAsText(),
+            )
+        }
 
-        val body = runCatching { response.body<TidalSearchResponse>() }.getOrNull() ?: return null
-        val items = body.items ?: return null
+        if (response.status != HttpStatusCode.OK) return@executeWithTokenRetry null
+
+        val rawBody = response.bodyAsText()
+        val body = runCatching { json.decodeFromString<TidalSearchResponse>(rawBody) }.getOrNull()
+            ?: return@executeWithTokenRetry null
+        val items = body.items ?: return@executeWithTokenRetry null
 
         for (item in items) {
             val itemTitle = item.title ?: continue
@@ -133,7 +201,7 @@ object TidalCanvasProvider {
                     }
 
                 if (videoUrl != null || staticUrl != null) {
-                    return CanvasArtwork(
+                    return@executeWithTokenRetry CanvasArtwork(
                         name = itemTitle,
                         artist = itemArtists.joinToString(", "),
                         albumName = item.album?.title,
@@ -147,19 +215,22 @@ object TidalCanvasProvider {
             }
         }
 
-        return null
+        null
     }
 
     suspend fun isHealthy(): Boolean =
         runCatching {
-            val response =
-                client.get(TIDAL_SEARCH_URL) {
-                    header("x-tidal-token", TIDAL_TOKEN)
+            tokenProvider.executeWithTokenRetry { token ->
+                val response = client.get(TIDAL_SEARCH_URL) {
+                    header("Authorization", "Bearer $token")
                     parameter("query", "music")
                     parameter("limit", 1)
                     parameter("countryCode", "US")
                 }
-            response.status == HttpStatusCode.OK
+                if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
+                    throw TokenRejectedException("TIDAL", response.status.value, response.bodyAsText())
+                }
+                response.status == HttpStatusCode.OK
+            }
         }.getOrDefault(false)
 }
-

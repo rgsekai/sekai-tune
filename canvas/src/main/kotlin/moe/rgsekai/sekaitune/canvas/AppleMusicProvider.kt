@@ -14,9 +14,12 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.KotlinxSerializationConverter
@@ -28,7 +31,14 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
+import moe.rgsekai.sekaitune.canvas.tokens.TokenRejectedException
+import moe.rgsekai.sekaitune.canvas.tokens.WebToken
+import moe.rgsekai.sekaitune.canvas.tokens.WebTokenProvider
+import java.io.IOException
+import java.net.URI
+import java.util.Base64
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
@@ -51,15 +61,10 @@ object AppleMusicProvider {
 
     // ── Constants ────────────────────────────────────────────────────────────────────
 
-    // Public read-only JWT used by the Apple Music web player for unauthenticated catalog reads.
-    private const val APPLE_MUSIC_TOKEN =
-        "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ" +
-            ".eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc0NDU2MzgyLCJleHAiOjE3ODE3" +
-            "MTM5ODIsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ" +
-            ".4n8qYF4qa18sL1E0G9A3qX35cD8wQ-IJcS9Bh8ZT8JV_yLBtVq46B-9-2ZS3EvWHuw3yK9BYFYAhAdTaDm38vQ"
-
     private const val AMP_BASE_URL = "https://amp-api.music.apple.com"
     private const val CACHE_TTL_MS = 1000L * 60 * 60 * 24 // 24 hours
+    private val tokenPattern = Regex("eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+")
+    private val scriptPattern = Regex("""<script\b[^>]*\bsrc=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
 
     // ── Networking ───────────────────────────────────────────────────────────────────
 
@@ -87,6 +92,90 @@ object AppleMusicProvider {
             }
             install(HttpCache)
             expectSuccess = false
+        }
+    }
+
+    // ── Dynamic Web Token Provider ───────────────────────────────────────────────────
+
+    val tokenProvider by lazy {
+        WebTokenProvider(
+            providerName = "AppleMusic",
+            client = client,
+            fetcher = { httpClient, rejectedToken ->
+                val pageUrl = URI("https://music.apple.com/us/new")
+                val pageResponse = httpClient.get(pageUrl.toString()) {
+                    header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    header("Cache-Control", "no-cache")
+                }
+                if (pageResponse.status != HttpStatusCode.OK) {
+                    throw IOException("Apple Music page fetch failed: ${pageResponse.status.value}")
+                }
+                val pageHtml = pageResponse.bodyAsText()
+
+                // Check for embedded token in HTML
+                val embeddedToken = extractAmpWebPlayToken(pageHtml, rejectedToken)
+                if (embeddedToken != null) {
+                    return@WebTokenProvider embeddedToken
+                }
+
+                // Check index scripts
+                val scriptUrls = scriptPattern.findAll(pageHtml)
+                    .map { pageUrl.resolve(it.groupValues[1]) }
+                    .filter { it.scheme == "https" && it.host == "music.apple.com" && it.path.contains("/assets/") }
+                    .distinct()
+                    .take(5)
+
+                for (url in scriptUrls) {
+                    val scriptResponse = httpClient.get(url.toString()) {
+                        header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    }
+                    if (scriptResponse.status == HttpStatusCode.OK) {
+                        val token = extractAmpWebPlayToken(scriptResponse.bodyAsText(), rejectedToken)
+                        if (token != null) {
+                            return@WebTokenProvider token
+                        }
+                    }
+                }
+
+                throw IOException("No valid AMPWebPlay token could be found in Apple Music web bundle")
+            },
+        )
+    }
+
+    private fun extractAmpWebPlayToken(text: String, rejectedToken: String?): WebToken? =
+        tokenPattern.findAll(text).firstNotNullOfOrNull { match ->
+            runCatching {
+                val value = match.value
+                if (value == rejectedToken) return@runCatching null
+                val payloadJson = String(
+                    Base64.getUrlDecoder().decode(value.substringAfter('.').substringBefore('.')),
+                    Charsets.UTF_8,
+                )
+                val payload = json.parseToJsonElement(payloadJson).jsonObject
+                if (payload["iss"]?.jsonPrimitive?.contentOrNull != "AMPWebPlay") return@runCatching null
+                val expiry = payload["exp"]?.jsonPrimitive?.longOrNull ?: return@runCatching null
+                val nowSeconds = System.currentTimeMillis() / 1_000L
+                if (expiry <= nowSeconds + 300L) return@runCatching null
+                WebToken(token = value, expiresAtEpochSeconds = expiry)
+            }.getOrNull()
+        }
+
+    private suspend fun ampGet(
+        url: String,
+        block: HttpRequestBuilder.() -> Unit = {},
+    ): HttpResponse {
+        return tokenProvider.executeWithTokenRetry { token ->
+            val response = client.get(url) {
+                header("Authorization", "Bearer $token")
+                header("Origin", "https://music.apple.com")
+                header("Referer", "https://music.apple.com/")
+                header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                block()
+            }
+            if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
+                throw TokenRejectedException("AppleMusic", response.status.value, response.bodyAsText())
+            }
+            response
         }
     }
 
@@ -162,18 +251,13 @@ object AppleMusicProvider {
             if (!album.isNullOrBlank() && !query.contains(album, ignoreCase = true)) query = "$query $album"
 
             val searchUrl = "$AMP_BASE_URL/v1/catalog/$storefront/search"
-            val response =
-                client.get(searchUrl) {
-                    header("Authorization", "Bearer $APPLE_MUSIC_TOKEN")
-                    header("Origin", "https://music.apple.com")
-                    header("Referer", "https://music.apple.com/")
-                    header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    parameter("term", query)
-                    parameter("types", type)
-                    parameter("limit", "10")
-                    parameter("extend", "editorialVideo")
-                    parameter("include", "albums")
-                }
+            val response = ampGet(searchUrl) {
+                parameter("term", query)
+                parameter("types", type)
+                parameter("limit", "10")
+                parameter("extend", "editorialVideo")
+                parameter("include", "albums")
+            }
             if (response.status != HttpStatusCode.OK) {
                 Log.w("search failed with status ${response.status}")
                 return@runCatching null
@@ -198,35 +282,26 @@ object AppleMusicProvider {
 
             for ((score, obj) in scoredResults) {
                 if (score < 12) {
-                    Log.d("skipping result with low score: $score")
-                    continue
+                    Log.d("Score $score too low, breaking")
+                    break
                 }
-
                 val attributes = obj["attributes"]?.jsonObject ?: continue
-                val resultName = attributes["name"]?.jsonPrimitive?.contentOrNull ?: ""
                 val resultArtistName = attributes["artistName"]?.jsonPrimitive?.contentOrNull ?: ""
                 val itemType = obj["type"]?.jsonPrimitive?.contentOrNull
 
-                val targetAlbumId = resolveAlbumId(obj, attributes, itemType, resultName)
-                if (targetAlbumId == null || targetAlbumId.startsWith("pl.")) {
-                    Log.d("skipping null or playlist albumId ($targetAlbumId) for $resultName ($resultArtistName)")
-                    continue
-                }
+                val targetAlbumId = resolveAlbumId(obj, attributes, itemType, term) ?: continue
 
-                Log.d("trying resolve for $targetAlbumId (from $itemType)")
-
-                val artworkObj = attributes["artwork"]?.jsonObject
-                val staticUrl =
-                    artworkObj?.get("url")?.jsonPrimitive?.contentOrNull
-                        ?.replace("{w}", "1000")
-                        ?.replace("{h}", "1000")
-                        ?.replace("{f}", "jpg")
-
-                // Check for immediate motion in search result
-                val ev = attributes["editorialVideo"]?.jsonObject
-                if (ev != null) {
-                    val videoUrls = extractEditorialVideoUrls(ev)
+                // Check direct editorialVideo first
+                val directEv = attributes["editorialVideo"]?.jsonObject
+                if (directEv != null) {
+                    val videoUrls = extractEditorialVideoUrls(directEv)
                     if (!videoUrls.animated.isNullOrBlank() || !videoUrls.animatedVertical.isNullOrBlank()) {
+                        val artworkObj = attributes["artwork"]?.jsonObject
+                        val staticUrl =
+                            artworkObj?.get("url")?.jsonPrimitive?.contentOrNull
+                                ?.replace("{w}", "1000")
+                                ?.replace("{h}", "1000")
+                                ?.replace("{f}", "jpg")
                         val name = attributes["name"]?.jsonPrimitive?.contentOrNull
                         val collName = attributes["collectionName"]?.jsonPrimitive?.contentOrNull
                         val resolvedAlbumName = if (itemType == "songs") collName else name
@@ -239,6 +314,8 @@ object AppleMusicProvider {
                             static = staticUrl,
                             animated = videoUrls.animated,
                             animatedVertical = videoUrls.animatedVertical,
+                            videoUrl = videoUrls.animated,
+                            videoUrlVertical = videoUrls.animatedVertical,
                         )
                     }
                 }
@@ -295,15 +372,10 @@ object AppleMusicProvider {
         return runCatching {
             Log.d("fetching album $albumId")
             val albumUrl = "$AMP_BASE_URL/v1/catalog/$storefront/albums/$albumId"
-            val response =
-                client.get(albumUrl) {
-                    header("Authorization", "Bearer $APPLE_MUSIC_TOKEN")
-                    header("Origin", "https://music.apple.com")
-                    header("Referer", "https://music.apple.com/")
-                    header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    parameter("extend", "editorialVideo")
-                    parameter("include", "tracks")
-                }
+            val response = ampGet(albumUrl) {
+                parameter("extend", "editorialVideo")
+                parameter("include", "tracks")
+            }
             if (response.status != HttpStatusCode.OK) {
                 Log.w("album fetch failed for $albumId: ${response.status}")
                 return@runCatching null
@@ -352,21 +424,13 @@ object AppleMusicProvider {
                         static = staticUrl,
                         animated = videoUrls.animated,
                         animatedVertical = videoUrls.animatedVertical,
+                        videoUrl = videoUrls.animated,
+                        videoUrlVertical = videoUrls.animatedVertical,
                     )
                 }
             }
 
-            if (!staticUrl.isNullOrBlank()) {
-                return@runCatching CanvasArtwork(
-                    name = finalTitle,
-                    artist = finalArtist,
-                    albumId = albumId,
-                    albumName = albumName,
-                    static = staticUrl,
-                )
-            }
-
-            Log.d("no editorialVideo or static artwork for $albumId (available keys: ${attributes?.keys})")
+            Log.d("no editorialVideo for $albumId (available keys: ${attributes?.keys})")
             null
         }.onFailure {
             if (it is CancellationException) throw it
@@ -407,14 +471,11 @@ object AppleMusicProvider {
 
         val artistMatch = resultArtistName.equals(artist, ignoreCase = true)
         val artistFuzzy =
-            artist.isBlank() ||
-                artist.equals("Unknown Artist", ignoreCase = true) ||
-                artist.equals("Cloud Audio", ignoreCase = true) ||
-                resultArtistName.contains(artist, ignoreCase = true) ||
+            resultArtistName.contains(artist, ignoreCase = true) ||
                 artist.contains(resultArtistName, ignoreCase = true)
         if (!artistFuzzy) return null
 
-        var score = if (artistMatch) 10 else if (artist.isNotBlank()) 5 else 0
+        var score = if (artistMatch) 10 else 5
 
         val nameMatch = resultName.equals(term, ignoreCase = true)
         val nameFuzzy = resultName.contains(term, ignoreCase = true) || term.contains(resultName, ignoreCase = true)
@@ -438,7 +499,7 @@ object AppleMusicProvider {
                 }
         }
 
-        // Album matching — very strong signal
+        // Album matching – very strong signal
         if (!album.isNullOrBlank() && resultCollectionName.isNotBlank()) {
             val albumMatch = resultCollectionName.equals(album, ignoreCase = true)
             val albumFuzzy =
@@ -528,20 +589,11 @@ object AppleMusicProvider {
 
     suspend fun isHealthy(): Boolean =
         runCatching {
-            val response =
-                client.get("$AMP_BASE_URL/v1/catalog/us/charts") {
-                    header("Authorization", "Bearer $APPLE_MUSIC_TOKEN")
-                    header("Origin", "https://music.apple.com")
-                    header("Referer", "https://music.apple.com/")
-                    header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    parameter("types", "albums")
-                    parameter("limit", "1")
-                    header("Cache-Control", "no-cache")
-                }
+            val response = ampGet("$AMP_BASE_URL/v1/catalog/us/charts") {
+                parameter("types", "albums")
+                parameter("limit", "1")
+                header("Cache-Control", "no-cache")
+            }
             response.status == HttpStatusCode.OK
         }.getOrDefault(false)
 }
-
-
-
-

@@ -127,6 +127,7 @@ class App :
         )
         MoriCipherUpdateScheduler.schedule(this)
         CanvasArtworkPlaybackCache.init(this)
+        moe.rgsekai.sekaitune.canvas.AndroidPersistentTokenStore.initialize(this)
         moe.rgsekai.sekaitune.playback.stream.PersistentVideoClientCache.initialize(this)
         moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.createNotificationChannel(this)
 
