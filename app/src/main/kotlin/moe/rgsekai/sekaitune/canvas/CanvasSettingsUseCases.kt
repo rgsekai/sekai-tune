@@ -61,17 +61,23 @@ class CanvasSettingsUseCases @Inject constructor(
 
     private suspend fun checkProvider(policy: CanvasPolicy, source: CanvasSource, spotifyConnected: Boolean = true): CanvasHealth {
         val availability = healthAvailability(policy, source, spotifyConnected)
+        Timber.tag("CanvasHealth").d(
+            "checkProvider start: source=%s, availability=%s (policy.ready=%s, config.enabled=%s, config.source=%s, online=%s, wifi=%s, lowData=%s)",
+            source, availability, policy.ready, policy.configuration.enabled, policy.configuration.source,
+            policy.connectivity.online, policy.connectivity.wifi, policy.configuration.lowDataMode,
+        )
         if (availability != CanvasHealth.CHECKING) return availability
+        val timeout = if (source == CanvasSource.SPOTIFY) 45_000L else 20_000L
         return try {
-            if (withTimeoutOrNull(if (source == CanvasSource.SPOTIFY) 45_000L else 20_000L) { repository.isHealthy(source) } == true) {
-                CanvasHealth.AVAILABLE
-            } else {
-                CanvasHealth.UNAVAILABLE
-            }
+            val isHealthy = withTimeoutOrNull(timeout) { repository.isHealthy(source) }
+            val result = if (isHealthy == true) CanvasHealth.AVAILABLE else CanvasHealth.UNAVAILABLE
+            Timber.tag("CanvasHealth").i("checkProvider finished: source=%s -> %s (isHealthy=%s, timeout=%dms)", source, result, isHealthy, timeout)
+            result
         } catch (error: CancellationException) {
+            Timber.tag("CanvasHealth").w("checkProvider cancelled: source=%s", source)
             throw error
         } catch (error: Exception) {
-            Timber.w(error, "Canvas provider health check failed: %s", source)
+            Timber.tag("CanvasHealth").e(error, "checkProvider exception: source=%s", source)
             CanvasHealth.UNAVAILABLE
         }
     }

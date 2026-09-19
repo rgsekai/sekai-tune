@@ -25,6 +25,19 @@ import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
+internal object CanvasLogger {
+    fun d(tag: String, msg: String) = println("$tag: D: $msg")
+    fun i(tag: String, msg: String) = println("$tag: I: $msg")
+    fun w(tag: String, msg: String, t: Throwable? = null) {
+        println("$tag: W: $msg")
+        t?.printStackTrace()
+    }
+    fun e(tag: String, msg: String, t: Throwable? = null) {
+        System.err.println("$tag: E: $msg")
+        t?.printStackTrace()
+    }
+}
+
 object SekaiTuneCanvas {
     private const val BETTERLYRICS_URL = "https://artwork.boidu.dev/"
 
@@ -39,9 +52,9 @@ object SekaiTuneCanvas {
         HttpClient(OkHttp) {
             install(ContentNegotiation) { json(json) }
             install(HttpTimeout) {
-                connectTimeoutMillis = 12_000
-                requestTimeoutMillis = 18_000
-                socketTimeoutMillis = 18_000
+                connectTimeoutMillis = 2_500
+                requestTimeoutMillis = 5_000
+                socketTimeoutMillis = 5_000
             }
             install(ContentEncoding) {
                 gzip()
@@ -63,6 +76,9 @@ object SekaiTuneCanvas {
     private val cache = ConcurrentHashMap<String, CacheEntry>()
     private val ttlMs = 60_000L
 
+    @Volatile
+    private var betterLyricsUnreachableUntilMs: Long = 0L
+
     suspend fun getCanvas(
         song: String,
         artists: List<String> = emptyList(),
@@ -81,22 +97,63 @@ object SekaiTuneCanvas {
         val result =
             when (policy.preferredSource) {
                 CanvasSource.BETTER_LYRICS -> {
-                    getBySongArtist(song, artistStr, storefront)
+                    val bl = getBySongArtist(song, artistStr, storefront)
+                    if (bl?.preferredAnimationUrl != null) {
+                        bl
+                    } else if (policy.allowFallback) {
+                        val spotify = if (!policy.spDc.isNullOrBlank()) SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc) else null
+                        if (spotify?.preferredAnimationUrl != null) {
+                            spotify
+                        } else {
+                            val tidal = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                            if (tidal?.preferredAnimationUrl != null) {
+                                tidal
+                            } else {
+                                val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                                if (am?.preferredAnimationUrl != null) am else (bl ?: spotify ?: tidal ?: am)
+                            }
+                        }
+                    } else {
+                        bl
+                    }
                 }
                 CanvasSource.APPLE_MUSIC -> {
-                    AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                    val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                    if (am?.preferredAnimationUrl != null) {
+                        am
+                    } else if (policy.allowFallback) {
+                        val spotify = if (!policy.spDc.isNullOrBlank()) SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc) else null
+                        if (spotify?.preferredAnimationUrl != null) {
+                            spotify
+                        } else {
+                            val tidal = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                            if (tidal?.preferredAnimationUrl != null) {
+                                tidal
+                            } else {
+                                val bl = getBetterLyricsOnly(song, artistStr, storefront)
+                                if (bl?.preferredAnimationUrl != null) bl else (am ?: spotify ?: tidal ?: bl)
+                            }
+                        }
+                    } else {
+                        am
+                    }
                 }
                 CanvasSource.TIDAL -> {
                     val tidalResult = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
                     if (tidalResult?.preferredAnimationUrl != null) {
                         tidalResult
                     } else if (policy.allowFallback) {
-                        val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
-                        if (am?.preferredAnimationUrl != null) {
-                            am
+                        val spotify = if (!policy.spDc.isNullOrBlank()) SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc) else null
+                        if (spotify?.preferredAnimationUrl != null) {
+                            spotify
                         } else {
-                            val bl = getBetterLyricsOnly(song, artistStr, storefront)
-                            if (bl?.preferredAnimationUrl != null) bl else (tidalResult ?: am ?: bl)
+                            val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                            if (am?.preferredAnimationUrl != null) {
+                                am
+                            } else {
+                                val bl = getBetterLyricsOnly(song, artistStr, storefront)
+                                if (bl?.preferredAnimationUrl != null) bl else (tidalResult ?: spotify ?: am ?: bl)
+                            }
                         }
                     } else {
                         tidalResult
@@ -124,35 +181,98 @@ object SekaiTuneCanvas {
                     }
                 }
                 CanvasSource.ALL -> {
+                    CanvasLogger.i("CanvasCascade", "=== Starting Canvas cascade for '$song' by '$artistStr' (storefront=$storefront) ===")
                     var fallbackStatic: CanvasArtwork? = null
 
                     // 1. BetterLyrics
                     val bl = getBetterLyricsOnly(song, artistStr, storefront)
                     if (bl?.preferredAnimationUrl != null) {
+                        CanvasLogger.i("CanvasCascade", "Cascade WON by BetterLyrics with animated video: ${bl.preferredAnimationUrl}")
                         bl
                     } else {
-                        if (bl?.static != null && fallbackStatic == null) fallbackStatic = bl
+                        if (bl?.static != null && fallbackStatic == null) {
+                            fallbackStatic = bl
+                            CanvasLogger.d("CanvasCascade", "Retained BetterLyrics static art as candidate fallback: ${bl.static}")
+                        }
 
                         // 2. Apple Music
-                        val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                        val am = try {
+                            val res = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                            val status = when {
+                                res?.preferredAnimationUrl != null -> "found-with-video (url=${res.preferredAnimationUrl})"
+                                res?.static != null -> "found-static-only (static=${res.static})"
+                                else -> "not-found"
+                            }
+                            CanvasLogger.i("CanvasCascade", "Apple Music [$song - $artistStr]: $status")
+                            res
+                        } catch (error: Exception) {
+                            CanvasLogger.e("CanvasCascade", "Apple Music [$song - $artistStr]: errored (${error.message})", error)
+                            null
+                        }
+
                         if (am?.preferredAnimationUrl != null) {
+                            CanvasLogger.i("CanvasCascade", "Cascade WON by Apple Music with animated video: ${am.preferredAnimationUrl}")
                             am
                         } else {
-                            if (am?.static != null && fallbackStatic == null) fallbackStatic = am
+                            if (am?.static != null && fallbackStatic == null) {
+                                fallbackStatic = am
+                                CanvasLogger.d("CanvasCascade", "Retained Apple Music static art as candidate fallback: ${am.static}")
+                            }
 
                             // 3. TIDAL
-                            val tidal = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                            val tidal = try {
+                                val res = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                                val status = when {
+                                    res?.preferredAnimationUrl != null -> "found-with-video (url=${res.preferredAnimationUrl})"
+                                    res?.static != null -> "found-static-only (static=${res.static})"
+                                    else -> "not-found"
+                                }
+                                CanvasLogger.i("CanvasCascade", "TIDAL [$song - $artistStr]: $status")
+                                res
+                            } catch (error: Exception) {
+                                CanvasLogger.e("CanvasCascade", "TIDAL [$song - $artistStr]: errored (${error.message})", error)
+                                null
+                            }
+
                             if (tidal?.preferredAnimationUrl != null) {
+                                CanvasLogger.i("CanvasCascade", "Cascade WON by TIDAL with animated video: ${tidal.preferredAnimationUrl}")
                                 tidal
                             } else {
-                                if (tidal?.static != null && fallbackStatic == null) fallbackStatic = tidal
+                                if (tidal?.static != null && fallbackStatic == null) {
+                                    fallbackStatic = tidal
+                                    CanvasLogger.d("CanvasCascade", "Retained TIDAL static art as candidate fallback: ${tidal.static}")
+                                }
 
                                 // 4. Spotify
-                                val spotify = SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc)
+                                val spotify = if (policy.spDc.isNullOrBlank()) {
+                                    CanvasLogger.i("CanvasCascade", "Spotify [$song - $artistStr]: skipped (not connected / no sp_dc)")
+                                    null
+                                } else {
+                                    try {
+                                        val res = SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc)
+                                        val status = when {
+                                            res?.preferredAnimationUrl != null -> "found-with-video (url=${res.preferredAnimationUrl})"
+                                            res?.static != null -> "found-static-only (static=${res.static})"
+                                            else -> "not-found"
+                                        }
+                                        CanvasLogger.i("CanvasCascade", "Spotify [$song - $artistStr]: $status")
+                                        res
+                                    } catch (error: Exception) {
+                                        CanvasLogger.e("CanvasCascade", "Spotify [$song - $artistStr]: errored (${error.message})", error)
+                                        null
+                                    }
+                                }
+
                                 if (spotify?.preferredAnimationUrl != null) {
+                                    CanvasLogger.i("CanvasCascade", "Cascade WON by Spotify with animated video: ${spotify.preferredAnimationUrl}")
                                     spotify
                                 } else {
                                     if (spotify?.static != null && fallbackStatic == null) fallbackStatic = spotify
+                                    if (fallbackStatic != null) {
+                                        CanvasLogger.i("CanvasCascade", "Cascade ended: no provider had animated video, falling back to static artwork (static=${fallbackStatic.static})")
+                                    } else {
+                                        CanvasLogger.w("CanvasCascade", "Cascade ended: no artwork found on any provider")
+                                    }
                                     fallbackStatic
                                 }
                             }
@@ -175,18 +295,38 @@ object SekaiTuneCanvas {
         artist: String,
         storefront: String = "us",
     ): CanvasArtwork? {
-        val response =
-            runCatching {
+        val now = System.currentTimeMillis()
+        if (betterLyricsUnreachableUntilMs > now) {
+            CanvasLogger.d("CanvasCascade", "BetterLyrics [$song - $artist]: skipped (backend unreachable, cooloff remaining ${(betterLyricsUnreachableUntilMs - now) / 1000}s)")
+            return null
+        }
+        val startTime = System.currentTimeMillis()
+        return try {
+            val response =
                 client.get {
                     parameter("s", song)
                     parameter("a", artist)
                     parameter("storefront", storefront)
                 }
-            }.getOrNull()
-
-        return when (response?.status) {
-            HttpStatusCode.OK -> runCatching { response.body<CanvasArtwork>() }.getOrNull()
-            else -> null
+            val elapsed = System.currentTimeMillis() - startTime
+            if (response.status == HttpStatusCode.OK) {
+                val artwork = response.body<CanvasArtwork>()
+                val status = when {
+                    artwork.preferredAnimationUrl != null -> "found-with-video (url=${artwork.preferredAnimationUrl})"
+                    artwork.static != null -> "found-static-only (static=${artwork.static})"
+                    else -> "not-found (empty payload)"
+                }
+                CanvasLogger.i("CanvasCascade", "BetterLyrics [$song - $artist] in ${elapsed}ms: $status")
+                artwork
+            } else {
+                CanvasLogger.w("CanvasCascade", "BetterLyrics [$song - $artist] in ${elapsed}ms: not-found (HTTP ${response.status})")
+                null
+            }
+        } catch (error: Exception) {
+            val elapsed = System.currentTimeMillis() - startTime
+            betterLyricsUnreachableUntilMs = System.currentTimeMillis() + 60_000L
+            CanvasLogger.e("CanvasCascade", "BetterLyrics [$song - $artist] in ${elapsed}ms: errored (${error.message})", error)
+            null
         }
     }
 
@@ -308,14 +448,32 @@ object SekaiTuneCanvas {
         return "$prefix|$normalized"
     }
 
-    suspend fun isHealthy(): Boolean =
-        runCatching {
+    suspend fun isHealthy(): Boolean {
+        val startTime = System.currentTimeMillis()
+        val endpoint = "${BETTERLYRICS_URL}health"
+        return try {
+            CanvasLogger.d("CanvasHealth", "BetterLyrics health check probe starting -> GET $endpoint")
             val response =
-                client.get("${BETTERLYRICS_URL}health") {
+                client.get(endpoint) {
                     header("Cache-Control", "no-cache")
                 }
-            response.status == HttpStatusCode.OK
-        }.getOrDefault(false)
+            val elapsed = System.currentTimeMillis() - startTime
+            val isOk = response.status == HttpStatusCode.OK
+            CanvasLogger.i(
+                "CanvasHealth",
+                "BetterLyrics health check probe finished in ${elapsed}ms: status=${response.status}, isHealthy=$isOk, requestUrl=${response.call.request.url}",
+            )
+            isOk
+        } catch (error: Exception) {
+            val elapsed = System.currentTimeMillis() - startTime
+            CanvasLogger.e(
+                "CanvasHealth",
+                "BetterLyrics health check probe failed in ${elapsed}ms: exception=${error.javaClass.simpleName}, message=${error.message}, endpoint=$endpoint",
+                error,
+            )
+            false
+        }
+    }
 }
 
 

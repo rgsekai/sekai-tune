@@ -7471,6 +7471,17 @@ class MusicService :
                         val title = mediaItem?.mediaMetadata?.title?.toString().orEmpty()
                         val artist = mediaItem?.mediaMetadata?.artist?.toString().orEmpty()
                         val albumTitle = mediaItem?.mediaMetadata?.albumTitle?.toString()
+                        val prefs = runCatching { dataStore.data.first() }.getOrNull()
+                        val spDc = prefs?.get(moe.rgsekai.sekaitune.constants.SpotifySpDcKey)?.takeIf { it.isNotBlank() }
+                        val sourceStr = prefs?.get(moe.rgsekai.sekaitune.constants.CanvasSourceKey)
+                        val preferredSource = sourceStr?.let { runCatching { moe.rgsekai.sekaitune.canvas.CanvasSource.valueOf(it) }.getOrNull() }
+                            ?: moe.rgsekai.sekaitune.canvas.CanvasSource.ALL
+                        val canvasPolicy = moe.rgsekai.sekaitune.canvas.CanvasRequestPolicy(
+                            preferredSource = preferredSource,
+                            allowMetered = prefs?.get(moe.rgsekai.sekaitune.constants.CanvasMeteredKey) ?: true,
+                            allowFallback = prefs?.get(moe.rgsekai.sekaitune.constants.CanvasFallbackKey) ?: true,
+                            spDc = spDc,
+                        )
                         val canvas =
                             resolveCanvasArtworkForPlayback(
                                 mediaId = trackId,
@@ -7480,6 +7491,7 @@ class MusicService :
                                 storefront = "us",
                                 requireVertical = false,
                                 allowNetwork = true,
+                                canvasPolicy = canvasPolicy,
                             )
                         resolvedThumbUrl = canvas?.static ?: canvas?.preferredAnimationUrl ?: canvas?.preferredVerticalAnimationUrl
                     }

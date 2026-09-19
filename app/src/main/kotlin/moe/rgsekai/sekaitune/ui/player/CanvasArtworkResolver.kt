@@ -29,17 +29,21 @@ internal suspend fun resolveCanvasArtworkForPlayback(
     allowNetwork: Boolean,
     canvasPolicy: CanvasRequestPolicy = CanvasRequestPolicy(),
 ): CanvasArtwork? {
-    withContext(Dispatchers.IO) {
+    val cached = withContext(Dispatchers.IO) {
         CanvasArtworkPlaybackCache.get(
             mediaId = mediaId,
             preferCachedOnly = true,
         )
-    }?.takeIf { artwork -> artwork.hasRequiredCanvasVariant(requireVertical) }
-        ?.let { return it }
+    }
+
+    // If cache already has animated video artwork, return immediately
+    if (cached?.preferredAnimationUrl != null || cached?.preferredVerticalAnimationUrl != null) {
+        return cached
+    }
 
     if (!allowNetwork || mediaId.isBlank()) {
         Timber.tag(CanvasArtworkLogTag).d("Skipping canvas network lookup for %s", mediaId)
-        return null
+        return cached?.takeIf { it.hasRequiredCanvasVariant(requireVertical) }
     }
 
     return withContext(Dispatchers.IO) {
@@ -60,7 +64,7 @@ internal suspend fun resolveCanvasArtworkForPlayback(
 
         if (fetched == null) {
             Timber.tag(CanvasArtworkLogTag).d("No playable canvas resolved for %s", mediaId)
-            return@withContext null
+            return@withContext cached?.takeIf { it.hasRequiredCanvasVariant(requireVertical) }
         }
 
         CanvasArtworkPlaybackCache.put(mediaId, fetched)
