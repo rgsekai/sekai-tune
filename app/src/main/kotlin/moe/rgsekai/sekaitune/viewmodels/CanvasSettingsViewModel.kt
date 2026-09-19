@@ -73,6 +73,7 @@ sealed interface CanvasSettingsAction {
     data class SelectSource(val source: CanvasSource) : CanvasSettingsAction
     data class SetWifiOnly(val wifiOnly: Boolean) : CanvasSettingsAction
     data class SetProceduralFallback(val enabled: Boolean) : CanvasSettingsAction
+    data class SetProceduralStyle(val style: moe.rgsekai.sekaitune.canvas.ProceduralCanvasStyle) : CanvasSettingsAction
     data class SetCacheLimit(val limitMb: Int) : CanvasSettingsAction
     data object ShowCacheLimit : CanvasSettingsAction
     data object ShowClearCache : CanvasSettingsAction
@@ -170,6 +171,7 @@ class CanvasSettingsViewModel @Inject constructor(
                     is CanvasSettingsAction.SelectSource -> useCases.setSource(action.source)
                     is CanvasSettingsAction.SetWifiOnly -> useCases.setWifiOnly(action.wifiOnly)
                     is CanvasSettingsAction.SetProceduralFallback -> useCases.setProceduralFallback(action.enabled)
+                    is CanvasSettingsAction.SetProceduralStyle -> useCases.setProceduralStyle(action.style)
                     is CanvasSettingsAction.SetCacheLimit -> useCases.setCacheLimit(action.limitMb)
                     CanvasSettingsAction.ClearCache -> useCases.clearCache()
                     else -> Unit

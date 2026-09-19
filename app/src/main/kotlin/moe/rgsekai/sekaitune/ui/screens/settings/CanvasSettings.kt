@@ -65,6 +65,7 @@ import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.canvas.CanvasHealth
 import moe.rgsekai.sekaitune.canvas.CanvasSource
+import moe.rgsekai.sekaitune.canvas.ProceduralCanvasStyle
 import moe.rgsekai.sekaitune.viewmodels.CanvasCacheOption
 import moe.rgsekai.sekaitune.viewmodels.CanvasSettingsAction
 import moe.rgsekai.sekaitune.viewmodels.CanvasSettingsDialog
@@ -271,6 +272,37 @@ private fun CanvasSettingsBody(
                         onCheckedChange = null,
                         enabled = !model.busy,
                     )
+                }
+
+                if (model.configuration.proceduralFallback) {
+                    val styles = remember { ProceduralCanvasStyle.entries.toList() }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                            .padding(bottom = 8.dp)
+                            .selectableGroup(),
+                    ) {
+                        styles.forEachIndexed { index, style ->
+                            val onSelect = remember(onAction, style) {
+                                { onAction(CanvasSettingsAction.SetProceduralStyle(style)) }
+                            }
+                            CanvasChoiceRow(
+                                title = when (style) {
+                                    ProceduralCanvasStyle.KAWARP -> stringResource(R.string.canvas_procedural_style_kawarp)
+                                    ProceduralCanvasStyle.SQUARE_TUNNEL -> stringResource(R.string.canvas_procedural_style_square_tunnel)
+                                },
+                                subtitle = when (style) {
+                                    ProceduralCanvasStyle.KAWARP -> stringResource(R.string.canvas_procedural_style_kawarp_desc)
+                                    ProceduralCanvasStyle.SQUARE_TUNNEL -> stringResource(R.string.canvas_procedural_style_square_tunnel_desc)
+                                },
+                                selected = model.configuration.proceduralStyle == style,
+                                enabled = !model.busy,
+                                shape = itemShape(index, styles.size),
+                                onClick = onSelect,
+                            )
+                        }
+                    }
                 }
             }
         }

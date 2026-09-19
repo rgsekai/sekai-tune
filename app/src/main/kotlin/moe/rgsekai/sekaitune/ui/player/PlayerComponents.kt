@@ -113,8 +113,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.saket.squiggles.SquigglySlider
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.canvas.ProceduralCanvasStyle
 import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
+import moe.rgsekai.sekaitune.constants.CanvasProceduralStyleKey
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
+import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
@@ -2587,6 +2590,7 @@ private fun V8Artwork(
     val context = LocalContext.current
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
     val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
+    val canvasProceduralStyle by rememberEnumPreference(CanvasProceduralStyleKey, ProceduralCanvasStyle.KAWARP)
 
     val primary = canvasPrimaryUrl?.takeIf { it.isNotBlank() }
     val fallback = canvasFallbackUrl?.takeIf { it.isNotBlank() }
@@ -2617,7 +2621,7 @@ private fun V8Artwork(
     }
 
     val canvasRenderMode =
-        remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, primary, fallback, proceduralBitmap, context) {
+        remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, canvasProceduralStyle, primary, fallback, proceduralBitmap, context) {
             when {
                 !shouldUseCanvas -> CanvasRenderMode.None
                 hasAnimatedCanvas ->
@@ -2625,7 +2629,7 @@ private fun V8Artwork(
                         primaryUrl = primary ?: fallback!!,
                         fallbackUrl = fallback,
                     )
-                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap)
+                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap, canvasProceduralStyle)
                 else -> CanvasRenderMode.None
             }
         }
@@ -3536,6 +3540,7 @@ private fun V9Artwork(
     val context = LocalContext.current
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
     val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
+    val canvasProceduralStyle by rememberEnumPreference(CanvasProceduralStyleKey, ProceduralCanvasStyle.KAWARP)
 
     val primary = canvasPrimaryUrl?.takeIf { it.isNotBlank() }
     val fallback = canvasFallbackUrl?.takeIf { it.isNotBlank() }
@@ -3566,7 +3571,7 @@ private fun V9Artwork(
     }
 
     val canvasRenderMode =
-        remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, primary, fallback, proceduralBitmap, context) {
+        remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, canvasProceduralStyle, primary, fallback, proceduralBitmap, context) {
             when {
                 !shouldUseCanvas -> CanvasRenderMode.None
                 hasAnimatedCanvas ->
@@ -3574,7 +3579,7 @@ private fun V9Artwork(
                         primaryUrl = primary ?: fallback!!,
                         fallbackUrl = fallback,
                     )
-                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap)
+                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap, canvasProceduralStyle)
                 else -> CanvasRenderMode.None
             }
         }

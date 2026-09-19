@@ -47,6 +47,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import moe.rgsekai.sekaitune.canvas.KenBurnsCanvas
 import moe.rgsekai.sekaitune.canvas.ProceduralCanvas
+import moe.rgsekai.sekaitune.canvas.ProceduralCanvasStyle
+import moe.rgsekai.sekaitune.canvas.SquareTunnelCanvas
 import moe.rgsekai.sekaitune.canvas.isProceduralShaderSupported
 import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.utils.StreamClientUtils
@@ -68,6 +70,7 @@ sealed interface CanvasRenderMode {
 
     data class ProceduralShader(
         val bitmap: Bitmap,
+        val style: ProceduralCanvasStyle = ProceduralCanvasStyle.KAWARP,
     ) : CanvasRenderMode
 
     data class KenBurns(
@@ -86,10 +89,14 @@ sealed interface CanvasRenderMode {
  * Resolves whether a static bitmap should be rendered using the AGSL Procedural Shader (API 33+)
  * or the Ken Burns pan/zoom fallback.
  */
-internal fun resolveProceduralRenderMode(context: Context, bitmap: Bitmap?): CanvasRenderMode {
+internal fun resolveProceduralRenderMode(
+    context: Context,
+    bitmap: Bitmap?,
+    style: ProceduralCanvasStyle = ProceduralCanvasStyle.KAWARP,
+): CanvasRenderMode {
     if (bitmap == null) return CanvasRenderMode.None
     return if (isProceduralShaderSupported(context)) {
-        CanvasRenderMode.ProceduralShader(bitmap)
+        CanvasRenderMode.ProceduralShader(bitmap, style)
     } else {
         CanvasRenderMode.KenBurns(bitmap)
     }
@@ -113,11 +120,22 @@ internal fun CanvasArtworkPlayer(
             )
         }
         is CanvasRenderMode.ProceduralShader -> {
-            ProceduralCanvas(
-                bitmap = renderMode.bitmap,
-                modifier = modifier,
-                isPlaying = isPlaying,
-            )
+            when (renderMode.style) {
+                ProceduralCanvasStyle.KAWARP -> {
+                    ProceduralCanvas(
+                        bitmap = renderMode.bitmap,
+                        modifier = modifier,
+                        isPlaying = isPlaying,
+                    )
+                }
+                ProceduralCanvasStyle.SQUARE_TUNNEL -> {
+                    SquareTunnelCanvas(
+                        bitmap = renderMode.bitmap,
+                        modifier = modifier,
+                        isPlaying = isPlaying,
+                    )
+                }
+            }
         }
         is CanvasRenderMode.KenBurns -> {
             KenBurnsCanvas(

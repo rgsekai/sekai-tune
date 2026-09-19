@@ -41,6 +41,7 @@ val CanvasMeteredKey = booleanPreferencesKey("canvas_metered")
 val CanvasWifiOnlyKey = booleanPreferencesKey("canvas_wifi_only")
 val CanvasFallbackKey = booleanPreferencesKey("canvas_fallback")
 val CanvasProceduralFallbackKey = booleanPreferencesKey("canvas_procedural_fallback")
+val CanvasProceduralStyleKey = stringPreferencesKey("canvas_procedural_style")
 val ThumbnailCornerRadiusKey = floatPreferencesKey("thumbnailCornerRadius")
 val CropThumbnailToSquareKey = booleanPreferencesKey("cropThumbnailToSquare")
 

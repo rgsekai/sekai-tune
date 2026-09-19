@@ -626,6 +626,11 @@
     <string name="canvas_wifi_only_desc">Turn off to allow mobile data. Downloaded canvases remain available offline.</string>
     <string name="canvas_procedural_fallback">Animate static album art</string>
     <string name="canvas_procedural_fallback_desc">Apply fluid on-device motion to album art when no animated Canvas video is available.</string>
+    <string name="canvas_procedural_style">Motion style</string>
+    <string name="canvas_procedural_style_kawarp">Kawarp</string>
+    <string name="canvas_procedural_style_kawarp_desc">Smooth harmonic fluid UV wave distortion</string>
+    <string name="canvas_procedural_style_square_tunnel">Square Tunnel</string>
+    <string name="canvas_procedural_style_square_tunnel_desc">Mirrored geometric square corridor visualizer</string>
     <string name="canvas_provider_health">Provider health</string>
     <string name="canvas_health_not_checked">Not checked</string>
     <string name="canvas_health_checking">Checking…</string>

@@ -35,6 +35,7 @@ class CanvasSettingsUseCases @Inject constructor(
     suspend fun setSource(source: CanvasSource) = repository.setSource(source)
     suspend fun setWifiOnly(wifiOnly: Boolean) = repository.setWifiOnly(wifiOnly)
     suspend fun setProceduralFallback(enabled: Boolean) = repository.setProceduralFallback(enabled)
+    suspend fun setProceduralStyle(style: ProceduralCanvasStyle) = repository.setProceduralStyle(style)
 
     suspend fun setCacheLimit(limitMb: Int) {
         require(limitMb in CACHE_LIMITS)

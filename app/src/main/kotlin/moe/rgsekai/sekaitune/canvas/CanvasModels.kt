@@ -9,12 +9,25 @@ package moe.rgsekai.sekaitune.canvas
 
 import androidx.compose.runtime.Immutable
 
+enum class ProceduralCanvasStyle {
+    KAWARP,
+    SQUARE_TUNNEL,
+    ;
+
+    companion object {
+        fun fromPreference(value: String?): ProceduralCanvasStyle {
+            return entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: KAWARP
+        }
+    }
+}
+
 @Immutable
 data class CanvasConfiguration(
     val enabled: Boolean = false,
     val source: CanvasSource = CanvasSource.ALL,
     val wifiOnly: Boolean = false,
     val proceduralFallback: Boolean = true,
+    val proceduralStyle: ProceduralCanvasStyle = ProceduralCanvasStyle.KAWARP,
     val cacheLimitMb: Int = 256,
     val lowDataMode: Boolean = false,
 )

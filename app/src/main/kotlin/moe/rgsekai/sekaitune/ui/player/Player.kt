@@ -155,10 +155,12 @@ import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.canvas.CanvasRequestPolicy
 import moe.rgsekai.sekaitune.canvas.CanvasSource
+import moe.rgsekai.sekaitune.canvas.ProceduralCanvasStyle
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
 import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
 import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
+import moe.rgsekai.sekaitune.constants.CanvasProceduralStyleKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
@@ -2038,6 +2040,7 @@ private fun V7PlayerBackdrop(
     val hasCanvas = !canvasPrimary.isNullOrBlank() || !canvasFallback.isNullOrBlank()
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
     val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
+    val canvasProceduralStyle by rememberEnumPreference(CanvasProceduralStyleKey, ProceduralCanvasStyle.KAWARP)
     // When canvas is available, prefer its static image as the sharp-stage placeholder.
     // This prevents the jarring YTM thumbnail → canvas video flash on expand.
     val sharpArtworkUrl = if (hasCanvas) (canvasStatic ?: coverArtworkUrl) else (coverArtworkUrl ?: canvasStatic)
@@ -2072,7 +2075,7 @@ private fun V7PlayerBackdrop(
     }
 
     val canvasRenderMode =
-        remember(SekaiTuneCanvasEnabled, hasCanvas, canvasProceduralFallback, canvasPrimary, canvasFallback, proceduralBitmap, context) {
+        remember(SekaiTuneCanvasEnabled, hasCanvas, canvasProceduralFallback, canvasProceduralStyle, canvasPrimary, canvasFallback, proceduralBitmap, context) {
             when {
                 !SekaiTuneCanvasEnabled -> CanvasRenderMode.None
                 hasCanvas ->
@@ -2080,7 +2083,7 @@ private fun V7PlayerBackdrop(
                         primaryUrl = canvasPrimary ?: canvasFallback!!,
                         fallbackUrl = canvasFallback,
                     )
-                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap)
+                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap, canvasProceduralStyle)
                 else -> CanvasRenderMode.None
             }
         }
