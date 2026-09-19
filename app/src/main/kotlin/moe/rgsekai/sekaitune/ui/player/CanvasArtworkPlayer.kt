@@ -131,47 +131,67 @@ internal fun CanvasArtworkPlayer(
                 }
         }
 
+    val watchdog =
+        remember(currentUrl, fallback) {
+            CanvasPlaybackWatchdog(
+                stallTimeoutMs = CanvasPlaybackStallTimeoutMs,
+                checkIntervalMs = CanvasPlaybackStallCheckIntervalMs,
+                onStallDetected = { stalledMs, posMs ->
+                    if (!fallback.isNullOrBlank() && fallback != currentUrl) {
+                        Timber.tag(CanvasPlaybackLogTag).w(
+                            "Canvas stream stalled for %d ms at pos=%d. Switching to fallback URL %s",
+                            stalledMs, posMs, fallback,
+                        )
+                        currentUrl = fallback
+                        isVideoReady = false
+                    } else {
+                        Timber.tag(CanvasPlaybackLogTag).w(
+                            "Canvas stream stalled for %d ms at pos=%d. In-place recovering stream %s",
+                            stalledMs, posMs, currentUrl,
+                        )
+                        exoPlayer.seekTo(0)
+                        exoPlayer.prepare()
+                        exoPlayer.play()
+                    }
+                },
+            )
+        }
+
+    Timber.tag(CanvasPlaybackLogTag).d(
+        "CanvasArtworkPlayer composed: currentUrl=%s, primary=%s, fallback=%s, isPlaying=%s",
+        currentUrl, primary, fallback, isPlaying,
+    )
+
     LaunchedEffect(isPlaying) {
+        Timber.tag(CanvasPlaybackLogTag).d("Canvas isPlaying changed: %s (playbackState=%s)", isPlaying, exoPlayer.playbackState)
         exoPlayer.setCanvasPlayback(isPlaying)
     }
 
-    LaunchedEffect(currentUrl, isPlaying, primary, fallback, exoPlayer) {
-        if (!isPlaying || fallback.isNullOrBlank() || currentUrl != primary) return@LaunchedEffect
+    // Active playback & initial load stall watchdog:
+    // Distinguishes loop wraps (position changes / discontinuities) from genuine hangs (position unchanged for >= timeout)
+    LaunchedEffect(currentUrl, isPlaying, watchdog, exoPlayer) {
+        if (!isPlaying) {
+            watchdog.reset()
+            return@LaunchedEffect
+        }
 
-        var lastPosition = exoPlayer.currentPosition
-        var stalledForMs = 0L
-
-        while (isActive && isPlaying && currentUrl == primary) {
+        while (isActive && isPlaying) {
             delay(CanvasPlaybackStallCheckIntervalMs)
-
-            val currentPosition = exoPlayer.currentPosition
-            val playbackState = exoPlayer.playbackState
-            val positionAdvanced = currentPosition != lastPosition
-            val isActivelyRendering =
-                playbackState == Player.STATE_READY &&
-                    exoPlayer.isPlaying &&
-                    positionAdvanced
-
-            stalledForMs =
-                if (isActivelyRendering) {
-                    0L
-                } else {
-                    stalledForMs + CanvasPlaybackStallCheckIntervalMs
-                }
-
-            if (stalledForMs >= CanvasPlaybackStallTimeoutMs) {
-                currentUrl = fallback
-                isVideoReady = false
-                return@LaunchedEffect
-            }
-
-            lastPosition = currentPosition
+            val currentPos = exoPlayer.currentPosition
+            val state = exoPlayer.playbackState
+            val isBufferingOrReady = state == Player.STATE_BUFFERING || state == Player.STATE_READY
+            watchdog.tick(
+                currentPositionMs = currentPos,
+                isBufferingOrReady = isBufferingOrReady,
+                playWhenReady = exoPlayer.playWhenReady,
+            )
         }
     }
 
     DisposableEffect(exoPlayer, lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
+                Timber.tag(CanvasPlaybackLogTag).d("Lifecycle event: %s (shouldPlay=%s)", event, shouldPlay)
                 if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
                     exoPlayer.setCanvasPlayback(shouldPlay)
                 }
@@ -182,44 +202,66 @@ internal fun CanvasArtworkPlayer(
         }
     }
 
-    DisposableEffect(exoPlayer, primary, fallback) {
+    DisposableEffect(exoPlayer, primary, fallback, watchdog) {
         val listener =
             object : Player.Listener {
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    Timber.tag(CanvasPlaybackLogTag).w(error, "Canvas playback failed")
+                    Timber.tag(CanvasPlaybackLogTag).w(error, "Canvas playback error on %s", currentUrl)
                     val next =
                         when (currentUrl) {
                             primary -> fallback?.takeIf { it != currentUrl }
                             else -> null
                         }
                     if (!next.isNullOrBlank()) {
+                        Timber.tag(CanvasPlaybackLogTag).i("Switching to fallback URL after player error: %s", next)
                         currentUrl = next
                         isVideoReady = false
                     }
                 }
 
                 override fun onRenderedFirstFrame() {
+                    Timber.tag(CanvasPlaybackLogTag).d("Canvas rendered first frame for %s", currentUrl)
                     isVideoReady = true
+                    watchdog.onFirstFrameRendered()
                     if (shouldPlay) {
                         exoPlayer.setCanvasPlayback(isPlaying = true)
                     }
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
+                    val stateName = when (playbackState) {
+                        Player.STATE_IDLE -> "IDLE"
+                        Player.STATE_BUFFERING -> "BUFFERING"
+                        Player.STATE_READY -> "READY"
+                        Player.STATE_ENDED -> "ENDED"
+                        else -> "UNKNOWN($playbackState)"
+                    }
+                    Timber.tag(CanvasPlaybackLogTag).d("Canvas playbackState: %s (playWhenReady=%s)", stateName, exoPlayer.playWhenReady)
                     if (!shouldPlay) return
                     exoPlayer.setCanvasPlayback(isPlaying = true)
+                }
+
+                override fun onPositionDiscontinuity(
+                    oldPosition: Player.PositionInfo,
+                    newPosition: Player.PositionInfo,
+                    reason: Int,
+                ) {
+                    Timber.tag(CanvasPlaybackLogTag).v("Canvas position discontinuity: %d -> %d (reason=%d)", oldPosition.positionMs, newPosition.positionMs, reason)
+                    watchdog.onPositionDiscontinuity(newPosition.positionMs)
                 }
 
                 override fun onPlayWhenReadyChanged(
                     playWhenReady: Boolean,
                     reason: Int,
                 ) {
+                    Timber.tag(CanvasPlaybackLogTag).d("Canvas playWhenReady: %s (reason=%d)", playWhenReady, reason)
                     if (shouldPlay && !playWhenReady) {
                         exoPlayer.setCanvasPlayback(isPlaying = true)
                     }
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    Timber.tag(CanvasPlaybackLogTag).d("Canvas onIsPlayingChanged: %s", isPlaying)
                     if (shouldPlay && !isPlaying) {
                         exoPlayer.setCanvasPlayback(isPlaying = true)
                     }
@@ -235,19 +277,18 @@ internal fun CanvasArtworkPlayer(
         val lowercaseUrl = normalized.lowercase(Locale.ROOT)
         val mimeType =
             when {
-                lowercaseUrl.contains("m3u8") -> MimeTypes.APPLICATION_M3U8
+                lowercaseUrl.contains("m3u8") || lowercaseUrl.contains(".hls") -> MimeTypes.APPLICATION_M3U8
                 lowercaseUrl.contains("mp4") -> MimeTypes.VIDEO_MP4
-                primary != null && currentUrl == primary -> MimeTypes.APPLICATION_M3U8
-                fallback != null && currentUrl == fallback -> MimeTypes.VIDEO_MP4
-                else -> MimeTypes.APPLICATION_M3U8
+                else -> null
             }
 
-        val mediaItem =
-            MediaItem
-                .Builder()
-                .setUri(normalized)
-                .setMimeType(mimeType)
-                .build()
+        Timber.tag(CanvasPlaybackLogTag).i("Preparing ExoPlayer for Canvas URL: %s (mimeType=%s)", normalized, mimeType)
+
+        val mediaItemBuilder = MediaItem.Builder().setUri(normalized)
+        if (mimeType != null) {
+            mediaItemBuilder.setMimeType(mimeType)
+        }
+        val mediaItem = mediaItemBuilder.build()
 
         exoPlayer.stop()
         exoPlayer.setMediaItem(mediaItem)
@@ -305,6 +346,43 @@ private const val CanvasPlaybackLogTag = "CanvasPlayback"
 private const val CanvasPlaybackUserAgent =
     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Mobile Safari/537.36"
 
+internal class CanvasPlaybackWatchdog(
+    val stallTimeoutMs: Long = CanvasPlaybackStallTimeoutMs,
+    val checkIntervalMs: Long = CanvasPlaybackStallCheckIntervalMs,
+    private val onStallDetected: (stalledMs: Long, positionMs: Long) -> Unit,
+) {
+    var lastPositionMs: Long = -1L
+        private set
+    var stalledForMs: Long = 0L
+        private set
 
+    fun reset() {
+        lastPositionMs = -1L
+        stalledForMs = 0L
+    }
 
+    fun onPositionDiscontinuity(newPositionMs: Long) {
+        lastPositionMs = newPositionMs
+        stalledForMs = 0L
+    }
 
+    fun onFirstFrameRendered() {
+        stalledForMs = 0L
+    }
+
+    fun tick(currentPositionMs: Long, isBufferingOrReady: Boolean, playWhenReady: Boolean) {
+        val progressMade = (lastPositionMs < 0L) || (currentPositionMs != lastPositionMs)
+        lastPositionMs = currentPositionMs
+
+        if (progressMade) {
+            stalledForMs = 0L
+        } else if (isBufferingOrReady && playWhenReady) {
+            stalledForMs += checkIntervalMs
+        }
+
+        if (stalledForMs >= stallTimeoutMs) {
+            onStallDetected(stalledForMs, currentPositionMs)
+            stalledForMs = 0L
+        }
+    }
+}

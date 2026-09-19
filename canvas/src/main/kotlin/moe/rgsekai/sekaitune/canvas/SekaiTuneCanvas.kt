@@ -88,30 +88,76 @@ object SekaiTuneCanvas {
                 }
                 CanvasSource.TIDAL -> {
                     val tidalResult = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
-                    if (tidalResult != null) {
+                    if (tidalResult?.preferredAnimationUrl != null) {
                         tidalResult
                     } else if (policy.allowFallback) {
-                        getBySongArtist(song, artistStr, storefront)
+                        val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                        if (am?.preferredAnimationUrl != null) {
+                            am
+                        } else {
+                            val bl = getBetterLyricsOnly(song, artistStr, storefront)
+                            if (bl?.preferredAnimationUrl != null) bl else (tidalResult ?: am ?: bl)
+                        }
                     } else {
-                        null
+                        tidalResult
                     }
                 }
                 CanvasSource.SPOTIFY -> {
                     val spotifyResult = SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc)
-                    if (spotifyResult != null) {
+                    if (spotifyResult?.preferredAnimationUrl != null) {
                         spotifyResult
                     } else if (policy.allowFallback) {
-                        TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
-                            ?: getBySongArtist(song, artistStr, storefront)
+                        val tidal = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                        if (tidal?.preferredAnimationUrl != null) {
+                            tidal
+                        } else {
+                            val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                            if (am?.preferredAnimationUrl != null) {
+                                am
+                            } else {
+                                val bl = getBetterLyricsOnly(song, artistStr, storefront)
+                                if (bl?.preferredAnimationUrl != null) bl else (spotifyResult ?: tidal ?: am ?: bl)
+                            }
+                        }
                     } else {
-                        null
+                        spotifyResult
                     }
                 }
                 CanvasSource.ALL -> {
-                    getBySongArtist(song, artistStr, storefront)
-                        ?: AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
-                        ?: TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
-                        ?: SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc)
+                    var fallbackStatic: CanvasArtwork? = null
+
+                    // 1. BetterLyrics
+                    val bl = getBetterLyricsOnly(song, artistStr, storefront)
+                    if (bl?.preferredAnimationUrl != null) {
+                        bl
+                    } else {
+                        if (bl?.static != null && fallbackStatic == null) fallbackStatic = bl
+
+                        // 2. Apple Music
+                        val am = AppleMusicProvider.getBySongArtist(song, artistStr, null, storefront)
+                        if (am?.preferredAnimationUrl != null) {
+                            am
+                        } else {
+                            if (am?.static != null && fallbackStatic == null) fallbackStatic = am
+
+                            // 3. TIDAL
+                            val tidal = TidalCanvasProvider.getCanvas(song, artists, durationMs, storefront)
+                            if (tidal?.preferredAnimationUrl != null) {
+                                tidal
+                            } else {
+                                if (tidal?.static != null && fallbackStatic == null) fallbackStatic = tidal
+
+                                // 4. Spotify
+                                val spotify = SpotifyCanvasProvider.getCanvas(song, artists, durationMs, policy.spDc)
+                                if (spotify?.preferredAnimationUrl != null) {
+                                    spotify
+                                } else {
+                                    if (spotify?.static != null && fallbackStatic == null) fallbackStatic = spotify
+                                    fallbackStatic
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -122,6 +168,26 @@ object SekaiTuneCanvas {
             )
 
         return result
+    }
+
+    suspend fun getBetterLyricsOnly(
+        song: String,
+        artist: String,
+        storefront: String = "us",
+    ): CanvasArtwork? {
+        val response =
+            runCatching {
+                client.get {
+                    parameter("s", song)
+                    parameter("a", artist)
+                    parameter("storefront", storefront)
+                }
+            }.getOrNull()
+
+        return when (response?.status) {
+            HttpStatusCode.OK -> runCatching { response.body<CanvasArtwork>() }.getOrNull()
+            else -> null
+        }
     }
 
     suspend fun getBySongArtist(
@@ -135,22 +201,17 @@ object SekaiTuneCanvas {
             cache.remove(key)
         }
 
-        val response =
-            runCatching {
-                client.get {
-                    parameter("s", song)
-                    parameter("a", artist)
-                    parameter("storefront", storefront)
-                }
-            }.getOrNull()
-
-        val primary =
-            when (response?.status) {
-                HttpStatusCode.OK -> runCatching { response.body<CanvasArtwork>() }.getOrNull()
-                else -> null
+        val bl = getBetterLyricsOnly(song, artist, storefront)
+        val value = if (bl?.preferredAnimationUrl != null) {
+            bl
+        } else {
+            val am = AppleMusicProvider.getBySongArtist(song, artist, null, storefront)
+            if (am?.preferredAnimationUrl != null) {
+                am
+            } else {
+                bl ?: am
             }
-
-        val value = primary ?: AppleMusicProvider.getBySongArtist(song, artist, null, storefront)
+        }
 
         cache[key] =
             CacheEntry(

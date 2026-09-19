@@ -29,6 +29,7 @@ import moe.rgsekai.sekaitune.canvas.tokens.WebToken
 import moe.rgsekai.sekaitune.canvas.tokens.WebTokenProvider
 import java.io.IOException
 import java.util.Base64
+import java.util.Locale
 
 object TidalCanvasProvider {
     private const val TIDAL_SEARCH_URL = "https://api.tidal.com/v1/search/tracks"
@@ -153,7 +154,7 @@ object TidalCanvasProvider {
             header("Authorization", "Bearer $token")
             parameter("query", query)
             parameter("limit", 10)
-            parameter("countryCode", countryCode)
+            parameter("countryCode", countryCode.uppercase(Locale.ROOT))
         }
 
         if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {

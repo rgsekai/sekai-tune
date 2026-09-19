@@ -126,4 +126,38 @@ class DynamicTokenScraperVerificationTest {
         assertNotNull("Apple Music must recover and resolve canvas after forced token invalidation", recoveredCanvas)
         println("Recovered Apple Music Canvas Result: $recoveredCanvas")
     }
+
+    @Test
+    fun testBetterLyricsHealthAndStaticFiltering() = runBlocking {
+        println("=== [TEST] BetterLyrics Health & Fallback Verification ===")
+        val isHealthy = SekaiTuneCanvas.isHealthy()
+        println("SekaiTuneCanvas.isHealthy(): $isHealthy")
+        assertTrue("BetterLyrics health endpoint must return true", isHealthy)
+
+        println("Fetching Lana Del Rey - Summertime Sadness with Mode=ALL...")
+        val canvasAll = SekaiTuneCanvas.getCanvas(
+            song = "Summertime Sadness",
+            artists = listOf("Lana Del Rey"),
+            policy = CanvasRequestPolicy(
+                preferredSource = CanvasSource.ALL,
+            ),
+        )
+        println("Result with Mode=ALL: $canvasAll")
+        println("preferredAnimationUrl: ${canvasAll?.preferredAnimationUrl}")
+
+        val tidal = TidalCanvasProvider.getCanvas("Summertime Sadness", listOf("Lana Del Rey"), durationMs = null, countryCode = "US")
+        println("Direct TIDAL: $tidal (animationUrl=${tidal?.preferredAnimationUrl})")
+
+        val apple = AppleMusicProvider.getBySongArtist("Summertime Sadness", "Lana Del Rey", "Born to Die – The Paradise Edition", "us")
+        println("Direct Apple Music (with album): $apple (animationUrl=${apple?.preferredAnimationUrl})")
+
+        val appleAlbum = AppleMusicProvider.getByAlbumArtist("Born to Die - The Paradise Edition", "Lana Del Rey", "us")
+        println("Direct Apple Music (album search): $appleAlbum (animationUrl=${appleAlbum?.preferredAnimationUrl})")
+
+        val appleAlbum2 = AppleMusicProvider.getByAlbumArtist("Born to Die – The Paradise Edition", "Lana Del Rey", "us")
+        println("Direct Apple Music (album search 2): $appleAlbum2 (animationUrl=${appleAlbum2?.preferredAnimationUrl})")
+
+        val appleAlbum3 = AppleMusicProvider.getByAlbumArtist("Born to Die", "Lana Del Rey", "us")
+        println("Direct Apple Music (album search 3): $appleAlbum3 (animationUrl=${appleAlbum3?.preferredAnimationUrl})")
+    }
 }
