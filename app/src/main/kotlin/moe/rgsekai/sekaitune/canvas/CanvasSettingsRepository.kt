@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.constants.CanvasAudioReactiveKey
 import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasProceduralStyleKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
@@ -53,6 +54,7 @@ class CanvasSettingsRepository @Inject constructor(
             wifiOnly = preferences[CanvasWifiOnlyKey] ?: false,
             proceduralFallback = preferences[CanvasProceduralFallbackKey] ?: true,
             proceduralStyle = ProceduralCanvasStyle.fromPreference(preferences[CanvasProceduralStyleKey]),
+            audioReactive = preferences[CanvasAudioReactiveKey] ?: false,
             cacheLimitMb = (preferences[MaxCanvasCacheSizeKey] ?: 256).coerceAtLeast(-1),
             lowDataMode = preferences[LowDataModeKey] ?: false,
         )
@@ -107,6 +109,10 @@ class CanvasSettingsRepository @Inject constructor(
 
     suspend fun setProceduralStyle(style: ProceduralCanvasStyle) {
         context.dataStore.edit { it[CanvasProceduralStyleKey] = style.name }
+    }
+
+    suspend fun setAudioReactive(enabled: Boolean) {
+        context.dataStore.edit { it[CanvasAudioReactiveKey] = enabled }
     }
 
     suspend fun setCacheLimit(limitMb: Int) {

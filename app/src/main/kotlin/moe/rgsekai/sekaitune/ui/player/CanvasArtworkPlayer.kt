@@ -71,6 +71,8 @@ sealed interface CanvasRenderMode {
     data class ProceduralShader(
         val bitmap: Bitmap,
         val style: ProceduralCanvasStyle = ProceduralCanvasStyle.KAWARP,
+        val audioSessionId: Int = 0,
+        val audioReactive: Boolean = false,
     ) : CanvasRenderMode
 
     data class KenBurns(
@@ -93,10 +95,17 @@ internal fun resolveProceduralRenderMode(
     context: Context,
     bitmap: Bitmap?,
     style: ProceduralCanvasStyle = ProceduralCanvasStyle.KAWARP,
+    audioSessionId: Int = 0,
+    audioReactive: Boolean = false,
 ): CanvasRenderMode {
     if (bitmap == null) return CanvasRenderMode.None
     return if (isProceduralShaderSupported(context)) {
-        CanvasRenderMode.ProceduralShader(bitmap, style)
+        CanvasRenderMode.ProceduralShader(
+            bitmap = bitmap,
+            style = style,
+            audioSessionId = audioSessionId,
+            audioReactive = audioReactive,
+        )
     } else {
         CanvasRenderMode.KenBurns(bitmap)
     }
@@ -126,6 +135,8 @@ internal fun CanvasArtworkPlayer(
                         bitmap = renderMode.bitmap,
                         modifier = modifier,
                         isPlaying = isPlaying,
+                        audioSessionId = renderMode.audioSessionId,
+                        audioReactive = renderMode.audioReactive,
                     )
                 }
                 ProceduralCanvasStyle.SQUARE_TUNNEL -> {
@@ -133,6 +144,8 @@ internal fun CanvasArtworkPlayer(
                         bitmap = renderMode.bitmap,
                         modifier = modifier,
                         isPlaying = isPlaying,
+                        audioSessionId = renderMode.audioSessionId,
+                        audioReactive = renderMode.audioReactive,
                     )
                 }
             }

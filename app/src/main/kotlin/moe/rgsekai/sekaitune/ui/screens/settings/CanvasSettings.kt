@@ -9,8 +9,15 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import timber.log.Timber
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -132,9 +139,38 @@ private fun CanvasSettingsBody(
     onAction: (CanvasSettingsAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { isGranted ->
+        Timber.tag("CanvasAudioReactor").d(
+            "RECORD_AUDIO permission request result: %s",
+            if (isGranted) "GRANTED (enabling audio-reactive animation)" else "DENIED (keeping audio-reactive animation disabled)"
+        )
+        onAction(CanvasSettingsAction.SetAudioReactive(isGranted))
+    }
     val onEnabled: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetEnabled(it)) } }
     val onWifiOnly: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetWifiOnly(it)) } }
     val onProceduralFallback: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetProceduralFallback(it)) } }
+    val onAudioReactive: (Boolean) -> Unit = remember(onAction, context, permissionLauncher) {
+        { enabled ->
+            if (enabled) {
+                val isPermissionGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                Timber.tag("CanvasAudioReactor").d(
+                    "RECORD_AUDIO permission check on toggle ON: %s",
+                    if (isPermissionGranted) "ALLOWED" else "NOT_GRANTED (launching system permission prompt)"
+                )
+                if (isPermissionGranted) {
+                    onAction(CanvasSettingsAction.SetAudioReactive(true))
+                } else {
+                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            } else {
+                Timber.tag("CanvasAudioReactor").d("Audio-reactive animation toggled OFF by user")
+                onAction(CanvasSettingsAction.SetAudioReactive(false))
+            }
+        }
+    }
     val onRefresh = remember(onAction) { { onAction(CanvasSettingsAction.RefreshHealth) } }
     val onCacheLimit = remember(onAction) { { onAction(CanvasSettingsAction.ShowCacheLimit) } }
     val onClear = remember(onAction) { { onAction(CanvasSettingsAction.ShowClearCache) } }
@@ -302,6 +338,37 @@ private fun CanvasSettingsBody(
                                 onClick = onSelect,
                             )
                         }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = model.configuration.audioReactive,
+                                enabled = !model.busy,
+                                role = Role.Switch,
+                                onValueChange = onAudioReactive,
+                            )
+                            .padding(horizontal = SettingsDimensions.RowHorizontalPadding, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = remember { Arrangement.spacedBy(16.dp) },
+                    ) {
+                        Column(modifier = remember { Modifier.weight(1f) }) {
+                            Text(
+                                text = stringResource(R.string.canvas_audio_reactive),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = stringResource(R.string.canvas_audio_reactive_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = model.configuration.audioReactive,
+                            onCheckedChange = null,
+                            enabled = !model.busy,
+                        )
                     }
                 }
             }

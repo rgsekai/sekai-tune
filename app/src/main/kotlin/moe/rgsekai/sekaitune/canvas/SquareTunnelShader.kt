@@ -38,6 +38,11 @@ import androidx.palette.graphics.Palette
 import kotlinx.coroutines.isActive
 
 /**
+ * Tuned audio-reactive amplitude scaling factor for Square Tunnel flight speed advance.
+ */
+const val TUNNEL_AUDIO_REACTIVE_INTENSITY: Float = 1.40f
+
+/**
  * AGSL (Android Graphics Shading Language) source implementing the mirrored square-tunnel effect.
  *
  * Mathematics:
@@ -54,6 +59,7 @@ const val SQUARE_TUNNEL_AGSL_SHADER: String = """
     uniform float2 resolution;
     uniform float time;
     uniform float3 centerColor;
+    uniform float bassEnergy;
 
     half4 main(float2 fragCoord) {
         // Isotropic coordinates centered at (0, 0), normalized by min(width, height)
@@ -66,8 +72,8 @@ const val SQUARE_TUNNEL_AGSL_SHADER: String = """
         // 8th-order Minkowski p-norm produces flat square tunnel walls with soft corners
         float r = pow(pow(abs(p.x), 8.0) + pow(abs(p.y), 8.0), 0.125);
 
-        // Depth UV motion (continuous forward flight loop)
-        float speed = 0.4;
+        // Depth UV motion (continuous forward flight loop modulated subtly by bassEnergy)
+        float speed = 0.4 * (1.0 + bassEnergy * 1.40);
         float u = (0.3 / max(r, 0.0001)) + (0.2 * time * speed);
 
         // Angle UV mapped across full circular revolution
@@ -128,6 +134,8 @@ fun SquareTunnelShaderCanvas(
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
     isPlaying: Boolean = true,
+    audioSessionId: Int = 0,
+    audioReactive: Boolean = false,
 ) {
     val time by produceState(initialValue = 0f, key1 = isPlaying) {
         if (!isPlaying) return@produceState
@@ -147,6 +155,12 @@ fun SquareTunnelShaderCanvas(
         extractTunnelCenterColor(bitmap)
     }
 
+    val bassEnergy by rememberBassEnergy(
+        audioSessionId = audioSessionId,
+        isPlaying = isPlaying,
+        enabled = audioReactive,
+    )
+
     val runtimeShader = remember { RuntimeShader(SQUARE_TUNNEL_AGSL_SHADER) }
 
     Box(
@@ -158,6 +172,7 @@ fun SquareTunnelShaderCanvas(
                     runtimeShader.setFloatUniform("resolution", currentWidth, currentHeight)
                     runtimeShader.setFloatUniform("time", time)
                     runtimeShader.setFloatUniform("centerColor", centerColor[0], centerColor[1], centerColor[2])
+                    runtimeShader.setFloatUniform("bassEnergy", bassEnergy)
                     renderEffect = RenderEffect
                         .createRuntimeShaderEffect(runtimeShader, "image")
                         .asComposeRenderEffect()
@@ -183,6 +198,8 @@ fun SquareTunnelCanvas(
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
     isPlaying: Boolean = true,
+    audioSessionId: Int = 0,
+    audioReactive: Boolean = false,
 ) {
     val context = LocalContext.current
     val supported = remember(context) { isProceduralShaderSupported(context) }
@@ -192,6 +209,8 @@ fun SquareTunnelCanvas(
             bitmap = bitmap,
             modifier = modifier,
             isPlaying = isPlaying,
+            audioSessionId = audioSessionId,
+            audioReactive = audioReactive,
         )
     } else {
         KenBurnsCanvas(

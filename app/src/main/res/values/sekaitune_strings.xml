@@ -631,6 +631,8 @@
     <string name="canvas_procedural_style_kawarp_desc">Smooth harmonic fluid UV wave distortion</string>
     <string name="canvas_procedural_style_square_tunnel">Square Tunnel</string>
     <string name="canvas_procedural_style_square_tunnel_desc">Mirrored geometric square corridor visualizer</string>
+    <string name="canvas_audio_reactive">Audio-reactive animation</string>
+    <string name="canvas_audio_reactive_desc">Modulate procedural motion subtly with low-frequency music bass beats (Experimental).</string>
     <string name="canvas_provider_health">Provider health</string>
     <string name="canvas_health_not_checked">Not checked</string>
     <string name="canvas_health_checking">Checking…</string>

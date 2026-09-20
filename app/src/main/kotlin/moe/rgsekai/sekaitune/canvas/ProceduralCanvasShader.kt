@@ -32,6 +32,11 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.isActive
 
 /**
+ * Tuned audio-reactive amplitude scaling factor for Kawarp displacement.
+ */
+const val KAWARP_AUDIO_REACTIVE_INTENSITY: Float = 1.80f
+
+/**
  * AGSL (Android Graphics Shading Language) source implementing the "Kawarp"
  * fluid UV warp distortion effect.
  *
@@ -44,6 +49,7 @@ const val KAWARP_AGSL_SHADER: String = """
     uniform shader image;
     uniform float2 resolution;
     uniform float time;
+    uniform float bassEnergy;
 
     half4 main(float2 fragCoord) {
         // Isotropic coordinates normalized by min(width, height).
@@ -53,15 +59,16 @@ const val KAWARP_AGSL_SHADER: String = """
         float2 normCoord = fragCoord / minDim;
         
         float t = time * 0.4;
+        float audioBoost = 1.0 + bassEnergy * 1.80;
         
-        // Multi-frequency harmonic wave displacement in isotropic space
-        float warpX = sin(normCoord.y * 6.2831853 + t * 1.2) * 0.015
+        // Multi-frequency harmonic wave displacement in isotropic space modulated by audioBoost
+        float warpX = (sin(normCoord.y * 6.2831853 + t * 1.2) * 0.015
                     + sin(normCoord.y * 12.5663706 - t * 0.9) * 0.007
-                    + cos(normCoord.x * 4.7123889 + t * 0.7) * 0.005;
+                    + cos(normCoord.x * 4.7123889 + t * 0.7) * 0.005) * audioBoost;
                     
-        float warpY = cos(normCoord.x * 6.2831853 + t * 1.1) * 0.015
+        float warpY = (cos(normCoord.x * 6.2831853 + t * 1.1) * 0.015
                     + cos(normCoord.x * 12.5663706 - t * 0.8) * 0.007
-                    + sin(normCoord.y * 4.7123889 - t * 0.6) * 0.005;
+                    + sin(normCoord.y * 4.7123889 - t * 0.6) * 0.005) * audioBoost;
 
         // Convert displacement to physical layer pixel space
         float2 dispPx = float2(warpX, warpY) * minDim;
@@ -107,6 +114,8 @@ fun ProceduralShaderCanvas(
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
     isPlaying: Boolean = true,
+    audioSessionId: Int = 0,
+    audioReactive: Boolean = false,
 ) {
     val time by produceState(initialValue = 0f, key1 = isPlaying) {
         if (!isPlaying) return@produceState
@@ -122,6 +131,12 @@ fun ProceduralShaderCanvas(
         }
     }
 
+    val bassEnergy by rememberBassEnergy(
+        audioSessionId = audioSessionId,
+        isPlaying = isPlaying,
+        enabled = audioReactive,
+    )
+
     val runtimeShader = remember { RuntimeShader(KAWARP_AGSL_SHADER) }
 
     Box(
@@ -132,6 +147,7 @@ fun ProceduralShaderCanvas(
                 if (currentWidth > 0f && currentHeight > 0f) {
                     runtimeShader.setFloatUniform("resolution", currentWidth, currentHeight)
                     runtimeShader.setFloatUniform("time", time)
+                    runtimeShader.setFloatUniform("bassEnergy", bassEnergy)
                     renderEffect = RenderEffect
                         .createRuntimeShaderEffect(runtimeShader, "image")
                         .asComposeRenderEffect()
@@ -157,6 +173,8 @@ fun ProceduralCanvas(
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
     isPlaying: Boolean = true,
+    audioSessionId: Int = 0,
+    audioReactive: Boolean = false,
 ) {
     val context = LocalContext.current
     val supported = remember(context) { isProceduralShaderSupported(context) }
@@ -166,6 +184,8 @@ fun ProceduralCanvas(
             bitmap = bitmap,
             modifier = modifier,
             isPlaying = isPlaying,
+            audioSessionId = audioSessionId,
+            audioReactive = audioReactive,
         )
     } else {
         KenBurnsCanvas(

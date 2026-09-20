@@ -22,6 +22,7 @@ class ProceduralCanvasShaderTest {
         assertTrue("Shader must declare uniform shader image", shader.contains("uniform shader image;"))
         assertTrue("Shader must declare uniform float2 resolution", shader.contains("uniform float2 resolution;"))
         assertTrue("Shader must declare uniform float time", shader.contains("uniform float time;"))
+        assertTrue("Shader must declare uniform float bassEnergy", shader.contains("uniform float bassEnergy;"))
         assertTrue("Shader must declare half4 main(float2 fragCoord)", shader.contains("half4 main(float2 fragCoord)"))
         assertTrue("Shader must evaluate input shader", shader.contains("image.eval("))
         assertTrue("Shader must clamp coordinates to prevent out-of-bounds sampling", shader.contains("clamp("))

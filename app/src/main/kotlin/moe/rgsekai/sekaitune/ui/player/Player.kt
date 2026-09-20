@@ -157,6 +157,7 @@ import moe.rgsekai.sekaitune.canvas.CanvasRequestPolicy
 import moe.rgsekai.sekaitune.canvas.CanvasSource
 import moe.rgsekai.sekaitune.canvas.ProceduralCanvasStyle
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
+import moe.rgsekai.sekaitune.constants.CanvasAudioReactiveKey
 import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
 import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
@@ -2041,6 +2042,9 @@ private fun V7PlayerBackdrop(
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
     val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
     val canvasProceduralStyle by rememberEnumPreference(CanvasProceduralStyleKey, ProceduralCanvasStyle.KAWARP)
+    val canvasAudioReactive by rememberPreference(CanvasAudioReactiveKey, false)
+    val playerConnection = LocalPlayerConnection.current
+    val audioSessionId = playerConnection?.localPlayer?.audioSessionId ?: 0
     // When canvas is available, prefer its static image as the sharp-stage placeholder.
     // This prevents the jarring YTM thumbnail → canvas video flash on expand.
     val sharpArtworkUrl = if (hasCanvas) (canvasStatic ?: coverArtworkUrl) else (coverArtworkUrl ?: canvasStatic)
@@ -2075,7 +2079,7 @@ private fun V7PlayerBackdrop(
     }
 
     val canvasRenderMode =
-        remember(SekaiTuneCanvasEnabled, hasCanvas, canvasProceduralFallback, canvasProceduralStyle, canvasPrimary, canvasFallback, proceduralBitmap, context) {
+        remember(SekaiTuneCanvasEnabled, hasCanvas, canvasProceduralFallback, canvasProceduralStyle, canvasAudioReactive, audioSessionId, canvasPrimary, canvasFallback, proceduralBitmap, context) {
             when {
                 !SekaiTuneCanvasEnabled -> CanvasRenderMode.None
                 hasCanvas ->
@@ -2083,7 +2087,13 @@ private fun V7PlayerBackdrop(
                         primaryUrl = canvasPrimary ?: canvasFallback!!,
                         fallbackUrl = canvasFallback,
                     )
-                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(context, proceduralBitmap, canvasProceduralStyle)
+                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(
+                    context = context,
+                    bitmap = proceduralBitmap,
+                    style = canvasProceduralStyle,
+                    audioSessionId = audioSessionId,
+                    audioReactive = canvasAudioReactive,
+                )
                 else -> CanvasRenderMode.None
             }
         }

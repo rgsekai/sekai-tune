@@ -28,6 +28,7 @@ data class CanvasConfiguration(
     val wifiOnly: Boolean = false,
     val proceduralFallback: Boolean = true,
     val proceduralStyle: ProceduralCanvasStyle = ProceduralCanvasStyle.KAWARP,
+    val audioReactive: Boolean = false,
     val cacheLimitMb: Int = 256,
     val lowDataMode: Boolean = false,
 )
