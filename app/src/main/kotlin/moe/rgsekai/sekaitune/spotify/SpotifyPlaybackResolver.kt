@@ -29,9 +29,81 @@ object SpotifyPlaybackResolver {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MediaMetadata>?): Boolean = size > CACHE_MAX_SIZE
         }
 
+    private val reverseCache =
+        object : LinkedHashMap<String, String>(CACHE_MAX_SIZE, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean = size > CACHE_MAX_SIZE
+        }
+
     fun getCached(trackId: String): MediaMetadata? =
         synchronized(cache) {
             cache[trackId]
+        }
+
+    suspend fun resolveToSpotifyUri(
+        youtubeId: String,
+        title: String,
+        artist: String,
+        durationSec: Int = -1,
+    ): Result<String?> =
+        runCatching {
+            withContext(Dispatchers.IO) {
+                val cachedSpotifyId =
+                    synchronized(cache) {
+                        cache.values.firstOrNull { it.id == youtubeId && !it.spotifyTrackId.isNullOrBlank() }?.spotifyTrackId
+                    }
+                if (!cachedSpotifyId.isNullOrBlank()) {
+                    return@withContext "spotify:track:$cachedSpotifyId"
+                }
+
+                val cachedUri = synchronized(reverseCache) { reverseCache[youtubeId] }
+                if (!cachedUri.isNullOrBlank()) {
+                    return@withContext cachedUri
+                }
+
+                val query = if (artist.isBlank()) title else "$artist $title"
+                val searchResult =
+                    kotlinx.coroutines.withTimeout(10_000L) {
+                        Spotify.search(query = query, types = listOf("track"), limit = 5).getOrThrow()
+                    }
+
+                val candidates = searchResult.tracks?.items.orEmpty()
+                if (candidates.isEmpty()) {
+                    return@withContext null
+                }
+
+                val precomputed =
+                    mutex.withLock {
+                        SpotifyMapper.precompute(
+                            title = title,
+                            artist = artist,
+                            durationMs = if (durationSec > 0) durationSec * 1000 else 0,
+                        )
+                    }
+
+                val (best, score) =
+                    mutex.withLock {
+                        candidates
+                            .map { candidate ->
+                                candidate to
+                                    SpotifyMapper.matchScorePrecomputed(
+                                        precomputed = precomputed,
+                                        candidateTitle = candidate.name,
+                                        candidateArtist = candidate.artists.joinToString(" ") { it.name },
+                                        candidateDurationSec = candidate.durationMs / 1000,
+                                    )
+                            }.maxByOrNull { it.second }
+                    } ?: return@withContext null
+
+                if (score < MIN_MATCH_THRESHOLD) {
+                    return@withContext null
+                }
+
+                val spotifyUri = "spotify:track:${best.id}"
+                synchronized(reverseCache) {
+                    reverseCache[youtubeId] = spotifyUri
+                }
+                spotifyUri
+            }
         }
 
     suspend fun resolveToMediaItem(track: SpotifyTrack): MediaItem? = resolveToMetadata(track)?.toMediaItem()

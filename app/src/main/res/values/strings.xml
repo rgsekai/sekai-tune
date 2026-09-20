@@ -953,6 +953,18 @@
     <string name="downloaded">Downloaded</string>
     <string name="remove_download_confirm">Are you sure you want to remove this downloaded item? This action cannot be undone.</string>
     <string name="remove_download_section_confirm">Are you sure you want to remove all downloads in this section? This action cannot be undone.</string>
+    <string name="spotify_add_to_playlist">Add to Spotify playlist</string>
+    <string name="spotify_track_added_to_playlist">Added to \"%1$s\"</string>
+    <string name="spotify_tracks_added_to_playlist">Added %1$d songs to \"%2$s\"</string>
+    <string name="spotify_tracks_added_with_duplicates">Added %1$d songs to \"%2$s\" (%3$d already in playlist)</string>
+    <string name="spotify_partial_add_to_playlist">Added %1$d of %2$d to \"%3$s\" — %4$d not found on Spotify.</string>
+    <string name="spotify_track_already_in_playlist">Song already in \"%1$s\"</string>
+    <string name="spotify_add_to_playlist_failed">Failed to add to Spotify playlist</string>
+    <string name="spotify_track_not_found_on_spotify">Track not found on Spotify</string>
+    <string name="spotify_resolution_timeout">Spotify search timed out. Please try again.</string>
+    <string name="spotify_no_playlists">No Spotify playlists found</string>
+    <string name="spotify_searching">Searching Spotify...</string>
+    <string name="spotify_resolving_batch">Searching Spotify (%1$d/%2$d)...</string>
 </resources>
 
 

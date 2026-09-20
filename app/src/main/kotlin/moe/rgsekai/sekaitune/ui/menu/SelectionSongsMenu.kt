@@ -61,6 +61,8 @@ import moe.rgsekai.sekaitune.LocalDownloadUtil
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.LocalSyncUtils
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
+import moe.rgsekai.sekaitune.constants.SpotifyAccessTokenKey
 import moe.rgsekai.sekaitune.db.entities.PlaylistSongMap
 import moe.rgsekai.sekaitune.db.entities.Song
 import moe.rgsekai.sekaitune.extensions.toMediaItem
@@ -77,6 +79,7 @@ import moe.rgsekai.sekaitune.ui.component.NewActionGrid
 import moe.rgsekai.sekaitune.ui.utils.HeaderDownloadItem
 import moe.rgsekai.sekaitune.ui.utils.sendAddMissingDownloads
 import moe.rgsekai.sekaitune.ui.utils.sendRemoveDownloads
+import moe.rgsekai.sekaitune.utils.rememberPreference
 import java.time.LocalDateTime
 
 @SuppressLint("MutableCollectionMutableState")
@@ -135,6 +138,31 @@ fun SelectionSongMenu(
                 }
         }
     }
+
+    val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
+    val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
+    val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken) {
+        showSpotifyPlaylists && spotifyAccessToken.isNotBlank()
+    }
+    var showAddToSpotifyDialog by rememberSaveable { mutableStateOf(false) }
+
+    AddToSpotifyPlaylistFlow(
+        showDialog = showAddToSpotifyDialog,
+        tracks = remember(songSelection) {
+            songSelection.map { song ->
+                SpotifyResolvableTrack(
+                    id = song.id,
+                    title = song.song.title,
+                    artist = song.artists.firstOrNull()?.name.orEmpty(),
+                    durationSec = song.song.duration,
+                )
+            }
+        },
+        onDismiss = {
+            showAddToSpotifyDialog = false
+            clearAction()
+        },
+    )
 
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
@@ -245,64 +273,88 @@ fun SelectionSongMenu(
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
                 NewActionGrid(
                     actions =
-                        listOf(
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.play),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.play),
-                                onClick = {
-                                    onDismiss()
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = "Selection",
-                                            items = songSelection.map { it.toMediaItem() },
-                                        ),
-                                    )
-                                    clearAction()
-                                },
-                            ),
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.shuffle),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.shuffle),
-                                onClick = {
-                                    onDismiss()
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = "Selection",
-                                            items = songSelection.shuffled().map { it.toMediaItem() },
-                                        ),
-                                    )
-                                    clearAction()
-                                },
-                            ),
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.playlist_add),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.add_to_playlist),
-                                onClick = {
-                                    showChoosePlaylistDialog = true
-                                },
-                            ),
-                        ),
+                        buildList {
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.play),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.play),
+                                    onClick = {
+                                        onDismiss()
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = "Selection",
+                                                items = songSelection.map { it.toMediaItem() },
+                                            ),
+                                        )
+                                        clearAction()
+                                    },
+                                ),
+                            )
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.shuffle),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.shuffle),
+                                    onClick = {
+                                        onDismiss()
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = "Selection",
+                                                items = songSelection.shuffled().map { it.toMediaItem() },
+                                            ),
+                                        )
+                                        clearAction()
+                                    },
+                                ),
+                            )
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.playlist_add),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.add_to_playlist),
+                                    onClick = {
+                                        showChoosePlaylistDialog = true
+                                    },
+                                ),
+                            )
+                            if (canAddToSpotify) {
+                                add(
+                                    NewAction(
+                                        icon = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.spotify_icon),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(28.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        },
+                                        text = stringResource(R.string.spotify_add_to_playlist),
+                                        onClick = {
+                                            showAddToSpotifyDialog = true
+                                        },
+                                    ),
+                                )
+                            }
+                        },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                 )
             }
@@ -718,6 +770,31 @@ fun SelectionMediaMetadataMenu(
         mutableStateOf(songSelection.isNotEmpty() && songSelection.all { it.liked })
     }
 
+    val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
+    val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
+    val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken) {
+        showSpotifyPlaylists && spotifyAccessToken.isNotBlank()
+    }
+    var showAddToSpotifyDialog by rememberSaveable { mutableStateOf(false) }
+
+    AddToSpotifyPlaylistFlow(
+        showDialog = showAddToSpotifyDialog,
+        tracks = remember(songSelection) {
+            songSelection.map { metadata ->
+                SpotifyResolvableTrack(
+                    id = metadata.id,
+                    title = metadata.title,
+                    artist = metadata.artists.firstOrNull()?.name.orEmpty(),
+                    durationSec = metadata.duration ?: -1,
+                )
+            }
+        },
+        onDismiss = {
+            showAddToSpotifyDialog = false
+            clearAction()
+        },
+    )
+
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -851,64 +928,88 @@ fun SelectionMediaMetadataMenu(
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
                 NewActionGrid(
                     actions =
-                        listOf(
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.play),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.play),
-                                onClick = {
-                                    onDismiss()
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = "Selection",
-                                            items = songSelection.map { it.toMediaItem() },
-                                        ),
-                                    )
-                                    clearAction()
-                                },
-                            ),
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.shuffle),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.shuffle),
-                                onClick = {
-                                    onDismiss()
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = "Selection",
-                                            items = songSelection.shuffled().map { it.toMediaItem() },
-                                        ),
-                                    )
-                                    clearAction()
-                                },
-                            ),
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.playlist_add),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.add_to_playlist),
-                                onClick = {
-                                    showChoosePlaylistDialog = true
-                                },
-                            ),
-                        ),
+                        buildList {
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.play),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.play),
+                                    onClick = {
+                                        onDismiss()
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = "Selection",
+                                                items = songSelection.map { it.toMediaItem() },
+                                            ),
+                                        )
+                                        clearAction()
+                                    },
+                                ),
+                            )
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.shuffle),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.shuffle),
+                                    onClick = {
+                                        onDismiss()
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = "Selection",
+                                                items = songSelection.shuffled().map { it.toMediaItem() },
+                                            ),
+                                        )
+                                        clearAction()
+                                    },
+                                ),
+                            )
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.playlist_add),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.add_to_playlist),
+                                    onClick = {
+                                        showChoosePlaylistDialog = true
+                                    },
+                                ),
+                            )
+                            if (canAddToSpotify) {
+                                add(
+                                    NewAction(
+                                        icon = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.spotify_icon),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(28.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        },
+                                        text = stringResource(R.string.spotify_add_to_playlist),
+                                        onClick = {
+                                            showAddToSpotifyDialog = true
+                                        },
+                                    ),
+                                )
+                            }
+                        },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                 )
             }
@@ -1200,6 +1301,32 @@ fun SelectionSpotifyTracksMenu(
     val coroutineScope = rememberCoroutineScope()
     val playerConnection = LocalPlayerConnection.current ?: return
 
+    val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
+    val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
+    val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken) {
+        showSpotifyPlaylists && spotifyAccessToken.isNotBlank()
+    }
+    var showAddToSpotifyDialog by rememberSaveable { mutableStateOf(false) }
+
+    AddToSpotifyPlaylistFlow(
+        showDialog = showAddToSpotifyDialog,
+        tracks = remember(trackSelection) {
+            trackSelection.map { track ->
+                SpotifyResolvableTrack(
+                    id = track.id,
+                    title = track.name,
+                    artist = track.artists.firstOrNull()?.name.orEmpty(),
+                    durationSec = (track.durationMs ?: 0) / 1000,
+                    spotifyUri = track.uri ?: "spotify:track:${track.id}",
+                )
+            }
+        },
+        onDismiss = {
+            showAddToSpotifyDialog = false
+            clearAction()
+        },
+    )
+
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -1321,78 +1448,102 @@ fun SelectionSpotifyTracksMenu(
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
                 NewActionGrid(
                     actions =
-                        listOf(
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.play),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.play),
-                                onClick = {
-                                    onDismiss()
-                                    coroutineScope.launch {
-                                        val resolvedTracks = trackSelection.mapNotNull { track ->
-                                            SpotifyPlaybackResolver.resolveToMediaItem(track)
+                        buildList {
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.play),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.play),
+                                    onClick = {
+                                        onDismiss()
+                                        coroutineScope.launch {
+                                            val resolvedTracks = trackSelection.mapNotNull { track ->
+                                                SpotifyPlaybackResolver.resolveToMediaItem(track)
+                                            }
+                                            if (resolvedTracks.isNotEmpty()) {
+                                                playerConnection.playQueue(
+                                                    ListQueue(
+                                                        title = playlistName.ifEmpty { "Selection" },
+                                                        items = resolvedTracks,
+                                                    ),
+                                                )
+                                            }
                                         }
-                                        if (resolvedTracks.isNotEmpty()) {
-                                            playerConnection.playQueue(
-                                                ListQueue(
-                                                    title = playlistName.ifEmpty { "Selection" },
-                                                    items = resolvedTracks,
-                                                ),
+                                        clearAction()
+                                    },
+                                ),
+                            )
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.shuffle),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.shuffle),
+                                    onClick = {
+                                        onDismiss()
+                                        coroutineScope.launch {
+                                            val resolvedTracks = trackSelection.shuffled().mapNotNull { track ->
+                                                SpotifyPlaybackResolver.resolveToMediaItem(track)
+                                            }
+                                            if (resolvedTracks.isNotEmpty()) {
+                                                playerConnection.playQueue(
+                                                    ListQueue(
+                                                        title = playlistName.ifEmpty { "Selection" },
+                                                        items = resolvedTracks,
+                                                    ),
+                                                )
+                                            }
+                                        }
+                                        clearAction()
+                                    },
+                                ),
+                            )
+                            add(
+                                NewAction(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.playlist_add),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    text = stringResource(R.string.add_to_playlist),
+                                    onClick = {
+                                        showChoosePlaylistDialog = true
+                                    },
+                                ),
+                            )
+                            if (canAddToSpotify) {
+                                add(
+                                    NewAction(
+                                        icon = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.spotify_icon),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(28.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
-                                        }
-                                    }
-                                    clearAction()
-                                },
-                            ),
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.shuffle),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.shuffle),
-                                onClick = {
-                                    onDismiss()
-                                    coroutineScope.launch {
-                                        val resolvedTracks = trackSelection.shuffled().mapNotNull { track ->
-                                            SpotifyPlaybackResolver.resolveToMediaItem(track)
-                                        }
-                                        if (resolvedTracks.isNotEmpty()) {
-                                            playerConnection.playQueue(
-                                                ListQueue(
-                                                    title = playlistName.ifEmpty { "Selection" },
-                                                    items = resolvedTracks,
-                                                ),
-                                            )
-                                        }
-                                    }
-                                    clearAction()
-                                },
-                            ),
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.playlist_add),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.add_to_playlist),
-                                onClick = {
-                                    showChoosePlaylistDialog = true
-                                },
-                            ),
-                        ),
+                                        },
+                                        text = stringResource(R.string.spotify_add_to_playlist),
+                                        onClick = {
+                                            showAddToSpotifyDialog = true
+                                        },
+                                    ),
+                                )
+                            }
+                        },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                 )
             }

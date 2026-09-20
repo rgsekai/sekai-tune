@@ -883,25 +883,36 @@ object Spotify {
         trackUris: List<String>,
     ): Result<Unit> =
         runCatching {
+            val cleanPlaylistId = playlistId.removePrefix("spotify:playlist:")
+            val formattedTrackUris =
+                trackUris.map { uri ->
+                    if (uri.startsWith("spotify:track:")) uri else "spotify:track:$uri"
+                }
             val vars =
                 buildJsonObject {
-                    put("playlistUri", "spotify:playlist:$playlistId")
+                    put("playlistUri", "spotify:playlist:$cleanPlaylistId")
                     putJsonArray("playlistItemUris") {
-                        trackUris.forEach { add(it) }
+                        formattedTrackUris.forEach { add(it) }
                     }
                     putJsonObject("newPosition") {
                         put("moveType", "BOTTOM_OF_PLAYLIST")
                         put("fromUid", JsonNull)
                     }
                 }
-            log("D", "addTracksToPlaylist: sending mutation for $playlistId with ${trackUris.size} tracks, vars=$vars")
-            kotlinx.coroutines.withTimeout(20_000L) {
-                graphqlPost(
-                    operationName = "addToPlaylist",
-                    variables = vars,
-                )
+            log("D", "addTracksToPlaylist: sending mutation for $cleanPlaylistId with ${formattedTrackUris.size} tracks, vars=$vars")
+            val response =
+                kotlinx.coroutines.withTimeout(20_000L) {
+                    graphqlPost(
+                        operationName = "addToPlaylist",
+                        variables = vars,
+                    )
+                }
+            val data = response.obj("data")
+            if (data == null) {
+                log("E", "addTracksToPlaylist failed: GQL response has no data: $response")
+                throw SpotifyException(500, "Spotify API returned empty data for addToPlaylist")
             }
-            log("D", "addTracksToPlaylist: added ${trackUris.size} tracks to $playlistId")
+            log("D", "addTracksToPlaylist: successfully added ${formattedTrackUris.size} tracks to $cleanPlaylistId (response: $response)")
         }
 
     /**

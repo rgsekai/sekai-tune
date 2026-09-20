@@ -121,6 +121,8 @@ import moe.rgsekai.sekaitune.constants.EqualizerVirtualizerEnabledKey
 import moe.rgsekai.sekaitune.constants.EqualizerVirtualizerStrengthKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderEnabledKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
+import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
+import moe.rgsekai.sekaitune.constants.SpotifyAccessTokenKey
 import moe.rgsekai.sekaitune.constants.SpeedDialSongIdsKey
 import moe.rgsekai.sekaitune.models.MediaMetadata
 import moe.rgsekai.sekaitune.playback.EqProfile
@@ -232,6 +234,23 @@ fun PlayerMenu(
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
+
+    val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
+    val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
+    val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken) {
+        showSpotifyPlaylists && spotifyAccessToken.isNotBlank()
+    }
+    var showAddToSpotifyPlaylist by rememberSaveable { mutableStateOf(false) }
+
+    AddToSpotifyPlaylistFlow(
+        showDialog = showAddToSpotifyPlaylist,
+        youtubeId = mediaMetadata.id,
+        title = mediaMetadata.title,
+        artist = mediaMetadata.artists.firstOrNull()?.name.orEmpty(),
+        durationSec = mediaMetadata.duration,
+        spotifyUri = mediaMetadata.spotifyTrackId?.let { "spotify:track:$it" },
+        onDismiss = { showAddToSpotifyPlaylist = false },
+    )
 
     AddToPlaylistDialog(
         isVisible = showChoosePlaylistDialog,
@@ -533,6 +552,22 @@ fun PlayerMenu(
                                     onClick = { showChoosePlaylistDialog = true },
                                 ),
                             )
+                            if (canAddToSpotify) {
+                                add(
+                                    NewAction(
+                                        icon = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.spotify_icon),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(28.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        },
+                                        text = stringResource(R.string.spotify_add_to_playlist),
+                                        onClick = { showAddToSpotifyPlaylist = true },
+                                    ),
+                                )
+                            }
                             add(
                                 NewAction(
                                     icon = {

@@ -78,6 +78,8 @@ import moe.rgsekai.sekaitune.constants.ExternalDownloaderEnabledKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
 import moe.rgsekai.sekaitune.constants.ListItemHeight
 import moe.rgsekai.sekaitune.constants.ListThumbnailSize
+import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
+import moe.rgsekai.sekaitune.constants.SpotifyAccessTokenKey
 import moe.rgsekai.sekaitune.constants.SpeedDialSongIdsKey
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadius
 import moe.rgsekai.sekaitune.db.entities.SongEntity
@@ -98,6 +100,7 @@ import moe.rgsekai.sekaitune.utils.SpeedDialPin
 import moe.rgsekai.sekaitune.utils.SpeedDialPinType
 import moe.rgsekai.sekaitune.utils.joinByBullet
 import moe.rgsekai.sekaitune.utils.makeTimeString
+import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.parseSpeedDialPins
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.serializeSpeedDialPins
@@ -167,6 +170,23 @@ fun YouTubeSongMenu(
                 }
             }
         }
+
+    val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
+    val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
+    val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken) {
+        showSpotifyPlaylists && spotifyAccessToken.isNotBlank()
+    }
+    var showAddToSpotifyPlaylist by rememberSaveable { mutableStateOf(false) }
+
+    AddToSpotifyPlaylistFlow(
+        showDialog = showAddToSpotifyPlaylist,
+        youtubeId = song.id,
+        title = song.title,
+        artist = song.artists.firstOrNull()?.name.orEmpty(),
+        durationSec = song.duration ?: -1,
+        spotifyUri = null,
+        onDismiss = { showAddToSpotifyPlaylist = false },
+    )
 
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
@@ -325,6 +345,7 @@ fun YouTubeSongMenu(
     val playNextText = stringResource(R.string.play_next)
     val addToQueueText = stringResource(R.string.add_to_queue)
     val addToPlaylistText = stringResource(R.string.add_to_playlist)
+    val addToSpotifyPlaylistText = stringResource(R.string.spotify_add_to_playlist)
     val shareText = stringResource(R.string.share)
 
     val primaryActions =
@@ -334,90 +355,118 @@ fun YouTubeSongMenu(
             playNextText,
             addToQueueText,
             addToPlaylistText,
+            addToSpotifyPlaylistText,
             shareText,
+            canAddToSpotify,
             onDismiss,
             playerConnection,
         ) {
-            listOf(
-                NewAction(
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.radio),
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    text = startRadioText,
-                    onClick = {
-                        onDismiss()
-                        playerConnection.playQueue(YouTubeQueue.radio(song.toMediaMetadata()))
-                    },
-                ),
-                NewAction(
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.playlist_play),
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    text = playNextText,
-                    onClick = {
-                        onDismiss()
-                        playerConnection.playNext(song.toMediaItem())
-                    },
-                ),
-                NewAction(
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.queue_music),
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    text = addToQueueText,
-                    onClick = {
-                        onDismiss()
-                        playerConnection.addToQueue(song.toMediaItem())
-                    },
-                ),
-                NewAction(
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.playlist_add),
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    text = addToPlaylistText,
-                    onClick = { showChoosePlaylistDialog = true },
-                ),
-                NewAction(
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.share),
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    text = shareText,
-                    onClick = {
-                        val intent =
-                            Intent().apply {
-                                action = Intent.ACTION_SEND
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, song.shareLink)
-                            }
-                        context.startActivity(Intent.createChooser(intent, null))
-                        onDismiss()
-                    },
-                ),
-            )
+            buildList {
+                add(
+                    NewAction(
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.radio),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        text = startRadioText,
+                        onClick = {
+                            onDismiss()
+                            playerConnection.playQueue(YouTubeQueue.radio(song.toMediaMetadata()))
+                        },
+                    ),
+                )
+                add(
+                    NewAction(
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.playlist_play),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        text = playNextText,
+                        onClick = {
+                            onDismiss()
+                            playerConnection.playNext(song.toMediaItem())
+                        },
+                    ),
+                )
+                add(
+                    NewAction(
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.queue_music),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        text = addToQueueText,
+                        onClick = {
+                            onDismiss()
+                            playerConnection.addToQueue(song.toMediaItem())
+                        },
+                    ),
+                )
+                add(
+                    NewAction(
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.playlist_add),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        text = addToPlaylistText,
+                        onClick = { showChoosePlaylistDialog = true },
+                    ),
+                )
+                if (canAddToSpotify) {
+                    add(
+                        NewAction(
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.spotify_icon),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            text = addToSpotifyPlaylistText,
+                            onClick = { showAddToSpotifyPlaylist = true },
+                        ),
+                    )
+                }
+                add(
+                    NewAction(
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.share),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        text = shareText,
+                        onClick = {
+                            val intent =
+                                Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, song.shareLink)
+                                }
+                            context.startActivity(Intent.createChooser(intent, null))
+                            onDismiss()
+                        },
+                    ),
+                )
+            }
         }
 
     LazyColumn(

@@ -166,6 +166,23 @@ class App :
                 .onFailure { Timber.w(it, "Mori cipher background initialization failed") }
         }
         applicationScope.launch(Dispatchers.IO) {
+            runCatching {
+                val prefs = dataStore.data.first()
+                val spDc = prefs[SpotifySpDcKey].orEmpty()
+                val accessToken = prefs[SpotifyAccessTokenKey].orEmpty()
+                if (spDc.isNotBlank() || accessToken.isNotBlank()) {
+                    Timber.tag("SpotifyInit").i("Auto-initializing Spotify session on app start...")
+                    val repository = moe.rgsekai.sekaitune.spotify.SpotifyLibraryRepository(this@App)
+                    val session = repository.restoreSession()
+                    Timber.tag("SpotifyInit").i("Spotify session initialized: authenticated=%b, user=%s", session.isAuthenticated, session.accountName)
+                }
+            }.onFailure {
+                if (it !is kotlinx.coroutines.CancellationException) {
+                    Timber.tag("SpotifyInit").w(it, "Spotify session auto-initialization failed")
+                }
+            }
+        }
+        applicationScope.launch(Dispatchers.IO) {
             try {
                 val prefs = dataStore.data.first()
 

@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -75,42 +77,46 @@ class SpotifyLibraryRepository
             }
         }
 
+        private val sessionMutex = kotlinx.coroutines.sync.Mutex()
+
         suspend fun restoreSession(): SpotifyAccountSession =
-            withContext(Dispatchers.IO) {
-                val prefs = context.dataStore.data.first()
-                val token = prefs[SpotifyAccessTokenKey].orEmpty()
-                val expiresAt = prefs[SpotifyAccessTokenExpiresAtKey] ?: 0L
-                val accountName = prefs[SpotifyAccountNameKey].orEmpty()
-                val avatarUrl = prefs[SpotifyAccountAvatarUrlKey]
+            sessionMutex.withLock {
+                withContext(Dispatchers.IO) {
+                    val prefs = context.dataStore.data.first()
+                    val token = prefs[SpotifyAccessTokenKey].orEmpty()
+                    val expiresAt = prefs[SpotifyAccessTokenExpiresAtKey] ?: 0L
+                    val accountName = prefs[SpotifyAccountNameKey].orEmpty()
+                    val avatarUrl = prefs[SpotifyAccountAvatarUrlKey]
 
-                if (token.isNotBlank() && expiresAt > System.currentTimeMillis() + TOKEN_EXPIRY_GRACE_MS) {
-                    Spotify.accessToken = token
-                    return@withContext SpotifyAccountSession(
-                        isAuthenticated = true,
-                        accountName = accountName,
-                        accountAvatarUrl = avatarUrl,
-                    )
+                    if (token.isNotBlank() && expiresAt > System.currentTimeMillis() + TOKEN_EXPIRY_GRACE_MS) {
+                        Spotify.accessToken = token
+                        return@withContext SpotifyAccountSession(
+                            isAuthenticated = true,
+                            accountName = accountName,
+                            accountAvatarUrl = avatarUrl,
+                        )
+                    }
+
+                    val spDc = prefs[SpotifySpDcKey].orEmpty()
+                    if (spDc.isBlank()) return@withContext SpotifyAccountSession()
+
+                    refreshAccessToken(spDc = spDc, spKey = prefs[SpotifySpKeyKey].orEmpty())
+                        .fold(
+                            onSuccess = {
+                                val refreshed = context.dataStore.data.first()
+                                SpotifyAccountSession(
+                                    isAuthenticated = true,
+                                    accountName = refreshed[SpotifyAccountNameKey].orEmpty(),
+                                    accountAvatarUrl = refreshed[SpotifyAccountAvatarUrlKey],
+                                )
+                            },
+                            onFailure = {
+                                if (it is CancellationException) throw it
+                                reportException(it)
+                                SpotifyAccountSession()
+                            },
+                        )
                 }
-
-                val spDc = prefs[SpotifySpDcKey].orEmpty()
-                if (spDc.isBlank()) return@withContext SpotifyAccountSession()
-
-                refreshAccessToken(spDc = spDc, spKey = prefs[SpotifySpKeyKey].orEmpty())
-                    .fold(
-                        onSuccess = {
-                            val refreshed = context.dataStore.data.first()
-                            SpotifyAccountSession(
-                                isAuthenticated = true,
-                                accountName = refreshed[SpotifyAccountNameKey].orEmpty(),
-                                accountAvatarUrl = refreshed[SpotifyAccountAvatarUrlKey],
-                            )
-                        },
-                        onFailure = {
-                            if (it is CancellationException) throw it
-                            reportException(it)
-                            SpotifyAccountSession()
-                        },
-                    )
             }
 
         suspend fun connectWithCookies(
