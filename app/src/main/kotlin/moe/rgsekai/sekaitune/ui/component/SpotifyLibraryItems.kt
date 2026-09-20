@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.media3.exoplayer.offline.Download
 import androidx.navigation.NavController
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.ListThumbnailSize
@@ -72,7 +74,19 @@ fun SpotifyTrackListItem(
     track: SpotifyTrack,
     modifier: Modifier = Modifier,
     albumIndex: Int? = null,
+    downloadState: Int? = null,
     badges: @Composable RowScope.() -> Unit = {
+        if (downloadState == Download.STATE_COMPLETED) {
+            Icon(
+                painter = painterResource(R.drawable.check),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier =
+                    Modifier
+                        .size(16.dp)
+                        .padding(end = 2.dp),
+            )
+        }
         if (track.explicit) {
             Icon(
                 painter = painterResource(R.drawable.explicit),

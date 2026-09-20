@@ -938,6 +938,21 @@
     <string name="together_buddy_request_title">New Buddy Request</string>
     <string name="together_buddy_request_received_from">%1$s sent you a buddy request.</string>
     <string name="together_buddy_view_requests">View</string>
+    <string name="download_action_failed">Couldn\'t update the download</string>
+    <string name="download_in_progress">In progress</string>
+    <string name="no_downloads">No downloaded music yet</string>
+    <string name="no_downloads_in_progress">No downloads in progress</string>
+    <string name="pause_download">Pause</string>
+    <string name="resume_download">Resume</string>
+    <string name="download_speed">%1$s/s</string>
+    <string name="download_progress_summary">%1$d%% • %2$s/s</string>
+    <string name="downloads_load_failed">Couldn\'t load downloads</string>
+    <string name="download_failed_state">Download failed</string>
+    <string name="search_downloads">Search downloads</string>
+    <string name="no_matching_downloads">No matching downloads</string>
+    <string name="downloaded">Downloaded</string>
+    <string name="remove_download_confirm">Are you sure you want to remove this downloaded item? This action cannot be undone.</string>
+    <string name="remove_download_section_confirm">Are you sure you want to remove all downloads in this section? This action cannot be undone.</string>
 </resources>
 
 

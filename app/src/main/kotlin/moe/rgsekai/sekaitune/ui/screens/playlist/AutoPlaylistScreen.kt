@@ -116,6 +116,7 @@ import moe.rgsekai.sekaitune.ui.component.SongListItem
 import moe.rgsekai.sekaitune.ui.component.SortHeader
 import moe.rgsekai.sekaitune.ui.menu.SelectionSongMenu
 import moe.rgsekai.sekaitune.ui.menu.SongMenu
+import moe.rgsekai.sekaitune.ui.screens.downloads.DownloadLibraryScreen
 import moe.rgsekai.sekaitune.ui.theme.PlayerColorExtractor
 import moe.rgsekai.sekaitune.ui.utils.HeaderDownloadItem
 import moe.rgsekai.sekaitune.ui.utils.HeaderDownloadProgressIndicator
@@ -139,6 +140,11 @@ fun AutoPlaylistScreen(
     scrollBehavior: TopAppBarScrollBehavior,
     viewModel: AutoPlaylistViewModel = hiltViewModel(),
 ) {
+    if (viewModel.playlist == "downloaded") {
+        DownloadLibraryScreen(navController = navController)
+        return
+    }
+
     val context = LocalContext.current
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current

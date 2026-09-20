@@ -29,13 +29,17 @@ object SpotifyPlaybackResolver {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MediaMetadata>?): Boolean = size > CACHE_MAX_SIZE
         }
 
+    fun getCached(trackId: String): MediaMetadata? =
+        synchronized(cache) {
+            cache[trackId]
+        }
+
     suspend fun resolveToMediaItem(track: SpotifyTrack): MediaItem? = resolveToMetadata(track)?.toMediaItem()
 
     suspend fun resolveToMetadata(track: SpotifyTrack): MediaMetadata? =
         withContext(Dispatchers.IO) {
-            mutex.withLock {
-                cache[track.id]?.let { return@withContext it }
-            }
+            val cached = synchronized(cache) { cache[track.id] }
+            if (cached != null) return@withContext cached
 
             val searchResult =
                 YouTube
@@ -86,7 +90,7 @@ object SpotifyPlaybackResolver {
                     spotifyTrackId = track.id.takeIf(String::isNotBlank),
                 )
 
-            mutex.withLock {
+            synchronized(cache) {
                 cache[track.id] = metadata
             }
             metadata

@@ -9,6 +9,7 @@ package moe.rgsekai.sekaitune.playback.stream
 
 import android.content.Context
 import android.net.ConnectivityManager
+import androidx.annotation.WorkerThread
 import androidx.core.content.getSystemService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -19,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runBlocking
 import moe.rgsekai.sekaitune.di.StreamResolutionScope
 import moe.rgsekai.sekaitune.utils.YTPlayerUtils
 import moe.rgsekai.sekaitune.utils.retryWithoutPlaybackLoginContext
@@ -76,6 +78,12 @@ class ResolveAudioStreamUseCase
 
         suspend operator fun invoke(request: AudioStreamRequest): ResolvedAudioStream =
             resolve(request, ResolutionConsumer.PLAYBACK)
+
+        @WorkerThread
+        fun resolveBlocking(request: AudioStreamRequest): ResolvedAudioStream =
+            runBlocking(Dispatchers.IO) {
+                invoke(request)
+            }
 
         suspend fun preload(request: AudioStreamRequest) {
             resolve(request, ResolutionConsumer.PRELOAD)

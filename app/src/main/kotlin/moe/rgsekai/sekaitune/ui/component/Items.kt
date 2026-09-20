@@ -2158,11 +2158,12 @@ private object Icon {
         when (state) {
             STATE_COMPLETED -> {
                 Icon(
-                    painter = painterResource(R.drawable.offline),
+                    painter = painterResource(R.drawable.check),
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier =
                         Modifier
-                            .size(18.dp)
+                            .size(16.dp)
                             .padding(end = 2.dp),
                 )
             }

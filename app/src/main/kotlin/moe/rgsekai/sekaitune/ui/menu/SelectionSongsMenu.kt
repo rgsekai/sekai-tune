@@ -68,12 +68,15 @@ import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.models.MediaMetadata
 import moe.rgsekai.sekaitune.playback.ExoDownloadService
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
+import moe.rgsekai.sekaitune.spotify.SpotifyPlaybackResolver
+import moe.rgsekai.sekaitune.spotify.models.SpotifyTrack
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import moe.rgsekai.sekaitune.ui.component.MenuSurfaceSection
 import moe.rgsekai.sekaitune.ui.component.NewAction
 import moe.rgsekai.sekaitune.ui.component.NewActionGrid
 import moe.rgsekai.sekaitune.ui.utils.HeaderDownloadItem
 import moe.rgsekai.sekaitune.ui.utils.sendAddMissingDownloads
+import moe.rgsekai.sekaitune.ui.utils.sendRemoveDownloads
 import java.time.LocalDateTime
 
 @SuppressLint("MutableCollectionMutableState")
@@ -1178,6 +1181,357 @@ fun SelectionMediaMetadataMenu(
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SelectionSpotifyTracksMenu(
+    trackSelection: List<SpotifyTrack>,
+    playlistName: String = "",
+    onDismiss: () -> Unit,
+    clearAction: () -> Unit,
+) {
+    val context = LocalContext.current
+    val database = LocalDatabase.current
+    val downloadUtil = LocalDownloadUtil.current
+    val coroutineScope = rememberCoroutineScope()
+    val playerConnection = LocalPlayerConnection.current ?: return
+
+    var showChoosePlaylistDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var downloadState by remember {
+        mutableIntStateOf(Download.STATE_STOPPED)
+    }
+
+    LaunchedEffect(trackSelection) {
+        if (trackSelection.isEmpty()) return@LaunchedEffect
+        downloadUtil.downloads.collect { downloads ->
+            val resolvedIds = trackSelection.mapNotNull { SpotifyPlaybackResolver.getCached(it.id)?.id }
+            downloadState =
+                if (resolvedIds.isNotEmpty() && resolvedIds.size == trackSelection.size && resolvedIds.all { downloads[it]?.state == Download.STATE_COMPLETED }) {
+                    Download.STATE_COMPLETED
+                } else if (resolvedIds.isNotEmpty() && resolvedIds.all {
+                        downloads[it]?.state == Download.STATE_QUEUED ||
+                            downloads[it]?.state == Download.STATE_DOWNLOADING ||
+                            downloads[it]?.state == Download.STATE_COMPLETED
+                    }
+                ) {
+                    Download.STATE_DOWNLOADING
+                } else {
+                    Download.STATE_STOPPED
+                }
+        }
+    }
+
+    var showRemoveDownloadDialog by remember {
+        mutableStateOf(false)
+    }
+
+    if (showRemoveDownloadDialog) {
+        DefaultDialog(
+            onDismiss = { showRemoveDownloadDialog = false },
+            content = {
+                Text(
+                    text = stringResource(R.string.remove_download_playlist_confirm, "selection"),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(horizontal = 18.dp),
+                )
+            },
+            buttons = {
+                TextButton(
+                    onClick = { showRemoveDownloadDialog = false },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(text = stringResource(android.R.string.cancel))
+                }
+
+                TextButton(
+                    onClick = {
+                        showRemoveDownloadDialog = false
+                        val resolvedIds = trackSelection.mapNotNull { SpotifyPlaybackResolver.getCached(it.id)?.id }
+                        if (resolvedIds.isNotEmpty()) {
+                            sendRemoveDownloads(context = context, songIds = resolvedIds)
+                        }
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(text = stringResource(android.R.string.ok))
+                }
+            },
+        )
+    }
+
+    AddToPlaylistDialog(
+        isVisible = showChoosePlaylistDialog,
+        onGetSong = {
+            val ids = mutableListOf<String>()
+            trackSelection.forEach { track ->
+                val metadata = SpotifyPlaybackResolver.getCached(track.id)
+                    ?: SpotifyPlaybackResolver.resolveToMetadata(track)
+                if (metadata != null) {
+                    database.insert(metadata)
+                    ids.add(metadata.id)
+                }
+            }
+            ids
+        },
+        onDismiss = { showChoosePlaylistDialog = false },
+        onAddComplete = { songCount, playlistNames ->
+            val message =
+                when {
+                    songCount == 1 && playlistNames.size == 1 -> {
+                        context.applicationContext.getString(R.string.added_to_playlist, playlistNames.first())
+                    }
+                    songCount > 1 && playlistNames.size == 1 -> {
+                        context.applicationContext.getString(R.string.added_n_songs_to_playlist, songCount, playlistNames.first())
+                    }
+                    songCount == 1 -> {
+                        context.applicationContext.getString(R.string.added_to_n_playlists, playlistNames.size)
+                    }
+                    else -> {
+                        context.applicationContext.getString(R.string.added_n_songs_to_n_playlists, songCount, playlistNames.size)
+                    }
+                }
+            Toast.makeText(context.applicationContext, message, Toast.LENGTH_SHORT).show()
+        },
+    )
+
+    val dividerModifier = Modifier.padding(start = 56.dp)
+
+    LazyColumn(
+        userScrollEnabled = true,
+        contentPadding =
+            PaddingValues(
+                start = 0.dp,
+                top = 0.dp,
+                end = 0.dp,
+                bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
+            ),
+    ) {
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        item {
+            MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
+                NewActionGrid(
+                    actions =
+                        listOf(
+                            NewAction(
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.play),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(28.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                text = stringResource(R.string.play),
+                                onClick = {
+                                    onDismiss()
+                                    coroutineScope.launch {
+                                        val resolvedTracks = trackSelection.mapNotNull { track ->
+                                            SpotifyPlaybackResolver.resolveToMediaItem(track)
+                                        }
+                                        if (resolvedTracks.isNotEmpty()) {
+                                            playerConnection.playQueue(
+                                                ListQueue(
+                                                    title = playlistName.ifEmpty { "Selection" },
+                                                    items = resolvedTracks,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                    clearAction()
+                                },
+                            ),
+                            NewAction(
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.shuffle),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(28.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                text = stringResource(R.string.shuffle),
+                                onClick = {
+                                    onDismiss()
+                                    coroutineScope.launch {
+                                        val resolvedTracks = trackSelection.shuffled().mapNotNull { track ->
+                                            SpotifyPlaybackResolver.resolveToMediaItem(track)
+                                        }
+                                        if (resolvedTracks.isNotEmpty()) {
+                                            playerConnection.playQueue(
+                                                ListQueue(
+                                                    title = playlistName.ifEmpty { "Selection" },
+                                                    items = resolvedTracks,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                    clearAction()
+                                },
+                            ),
+                            NewAction(
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.playlist_add),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(28.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                text = stringResource(R.string.add_to_playlist),
+                                onClick = {
+                                    showChoosePlaylistDialog = true
+                                },
+                            ),
+                        ),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        item {
+            MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
+                Column {
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.play_next)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.playlist_play),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier =
+                            Modifier.clickable {
+                                onDismiss()
+                                coroutineScope.launch {
+                                    val resolved = trackSelection.mapNotNull { SpotifyPlaybackResolver.resolveToMediaItem(it) }
+                                    if (resolved.isNotEmpty()) playerConnection.playNext(resolved)
+                                }
+                                clearAction()
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+
+                    HorizontalDivider(
+                        modifier = dividerModifier,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.add_to_queue)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.queue_music),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier =
+                            Modifier.clickable {
+                                onDismiss()
+                                coroutineScope.launch {
+                                    val resolved = trackSelection.mapNotNull { SpotifyPlaybackResolver.resolveToMediaItem(it) }
+                                    if (resolved.isNotEmpty()) playerConnection.addToQueue(resolved)
+                                }
+                                clearAction()
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        item {
+            MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
+                Column {
+                    when (downloadState) {
+                        Download.STATE_COMPLETED -> {
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.remove_download),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                leadingContent = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.offline),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        showRemoveDownloadDialog = true
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+
+                        Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
+                            ListItem(
+                                headlineContent = { Text(text = stringResource(R.string.downloading)) },
+                                leadingContent = {
+                                    CircularWavyProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        showRemoveDownloadDialog = true
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+
+                        else -> {
+                            ListItem(
+                                headlineContent = { Text(text = stringResource(R.string.download)) },
+                                leadingContent = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.download),
+                                        contentDescription = null,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.clickable {
+                                        onDismiss()
+                                        coroutineScope.launch {
+                                            val resolvedItems = trackSelection.mapNotNull { track ->
+                                                SpotifyPlaybackResolver.resolveToMetadata(track)?.let { metadata ->
+                                                    HeaderDownloadItem(id = metadata.id, title = metadata.title)
+                                                }
+                                            }
+                                            if (resolvedItems.isNotEmpty()) {
+                                                sendAddMissingDownloads(
+                                                    context = context,
+                                                    songs = resolvedItems,
+                                                    downloads = downloadUtil.downloads.value,
+                                                )
+                                            }
+                                        }
+                                        clearAction()
+                                    },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+                    }
                 }
             }
         }
