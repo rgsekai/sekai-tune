@@ -697,7 +697,7 @@ private fun DownloadSectionHeader(
             },
             trailingContent = {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (inProgress && selectedStorage == DownloadStorageType.IN_APP) {
+                    if (inProgress) {
                         PrimaryFilledIconButton(
                             icon = if (section.paused) R.drawable.play else R.drawable.pause,
                             contentDescription =
@@ -834,7 +834,13 @@ private fun DownloadEntry(
                             }
                         }
                     } else {
-                        if (selectedStorage == DownloadStorageType.IN_APP) {
+                        if (entry.failed) {
+                            PrimaryFilledIconButton(
+                                icon = R.drawable.sync,
+                                contentDescription = stringResource(R.string.retry),
+                                onClick = onResume,
+                            )
+                        } else {
                             PrimaryFilledIconButton(
                                 icon = if (entry.paused) R.drawable.play else R.drawable.pause,
                                 contentDescription =
@@ -842,12 +848,6 @@ private fun DownloadEntry(
                                         if (entry.paused) R.string.resume_download else R.string.pause_download,
                                     ),
                                 onClick = if (entry.paused) onResume else onPause,
-                            )
-                        } else if (entry.failed) {
-                            PrimaryFilledIconButton(
-                                icon = R.drawable.sync,
-                                contentDescription = stringResource(R.string.retry),
-                                onClick = onResume,
                             )
                         }
                     }

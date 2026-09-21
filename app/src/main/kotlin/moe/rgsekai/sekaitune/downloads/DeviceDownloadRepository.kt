@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import moe.rgsekai.sekaitune.download.PausedDeviceDownloadStore
 import moe.rgsekai.sekaitune.download.TAG_SAVE_TO_DEVICE
 import moe.rgsekai.sekaitune.download.startDownload
 import moe.rgsekai.sekaitune.models.MediaMetadata
@@ -38,6 +40,7 @@ class DeviceDownloadRepository
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
+        private val pausedStore: PausedDeviceDownloadStore,
     ) {
         private val workManager = WorkManager.getInstance(context)
 
@@ -65,60 +68,129 @@ class DeviceDownloadRepository
             }.flowOn(Dispatchers.IO)
 
         fun observeInProgress(): Flow<List<DownloadEntryUiModel>> =
-            workManager
-                .getWorkInfosByTagFlow(TAG_SAVE_TO_DEVICE)
-                .map { workInfos ->
-                    workInfos
-                        .filter { info ->
-                            info.state == WorkInfo.State.RUNNING ||
-                                info.state == WorkInfo.State.ENQUEUED ||
-                                info.state == WorkInfo.State.BLOCKED ||
-                                info.state == WorkInfo.State.FAILED
-                        }
-                        .map { info ->
-                            val workId = info.id.toString()
-                            val progressData = info.progress
-                            val percent = progressData.getInt("PROGRESS", 0)
-                            val stage = progressData.getString("STAGE") ?: if (info.state == WorkInfo.State.ENQUEUED) "queued" else "running"
-                            val songTitle = progressData.getString("SONG_TITLE")
-                                ?: info.tags.firstOrNull { it.startsWith("title:") }?.removePrefix("title:")
-                                ?: "Exporting song..."
-                            val songArtist = progressData.getString("SONG_ARTIST")
-                                ?: info.tags.firstOrNull { it.startsWith("artist:") }?.removePrefix("artist:")
-                                ?: "Save to Device"
-                            val songId = progressData.getString("SONG_ID")
-                                ?: info.tags.firstOrNull { it.startsWith("song_id:") }?.removePrefix("song_id:")
-                                ?: workId
+            combine(
+                workManager.getWorkInfosByTagFlow(TAG_SAVE_TO_DEVICE),
+                pausedStore.observePaused(),
+            ) { workInfos, pausedList ->
+                val activeEntries = workInfos
+                    .filter { info ->
+                        info.state == WorkInfo.State.RUNNING ||
+                            info.state == WorkInfo.State.ENQUEUED ||
+                            info.state == WorkInfo.State.BLOCKED ||
+                            info.state == WorkInfo.State.FAILED
+                    }
+                    .map { info ->
+                        val workId = info.id.toString()
+                        val progressData = info.progress
+                        val percent = progressData.getInt("PROGRESS", 0)
+                        val stage = progressData.getString("STAGE") ?: if (info.state == WorkInfo.State.ENQUEUED) "queued" else "running"
+                        val songTitle = progressData.getString("SONG_TITLE")
+                            ?: info.tags.firstOrNull { it.startsWith("title:") }?.removePrefix("title:")
+                            ?: "Exporting song..."
+                        val songArtist = progressData.getString("SONG_ARTIST")
+                            ?: info.tags.firstOrNull { it.startsWith("artist:") }?.removePrefix("artist:")
+                            ?: "Save to Device"
+                        val songId = progressData.getString("SONG_ID")
+                            ?: info.tags.firstOrNull { it.startsWith("song_id:") }?.removePrefix("song_id:")
+                            ?: workId
 
-                            val isFailed = info.state == WorkInfo.State.FAILED
-                            val supportingText = when {
-                                isFailed -> "Download failed"
-                                stage == "queued" -> "Queued"
-                                stage == "resolving" -> "Resolving stream..."
-                                stage == "downloading" -> "Downloading... $percent%"
-                                stage == "artwork" -> "Processing artwork..."
-                                stage == "tagging" -> "Tagging and finalizing..."
-                                else -> "$songArtist • In Progress"
-                            }
-
-                            DownloadEntryUiModel(
-                                id = workId,
-                                title = songTitle,
-                                supportingText = supportingText,
-                                thumbnailUrl = null,
-                                destinationRoute = null,
-                                playbackMetadata = null,
-                                durationSeconds = null,
-                                songIds = listOf(songId),
-                                totalCount = 1,
-                                progress = (percent / 100f).coerceIn(0f, 1f),
-                                percent = percent,
-                                speedBytesPerSecond = 0L,
-                                paused = false,
-                                failed = isFailed,
-                            )
+                        val isFailed = info.state == WorkInfo.State.FAILED
+                        val supportingText = when {
+                            isFailed -> "$songArtist • Download failed"
+                            stage == "queued" -> "$songArtist • Queued"
+                            stage == "resolving" -> "$songArtist • Resolving stream..."
+                            stage == "downloading" -> "$songArtist • Downloading... $percent%"
+                            stage == "artwork" -> "$songArtist • Processing artwork..."
+                            stage == "tagging" -> "$songArtist • Tagging and finalizing..."
+                            else -> "$songArtist • In Progress"
                         }
-                }.flowOn(Dispatchers.IO)
+
+                        DownloadEntryUiModel(
+                            id = workId,
+                            title = songTitle,
+                            supportingText = supportingText,
+                            thumbnailUrl = null,
+                            destinationRoute = null,
+                            playbackMetadata = null,
+                            durationSeconds = null,
+                            songIds = listOf(songId),
+                            totalCount = 1,
+                            progress = (percent / 100f).coerceIn(0f, 1f),
+                            percent = percent,
+                            speedBytesPerSecond = 0L,
+                            paused = false,
+                            failed = isFailed,
+                        )
+                    }
+
+                val activeSongIds = activeEntries.flatMap { it.songIds }.toSet()
+
+                val pausedEntries = pausedList
+                    .filter { paused -> !activeSongIds.contains(paused.songId) }
+                    .map { paused ->
+                        DownloadEntryUiModel(
+                            id = "paused_${paused.songId}",
+                            title = paused.title,
+                            supportingText = "${paused.artist} • Paused",
+                            thumbnailUrl = null,
+                            destinationRoute = null,
+                            playbackMetadata = null,
+                            durationSeconds = null,
+                            songIds = listOf(paused.songId),
+                            totalCount = 1,
+                            progress = (paused.progress / 100f).coerceIn(0f, 1f),
+                            percent = paused.progress,
+                            speedBytesPerSecond = 0L,
+                            paused = true,
+                            failed = false,
+                        )
+                    }
+
+                activeEntries + pausedEntries
+            }.flowOn(Dispatchers.IO)
+
+        fun pause(entry: DownloadEntryUiModel) {
+            val songId = entry.songIds.firstOrNull() ?: entry.id.removePrefix("paused_")
+            val paused = pausedStore.get(songId)
+            val artist = paused?.artist
+                ?: entry.supportingText?.substringBefore(" •")
+                ?: "Unknown Artist"
+            val title = paused?.title ?: entry.title
+
+            pausedStore.savePaused(
+                songId = songId,
+                title = title,
+                artist = artist,
+                bytesWritten = 0L,
+                totalBytes = 0L,
+                progress = entry.percent,
+            )
+            workManager.cancelAllWorkByTag("song_id:$songId")
+            runCatching {
+                workManager.cancelWorkById(UUID.fromString(entry.id))
+            }
+        }
+
+        fun resume(entry: DownloadEntryUiModel) {
+            val songId = entry.songIds.firstOrNull() ?: entry.id.removePrefix("paused_")
+            val paused = pausedStore.get(songId)
+            val title = paused?.title ?: entry.title
+            val artist = paused?.artist
+                ?: entry.supportingText?.substringBefore(" •")
+                ?: "Unknown Artist"
+
+            pausedStore.remove(songId)
+            startDownload(
+                context = context,
+                songId = songId,
+                title = title,
+                artist = artist,
+            )
+        }
+
+        fun retry(entry: DownloadEntryUiModel) {
+            resume(entry)
+        }
 
         fun cancel(workId: String) {
             runCatching {
@@ -126,21 +198,24 @@ class DeviceDownloadRepository
             }
         }
 
-        fun retry(entry: DownloadEntryUiModel) {
-            val songId = entry.songIds.firstOrNull() ?: return
-            startDownload(
-                context = context,
-                songId = songId,
-                title = entry.title,
-                artist = entry.supportingText?.substringBefore(" •") ?: "Unknown Artist",
-            )
-        }
-
         fun delete(entry: DownloadEntryUiModel) {
-            val uriStr = entry.playbackMetadata?.id ?: entry.id
-            val uri = Uri.parse(uriStr)
+            val songId = entry.songIds.firstOrNull() ?: entry.id.removePrefix("paused_")
+            workManager.cancelAllWorkByTag("song_id:$songId")
             runCatching {
-                context.contentResolver.delete(uri, null, null)
+                workManager.cancelWorkById(UUID.fromString(entry.id))
+            }
+            pausedStore.remove(songId)
+            val partFile = PausedDeviceDownloadStore.getPartFile(context, songId)
+            if (partFile.exists()) {
+                partFile.delete()
+            }
+
+            val uriStr = entry.playbackMetadata?.id ?: entry.id
+            if (uriStr.startsWith("content://")) {
+                val uri = Uri.parse(uriStr)
+                runCatching {
+                    context.contentResolver.delete(uri, null, null)
+                }
             }
         }
 

@@ -314,7 +314,7 @@ class DownloadLibraryViewModel
                 if (selectedStorage.value == DownloadStorageType.IN_APP) {
                     manageDownloads.pause(entry.songIds)
                 } else {
-                    deviceDownloadRepository.cancel(entry.id)
+                    deviceDownloadRepository.pause(entry)
                 }
             }
 
@@ -323,7 +323,7 @@ class DownloadLibraryViewModel
                 if (selectedStorage.value == DownloadStorageType.IN_APP) {
                     manageDownloads.resume(entry.songIds)
                 } else {
-                    deviceDownloadRepository.retry(entry)
+                    deviceDownloadRepository.resume(entry)
                 }
             }
 
@@ -340,6 +340,10 @@ class DownloadLibraryViewModel
             runAction("section:${section.mediaType}") {
                 if (selectedStorage.value == DownloadStorageType.IN_APP) {
                     manageDownloads.pause(section.songIds)
+                } else {
+                    section.entries.forEach { entry ->
+                        deviceDownloadRepository.pause(entry)
+                    }
                 }
             }
 
@@ -347,6 +351,10 @@ class DownloadLibraryViewModel
             runAction("section:${section.mediaType}") {
                 if (selectedStorage.value == DownloadStorageType.IN_APP) {
                     manageDownloads.resume(section.songIds)
+                } else {
+                    section.entries.forEach { entry ->
+                        deviceDownloadRepository.resume(entry)
+                    }
                 }
             }
 

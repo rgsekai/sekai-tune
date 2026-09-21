@@ -46,6 +46,8 @@ class AudioDownloadWorker(
             if (!exists()) mkdirs()
         }
 
+        val pausedStore = PausedDeviceDownloadStore(applicationContext)
+
         // --- NOTIFICATION SETUP ---
         val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "sekai_tune_downloads"
@@ -56,7 +58,18 @@ class AudioDownloadWorker(
         }
 
         val notificationId = Math.abs(songId.hashCode())
-        val cancelIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
+        val pauseIntent = SaveToDeviceActionReceiver.createPausePendingIntent(
+            applicationContext,
+            songId,
+            songTitle,
+            songArtist,
+            notificationId
+        )
+        val cancelIntent = SaveToDeviceActionReceiver.createCancelPendingIntent(
+            applicationContext,
+            songId,
+            notificationId
+        )
 
         val notificationTitle = if (totalSongs > 1) {
             "[$currentSongNumber/$totalSongs] Downloading: $songTitle"
@@ -70,7 +83,8 @@ class AudioDownloadWorker(
             .setSmallIcon(R.drawable.download)
             .setOngoing(true)
             .setProgress(100, 0, true)
-            .addAction(0, "Cancel", cancelIntent)
+            .addAction(R.drawable.pause, "Pause", pauseIntent)
+            .addAction(R.drawable.close, "Cancel", cancelIntent)
 
         val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(
@@ -117,23 +131,32 @@ class AudioDownloadWorker(
                 connectivityManager = connectivityManager,
             ).getOrThrow()
 
-            val isWebmSource = playbackData.format.mimeType?.contains("webm") == true ||
-                    playbackData.format.mimeType?.contains("opus") == true
-            val sourceExt = if (isWebmSource) "webm" else "m4a"
+            if (isStopped) {
+                Timber.d("Worker stopped during resolution for songId=$songId")
+                return@withContext Result.failure()
+            }
 
-            tempSourceFile = File.createTempFile("dl_src_${songId}_", ".$sourceExt", tempDir)
+            tempSourceFile = PausedDeviceDownloadStore.getPartFile(applicationContext, songId)
             tempArtworkFile = File.createTempFile("dl_art_${songId}_", ".jpg", tempDir)
             croppedCoverFile = File.createTempFile("dl_crop_${songId}_", ".jpg", tempDir)
             tempOutputFile = File.createTempFile("dl_out_${songId}_", ".$userChosenFormat", tempDir)
 
-            // 2. Download audio stream
+            // 2. Download audio stream (resumable)
             notificationBuilder.setContentText("Downloading audio stream...")
             notificationBuilder.setProgress(100, 0, false)
             try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
             var lastProgress = -1
             val startTime = System.currentTimeMillis()
-            downloadAudioStream(playbackData, tempSourceFile) { percent, bytesWritten, totalBytes ->
+            downloadAudioStream(
+                songId = songId,
+                songTitle = songTitle,
+                songArtist = songArtist,
+                userChosenFormat = userChosenFormat,
+                playbackData = playbackData,
+                destFile = tempSourceFile,
+                pausedStore = pausedStore,
+            ) { percent, bytesWritten, totalBytes ->
                 if (percent != lastProgress) {
                     lastProgress = percent
                     val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
@@ -159,6 +182,11 @@ class AudioDownloadWorker(
                 }
             }
 
+            if (isStopped) {
+                Timber.d("Worker stopped during downloadAudioStream for songId=$songId")
+                return@withContext Result.failure()
+            }
+
             // 3. Resolve & download artwork, then native 1:1 center crop
             notificationBuilder.setProgress(0, 0, true)
             notificationBuilder.setContentText("Processing album artwork...")
@@ -179,6 +207,11 @@ class AudioDownloadWorker(
                 cropSquareAndCompress(tempArtworkFile, croppedCoverFile, targetSize = 1200)
             } else {
                 false
+            }
+
+            if (isStopped) {
+                Timber.d("Worker stopped before transcode for songId=$songId")
+                return@withContext Result.failure()
             }
 
             // 4. FFmpeg audio transcode and metadata tagging
@@ -218,6 +251,9 @@ class AudioDownloadWorker(
             // 5. Export to Android MediaStore
             exportToMediaStore(tempOutputFile, songTitle, songArtist, userChosenFormat)
 
+            // Remove paused store entry upon complete finish
+            pausedStore.remove(songId)
+
             notificationBuilder.setContentText("Download Complete!")
             notificationBuilder.setProgress(100, 100, false)
             notificationBuilder.setOngoing(false)
@@ -233,6 +269,10 @@ class AudioDownloadWorker(
                 )
             )
         } catch (e: Exception) {
+            if (isStopped) {
+                Timber.d("AudioDownloadWorker cancelled/stopped for songId=$songId")
+                return@withContext Result.failure()
+            }
             Timber.e(e, "Fatal crash or failure in AudioDownloadWorker for songId=$songId")
             notificationBuilder.setContentText("Download Failed: ${e.message ?: "Unknown error"}")
             notificationBuilder.setProgress(0, 0, false)
@@ -240,7 +280,9 @@ class AudioDownloadWorker(
             try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
             Result.failure()
         } finally {
-            tempSourceFile?.delete()
+            if (!isStopped) {
+                tempSourceFile?.delete()
+            }
             tempArtworkFile?.delete()
             croppedCoverFile?.delete()
             tempOutputFile?.delete()
@@ -248,34 +290,104 @@ class AudioDownloadWorker(
     }
 
     private fun downloadAudioStream(
+        songId: String,
+        songTitle: String,
+        songArtist: String,
+        userChosenFormat: String,
         playbackData: YTPlayerUtils.PlaybackData,
         destFile: File,
+        pausedStore: PausedDeviceDownloadStore,
         onProgress: (percent: Int, bytesWritten: Long, totalBytes: Long) -> Unit,
     ) {
         val totalLength = playbackData.format.contentLength ?: 10_000_000L
-        val rangedUrl = "${playbackData.streamUrl}&range=0-$totalLength"
-        val request = Request.Builder().url(rangedUrl).build()
+        var startOffset = if (destFile.exists()) destFile.length() else 0L
 
-        httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) error("Audio stream request failed with HTTP ${response.code}")
+        if (startOffset >= totalLength && totalLength > 0L) {
+            destFile.delete()
+            startOffset = 0L
+        }
+
+        var streamResponse: okhttp3.Response? = null
+        var isAppend = false
+
+        if (startOffset > 0L) {
+            val rangedUrl = "${playbackData.streamUrl}&range=$startOffset-$totalLength"
+            val request = Request.Builder()
+                .url(rangedUrl)
+                .addHeader("Range", "bytes=$startOffset-")
+                .build()
+            val resp = runCatching { httpClient.newCall(request).execute() }.getOrNull()
+            if (resp != null && (resp.code == 206 || resp.isSuccessful)) {
+                streamResponse = resp
+                isAppend = (resp.code == 206)
+                if (!isAppend) {
+                    destFile.delete()
+                    startOffset = 0L
+                }
+            } else {
+                resp?.close()
+                Timber.w("Range request failed (HTTP ${resp?.code}), resetting .part file from 0")
+                destFile.delete()
+                startOffset = 0L
+            }
+        }
+
+        if (streamResponse == null) {
+            val rangedUrl = "${playbackData.streamUrl}&range=0-$totalLength"
+            val request = Request.Builder().url(rangedUrl).build()
+            val resp = httpClient.newCall(request).execute()
+            if (!resp.isSuccessful) {
+                resp.close()
+                error("Audio stream request failed with HTTP ${resp.code}")
+            }
+            streamResponse = resp
+            isAppend = false
+        }
+
+        streamResponse.use { response ->
             val body = response.body ?: error("No response body received from audio stream")
-            val totalBytes = body.contentLength().takeIf { it > 0 } ?: totalLength
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-            var bytesWritten = 0L
+            val effectiveTotalBytes = if (isAppend) {
+                val bodyLen = body.contentLength()
+                if (bodyLen > 0) startOffset + bodyLen else totalLength
+            } else {
+                val bodyLen = body.contentLength()
+                if (bodyLen > 0) bodyLen else totalLength
+            }
 
-            destFile.outputStream().use { output ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var bytesWritten = startOffset
+
+            java.io.FileOutputStream(destFile, isAppend).use { output ->
+                val input = body.byteStream()
                 var read: Int
-                while (body.byteStream().read(buffer).also { read = it } != -1) {
+                while (input.read(buffer).also { read = it } != -1) {
+                    if (isStopped) {
+                        output.flush()
+                        val percent = if (effectiveTotalBytes > 0) ((bytesWritten * 100) / effectiveTotalBytes).toInt().coerceIn(0, 99) else 0
+                        pausedStore.savePaused(
+                            songId = songId,
+                            title = songTitle,
+                            artist = songArtist,
+                            bytesWritten = bytesWritten,
+                            totalBytes = effectiveTotalBytes,
+                            progress = percent,
+                            format = userChosenFormat,
+                        )
+                        Timber.d("AudioDownloadWorker isStopped=true. Paused at bytesWritten=$bytesWritten/$effectiveTotalBytes ($percent%)")
+                        return
+                    }
                     output.write(buffer, 0, read)
                     bytesWritten += read
-                    val percent = ((bytesWritten * 100) / totalBytes).toInt().coerceIn(0, 99)
-                    onProgress(percent, bytesWritten, totalBytes)
+                    val percent = if (effectiveTotalBytes > 0) ((bytesWritten * 100) / effectiveTotalBytes).toInt().coerceIn(0, 99) else 0
+                    onProgress(percent, bytesWritten, effectiveTotalBytes)
                 }
                 output.flush()
             }
 
-            if (totalBytes > 0 && bytesWritten < totalBytes) {
-                error("Incomplete download: wrote $bytesWritten of $totalBytes bytes")
+            if (isStopped) return
+
+            if (effectiveTotalBytes > 0 && bytesWritten < effectiveTotalBytes) {
+                error("Incomplete download: wrote $bytesWritten of $effectiveTotalBytes bytes")
             }
         }
     }

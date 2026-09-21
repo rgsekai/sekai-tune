@@ -274,6 +274,10 @@
         </service>
 
         <receiver
+            android:name=".download.SaveToDeviceActionReceiver"
+            android:exported="true" />
+
+        <receiver
             android:name="androidx.media3.session.MediaButtonReceiver"
             android:exported="true">
             <intent-filter>

@@ -34,6 +34,8 @@ fun createSaveToDeviceWorkRequest(
         .setConstraints(constraints)
         .addTag(TAG_SAVE_TO_DEVICE)
         .addTag("song_id:$songId")
+        .addTag("title:$title")
+        .addTag("artist:$artist")
         .build()
 }
 
