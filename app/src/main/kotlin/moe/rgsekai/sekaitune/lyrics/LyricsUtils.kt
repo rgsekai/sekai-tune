@@ -9,7 +9,6 @@ package moe.rgsekai.sekaitune.lyrics
 
 import android.icu.text.Transliterator
 import android.text.format.DateUtils
-import com.atilika.kuromoji.ipadic.Tokenizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.betterlyrics.TTMLParser
@@ -370,10 +369,6 @@ object LyricsUtils {
                 ),
         )
 
-    // Lazy initialized Tokenizer
-    private val kuromojiTokenizer: Tokenizer by lazy {
-        Tokenizer()
-    }
 
     fun isTtml(lyrics: String): Boolean {
         val trimmed = normalizeLyricsText(lyrics)
@@ -700,35 +695,17 @@ object LyricsUtils {
     }
 
     /**
-     * Romanizes Japanese text using Kuromoji Tokenizer and the optimized katakanaToRomaji function.
+     * Romanizes Japanese text using Katakana/Romaji mapping and Android ICU Transliterator.
      * Runs on Dispatchers.Default for CPU-intensive work.
-     * Expected impact: Faster tokenization due to reused Tokenizer instance and faster
-     * per-token romanization.
      */
     suspend fun romanizeJapanese(text: String): String =
         withContext(Dispatchers.Default) {
-            // Use the lazily initialized tokenizer
-            val tokens = kuromojiTokenizer.tokenize(text)
-
-            val romanizedTokens =
-                tokens.mapIndexed { index, token ->
-                    val currentReading =
-                        if (token.reading.isNullOrEmpty() || token.reading == "*") {
-                            token.surface
-                        } else {
-                            token.reading
-                        }
-
-                    // Pass the next token's reading for sokuon handling if applicable
-                    val nextTokenReading =
-                        if (index + 1 < tokens.size) {
-                            tokens[index + 1].reading?.takeIf { it.isNotEmpty() && it != "*" } ?: tokens[index + 1].surface
-                        } else {
-                            null
-                        }
-                    katakanaToRomaji(currentReading, nextTokenReading)
-                }
-            romanizedTokens.joinToString(" ")
+            val kanaMapped = katakanaToRomaji(text)
+            if (kanaMapped.isNotEmpty() && !isJapanese(kanaMapped)) {
+                kanaMapped
+            } else {
+                romanizeWithIcu(text)
+            }
         }
 
     /**

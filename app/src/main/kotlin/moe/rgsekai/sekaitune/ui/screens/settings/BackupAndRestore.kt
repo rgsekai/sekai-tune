@@ -689,7 +689,7 @@ private fun SpotifyLoginSheet(
                                 )
                             webView = this
                             mainWebView = this
-                            resetAuthWebViewSession(context, this) {
+                            resetAuthWebViewSession(context, this, clearCookies = false) {
                                 loadUrl(SpotifyAuth.LOGIN_URL)
                             }
                         }

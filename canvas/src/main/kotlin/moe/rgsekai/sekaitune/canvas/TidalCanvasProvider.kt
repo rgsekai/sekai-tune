@@ -146,78 +146,80 @@ object TidalCanvasProvider {
         artists: List<String> = emptyList(),
         durationMs: Long? = null,
         countryCode: String = "US",
-    ): CanvasArtwork? = tokenProvider.executeWithTokenRetry { token ->
-        val artistQuery = artists.firstOrNull() ?: ""
-        val query = if (artistQuery.isNotBlank()) "$song $artistQuery" else song
+    ): CanvasArtwork? = runCatching {
+        tokenProvider.executeWithTokenRetry { token ->
+            val artistQuery = artists.firstOrNull() ?: ""
+            val query = if (artistQuery.isNotBlank()) "$song $artistQuery" else song
 
-        val response = client.get(TIDAL_SEARCH_URL) {
-            header("Authorization", "Bearer $token")
-            parameter("query", query)
-            parameter("limit", 10)
-            parameter("countryCode", countryCode.uppercase(Locale.ROOT))
-        }
+            val response = client.get(TIDAL_SEARCH_URL) {
+                header("Authorization", "Bearer $token")
+                parameter("query", query)
+                parameter("limit", 10)
+                parameter("countryCode", countryCode.uppercase(Locale.ROOT))
+            }
 
-        if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
-            throw TokenRejectedException(
-                provider = "TIDAL",
-                statusCode = response.status.value,
-                message = response.bodyAsText(),
-            )
-        }
-
-        if (response.status != HttpStatusCode.OK) return@executeWithTokenRetry null
-
-        val rawBody = response.bodyAsText()
-        val body = runCatching { json.decodeFromString<TidalSearchResponse>(rawBody) }.getOrNull()
-            ?: return@executeWithTokenRetry null
-        val items = body.items ?: return@executeWithTokenRetry null
-
-        for (item in items) {
-            val itemTitle = item.title ?: continue
-            val itemArtists = item.artists?.mapNotNull { it.name } ?: emptyList()
-            val itemDurationMs = item.duration?.let { it * 1000L }
-
-            if (CanvasArtworkIdentity.matches(
-                    title1 = song,
-                    artists1 = artists,
-                    durationMs1 = durationMs,
-                    title2 = itemTitle,
-                    artists2 = itemArtists,
-                    durationMs2 = itemDurationMs,
+            if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
+                throw TokenRejectedException(
+                    provider = "TIDAL",
+                    statusCode = response.status.value,
+                    message = response.bodyAsText(),
                 )
-            ) {
-                val videoCoverId = item.videoCover ?: item.album?.videoCover
-                val staticCoverId = item.album?.cover
+            }
 
-                val videoUrl =
-                    videoCoverId?.let { id ->
-                        val path = id.replace("-", "/")
-                        "https://resources.tidal.com/videos/$path/1280x1280.mp4"
-                    }
+            if (response.status != HttpStatusCode.OK) return@executeWithTokenRetry null
 
-                val staticUrl =
-                    staticCoverId?.let { id ->
-                        val path = id.replace("-", "/")
-                        "https://resources.tidal.com/images/$path/1280x1280.jpg"
-                    }
+            val rawBody = response.bodyAsText()
+            val body = runCatching { json.decodeFromString<TidalSearchResponse>(rawBody) }.getOrNull()
+                ?: return@executeWithTokenRetry null
+            val items = body.items ?: return@executeWithTokenRetry null
 
-                if (videoUrl != null || staticUrl != null) {
-                    return@executeWithTokenRetry CanvasArtwork(
-                        name = itemTitle,
-                        artist = itemArtists.joinToString(", "),
-                        albumName = item.album?.title,
-                        static = staticUrl,
-                        animated = videoUrl,
-                        animatedVertical = videoUrl,
-                        videoUrl = videoUrl,
-                        videoUrlVertical = videoUrl,
+            for (item in items) {
+                val itemTitle = item.title ?: continue
+                val itemArtists = item.artists?.mapNotNull { it.name } ?: emptyList()
+                val itemDurationMs = item.duration?.let { it * 1000L }
+
+                if (CanvasArtworkIdentity.matches(
+                        title1 = song,
+                        artists1 = artists,
+                        durationMs1 = durationMs,
+                        title2 = itemTitle,
+                        artists2 = itemArtists,
+                        durationMs2 = itemDurationMs,
                     )
+                ) {
+                    val videoCoverId = item.videoCover ?: item.album?.videoCover
+                    val staticCoverId = item.album?.cover
+
+                    val videoUrl =
+                        videoCoverId?.let { id ->
+                            val path = id.replace("-", "/")
+                            "https://resources.tidal.com/videos/$path/1280x1280.mp4"
+                        }
+
+                    val staticUrl =
+                        staticCoverId?.let { id ->
+                            val path = id.replace("-", "/")
+                            "https://resources.tidal.com/images/$path/1280x1280.jpg"
+                        }
+
+                    if (videoUrl != null || staticUrl != null) {
+                        return@executeWithTokenRetry CanvasArtwork(
+                            name = itemTitle,
+                            artist = itemArtists.joinToString(", "),
+                            albumName = item.album?.title,
+                            static = staticUrl,
+                            animated = videoUrl,
+                            animatedVertical = videoUrl,
+                            videoUrl = videoUrl,
+                            videoUrlVertical = videoUrl,
+                        )
+                    }
                 }
             }
-        }
 
-        null
-    }
+            null
+        }
+    }.getOrNull()
 
     suspend fun isHealthy(): Boolean =
         runCatching {

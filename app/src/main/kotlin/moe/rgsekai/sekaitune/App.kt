@@ -175,6 +175,9 @@ class App :
                     val repository = moe.rgsekai.sekaitune.spotify.SpotifyLibraryRepository(this@App)
                     val session = repository.restoreSession()
                     Timber.tag("SpotifyInit").i("Spotify session initialized: authenticated=%b, user=%s", session.isAuthenticated, session.accountName)
+                    if (spDc.isNotBlank()) {
+                        moe.rgsekai.sekaitune.canvas.SpotifyCanvasProvider.preWarm(spDc)
+                    }
                 }
             }.onFailure {
                 if (it !is kotlinx.coroutines.CancellationException) {

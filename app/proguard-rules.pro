@@ -95,9 +95,6 @@
 -dontwarn java.beans.PropertyDescriptor
 -dontwarn java.lang.management.**
 
-# Keep all classes within the kuromoji package
--keep class com.atilika.kuromoji.** { *; }
-
 ## Queue Persistence Rules
 # Keep queue-related classes to prevent serialization issues in release builds
 -keep class moe.rgsekai.sekaitune.models.PersistQueue { *; }
@@ -148,4 +145,32 @@
 
 # engine HTTP Android/OkHttp Ktor
 -dontwarn kotlinx.coroutines.**
+
+## Room Entities & DAOs
+-keep class androidx.room.RoomDatabase
+-dontwarn androidx.room.paging.**
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }
+
+## Hilt / Dagger
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+-keep class * extends dagger.hilt.internal.GeneratedComponent { *; }
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+
+## FFmpegKit
+-keep class com.arthenica.ffmpegkit.** { *; }
+-keep class com.antonkarpenko.ffmpegkit.** { *; }
+-dontwarn com.arthenica.ffmpegkit.**
+-dontwarn com.antonkarpenko.ffmpegkit.**
+
+## Material Kolor
+-keep class com.materialkolor.** { *; }
+-dontwarn com.materialkolor.**
+
+## OkHttp
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keepattributes *Annotation*
 

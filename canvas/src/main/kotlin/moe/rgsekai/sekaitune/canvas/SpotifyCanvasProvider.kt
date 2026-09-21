@@ -425,6 +425,17 @@ object SpotifyCanvasProvider {
         }
     }
 
+    suspend fun preWarm(spDc: String? = null) = withContext(Dispatchers.IO) {
+        if (spDc.isNullOrBlank()) return@withContext
+        runCatching {
+            val session = acquireSession(spDc)
+            if (session != null) {
+                fetchClientToken(session.clientId)
+                CanvasLogger.i("SpotifyCanvas", "preWarm: Session and ClientToken pre-warmed successfully")
+            }
+        }
+    }
+
     private fun writeVarint(out: ByteArrayOutputStream, value: Long) {
         var v = value
         while ((v and 0x7FL.inv()) != 0L) {

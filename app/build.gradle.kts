@@ -139,13 +139,29 @@ android {
             keyPassword = "android"
         }
         create("release") {
-            // ... (Keep all your existing release code here) ...
+            if (hasReleaseSigningConfig) {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            } else {
+                storeFile = file("persistent-debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 
     buildTypes {
         release {
-            // ... (Keep your release stuff here)
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
         }
 
         debug {
@@ -282,7 +298,6 @@ dependencies {
     implementation(libs.squigglyslider)
 
     implementation(libs.room.runtime)
-    implementation(libs.kuromoji.ipadic)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
