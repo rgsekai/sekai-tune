@@ -892,19 +892,13 @@ fun PlaylistMenu(
 
                                 // 2. Loop through ALL songs (starting from index 0) and link them like train cars
                                 for (i in 0 until songs.size) {
-                                    val data = androidx.work.workDataOf(
-                                        "SONG_ID" to songs[i].id,
-                                        "SONG_TITLE" to songs[i].title,
-                                        "SONG_ARTIST" to "Unknown Artist",
-                                        "CURRENT_SONG_NUMBER" to (i + 1),  // i starts at 0, so we add 1
-                                        "TOTAL_SONGS" to songs.size        // The total size of the playlist
+                                    val downloadRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                        songId = songs[i].id,
+                                        title = songs[i].title,
+                                        artist = "Unknown Artist",
+                                        currentSongNumber = i + 1,
+                                        totalSongs = songs.size,
                                     )
-
-                                    val downloadRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
-                                        .setInputData(data)
-                                        .build()
-
-                                    // Append each song to the chain
                                     continuation = continuation.then(downloadRequest)
                                 }
 

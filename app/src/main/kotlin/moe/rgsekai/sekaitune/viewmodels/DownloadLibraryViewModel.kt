@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,11 +23,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.downloads.DeviceDownloadRepository
 import moe.rgsekai.sekaitune.downloads.DownloadEntryUiModel
 import moe.rgsekai.sekaitune.downloads.DownloadLibraryUiModel
 import moe.rgsekai.sekaitune.downloads.DownloadMediaType
@@ -36,41 +39,54 @@ import moe.rgsekai.sekaitune.models.MediaMetadata
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
+enum class DownloadStorageType {
+    IN_APP,
+    DEVICE,
+}
+
 enum class DownloadLibraryTab {
     DOWNLOADED,
     PROGRESS,
 }
 
 sealed interface DownloadLibraryScreenState {
+    val selectedStorage: DownloadStorageType
+    val selectedTab: DownloadLibraryTab
+    val query: String
+    val isSearchActive: Boolean
     val pendingRemoval: DownloadRemovalConfirmation?
 
     data class Loading(
-        val selectedTab: DownloadLibraryTab,
-        val query: String,
-        val isSearchActive: Boolean,
+        override val selectedStorage: DownloadStorageType,
+        override val selectedTab: DownloadLibraryTab,
+        override val query: String,
+        override val isSearchActive: Boolean,
         override val pendingRemoval: DownloadRemovalConfirmation? = null,
     ) : DownloadLibraryScreenState
 
     data class Success(
-        val selectedTab: DownloadLibraryTab,
+        override val selectedStorage: DownloadStorageType,
+        override val selectedTab: DownloadLibraryTab,
         val library: DownloadLibraryUiModel,
-        val query: String,
-        val isSearchActive: Boolean,
+        override val query: String,
+        override val isSearchActive: Boolean,
         override val pendingRemoval: DownloadRemovalConfirmation? = null,
     ) : DownloadLibraryScreenState
 
     data class Empty(
-        val selectedTab: DownloadLibraryTab,
-        val query: String,
-        val isSearchActive: Boolean,
+        override val selectedStorage: DownloadStorageType,
+        override val selectedTab: DownloadLibraryTab,
+        override val query: String,
+        override val isSearchActive: Boolean,
         override val pendingRemoval: DownloadRemovalConfirmation? = null,
     ) : DownloadLibraryScreenState
 
     data class Error(
-        val selectedTab: DownloadLibraryTab,
+        override val selectedStorage: DownloadStorageType,
+        override val selectedTab: DownloadLibraryTab,
         @StringRes val messageRes: Int,
-        val query: String,
-        val isSearchActive: Boolean,
+        override val query: String,
+        override val isSearchActive: Boolean,
         override val pendingRemoval: DownloadRemovalConfirmation? = null,
     ) : DownloadLibraryScreenState
 }
@@ -102,12 +118,14 @@ sealed interface DownloadLibraryEvent {
     ) : DownloadLibraryEvent
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DownloadLibraryViewModel
     @Inject
     constructor(
         savedStateHandle: SavedStateHandle,
         private val manageDownloads: ManageDownloadsUseCase,
+        private val deviceDownloadRepository: DeviceDownloadRepository,
     ) : ViewModel() {
         private val initialTab =
             if (savedStateHandle.get<String>("tab") == PROGRESS_TAB_ARGUMENT) {
@@ -116,6 +134,14 @@ class DownloadLibraryViewModel
                 DownloadLibraryTab.DOWNLOADED
             }
 
+        private val initialStorage =
+            if (savedStateHandle.get<String>("storage") == DEVICE_STORAGE_ARGUMENT) {
+                DownloadStorageType.DEVICE
+            } else {
+                DownloadStorageType.IN_APP
+            }
+
+        private val selectedStorage = MutableStateFlow(initialStorage)
         private val selectedTab = MutableStateFlow(initialTab)
         private val query = MutableStateFlow("")
         private val isSearchActive = MutableStateFlow(false)
@@ -125,23 +151,54 @@ class DownloadLibraryViewModel
 
         val events = eventChannel.receiveAsFlow()
 
+        private val activeLibraryFlow =
+            selectedStorage.flatMapLatest { storage ->
+                when (storage) {
+                    DownloadStorageType.IN_APP ->
+                        manageDownloads
+                            .observe()
+                            .map<DownloadLibraryUiModel, DownloadLibraryResult> { DownloadLibraryResult.Data(it) }
+                            .catch { emit(DownloadLibraryResult.Failure) }
+
+                    DownloadStorageType.DEVICE ->
+                        combine(
+                            deviceDownloadRepository.observeDownloaded(),
+                            deviceDownloadRepository.observeInProgress(),
+                        ) { downloaded, inProgress ->
+                            val downloadedSections =
+                                if (downloaded.isNotEmpty()) {
+                                    listOf(DownloadSectionUiModel(DownloadMediaType.SONG, downloaded))
+                                } else {
+                                    emptyList()
+                                }
+                            val inProgressSections =
+                                if (inProgress.isNotEmpty()) {
+                                    listOf(DownloadSectionUiModel(DownloadMediaType.SONG, inProgress))
+                                } else {
+                                    emptyList()
+                                }
+                            DownloadLibraryUiModel(
+                                downloadedSections = downloadedSections,
+                                progressSections = inProgressSections,
+                            )
+                        }.map<DownloadLibraryUiModel, DownloadLibraryResult> { DownloadLibraryResult.Data(it) }
+                            .catch { emit(DownloadLibraryResult.Failure) }
+                }
+            }
+
         val screenState: StateFlow<DownloadLibraryScreenState> =
             combine(
-                manageDownloads
-                    .observe()
-                    .map<DownloadLibraryUiModel, DownloadLibraryResult> { DownloadLibraryResult.Data(it) }
-                    .catch {
-                        emit(DownloadLibraryResult.Failure)
-                    },
+                activeLibraryFlow,
+                selectedStorage,
                 selectedTab,
                 query,
-                isSearchActive,
-                pendingRemoval,
-            ) { result, tab, currentQuery, searchActive, removalConfirmation ->
+                combine(isSearchActive, pendingRemoval) { active, removal -> active to removal },
+            ) { result, storage, tab, currentQuery, (searchActive, removalConfirmation) ->
                 when (result) {
                     is DownloadLibraryResult.Data -> {
                         if (result.library.isEmpty) {
                             DownloadLibraryScreenState.Empty(
+                                selectedStorage = storage,
                                 selectedTab = tab,
                                 query = currentQuery,
                                 isSearchActive = searchActive,
@@ -149,6 +206,7 @@ class DownloadLibraryViewModel
                             )
                         } else {
                             DownloadLibraryScreenState.Success(
+                                selectedStorage = storage,
                                 selectedTab = tab,
                                 library = result.library.filteredBy(currentQuery),
                                 query = currentQuery,
@@ -160,6 +218,7 @@ class DownloadLibraryViewModel
 
                     DownloadLibraryResult.Failure -> {
                         DownloadLibraryScreenState.Error(
+                            selectedStorage = storage,
                             selectedTab = tab,
                             messageRes = R.string.downloads_load_failed,
                             query = currentQuery,
@@ -173,11 +232,16 @@ class DownloadLibraryViewModel
                 started = SharingStarted.WhileSubscribed(5_000L),
                 initialValue =
                     DownloadLibraryScreenState.Loading(
+                        selectedStorage = selectedStorage.value,
                         selectedTab = selectedTab.value,
                         query = "",
                         isSearchActive = false,
                     ),
             )
+
+        fun selectStorage(storage: DownloadStorageType) {
+            selectedStorage.value = storage
+        }
 
         fun selectTab(tab: DownloadLibraryTab) {
             selectedTab.value = tab
@@ -245,17 +309,57 @@ class DownloadLibraryViewModel
             return ImmutableList.copyOf(metadata)
         }
 
-        fun pause(entry: DownloadEntryUiModel) = runAction(entry.id) { manageDownloads.pause(entry.songIds) }
+        fun pause(entry: DownloadEntryUiModel) =
+            runAction(entry.id) {
+                if (selectedStorage.value == DownloadStorageType.IN_APP) {
+                    manageDownloads.pause(entry.songIds)
+                } else {
+                    deviceDownloadRepository.cancel(entry.id)
+                }
+            }
 
-        fun resume(entry: DownloadEntryUiModel) = runAction(entry.id) { manageDownloads.resume(entry.songIds) }
+        fun resume(entry: DownloadEntryUiModel) =
+            runAction(entry.id) {
+                if (selectedStorage.value == DownloadStorageType.IN_APP) {
+                    manageDownloads.resume(entry.songIds)
+                } else {
+                    deviceDownloadRepository.retry(entry)
+                }
+            }
 
-        fun remove(entry: DownloadEntryUiModel) = runAction(entry.id) { manageDownloads.remove(entry.songIds) }
+        fun remove(entry: DownloadEntryUiModel) =
+            runAction(entry.id) {
+                if (selectedStorage.value == DownloadStorageType.IN_APP) {
+                    manageDownloads.remove(entry.songIds)
+                } else {
+                    deviceDownloadRepository.delete(entry)
+                }
+            }
 
-        fun pause(section: DownloadSectionUiModel) = runAction("section:${section.mediaType}") { manageDownloads.pause(section.songIds) }
+        fun pause(section: DownloadSectionUiModel) =
+            runAction("section:${section.mediaType}") {
+                if (selectedStorage.value == DownloadStorageType.IN_APP) {
+                    manageDownloads.pause(section.songIds)
+                }
+            }
 
-        fun resume(section: DownloadSectionUiModel) = runAction("section:${section.mediaType}") { manageDownloads.resume(section.songIds) }
+        fun resume(section: DownloadSectionUiModel) =
+            runAction("section:${section.mediaType}") {
+                if (selectedStorage.value == DownloadStorageType.IN_APP) {
+                    manageDownloads.resume(section.songIds)
+                }
+            }
 
-        fun remove(section: DownloadSectionUiModel) = runAction("section:${section.mediaType}") { manageDownloads.remove(section.songIds) }
+        fun remove(section: DownloadSectionUiModel) =
+            runAction("section:${section.mediaType}") {
+                if (selectedStorage.value == DownloadStorageType.IN_APP) {
+                    manageDownloads.remove(section.songIds)
+                } else {
+                    section.entries.forEach { entry ->
+                        deviceDownloadRepository.delete(entry)
+                    }
+                }
+            }
 
         fun requestRemove(entry: DownloadEntryUiModel) {
             pendingRemoval.value = DownloadRemovalConfirmation.Entry(entry)
@@ -324,5 +428,6 @@ class DownloadLibraryViewModel
 
         private companion object {
             const val PROGRESS_TAB_ARGUMENT = "progress"
+            const val DEVICE_STORAGE_ARGUMENT = "device"
         }
     }

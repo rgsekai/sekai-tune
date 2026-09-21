@@ -603,19 +603,13 @@ fun SelectionSongMenu(
                             for (i in 0 until songSelection.size) {
                                 val song = songSelection[i]
                                 val artistName = song.toMediaItem().mediaMetadata.artist?.toString() ?: "Unknown Artist"
-
-                                val data = androidx.work.workDataOf(
-                                    "SONG_ID" to song.id,
-                                    "SONG_TITLE" to song.song.title,
-                                    "SONG_ARTIST" to artistName,
-                                    "CURRENT_SONG_NUMBER" to (i + 1),
-                                    "TOTAL_SONGS" to songSelection.size
+                                val downloadRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                    songId = song.id,
+                                    title = song.song.title,
+                                    artist = artistName,
+                                    currentSongNumber = i + 1,
+                                    totalSongs = songSelection.size,
                                 )
-
-                                val downloadRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
-                                    .setInputData(data)
-                                    .build()
-
                                 continuation = continuation.then(downloadRequest)
                             }
 
@@ -1261,19 +1255,13 @@ fun SelectionMediaMetadataMenu(
                             for (i in 0 until songSelection.size) {
                                 val song = songSelection[i]
                                 val artistName = song.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
-
-                                val data = androidx.work.workDataOf(
-                                    "SONG_ID" to song.id,
-                                    "SONG_TITLE" to song.title,
-                                    "SONG_ARTIST" to artistName,
-                                    "CURRENT_SONG_NUMBER" to (i + 1),
-                                    "TOTAL_SONGS" to songSelection.size
+                                val downloadRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                    songId = song.id,
+                                    title = song.title,
+                                    artist = artistName,
+                                    currentSongNumber = i + 1,
+                                    totalSongs = songSelection.size,
                                 )
-
-                                val downloadRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
-                                    .setInputData(data)
-                                    .build()
-
                                 continuation = continuation.then(downloadRequest)
                             }
 

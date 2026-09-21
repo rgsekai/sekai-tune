@@ -759,17 +759,11 @@ fun YouTubeSongMenu(
                             android.widget.Toast.makeText(context.applicationContext, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
 
                             val artistName = song.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
-
-                            val inputData = androidx.work.workDataOf(
-                                "SONG_ID" to song.id,
-                                "SONG_TITLE" to song.title,
-                                "SONG_ARTIST" to artistName
+                            val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                songId = song.id,
+                                title = song.title,
+                                artist = artistName,
                             )
-
-                            val workRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
-                                .setInputData(inputData)
-                                .build()
-
                             androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
                         }
                     )

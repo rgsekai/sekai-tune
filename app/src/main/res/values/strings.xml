@@ -60,6 +60,9 @@
     <string name="cached">Cached</string>
     <string name="local_files">Local Files</string>
     <string name="downloaded_desc">Downloaded</string>
+    <string name="in_app_downloads">In App</string>
+    <string name="save_to_device_downloads">Save to Device</string>
+    <string name="cancel_download">Cancel</string>
     <string name="instant_playback">Instant playback</string>
     <string name="on_device">On device</string>
     <string name="recently_played">Recently Played</string>

@@ -210,10 +210,8 @@ ksp {
 
 dependencies {
 
-    // Jetpack Credential Manager API
-    implementation("com.antonkarpenko:ffmpeg-kit-full:2.2.1")
-    implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
-    implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+    // Lightweight audio-only FFmpeg engine for transcoding and ID3 tagging
+    implementation("com.antonkarpenko:ffmpeg-kit-audio:2.2.1")
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")

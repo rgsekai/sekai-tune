@@ -395,20 +395,14 @@ fun PlayerMenu(
             val rawArtist = mediaMetadata.artists.toString() // (Change mediaItem to whatever variable you are using here)
 
             // 2. Cut out everything except the actual name
-            // The clean Kotlin way to extract names from a list of Artist objects!
             val safeArtistName = mediaMetadata.artists?.joinToString(", ") { it.name } ?: "Unknown Artist"
 
             // 3. Pass it to the Worker
-            val inputData = androidx.work.workDataOf(
-                "SONG_ID" to songId.toString(),
-                "SONG_TITLE" to songTitle.toString(),
-                "SONG_ARTIST" to safeArtistName
+            val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                songId = songId.toString(),
+                title = songTitle.toString(),
+                artist = safeArtistName,
             )
-
-            val workRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.AudioDownloadWorker>()
-                .setInputData(inputData)
-                .build()
-
             androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
         }
     )

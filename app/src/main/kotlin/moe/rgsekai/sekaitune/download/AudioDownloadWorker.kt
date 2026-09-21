@@ -1,22 +1,31 @@
 package moe.rgsekai.sekaitune.download
 
-import android.content.pm.ServiceInfo
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import androidx.core.app.NotificationCompat
-import androidx.work.ForegroundInfo
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.antonkarpenko.ffmpegkit.FFmpegKit
+import com.antonkarpenko.ffmpegkit.ReturnCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.AudioQuality
+import moe.rgsekai.sekaitune.ui.utils.resize
 import moe.rgsekai.sekaitune.utils.YTPlayerUtils
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import timber.log.Timber
 import java.io.File
 
 class AudioDownloadWorker(
@@ -24,179 +33,392 @@ class AudioDownloadWorker(
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
-    override suspend fun doWork(): Result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    private val httpClient = OkHttpClient()
+
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val songId = inputData.getString("SONG_ID") ?: return@withContext Result.failure()
+        val songTitle = inputData.getString("SONG_TITLE") ?: "Unknown Title"
+        val songArtist = inputData.getString("SONG_ARTIST") ?: "Unknown Artist"
+        val currentSongNumber = inputData.getInt("CURRENT_SONG_NUMBER", 1)
+        val totalSongs = inputData.getInt("TOTAL_SONGS", 1)
+
+        val tempDir = File(applicationContext.cacheDir, "downloads").apply {
+            if (!exists()) mkdirs()
+        }
+
+        // --- NOTIFICATION SETUP ---
+        val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "sekai_tune_downloads"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, "Downloads", NotificationManager.IMPORTANCE_LOW)
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notificationId = Math.abs(songId.hashCode())
+        val cancelIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
+
+        val notificationTitle = if (totalSongs > 1) {
+            "[$currentSongNumber/$totalSongs] Downloading: $songTitle"
+        } else {
+            "Downloading: $songTitle"
+        }
+
+        val notificationBuilder = NotificationCompat.Builder(applicationContext, channelId)
+            .setContentTitle(notificationTitle)
+            .setContentText("Resolving audio stream...")
+            .setSmallIcon(R.drawable.download)
+            .setOngoing(true)
+            .setProgress(100, 0, true)
+            .addAction(0, "Cancel", cancelIntent)
+
+        val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                notificationId,
+                notificationBuilder.build(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(notificationId, notificationBuilder.build())
+        }
+
         try {
-            // EVERYTHING is now inside the try-block so we can catch and log silent killers!
-            val songId = inputData.getString("SONG_ID") ?: return@withContext Result.failure()
-            val songTitle = inputData.getString("SONG_TITLE") ?: "Unknown Title"
-            val songArtist = inputData.getString("SONG_ARTIST") ?: "Unknown Artist"
+            setForeground(foregroundInfo)
+        } catch (e: Exception) {
+            Timber.w(e, "Foreground service blocked by system, running silently.")
+        }
 
-// Add these two lines:
-            val currentSongNumber = inputData.getInt("CURRENT_SONG_NUMBER", 1)
-            val totalSongs = inputData.getInt("TOTAL_SONGS", 1)
+        val sharedPrefs = applicationContext.getSharedPreferences("sekai_tune_prefs", Context.MODE_PRIVATE)
+        val userChosenFormat = sharedPrefs.getString("audio_format", "mp3")?.lowercase() ?: "mp3"
 
-            val tempDir = java.io.File(applicationContext.cacheDir, "downloads")
-            if (!tempDir.exists()) tempDir.mkdirs()
+        var tempSourceFile: File? = null
+        var tempArtworkFile: File? = null
+        var croppedCoverFile: File? = null
+        var tempOutputFile: File? = null
 
-            // --- NOTIFICATION SETUP ---
-            val notificationManager = applicationContext.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-            val channelId = "sekai_tune_downloads"
+        try {
+            val connectivityManager = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                ?: error("No connectivity manager available")
 
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val channel = android.app.NotificationChannel(channelId, "Downloads", android.app.NotificationManager.IMPORTANCE_LOW)
-                notificationManager.createNotificationChannel(channel)
-            }
-
-            // FIX 1: Ensure Notification ID is strictly positive
-            val notificationId = Math.abs(songId.hashCode())
-
-            // FIX 2: Create the WorkManager Cancel Intent
-            val cancelIntent = androidx.work.WorkManager.getInstance(applicationContext)
-                .createCancelPendingIntent(id)
-
-            // Create a smart title
-            val notificationTitle = if (totalSongs > 1) {
-                "[$currentSongNumber/$totalSongs] Downloading: $songTitle"
-            } else {
-                "Downloading: $songTitle"
-            }
-
-// FIX 3: Stop using Android System icons. Using your app's native download icon!
-            val notificationBuilder = androidx.core.app.NotificationCompat.Builder(applicationContext, channelId)
-                .setContentTitle(notificationTitle) // Using the smart title here!
-                .setContentText("Starting download...")
-                .setSmallIcon(moe.rgsekai.sekaitune.R.drawable.download)
-                .setOngoing(true)
-                .setProgress(100, 0, true)
-                .addAction(0, "Cancel / Stop All", cancelIntent) // '0' means no icon for the button, keeping it extremely safe
-
-            val foregroundInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                androidx.work.ForegroundInfo(
-                    notificationId,
-                    notificationBuilder.build(),
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            // 1. Resolve stream URL via InnerTube client
+            setProgress(
+                androidx.work.workDataOf(
+                    "PROGRESS" to 0,
+                    "STAGE" to "resolving",
+                    "SONG_ID" to songId,
+                    "SONG_TITLE" to songTitle,
+                    "SONG_ARTIST" to songArtist,
                 )
-            } else {
-                androidx.work.ForegroundInfo(notificationId, notificationBuilder.build())
-            }
+            )
 
-            try {
-                setForeground(foregroundInfo)
-            } catch (e: Exception) {
-                // This safely catches the Android 12+ foreground crash, AND any older Android crashes,
-                // allowing WorkManager to finish the download silently in the background!
-                android.util.Log.w("AudioWorker", "Foreground service blocked by system, running silently.", e)
-            }
-            // --------------------------
+            val playbackData = YTPlayerUtils.playerResponseForPlayback(
+                videoId = songId,
+                audioQuality = AudioQuality.HIGH,
+                connectivityManager = connectivityManager,
+            ).getOrThrow()
 
-            // Initialize downloader
-            com.yausername.youtubedl_android.YoutubeDL.getInstance().init(applicationContext)
-            com.yausername.ffmpeg.FFmpeg.getInstance().init(applicationContext)
+            val isWebmSource = playbackData.format.mimeType?.contains("webm") == true ||
+                    playbackData.format.mimeType?.contains("opus") == true
+            val sourceExt = if (isWebmSource) "webm" else "m4a"
 
-            // --- SMART ENGINE UPDATE ---
-            try {
-                val prefs = applicationContext.getSharedPreferences("sekai_tune_prefs", android.content.Context.MODE_PRIVATE)
-                val lastUpdate = prefs.getLong("last_ytdlp_update", 0L)
-                val currentTime = System.currentTimeMillis()
+            tempSourceFile = File.createTempFile("dl_src_${songId}_", ".$sourceExt", tempDir)
+            tempArtworkFile = File.createTempFile("dl_art_${songId}_", ".jpg", tempDir)
+            croppedCoverFile = File.createTempFile("dl_crop_${songId}_", ".jpg", tempDir)
+            tempOutputFile = File.createTempFile("dl_out_${songId}_", ".$userChosenFormat", tempDir)
 
-                // 86400000 milliseconds = 24 hours. It will only update ONCE per day!
-                if (currentTime - lastUpdate > 86400000L) {
-                    android.util.Log.d("AudioWorker", "Running daily yt-dlp update check...")
-                    com.yausername.youtubedl_android.YoutubeDL.getInstance().updateYoutubeDL(applicationContext)
-                    prefs.edit().putLong("last_ytdlp_update", currentTime).apply()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("AudioWorker", "Update check failed: ${e.message}")
-            }
-// ---------------------------
+            // 2. Download audio stream
+            notificationBuilder.setContentText("Downloading audio stream...")
+            notificationBuilder.setProgress(100, 0, false)
+            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
-            val youtubeUrl = "https://music.youtube.com/watch?v=$songId"
-            val request = com.yausername.youtubedl_android.YoutubeDLRequest(youtubeUrl)
-
-            request.addOption("--extractor-args", "youtube:player_client=android,web")
-
-            val sharedPrefs = applicationContext.getSharedPreferences("sekai_tune_prefs", android.content.Context.MODE_PRIVATE)
-            val userChosenFormat = sharedPrefs.getString("audio_format", "mp3") ?: "mp3"
-
-            request.addOption("-x")
-            request.addOption("--audio-format", userChosenFormat)
-            request.addOption("--write-thumbnail")
-            request.addOption("--paths", tempDir.absolutePath)
-            request.addOption("-o", "$songId.%(ext)s")
-
-            android.util.Log.d("AudioWorker", "Starting yt-dlp download for $songTitle...")
-
-            // FIX 4: Throttle Notification Updates!
-            // Only updates notification when the integer percentage actually changes to prevent IPC spam blocks.
             var lastProgress = -1
-            com.yausername.youtubedl_android.YoutubeDL.getInstance().execute(request) { progress: Float, etaInSeconds: Long, line: String ->
-                val currentProgress = progress.toInt()
-                if (currentProgress != lastProgress) {
-                    lastProgress = currentProgress
-                    notificationBuilder.setProgress(100, currentProgress, false)
-                    notificationBuilder.setContentText("Downloading... $currentProgress% (ETA: ${etaInSeconds}s)")
+            val startTime = System.currentTimeMillis()
+            downloadAudioStream(playbackData, tempSourceFile) { percent, bytesWritten, totalBytes ->
+                if (percent != lastProgress) {
+                    lastProgress = percent
+                    val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
+                    val bytesPerSec = if (elapsedSec > 0) bytesWritten / elapsedSec else 0.0
+                    val remainingBytes = (totalBytes - bytesWritten).coerceAtLeast(0)
+                    val etaSec = if (bytesPerSec > 0) (remainingBytes / bytesPerSec).toLong() else 0L
 
-                    // Safe notify ignores missing notification permissions so download doesn't abort
-                    try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (e: Exception) {}
+                    notificationBuilder.setProgress(100, percent, false)
+                    notificationBuilder.setContentText("Downloading... $percent% (ETA: ${etaSec}s)")
+                    try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+
+                    setProgressAsync(
+                        androidx.work.workDataOf(
+                            "PROGRESS" to percent,
+                            "STAGE" to "downloading",
+                            "BYTES_WRITTEN" to bytesWritten,
+                            "TOTAL_BYTES" to totalBytes,
+                            "SONG_ID" to songId,
+                            "SONG_TITLE" to songTitle,
+                            "SONG_ARTIST" to songArtist,
+                        )
+                    )
                 }
             }
 
+            // 3. Resolve & download artwork, then native 1:1 center crop
             notificationBuilder.setProgress(0, 0, true)
-            notificationBuilder.setContentText("Processing audio and album art...")
-            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (e: Exception) {}
+            notificationBuilder.setContentText("Processing album artwork...")
+            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
-            val finishedFile = java.io.File(tempDir, "$songId.$userChosenFormat")
-            val rawAudio = java.io.File(tempDir, "$songId.$userChosenFormat")
-            val rawThumb = tempDir.listFiles()?.firstOrNull { it.name.startsWith(songId) && (it.name.endsWith(".webp") || it.name.endsWith(".jpg")) }
-            val finalAudio = java.io.File(tempDir, "${songId}_final.$userChosenFormat")
+            setProgress(
+                androidx.work.workDataOf(
+                    "PROGRESS" to 85,
+                    "STAGE" to "artwork",
+                    "SONG_ID" to songId,
+                    "SONG_TITLE" to songTitle,
+                    "SONG_ARTIST" to songArtist,
+                )
+            )
 
-            if (rawAudio.exists() && rawThumb != null && rawThumb.exists()) {
-                android.util.Log.d("AudioWorker", "Starting FFmpeg crop...")
-                val ffmpegCommand = "-i \"${rawAudio.absolutePath}\" -i \"${rawThumb.absolutePath}\" -map 0 -map 1 -c:a copy -c:v mjpeg -vf \"crop='min(iw,ih)':'min(iw,ih)'\" -disposition:v attached_pic \"${finalAudio.absolutePath}\""
-                com.antonkarpenko.ffmpegkit.FFmpegKit.execute(ffmpegCommand)
-
-                if (finalAudio.exists()) {
-                    rawAudio.delete()
-                    finalAudio.renameTo(rawAudio)
-                    rawThumb.delete()
-                }
-            }
-
-            if (finishedFile.exists()) {
-                exportToMediaStore(finishedFile, songTitle, songArtist, userChosenFormat)
-                finishedFile.delete()
-
-                notificationBuilder.setContentText("Download Complete!")
-                notificationBuilder.setProgress(100, 100, false)
-                notificationBuilder.setOngoing(false)
-                try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (e: Exception) {}
-
-                Result.success()
+            val artworkDownloaded = downloadArtwork(playbackData, songId, tempArtworkFile)
+            val hasCroppedCover = if (artworkDownloaded) {
+                cropSquareAndCompress(tempArtworkFile, croppedCoverFile, targetSize = 1200)
             } else {
-                android.util.Log.e("AudioWorker", "File failed to export to MediaStore.")
-                Result.failure()
+                false
             }
 
+            // 4. FFmpeg audio transcode and metadata tagging
+            notificationBuilder.setContentText("Tagging and finalizing audio...")
+            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+
+            setProgress(
+                androidx.work.workDataOf(
+                    "PROGRESS" to 95,
+                    "STAGE" to "tagging",
+                    "SONG_ID" to songId,
+                    "SONG_TITLE" to songTitle,
+                    "SONG_ARTIST" to songArtist,
+                )
+            )
+
+            val ffmpegCommand = buildFfmpegCommand(
+                inputPath = tempSourceFile.absolutePath,
+                outputPath = tempOutputFile.absolutePath,
+                format = userChosenFormat,
+                title = songTitle,
+                artist = songArtist,
+                album = songTitle,
+                coverFile = if (hasCroppedCover) croppedCoverFile else null,
+            )
+
+            val session = FFmpegKit.execute(ffmpegCommand)
+            val returnCode = session.returnCode
+            if (returnCode == null || !ReturnCode.isSuccess(returnCode)) {
+                error("FFmpeg transcode/tagging failed: ${session.output}")
+            }
+
+            if (!tempOutputFile.exists() || tempOutputFile.length() <= 0L) {
+                error("Exported audio file is missing or empty")
+            }
+
+            // 5. Export to Android MediaStore
+            exportToMediaStore(tempOutputFile, songTitle, songArtist, userChosenFormat)
+
+            notificationBuilder.setContentText("Download Complete!")
+            notificationBuilder.setProgress(100, 100, false)
+            notificationBuilder.setOngoing(false)
+            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+
+            Result.success(
+                androidx.work.workDataOf(
+                    "PROGRESS" to 100,
+                    "STAGE" to "completed",
+                    "SONG_ID" to songId,
+                    "SONG_TITLE" to songTitle,
+                    "SONG_ARTIST" to songArtist,
+                )
+            )
         } catch (e: Exception) {
-            // FIX 5: Now if absolutely ANYTHING crashes, it will print brightly in your Logcat!
-            android.util.Log.e("AudioWorker", "FATAL CRASH in Worker: ${e.message}", e)
+            Timber.e(e, "Fatal crash or failure in AudioDownloadWorker for songId=$songId")
+            notificationBuilder.setContentText("Download Failed: ${e.message ?: "Unknown error"}")
+            notificationBuilder.setProgress(0, 0, false)
+            notificationBuilder.setOngoing(false)
+            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
             Result.failure()
-        }
-    }
-    private fun getResizedArtworkBytes(imageFile: File): ByteArray {
-        return try {
-            val bitmap = android.graphics.BitmapFactory.decodeFile(imageFile.absolutePath)
-                ?: return imageFile.readBytes()
-            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, 600, 600, true)
-            val outputStream = java.io.ByteArrayOutputStream()
-            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
-            outputStream.toByteArray()
-        } catch (e: Exception) {
-            imageFile.readBytes()
+        } finally {
+            tempSourceFile?.delete()
+            tempArtworkFile?.delete()
+            croppedCoverFile?.delete()
+            tempOutputFile?.delete()
         }
     }
 
-    // --- Helper Functions ---
+    private fun downloadAudioStream(
+        playbackData: YTPlayerUtils.PlaybackData,
+        destFile: File,
+        onProgress: (percent: Int, bytesWritten: Long, totalBytes: Long) -> Unit,
+    ) {
+        val totalLength = playbackData.format.contentLength ?: 10_000_000L
+        val rangedUrl = "${playbackData.streamUrl}&range=0-$totalLength"
+        val request = Request.Builder().url(rangedUrl).build()
+
+        httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("Audio stream request failed with HTTP ${response.code}")
+            val body = response.body ?: error("No response body received from audio stream")
+            val totalBytes = body.contentLength().takeIf { it > 0 } ?: totalLength
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var bytesWritten = 0L
+
+            destFile.outputStream().use { output ->
+                var read: Int
+                while (body.byteStream().read(buffer).also { read = it } != -1) {
+                    output.write(buffer, 0, read)
+                    bytesWritten += read
+                    val percent = ((bytesWritten * 100) / totalBytes).toInt().coerceIn(0, 99)
+                    onProgress(percent, bytesWritten, totalBytes)
+                }
+                output.flush()
+            }
+
+            if (totalBytes > 0 && bytesWritten < totalBytes) {
+                error("Incomplete download: wrote $bytesWritten of $totalBytes bytes")
+            }
+        }
+    }
+
+    private fun downloadArtwork(playbackData: YTPlayerUtils.PlaybackData, songId: String, destFile: File): Boolean {
+        val videoThumbnails = playbackData.videoDetails?.thumbnail?.thumbnails
+        val bestThumb = videoThumbnails?.maxByOrNull { (it.width ?: 0) * (it.height ?: 0) }?.url
+
+        val candidateUrls = mutableListOf<String>()
+        if (!bestThumb.isNullOrBlank()) {
+            candidateUrls.add(bestThumb.resize(1200, 1200))
+            candidateUrls.add(bestThumb)
+        }
+        candidateUrls.add("https://i.ytimg.com/vi/$songId/maxresdefault.jpg")
+        candidateUrls.add("https://i.ytimg.com/vi/$songId/sddefault.jpg")
+        candidateUrls.add("https://i.ytimg.com/vi/$songId/hqdefault.jpg")
+
+        for (url in candidateUrls.distinct()) {
+            val downloaded = runCatching {
+                httpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                    if (!response.isSuccessful) return@use false
+                    val body = response.body ?: return@use false
+                    body.byteStream().use { input ->
+                        destFile.outputStream().use { output ->
+                            input.copyTo(output)
+                            output.flush()
+                        }
+                    }
+                    destFile.exists() && destFile.length() > 0L
+                }
+            }.getOrDefault(false)
+
+            if (downloaded) return true
+        }
+        return false
+    }
+
+    private fun cropSquareAndCompress(sourceFile: File, outputFile: File, targetSize: Int = 1200): Boolean {
+        return runCatching {
+            val bitmap = BitmapFactory.decodeFile(sourceFile.absolutePath) ?: return false
+            val sourceMinDim = minOf(bitmap.width, bitmap.height)
+            val x = (bitmap.width - sourceMinDim) / 2
+            val y = (bitmap.height - sourceMinDim) / 2
+            val cropped = Bitmap.createBitmap(bitmap, x, y, sourceMinDim, sourceMinDim)
+
+            // Only scale down if source is larger than targetSize; do NOT upscale past source resolution
+            val finalSize = minOf(sourceMinDim, targetSize)
+            val scaled = if (cropped.width != finalSize || cropped.height != finalSize) {
+                Bitmap.createScaledBitmap(cropped, finalSize, finalSize, true).also {
+                    if (it != cropped) cropped.recycle()
+                }
+            } else {
+                cropped
+            }
+
+            outputFile.outputStream().use { out ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                out.flush()
+            }
+            scaled.recycle()
+            bitmap.recycle()
+            outputFile.exists() && outputFile.length() > 0L
+        }.getOrDefault(false)
+    }
+
+    private fun buildMetadataBlockPictureBase64(imageFile: File): String? {
+        return runCatching {
+            val imageBytes = imageFile.readBytes()
+            if (imageBytes.isEmpty()) return null
+
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(imageFile.absolutePath, options)
+            val width = if (options.outWidth > 0) options.outWidth else 1200
+            val height = if (options.outHeight > 0) options.outHeight else 1200
+
+            val mime = "image/jpeg"
+            val mimeBytes = mime.toByteArray(Charsets.US_ASCII)
+            val descriptionBytes = ByteArray(0)
+
+            val buffer = java.nio.ByteBuffer.allocate(32 + mimeBytes.size + descriptionBytes.size + imageBytes.size)
+            buffer.order(java.nio.ByteOrder.BIG_ENDIAN)
+
+            // 1. Picture type: 3 = Cover (front)
+            buffer.putInt(3)
+            // 2. MIME type length & MIME string
+            buffer.putInt(mimeBytes.size)
+            buffer.put(mimeBytes)
+            // 3. Description length & Description
+            buffer.putInt(descriptionBytes.size)
+            buffer.put(descriptionBytes)
+            // 4. Width, Height, Color depth (24), Number of indexed colors (0)
+            buffer.putInt(width)
+            buffer.putInt(height)
+            buffer.putInt(24)
+            buffer.putInt(0)
+            // 5. Picture data length & binary image bytes
+            buffer.putInt(imageBytes.size)
+            buffer.put(imageBytes)
+
+            android.util.Base64.encodeToString(buffer.array(), android.util.Base64.NO_WRAP)
+        }.getOrNull()
+    }
+
+    private fun buildFfmpegCommand(
+        inputPath: String,
+        outputPath: String,
+        format: String,
+        title: String,
+        artist: String,
+        album: String,
+        coverFile: File?,
+    ): String {
+        val escapedInput = inputPath.ffmpegEscape()
+        val escapedOutput = outputPath.ffmpegEscape()
+        val titleMeta = title.ffmpegEscape()
+        val artistMeta = artist.ffmpegEscape()
+        val albumMeta = album.ffmpegEscape()
+
+        if (format.lowercase() == "opus") {
+            val metadataBlock = coverFile?.let { buildMetadataBlockPictureBase64(it) }
+            val pictureMetaFlag = if (!metadataBlock.isNullOrBlank()) {
+                " -metadata METADATA_BLOCK_PICTURE='${metadataBlock.ffmpegEscape()}'"
+            } else {
+                ""
+            }
+            return "-y -i '$escapedInput' -c:a libopus -b:a 160k -metadata title='$titleMeta' -metadata artist='$artistMeta' -metadata album='$albumMeta'$pictureMetaFlag '$escapedOutput'"
+        }
+
+        val codecArgs = when (format.lowercase()) {
+            "flac" -> "-c:a flac"
+            "m4a" -> "-c:a aac -b:a 256k"
+            else -> "-c:a libmp3lame -b:a 320k -id3v2_version 3" // default mp3
+        }
+
+        return if (coverFile != null && coverFile.exists()) {
+            val escapedCover = coverFile.absolutePath.ffmpegEscape()
+            "-y -i '$escapedInput' -i '$escapedCover' -map 0:a -map 1:v -c:v mjpeg -disposition:v attached_pic $codecArgs -metadata title='$titleMeta' -metadata artist='$artistMeta' -metadata album='$albumMeta' '$escapedOutput'"
+        } else {
+            "-y -i '$escapedInput' $codecArgs -metadata title='$titleMeta' -metadata artist='$artistMeta' -metadata album='$albumMeta' '$escapedOutput'"
+        }
+    }
+
+    private fun String.ffmpegEscape(): String = replace("'", "'\\''")
 
     private fun exportToMediaStore(fileToExport: File, title: String, artist: String, extension: String) {
         val resolver = context.contentResolver
@@ -210,8 +432,7 @@ class AudioDownloadWorker(
         val safeArtist = artist.replace(Regex("[\\\\/:*?\"<>|]"), "_")
         val fileName = "$safeTitle - $safeArtist.$extension"
 
-        // Dynamically assign correct MIME type based on user selection
-        val mimeType = when (extension) {
+        val mimeType = when (extension.lowercase()) {
             "mp3" -> "audio/mpeg"
             "flac" -> "audio/flac"
             "opus" -> "audio/ogg"
@@ -241,53 +462,6 @@ class AudioDownloadWorker(
                 songDetails.clear()
                 songDetails.put(MediaStore.Audio.Media.IS_PENDING, 0)
                 resolver.update(finalUri, songDetails, null, null)
-            }
-        }
-    }
-
-    private suspend fun downloadFileInChunks(urlString: String, outputFile: File) =
-        withContext(Dispatchers.IO) {
-            val client = OkHttpClient()
-            val chunkSize = 5 * 1024 * 1024L // 5MB chunks
-
-            val initialRequest =
-                Request.Builder().url(urlString).header("Range", "bytes=0-0").build()
-            val initialResponse = client.newCall(initialRequest).execute()
-            val contentRange = initialResponse.header("Content-Range")
-            initialResponse.close()
-
-            val totalSize = contentRange?.substringAfter("/")?.toLongOrNull() ?: -1L
-
-            if (totalSize <= 0) {
-                downloadFileDirect(urlString, outputFile)
-                return@withContext
-            }
-
-            outputFile.outputStream().use { fos ->
-                var uploaded = 0L
-                while (uploaded < totalSize) {
-                    val end = (uploaded + chunkSize - 1).coerceAtMost(totalSize - 1)
-                    val chunkRequest = Request.Builder()
-                        .url(urlString)
-                        .header("Range", "bytes=$uploaded-$end")
-                        .build()
-
-                    client.newCall(chunkRequest).execute().use { response ->
-                        if (!response.isSuccessful) throw Exception("Chunk failed")
-                        response.body?.byteStream()?.use { input -> input.copyTo(fos) }
-                    }
-                    uploaded = end + 1
-                }
-                fos.flush()
-            }
-        }
-
-    private fun downloadFileDirect(urlString: String, outputFile: File) {
-        val request = Request.Builder().url(urlString).build()
-        OkHttpClient().newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw Exception("HTTP error: ${response.code}") // This forces it to stop if YouTube sends an error
-            response.body?.byteStream()?.use { input ->
-                outputFile.outputStream().use { output -> input.copyTo(output) }
             }
         }
     }

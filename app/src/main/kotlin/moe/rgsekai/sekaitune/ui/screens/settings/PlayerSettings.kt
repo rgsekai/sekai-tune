@@ -504,7 +504,7 @@ fun PlayerSettings(navController: NavController) {
                     var selectedFormat by remember {
                         mutableStateOf(sharedPrefs.getString("audio_format", "mp3") ?: "mp3")
                     }
-                    val formats = listOf("mp3", "m4a", "flac")
+                    val formats = listOf("mp3", "m4a", "flac", "opus")
 
                     Column(modifier = Modifier.padding(vertical = 4.dp)) {
                         formats.forEach { format ->

@@ -54,6 +54,9 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -83,6 +86,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -106,6 +110,7 @@ import moe.rgsekai.sekaitune.viewmodels.DownloadLibraryScreenState
 import moe.rgsekai.sekaitune.viewmodels.DownloadLibraryTab
 import moe.rgsekai.sekaitune.viewmodels.DownloadLibraryViewModel
 import moe.rgsekai.sekaitune.viewmodels.DownloadRemovalConfirmation
+import moe.rgsekai.sekaitune.viewmodels.DownloadStorageType
 
 @Composable
 fun DownloadLibraryScreen(
@@ -150,6 +155,7 @@ fun DownloadLibraryScreen(
         onSubmitSearch = viewModel::submitSearch,
         onQueryChange = viewModel::updateQuery,
         onClearQuery = viewModel::clearQuery,
+        onStorageSelected = viewModel::selectStorage,
         onTabSelected = viewModel::selectTab,
         onOpenEntry = viewModel::open,
         onPauseEntry = viewModel::pause,
@@ -176,6 +182,7 @@ private fun DownloadLibraryScreenContent(
     onSubmitSearch: () -> Unit,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
+    onStorageSelected: (DownloadStorageType) -> Unit,
     onTabSelected: (DownloadLibraryTab) -> Unit,
     onOpenEntry: (DownloadEntryUiModel) -> Unit,
     onPauseEntry: (DownloadEntryUiModel) -> Unit,
@@ -189,6 +196,7 @@ private fun DownloadLibraryScreenContent(
     onConfirmRemove: () -> Unit,
     onDismissRemoveConfirmation: () -> Unit,
 ) {
+    val selectedStorage = state.selectedStorage
     val selectedTab = state.selectedTab()
     val query = state.query()
     val isSearchActive = state.isSearchActive()
@@ -262,7 +270,44 @@ private fun DownloadLibraryScreenContent(
                 } else {
                     Column {
                         TopAppBar(
-                            title = { Text(stringResource(R.string.downloaded)) },
+                            title = {
+                                SingleChoiceSegmentedButtonRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(end = 4.dp),
+                                ) {
+                                    SegmentedButton(
+                                        selected = selectedStorage == DownloadStorageType.IN_APP,
+                                        onClick = { onStorageSelected(DownloadStorageType.IN_APP) },
+                                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                                        icon = {},
+                                        label = {
+                                            Text(
+                                                text = stringResource(R.string.in_app_downloads),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.5.sp),
+                                                fontWeight = if (selectedStorage == DownloadStorageType.IN_APP) FontWeight.SemiBold else FontWeight.Normal,
+                                            )
+                                        },
+                                    )
+                                    SegmentedButton(
+                                        selected = selectedStorage == DownloadStorageType.DEVICE,
+                                        onClick = { onStorageSelected(DownloadStorageType.DEVICE) },
+                                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                                        icon = {},
+                                        label = {
+                                            Text(
+                                                text = stringResource(R.string.save_to_device_downloads),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.5.sp),
+                                                fontWeight = if (selectedStorage == DownloadStorageType.DEVICE) FontWeight.SemiBold else FontWeight.Normal,
+                                            )
+                                        },
+                                    )
+                                }
+                            },
                             navigationIcon = {
                                 IconButton(
                                     onClick = onBack,
@@ -306,6 +351,7 @@ private fun DownloadLibraryScreenContent(
             is DownloadLibraryScreenState.Loading -> {
                 DownloadPager(
                     pagerState = pagerState,
+                    selectedStorage = selectedStorage,
                     query = query,
                     downloadedSections = emptyList(),
                     progressSections = emptyList(),
@@ -333,6 +379,7 @@ private fun DownloadLibraryScreenContent(
             is DownloadLibraryScreenState.Empty -> {
                 DownloadPager(
                     pagerState = pagerState,
+                    selectedStorage = selectedStorage,
                     query = query,
                     downloadedSections = emptyList(),
                     progressSections = emptyList(),
@@ -352,6 +399,7 @@ private fun DownloadLibraryScreenContent(
             is DownloadLibraryScreenState.Success -> {
                 DownloadPager(
                     pagerState = pagerState,
+                    selectedStorage = selectedStorage,
                     query = query,
                     downloadedSections = state.library.downloadedSections,
                     progressSections = state.library.progressSections,
@@ -436,6 +484,7 @@ private fun DownloadTabs(
 @Composable
 private fun DownloadPager(
     pagerState: PagerState,
+    selectedStorage: DownloadStorageType,
     query: String,
     downloadedSections: List<DownloadSectionUiModel>,
     progressSections: List<DownloadSectionUiModel>,
@@ -458,6 +507,7 @@ private fun DownloadPager(
         val inProgress = page == DownloadLibraryTab.PROGRESS.ordinal
         DownloadSections(
             sections = if (inProgress) progressSections else downloadedSections,
+            selectedStorage = selectedStorage,
             inProgress = inProgress,
             query = query,
             contentPadding = contentPadding,
@@ -477,6 +527,7 @@ private fun DownloadPager(
 @Composable
 private fun DownloadSections(
     sections: List<DownloadSectionUiModel>,
+    selectedStorage: DownloadStorageType,
     inProgress: Boolean,
     query: String,
     contentPadding: PaddingValues,
@@ -540,6 +591,7 @@ private fun DownloadSections(
                 val removeAction = remember(section, onRequestRemoveSection) { { onRequestRemoveSection(section) } }
                 DownloadSectionHeader(
                     section = section,
+                    selectedStorage = selectedStorage,
                     inProgress = inProgress,
                     onPause = pauseAction,
                     onResume = resumeAction,
@@ -571,6 +623,7 @@ private fun DownloadSections(
 
                     DownloadEntry(
                         entry = entry,
+                        selectedStorage = selectedStorage,
                         inProgress = inProgress,
                         onOpen = openAction,
                         onPause = pauseAction,
@@ -590,6 +643,7 @@ private fun DownloadSections(
 @Composable
 private fun DownloadSectionHeader(
     section: DownloadSectionUiModel,
+    selectedStorage: DownloadStorageType,
     inProgress: Boolean,
     onPause: () -> Unit,
     onResume: () -> Unit,
@@ -643,7 +697,7 @@ private fun DownloadSectionHeader(
             },
             trailingContent = {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (inProgress) {
+                    if (inProgress && selectedStorage == DownloadStorageType.IN_APP) {
                         PrimaryFilledIconButton(
                             icon = if (section.paused) R.drawable.play else R.drawable.pause,
                             contentDescription =
@@ -656,7 +710,7 @@ private fun DownloadSectionHeader(
                     PrimaryFilledIconButton(
                         icon = if (inProgress) R.drawable.close else R.drawable.delete,
                         contentDescription =
-                            stringResource(if (inProgress) android.R.string.cancel else R.string.remove_download),
+                            stringResource(if (inProgress) R.string.cancel_download else R.string.remove_download),
                         onClick = onRemove,
                     )
                 }
@@ -669,6 +723,7 @@ private fun DownloadSectionHeader(
 @Composable
 private fun DownloadEntry(
     entry: DownloadEntryUiModel,
+    selectedStorage: DownloadStorageType,
     inProgress: Boolean,
     onOpen: () -> Unit,
     onPause: () -> Unit,
@@ -720,10 +775,12 @@ private fun DownloadEntry(
                                 text = stringResource(R.string.download_progress_percent, entry.percent),
                                 style = MaterialTheme.typography.labelMedium,
                             )
-                            Text(
-                                text = stringResource(R.string.download_speed, formatFileSize(entry.speedBytesPerSecond)),
-                                style = MaterialTheme.typography.labelMedium,
-                            )
+                            if (selectedStorage == DownloadStorageType.IN_APP) {
+                                Text(
+                                    text = stringResource(R.string.download_speed, formatFileSize(entry.speedBytesPerSecond)),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
                         }
                         LinearWavyProgressIndicator(
                             progress = { entry.progress },
@@ -777,19 +834,27 @@ private fun DownloadEntry(
                             }
                         }
                     } else {
-                        PrimaryFilledIconButton(
-                            icon = if (entry.paused) R.drawable.play else R.drawable.pause,
-                            contentDescription =
-                                stringResource(
-                                    if (entry.paused) R.string.resume_download else R.string.pause_download,
-                                ),
-                            onClick = if (entry.paused) onResume else onPause,
-                        )
+                        if (selectedStorage == DownloadStorageType.IN_APP) {
+                            PrimaryFilledIconButton(
+                                icon = if (entry.paused) R.drawable.play else R.drawable.pause,
+                                contentDescription =
+                                    stringResource(
+                                        if (entry.paused) R.string.resume_download else R.string.pause_download,
+                                    ),
+                                onClick = if (entry.paused) onResume else onPause,
+                            )
+                        } else if (entry.failed) {
+                            PrimaryFilledIconButton(
+                                icon = R.drawable.sync,
+                                contentDescription = stringResource(R.string.retry),
+                                onClick = onResume,
+                            )
+                        }
                     }
                     PrimaryFilledIconButton(
                         icon = if (inProgress) R.drawable.close else R.drawable.delete,
                         contentDescription =
-                            stringResource(if (inProgress) android.R.string.cancel else R.string.remove_download),
+                            stringResource(if (inProgress) R.string.cancel_download else R.string.remove_download),
                         onClick = onRemove,
                     )
                 }
