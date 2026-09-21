@@ -370,42 +370,7 @@ fun PlayerMenu(
             },
         )
     }
-    HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant,
-    )
 
-    ListItem(
-        headlineContent = { Text("Save to Device") },
-        leadingContent = {
-            Icon(
-                painter = painterResource(id = R.drawable.download),
-                contentDescription = null
-            )
-        },
-        modifier = Modifier.clickable {
-            onDismiss() // Or whatever function closes this player menu
-            android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
-
-            // Extract song metadata
-            val songId = mediaMetadata?.id ?: return@clickable
-            val songTitle = mediaMetadata.title ?: "Unknown Title"
-            val songArtist = mediaMetadata.artists ?: "Unknown Artist" // or song.artists.joinToString(", ") { it.name }
-
-            // 1. Get the raw, messy artist string
-            val rawArtist = mediaMetadata.artists.toString() // (Change mediaItem to whatever variable you are using here)
-
-            // 2. Cut out everything except the actual name
-            val safeArtistName = mediaMetadata.artists?.joinToString(", ") { it.name } ?: "Unknown Artist"
-
-            // 3. Pass it to the Worker
-            val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
-                songId = songId.toString(),
-                title = songTitle.toString(),
-                artist = safeArtistName,
-            )
-            androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
-        }
-    )
 
     val nowPlayingTitle =
         remember(mediaMetadata.title) {
@@ -740,6 +705,39 @@ fun PlayerMenu(
                             )
                         }
                     }
+                }
+            }
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+        if (!isLocalMedia) {
+            item {
+                MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.save_to_device_downloads)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.download),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier =
+                            Modifier.clickable {
+                                onDismiss()
+                                android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+                                val songId = mediaMetadata.id
+                                val songTitle = mediaMetadata.title
+                                val safeArtistName = mediaMetadata.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
+                                val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                    songId = songId,
+                                    title = songTitle,
+                                    artist = safeArtistName,
+                                )
+                                androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
                 }
             }
             item {

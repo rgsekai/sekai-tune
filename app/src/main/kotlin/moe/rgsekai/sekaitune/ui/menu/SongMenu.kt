@@ -74,6 +74,7 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.work.WorkManager
 import moe.rgsekai.sekaitune.LocalDatabase
 import moe.rgsekai.sekaitune.LocalDownloadUtil
 import moe.rgsekai.sekaitune.LocalPlayerConnection
@@ -110,6 +111,7 @@ import moe.rgsekai.sekaitune.utils.parseSpeedDialPins
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.serializeSpeedDialPins
 import moe.rgsekai.sekaitune.utils.shareLocalAudio
+import moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest
 import moe.rgsekai.sekaitune.utils.toggleSpeedDialPin
 import moe.rgsekai.sekaitune.viewmodels.CachePlaylistViewModel
 
@@ -424,6 +426,7 @@ fun SongMenu(
     val addToPlaylistText = stringResource(R.string.add_to_playlist)
     val addToSpotifyPlaylistText = stringResource(R.string.spotify_add_to_playlist)
     val shareText = stringResource(R.string.share)
+    val saveToDeviceText = stringResource(R.string.save_to_device_downloads)
     val editText = stringResource(R.string.edit)
 
     val primaryActions =
@@ -435,6 +438,7 @@ fun SongMenu(
             addToPlaylistText,
             addToSpotifyPlaylistText,
             shareText,
+            saveToDeviceText,
             editText,
             isLocalSong,
             canAddToSpotify,
@@ -552,6 +556,34 @@ fun SongMenu(
                         },
                     ),
                 )
+                if (!isLocalSong) {
+                    add(
+                        NewAction(
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.download),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            text = saveToDeviceText,
+                            onClick = {
+                                onDismiss()
+                                Toast.makeText(context, "Exporting to Music folder...", Toast.LENGTH_SHORT).show()
+                                val songId = song.id
+                                val songTitle = song.song.title
+                                val safeArtistName = song.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
+                                val workRequest = createSaveToDeviceWorkRequest(
+                                    songId = songId,
+                                    title = songTitle,
+                                    artist = safeArtistName,
+                                )
+                                WorkManager.getInstance(context).enqueue(workRequest)
+                            },
+                        ),
+                    )
+                }
                 add(
                     NewAction(
                         icon = {
