@@ -1,8 +1,3 @@
-import * as admin from "firebase-admin";
-
-admin.initializeApp();
-// const db = admin.firestore();
-
-// Note: Cloud Functions deployment requires the Firebase Blaze (pay-as-you-go) plan.
-// Buddy list operations (accept/reject/remove) are currently handled via direct client-side
-// Firestore atomic batch writes with secure Firestore rules.
+// No Cloud Functions are deployed (Firebase Spark free tier does not support Cloud Functions).
+// Notification relay and install counting are handled by the self-hosted Render relay service in /relay-service.
+export {};

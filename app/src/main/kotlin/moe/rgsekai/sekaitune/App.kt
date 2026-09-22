@@ -178,6 +178,9 @@ class App :
                 .onFailure { Timber.w(it, "Mori cipher background initialization failed") }
         }
         applicationScope.launch(Dispatchers.IO) {
+            moe.rgsekai.sekaitune.utils.InstallTracker.reportInstallIfNeeded(this@App)
+        }
+        applicationScope.launch(Dispatchers.IO) {
             runCatching {
                 val prefs = dataStore.data.first()
                 val spDc = prefs[SpotifySpDcKey].orEmpty()
