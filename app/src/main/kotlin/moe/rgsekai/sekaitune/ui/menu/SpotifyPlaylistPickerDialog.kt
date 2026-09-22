@@ -86,33 +86,49 @@ fun SpotifyPlaylistPickerDialog(
     addingPlaylistId: String? = null,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
     var playlists by remember { mutableStateOf<List<SpotifyPlaylist>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        val cached = SpotifyPlaylistsCache.get()
-        if (cached != null) {
-            playlists = cached
+        val repo = moe.rgsekai.sekaitune.spotify.SpotifyLibraryRepository(context.applicationContext)
+        val memoryCached = SpotifyPlaylistsCache.get()
+        if (memoryCached != null && memoryCached.isNotEmpty()) {
+            playlists = memoryCached
             isLoading = false
             return@LaunchedEffect
         }
 
-        isLoading = true
+        val diskCached = withContext(Dispatchers.IO) { repo.getCachedPlaylists() }
+        if (diskCached.isNotEmpty()) {
+            playlists = diskCached
+            SpotifyPlaylistsCache.put(diskCached)
+            isLoading = false
+        } else {
+            isLoading = true
+        }
+
         error = null
-        val result =
-            withContext(Dispatchers.IO) {
-                Spotify.myPlaylists(limit = 50)
-            }
-        result
-            .onSuccess { paging ->
-                playlists = paging.items
-                SpotifyPlaylistsCache.put(paging.items)
-                isLoading = false
+        withContext(Dispatchers.IO) {
+            runCatching {
+                repo.ensureAuthenticated()
+                repo.refreshPlaylists()
+            }.onSuccess { loaded ->
+                withContext(Dispatchers.Main) {
+                    playlists = loaded
+                    SpotifyPlaylistsCache.put(loaded)
+                    isLoading = false
+                }
             }.onFailure { err ->
-                error = err.message ?: "Failed to load Spotify playlists"
-                isLoading = false
+                withContext(Dispatchers.Main) {
+                    if (playlists.isEmpty()) {
+                        error = err.message ?: context.getString(R.string.spotify_add_to_playlist_failed)
+                    }
+                    isLoading = false
+                }
             }
+        }
     }
 
     AlertDialog(
@@ -283,6 +299,9 @@ fun AddToSpotifyPlaylistFlow(
         var currentUnresolved = 0
 
         withContext(Dispatchers.IO) {
+            runCatching {
+                moe.rgsekai.sekaitune.spotify.SpotifyLibraryRepository(context.applicationContext).ensureAuthenticated()
+            }
             // Concurrent chunked resolution (MAX_CONCURRENT_RESOLUTIONS = 8)
             tracks.chunked(8).forEach { chunk ->
                 val chunkResults: List<String?> =
@@ -391,6 +410,20 @@ fun AddToSpotifyPlaylistFlow(
                 onSelect = { selectedPlaylist ->
                     addingPlaylistId = selectedPlaylist.id
                     coroutineScope.launch(Dispatchers.IO) {
+                        val repo = moe.rgsekai.sekaitune.spotify.SpotifyLibraryRepository(context.applicationContext)
+                        runCatching {
+                            repo.ensureAuthenticated()
+                        }.onFailure { err ->
+                            withContext(Dispatchers.Main) {
+                                addingPlaylistId = null
+                                Toast.makeText(
+                                    context,
+                                    err.message ?: context.getString(R.string.spotify_add_to_playlist_failed),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                            return@launch
+                        }
                         // Check for duplicate tracks in the target playlist
                         val existingTracks =
                             Spotify

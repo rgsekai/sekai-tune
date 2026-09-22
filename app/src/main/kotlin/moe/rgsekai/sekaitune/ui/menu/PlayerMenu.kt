@@ -237,8 +237,9 @@ fun PlayerMenu(
 
     val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
     val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
-    val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken) {
-        showSpotifyPlaylists && spotifyAccessToken.isNotBlank()
+    val (spotifySpDc) = rememberPreference(moe.rgsekai.sekaitune.constants.SpotifySpDcKey, defaultValue = "")
+    val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken, spotifySpDc) {
+        showSpotifyPlaylists && (spotifyAccessToken.isNotBlank() || spotifySpDc.isNotBlank())
     }
     var showAddToSpotifyPlaylist by rememberSaveable { mutableStateOf(false) }
 

@@ -52,6 +52,36 @@ class SpotifyLibraryRepository
 
         private val _errorMessage = MutableStateFlow<String?>(null)
         val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+        init {
+            Spotify.onTokenExpired = {
+                runCatching {
+                    val session = restoreSession(forceRefresh = false)
+                    if (session.isAuthenticated && !Spotify.accessToken.isNullOrBlank()) {
+                        true
+                    } else {
+                        restoreSession(forceRefresh = true).isAuthenticated
+                    }
+                }.getOrDefault(false)
+            }
+        }
+
+        suspend fun getCachedPlaylists(): List<SpotifyPlaylist> =
+            withContext(Dispatchers.IO) {
+                if (_playlists.value.isNotEmpty()) return@withContext _playlists.value
+                val cached =
+                    context.dataStore.data
+                        .first()[SpotifyLibraryPlaylistsCacheKey]
+                        .orEmpty()
+                if (cached.isBlank()) return@withContext emptyList()
+                runCatching {
+                    spotifyCacheJson.decodeFromString(
+                        ListSerializer(SpotifyPlaylist.serializer()),
+                        cached,
+                    )
+                }.onSuccess { playlists ->
+                    _playlists.value = playlists
+                }.getOrDefault(emptyList())
+            }
 
         suspend fun restoreCachedPlaylists() {
             withContext(Dispatchers.IO) {
@@ -79,7 +109,7 @@ class SpotifyLibraryRepository
 
         private val sessionMutex = kotlinx.coroutines.sync.Mutex()
 
-        suspend fun restoreSession(): SpotifyAccountSession =
+        suspend fun restoreSession(forceRefresh: Boolean = false): SpotifyAccountSession =
             sessionMutex.withLock {
                 withContext(Dispatchers.IO) {
                     val prefs = context.dataStore.data.first()
@@ -88,7 +118,7 @@ class SpotifyLibraryRepository
                     val accountName = prefs[SpotifyAccountNameKey].orEmpty()
                     val avatarUrl = prefs[SpotifyAccountAvatarUrlKey]
 
-                    if (token.isNotBlank() && expiresAt > System.currentTimeMillis() + TOKEN_EXPIRY_GRACE_MS) {
+                    if (!forceRefresh && token.isNotBlank() && expiresAt > System.currentTimeMillis() + TOKEN_EXPIRY_GRACE_MS) {
                         Spotify.accessToken = token
                         return@withContext SpotifyAccountSession(
                             isAuthenticated = true,
@@ -226,20 +256,16 @@ class SpotifyLibraryRepository
                 tracks
             }
 
-        private suspend fun ensureAuthenticated() {
-            val prefs = context.dataStore.data.first()
-            val token = prefs[SpotifyAccessTokenKey].orEmpty()
-            val expiresAt = prefs[SpotifyAccessTokenExpiresAtKey] ?: 0L
-            if (token.isNotBlank() && expiresAt > System.currentTimeMillis() + TOKEN_EXPIRY_GRACE_MS) {
-                Spotify.accessToken = token
-                return
+        suspend fun ensureAuthenticated(forceRefresh: Boolean = false) {
+            val session = restoreSession(forceRefresh = forceRefresh)
+            if (!session.isAuthenticated) {
+                val prefs = context.dataStore.data.first()
+                if (prefs[SpotifySpDcKey].isNullOrBlank()) {
+                    throw IllegalStateException(context.getString(R.string.spotify_not_connected))
+                } else {
+                    throw IllegalStateException("Failed to authenticate with Spotify")
+                }
             }
-
-            val spDc = prefs[SpotifySpDcKey].orEmpty()
-            if (spDc.isBlank()) {
-                throw IllegalStateException(context.getString(R.string.spotify_not_connected))
-            }
-            refreshAccessToken(spDc = spDc, spKey = prefs[SpotifySpKeyKey].orEmpty()).getOrThrow()
         }
 
         private suspend fun refreshAccessToken(

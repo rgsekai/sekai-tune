@@ -133,6 +133,18 @@ class App :
 
         PaxsenixLyrics.setUserAgent("SekaiTune", BuildConfig.VERSION_NAME)
 
+        moe.rgsekai.sekaitune.spotify.Spotify.onTokenExpired = {
+            runCatching {
+                val repository = moe.rgsekai.sekaitune.spotify.SpotifyLibraryRepository(this@App)
+                val session = repository.restoreSession(forceRefresh = false)
+                if (session.isAuthenticated && !moe.rgsekai.sekaitune.spotify.Spotify.accessToken.isNullOrBlank()) {
+                    true
+                } else {
+                    repository.restoreSession(forceRefresh = true).isAuthenticated
+                }
+            }.getOrDefault(false)
+        }
+
         YouTube.onStageReached = { name -> ColdStartTimer.addStage(name) }
         MoriCipherRuntime.onStageReached = { name -> ColdStartTimer.addStage(name) }
 

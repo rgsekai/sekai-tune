@@ -182,12 +182,27 @@ object Spotify {
     @Volatile
     var onHashExpired: ((operationName: String) -> Unit)? = null
 
+    /**
+     * Callback invoked when an access token is missing (null) or rejected (401 Unauthorized).
+     * The app module sets this to trigger a token refresh/restoration from persistent storage.
+     * Returns true if the token was refreshed/restored successfully.
+     */
+    @Volatile
+    var onTokenExpired: (suspend () -> Boolean)? = null
+
     private suspend fun graphqlPost(
         operationName: String,
         variables: JsonObject = buildJsonObject {},
     ): JsonObject {
-        val token =
-            accessToken ?: throw SpotifyException(401, "Not authenticated").also {
+        var token = accessToken
+        if (token == null) {
+            val refreshed = onTokenExpired?.invoke() == true
+            if (refreshed) {
+                token = accessToken
+            }
+        }
+        val currentToken =
+            token ?: throw SpotifyException(401, "Not authenticated").also {
                 log("E", "GQL $operationName — no token")
             }
 
@@ -202,7 +217,7 @@ object Spotify {
 
         for ((hashIdx, sha256Hash) in hashCandidates.withIndex()) {
             val body = buildGqlBody(operationName, sha256Hash, variables)
-            val result = executeGqlWithRetries(operationName, token, body)
+            val result = executeGqlWithRetries(operationName, currentToken, body)
 
             if (result.isPersistedQueryNotFound) {
                 if (hashIdx < hashCandidates.lastIndex) {
@@ -246,17 +261,18 @@ object Spotify {
         token: String,
         body: JsonObject,
     ): GqlResult {
+        var currentToken = token
         val maxRetries = 3
         for (attempt in 0 until maxRetries) {
             log(
                 "D",
-                "GQL POST $operationName (token: ${token.take(8)}...)" +
+                "GQL POST $operationName (token: ${currentToken.take(8)}...)" +
                     if (attempt > 0) " [retry $attempt]" else "",
             )
 
             val response =
                 gqlClient.post(GQL_URL) {
-                    header("Authorization", "Bearer $token")
+                    header("Authorization", "Bearer $currentToken")
                     setBody(
                         TextContent(
                             body.toString(),
@@ -268,6 +284,14 @@ object Spotify {
             log("D", "GQL POST $operationName -> ${response.status.value}")
 
             if (response.status == HttpStatusCode.Unauthorized) {
+                if (attempt == 0 && onTokenExpired?.invoke() == true) {
+                    val newToken = accessToken
+                    if (newToken != null && newToken != currentToken) {
+                        log("I", "GQL $operationName: token refreshed on 401, retrying with new token")
+                        currentToken = newToken
+                        continue
+                    }
+                }
                 throw SpotifyException(401, "Token expired or invalid")
             }
             if (response.status == HttpStatusCode.TooManyRequests) {
@@ -313,8 +337,15 @@ object Spotify {
         failFastOn429: Boolean = false,
         crossinline block: io.ktor.client.request.HttpRequestBuilder.() -> Unit = {},
     ): T {
-        val token =
-            accessToken ?: throw SpotifyException(401, "Not authenticated").also {
+        var token = accessToken
+        if (token == null) {
+            val refreshed = onTokenExpired?.invoke() == true
+            if (refreshed) {
+                token = accessToken
+            }
+        }
+        var currentToken =
+            token ?: throw SpotifyException(401, "Not authenticated").also {
                 log("E", "REST $endpoint — no token")
             }
 
@@ -323,17 +354,25 @@ object Spotify {
         for (attempt in 0 until maxRetries) {
             log(
                 "D",
-                "REST GET $endpoint (token: ${token.take(8)}...)" +
+                "REST GET $endpoint (token: ${currentToken.take(8)}...)" +
                     if (attempt > 0) " [retry $attempt]" else "",
             )
             val response =
                 restClient.get(endpoint) {
-                    header("Authorization", "Bearer $token")
+                    header("Authorization", "Bearer $currentToken")
                     block()
                 }
             log("D", "REST GET $endpoint -> ${response.status.value}")
 
             if (response.status == HttpStatusCode.Unauthorized) {
+                if (attempt == 0 && onTokenExpired?.invoke() == true) {
+                    val newToken = accessToken
+                    if (newToken != null && newToken != currentToken) {
+                        log("I", "REST $endpoint: token refreshed on 401, retrying with new token")
+                        currentToken = newToken
+                        continue
+                    }
+                }
                 throw SpotifyException(401, "Token expired or invalid")
             }
             if (response.status == HttpStatusCode.TooManyRequests) {
