@@ -34,8 +34,6 @@ import moe.rgsekai.sekaitune.about.FetchAboutContributorsUseCase
 import moe.rgsekai.sekaitune.about.FetchAboutDependencyLicensesUseCase
 import moe.rgsekai.sekaitune.about.FetchAboutTranslationContributorsUseCase
 import moe.rgsekai.sekaitune.currentBuildHash
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 sealed interface AboutScreenState {
@@ -50,16 +48,6 @@ sealed interface AboutScreenState {
     data class Error(
         @StringRes val messageResId: Int,
     ) : AboutScreenState
-}
-
-sealed interface AboutInstallCountUiState {
-    data object Loading : AboutInstallCountUiState
-
-    data class Success(
-        val count: Long,
-    ) : AboutInstallCountUiState
-
-    data object Unavailable : AboutInstallCountUiState
 }
 
 @Immutable
@@ -78,7 +66,6 @@ data class AboutUiModel(
     val activeDialog: AboutDialog,
     val translationContributorsState: AboutTranslationContributorsUiState,
     val dependencyLicensesState: AboutDependencyLicensesUiState,
-    val installCountState: AboutInstallCountUiState = AboutInstallCountUiState.Loading,
 )
 
 @Immutable
@@ -275,36 +262,11 @@ class AboutViewModel
         private var translationContributorsState: AboutTranslationContributorsUiState =
             AboutTranslationContributorsUiState.Loading
         private var dependencyLicensesState: AboutDependencyLicensesUiState = AboutDependencyLicensesUiState.Loading
-        private var installCountState: AboutInstallCountUiState = AboutInstallCountUiState.Loading
         private var isOverflowMenuExpanded = false
         private var activeDialog = AboutDialog.NONE
 
         init {
             loadContributors()
-            loadInstallCount()
-        }
-
-        private fun loadInstallCount() {
-            viewModelScope.launch(Dispatchers.IO) {
-                installCountState = try {
-                    val snapshot = FirebaseFirestore.getInstance()
-                        .collection("app_stats")
-                        .document("install_count")
-                        .get()
-                        .await()
-                    val total = snapshot.getLong("total")
-                    if (total != null) {
-                        AboutInstallCountUiState.Success(total)
-                    } else {
-                        AboutInstallCountUiState.Unavailable
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Throwable) {
-                    AboutInstallCountUiState.Unavailable
-                }
-                updateState()
-            }
         }
 
         fun retryContributors() {
@@ -492,7 +454,6 @@ class AboutViewModel
                 activeDialog = activeDialog,
                 translationContributorsState = translationContributorsState,
                 dependencyLicensesState = dependencyLicensesState,
-                installCountState = installCountState,
             )
 
         private fun AboutContributorCollection.toUiCollection(): AboutContributorUiCollection {

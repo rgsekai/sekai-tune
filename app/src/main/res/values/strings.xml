@@ -968,8 +968,6 @@
     <string name="spotify_no_playlists">No Spotify playlists found</string>
     <string name="spotify_searching">Searching Spotify...</string>
     <string name="spotify_resolving_batch">Searching Spotify (%1$d/%2$d)...</string>
-    <string name="total_installs">Total installs: %1$s</string>
-    <string name="total_installs_loading">Total installs: …</string>
 </resources>
 
 

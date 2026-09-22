@@ -152,12 +152,6 @@ Sekai Tune is made possible by the work of many open-source projects and communi
 
 ---
 
-## 🔒 Privacy & Anonymous Install Metrics
-
-Sekai Tune sends a single anonymous ping on first launch to count installs. No personal data, device identifiers, or usage tracking is included — just an incremented counter, publicly visible in the app's About screen. This is separate from any GitHub download statistics.
-
----
-
 ## ⚖️ Legal Disclaimer
 
 SekaiTune is an independent third-party client.

@@ -89,7 +89,6 @@ import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.viewmodels.AboutDependencyLicenseUiCollection
 import moe.rgsekai.sekaitune.viewmodels.AboutDependencyLicensesUiState
 import moe.rgsekai.sekaitune.viewmodels.AboutDialog
-import moe.rgsekai.sekaitune.viewmodels.AboutInstallCountUiState
 import moe.rgsekai.sekaitune.viewmodels.AboutLinkCollection
 import moe.rgsekai.sekaitune.viewmodels.AboutScreenEffect
 import moe.rgsekai.sekaitune.viewmodels.AboutScreenState
@@ -780,63 +779,6 @@ private fun AboutSuccessContent(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-        }
-        item(key = "install_count", contentType = "about_install_count") {
-            AboutContentContainer {
-                AboutInstallCountCard(
-                    installCountState = model.installCountState,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AboutInstallCountCard(
-    installCountState: AboutInstallCountUiState,
-    modifier: Modifier = Modifier,
-) {
-    val text =
-        when (installCountState) {
-            is AboutInstallCountUiState.Loading -> {
-                stringResource(R.string.total_installs_loading)
-            }
-            is AboutInstallCountUiState.Success -> {
-                val formatted =
-                    java.text.NumberFormat.getNumberInstance(java.util.Locale.getDefault())
-                        .format(installCountState.count)
-                stringResource(R.string.total_installs, formatted)
-            }
-            AboutInstallCountUiState.Unavailable -> {
-                stringResource(R.string.total_installs, "—")
-            }
-        }
-
-    Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.extraLarge,
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

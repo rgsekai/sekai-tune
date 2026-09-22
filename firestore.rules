@@ -15,15 +15,6 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------
-    // Public App Statistics (Install Counter)
-    // ----------------------------------------------------
-    match /app_stats/install_count {
-      // Readable by ANY client (unauthenticated or authenticated), writeable ONLY by backend (Cloud Function / Admin SDK)
-      allow read: if true;
-      allow write: if false;
-    }
-
-    // ----------------------------------------------------
     // User Settings & Secrets (Feature 2)
     // ----------------------------------------------------
     match /user_settings/{userId} {

@@ -252,25 +252,6 @@ app.post("/notify/invite", requireRelayKey, async (req, res) => {
   }
 });
 
-// Record anonymous app install count
-app.post("/record-install", async (req, res) => {
-  try {
-    const statsDocRef = db.doc("app_stats/install_count");
-    await statsDocRef.set(
-      {
-        total: admin.firestore.FieldValue.increment(1),
-        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    res.status(200).send("OK");
-  } catch (err) {
-    console.error("[Relay] Error in /record-install:", err);
-    res.status(500).json({ error: "Internal server error", message: err.message });
-  }
-});
-
 // Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

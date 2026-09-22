@@ -14,7 +14,6 @@ Firebase Spark (free plan) does not support Cloud Functions. Instead of leaving 
 | Method | Endpoint | Description | Auth Required |
 |---|---|---|---|
 | `GET` | `/` | Health check endpoint | No |
-| `POST` | `/record-install` | Increments anonymous install counter in Firestore `app_stats/install_count` | No |
 | `POST` | `/notify/buddy-request` | Sends "You have a new buddy request" push to `targetUid` | Yes (`X-Relay-Key`) |
 | `POST` | `/notify/invite` | Sends Together session invite push to `targetUid` | Yes (`X-Relay-Key`) |
 
