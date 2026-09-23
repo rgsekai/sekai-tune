@@ -856,10 +856,12 @@ class MainActivity : ComponentActivity() {
                     val defaultOpenTab by rememberEnumPreference(DefaultOpenTabKey, NavigationTab.HOME)
                     val pauseSearchHistory by rememberPreference(PauseSearchHistoryKey, defaultValue = false)
                     val onboardingCompleted by rememberPreference(OnboardingCompletedKey, defaultValue = false)
-                    val launchCount by rememberPreference(LaunchCountKey, defaultValue = 0)
                     val initialOnboardingRequired =
                         rememberSaveable {
-                            !onboardingCompleted && launchCount <= 0
+                            val isCompleted =
+                                moe.rgsekai.sekaitune.utils.PreferenceStore.get(OnboardingCompletedKey)
+                                    ?: (dataStore[OnboardingCompletedKey] == true)
+                            !isCompleted
                         }
                     val tabOpenedFromShortcut =
                         remember {

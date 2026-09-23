@@ -24,8 +24,7 @@ class OnboardingRepository
     ) {
         fun observeShouldShowOnboarding(): Flow<Boolean> =
             context.dataStore.data.map { preferences ->
-                preferences[OnboardingCompletedKey] != true &&
-                    (preferences[LaunchCountKey] ?: 0) <= 0
+                preferences[OnboardingCompletedKey] != true
             }
 
         suspend fun markCompleted() {
