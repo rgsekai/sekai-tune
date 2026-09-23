@@ -969,6 +969,10 @@
     <string name="spotify_no_playlists">No Spotify playlists found</string>
     <string name="spotify_searching">Searching Spotify...</string>
     <string name="spotify_resolving_batch">Searching Spotify (%1$d/%2$d)...</string>
+    <string name="widget_play_pause_name">Play / Pause</string>
+    <string name="widget_play_pause_description">A minimal single-button widget to control playback.</string>
+    <string name="widget_now_playing_card_name">Now Playing Card</string>
+    <string name="widget_now_playing_card_description">Now playing music card with artwork, playback controls, progress bar, and like button.</string>
 </resources>
 
 

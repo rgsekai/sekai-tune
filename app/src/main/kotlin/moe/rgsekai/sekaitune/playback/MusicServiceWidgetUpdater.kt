@@ -38,16 +38,8 @@ import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.extensions.SilentHandler
 import moe.rgsekai.sekaitune.utils.reportException
-import moe.rgsekai.sekaitune.widget.AlbumArtWidget
-import moe.rgsekai.sekaitune.widget.ListeningInsightsWidget
 import moe.rgsekai.sekaitune.widget.LoadWidgetInsightsUseCase
-import moe.rgsekai.sekaitune.widget.MusicWidget
 import moe.rgsekai.sekaitune.widget.MusicWidgetKeys
-import moe.rgsekai.sekaitune.widget.NowPlayingCardWidget
-import moe.rgsekai.sekaitune.widget.PlaybackCapsuleWidget
-import moe.rgsekai.sekaitune.widget.PlaybackCommandWidget
-import moe.rgsekai.sekaitune.widget.PlaybackDeckWidget
-import moe.rgsekai.sekaitune.widget.PlaybackSpotlightWidget
 import moe.rgsekai.sekaitune.widget.WidgetInsightsSnapshot
 import moe.rgsekai.sekaitune.widget.toWidgetPreferenceValue
 import java.io.File
@@ -126,6 +118,7 @@ internal class MusicServiceWidgetUpdater(
                 isPlaying = player.isPlaying,
                 isBuffering = player.playbackState == Player.STATE_BUFFERING,
                 isAvailable = mediaItem != null,
+                isLiked = service.isCurrentSongLiked(),
                 playbackPosition = player.playbackProgress(),
                 artPath = artFile?.absolutePath,
                 dominantColor = dominantColor,
@@ -183,6 +176,7 @@ internal class MusicServiceWidgetUpdater(
         this[MusicWidgetKeys.IS_PLAYING] = snapshot.isPlaying
         this[MusicWidgetKeys.IS_BUFFERING] = snapshot.isBuffering
         this[MusicWidgetKeys.IS_AVAILABLE] = snapshot.isAvailable
+        this[MusicWidgetKeys.IS_LIKED] = snapshot.isLiked
         this[MusicWidgetKeys.PLAYBACK_POSITION] = snapshot.playbackPosition
 
         val artPath = snapshot.artPath
@@ -311,6 +305,7 @@ internal class MusicServiceWidgetUpdater(
         val isPlaying: Boolean,
         val isBuffering: Boolean,
         val isAvailable: Boolean,
+        val isLiked: Boolean,
         val playbackPosition: Float,
         val artPath: String?,
         val dominantColor: Int?,
@@ -324,30 +319,23 @@ internal class MusicServiceWidgetUpdater(
     )
 
     private companion object {
-        val playbackWidgets =
+        val playbackWidgets: List<WidgetTarget> =
             listOf(
-                WidgetTarget(MusicWidget::class.java, MusicWidget()),
-                WidgetTarget(NowPlayingCardWidget::class.java, NowPlayingCardWidget()),
-                WidgetTarget(PlaybackDeckWidget::class.java, PlaybackDeckWidget()),
-                WidgetTarget(AlbumArtWidget::class.java, AlbumArtWidget()),
-                WidgetTarget(PlaybackCapsuleWidget::class.java, PlaybackCapsuleWidget()),
-                WidgetTarget(PlaybackSpotlightWidget::class.java, PlaybackSpotlightWidget()),
-                WidgetTarget(PlaybackCommandWidget::class.java, PlaybackCommandWidget()),
                 WidgetTarget(
-                    widgetClass = ListeningInsightsWidget::class.java,
-                    widget = ListeningInsightsWidget(),
-                    requiresInsights = true,
+                    widgetClass = moe.rgsekai.sekaitune.widget.PlayPauseWidget::class.java,
+                    widget = moe.rgsekai.sekaitune.widget.PlayPauseWidget(),
+                ),
+                WidgetTarget(
+                    widgetClass = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget::class.java,
+                    widget = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget(),
                 ),
             )
-
-        val progressWidgets =
+        val progressWidgets: List<WidgetTarget> =
             listOf(
-                WidgetTarget(MusicWidget::class.java, MusicWidget()),
-                WidgetTarget(NowPlayingCardWidget::class.java, NowPlayingCardWidget()),
-                WidgetTarget(PlaybackDeckWidget::class.java, PlaybackDeckWidget()),
-                WidgetTarget(PlaybackCapsuleWidget::class.java, PlaybackCapsuleWidget()),
-                WidgetTarget(PlaybackSpotlightWidget::class.java, PlaybackSpotlightWidget()),
-                WidgetTarget(PlaybackCommandWidget::class.java, PlaybackCommandWidget()),
+                WidgetTarget(
+                    widgetClass = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget::class.java,
+                    widget = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget(),
+                ),
             )
     }
 }

@@ -637,6 +637,8 @@ class MusicService :
 
     private lateinit var widgetUpdater: MusicServiceWidgetUpdater
 
+    fun isCurrentSongLiked(): Boolean = currentSong.value?.song?.liked == true
+
     val autoAddedMediaIds: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
 
     private var consecutivePlaybackErr = 0
@@ -1154,6 +1156,7 @@ class MusicService :
 
         currentSong.debounce(300).collect(scope) { song ->
             updateNotification()
+            widgetUpdater.update()
         }
 
         combine(
@@ -6037,6 +6040,7 @@ class MusicService :
         if (!isCrossfading && !crossfadeHandoffInProgress) {
             scheduleCrossfade()
         }
+        widgetUpdater.updateProgressTracking()
     }
 
     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {

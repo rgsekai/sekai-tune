@@ -46,10 +46,44 @@ class SkipPrevAction : ActionCallback {
     }
 }
 
+class LikeAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) {
+        toggleWidgetLike(context)
+    }
+}
+
 private const val ACTION_PLAY_PAUSE = "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE"
 private const val ACTION_SKIP_NEXT = "moe.rgsekai.sekaitune.WIDGET_SKIP_NEXT"
 private const val ACTION_SKIP_PREV = "moe.rgsekai.sekaitune.WIDGET_SKIP_PREV"
 private const val TAG = "MusicWidgetActions"
+
+private fun toggleWidgetLike(context: Context) {
+    runCatching {
+        val serviceIntent = Intent(context, MusicService::class.java)
+        context.bindService(
+            serviceIntent,
+            object : android.content.ServiceConnection {
+                override fun onServiceConnected(
+                    name: android.content.ComponentName?,
+                    binder: android.os.IBinder?,
+                ) {
+                    val service = (binder as? MusicService.MusicBinder)?.service
+                    service?.toggleLike()
+                    runCatching { context.unbindService(this) }
+                }
+
+                override fun onServiceDisconnected(name: android.content.ComponentName?) = Unit
+            },
+            Context.BIND_AUTO_CREATE,
+        )
+    }.onFailure { error ->
+        Log.e(TAG, "Failed to toggle like from widget", error)
+    }
+}
 
 private fun sendWidgetAction(
     context: Context,
