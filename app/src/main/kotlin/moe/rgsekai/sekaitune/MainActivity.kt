@@ -200,6 +200,7 @@ import moe.rgsekai.sekaitune.constants.MiniPlayerBottomSpacing
 import moe.rgsekai.sekaitune.constants.MiniPlayerHeight
 import moe.rgsekai.sekaitune.constants.MiniPlayerLastAnchorKey
 import moe.rgsekai.sekaitune.constants.NavigationBarAnimationSpec
+import moe.rgsekai.sekaitune.constants.OnboardingCompletedKey
 import moe.rgsekai.sekaitune.constants.PauseSearchHistoryKey
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
@@ -228,8 +229,6 @@ import moe.rgsekai.sekaitune.models.toMediaMetadata
 import moe.rgsekai.sekaitune.musicrecognition.ACTION_MUSIC_RECOGNITION
 import moe.rgsekai.sekaitune.musicrecognition.MusicRecognitionRoute
 import moe.rgsekai.sekaitune.musicrecognition.openMusicRecognition
-import moe.rgsekai.sekaitune.onboarding.OnboardingScreenState
-import moe.rgsekai.sekaitune.onboarding.OnboardingViewModel
 import moe.rgsekai.sekaitune.playback.DownloadUtil
 import moe.rgsekai.sekaitune.playback.MusicService
 import moe.rgsekai.sekaitune.playback.MusicService.MusicBinder
@@ -261,7 +260,6 @@ import moe.rgsekai.sekaitune.ui.screens.LOGIN_URL_ARGUMENT
 import moe.rgsekai.sekaitune.ui.screens.Screens
 import moe.rgsekai.sekaitune.ui.screens.buildLoginRoute
 import moe.rgsekai.sekaitune.ui.screens.navigationBuilder
-import moe.rgsekai.sekaitune.ui.screens.onboarding.OnboardingRoute
 import moe.rgsekai.sekaitune.ui.screens.search.LocalSearchScreen
 import moe.rgsekai.sekaitune.ui.screens.search.OnlineSearchResultArgument
 import moe.rgsekai.sekaitune.ui.screens.search.OnlineSearchResultRoutePrefix
@@ -795,19 +793,10 @@ class MainActivity : ComponentActivity() {
                 fontPreference = fontPreference,
                 customFontUri = customFontUri,
             ) {
-                val onboardingViewModel: OnboardingViewModel = hiltViewModel()
-                val onboardingState by onboardingViewModel.screenState.collectAsStateWithLifecycle()
-                val shouldShowOnboarding =
-                    when (val state = onboardingState) {
-                        OnboardingScreenState.Loading -> true
-                        OnboardingScreenState.Empty -> true
-                        is OnboardingScreenState.Error -> false
-                        is OnboardingScreenState.Success -> state.uiState.shouldShowOnboarding
-                    }
-
-                if (shouldShowOnboarding) {
-                    OnboardingRoute(viewModel = onboardingViewModel)
-                    return@SekaiTuneTheme
+                val navController = rememberNavController()
+                DisposableEffect(navController) {
+                    this@MainActivity.navController = navController
+                    onDispose {}
                 }
 
                 BoxWithConstraints(
@@ -832,11 +821,6 @@ class MainActivity : ComponentActivity() {
                                 .windowSizeClass
                                 .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
-                    val navController = rememberNavController()
-                    DisposableEffect(navController) {
-                        this@MainActivity.navController = navController
-                        onDispose {}
-                    }
                     val coroutineScope = rememberCoroutineScope()
                     val homeViewModel: HomeViewModel = hiltViewModel()
                     val networkBannerViewModel: NetworkBannerViewModel = hiltViewModel()
@@ -871,6 +855,12 @@ class MainActivity : ComponentActivity() {
                         )
                     val defaultOpenTab by rememberEnumPreference(DefaultOpenTabKey, NavigationTab.HOME)
                     val pauseSearchHistory by rememberPreference(PauseSearchHistoryKey, defaultValue = false)
+                    val onboardingCompleted by rememberPreference(OnboardingCompletedKey, defaultValue = false)
+                    val launchCount by rememberPreference(LaunchCountKey, defaultValue = 0)
+                    val initialOnboardingRequired =
+                        rememberSaveable {
+                            !onboardingCompleted && launchCount <= 0
+                        }
                     val tabOpenedFromShortcut =
                         remember {
                             when (intent?.action) {
@@ -944,8 +934,10 @@ class MainActivity : ComponentActivity() {
 
                     val shouldShowNavigationBar =
                         remember(navBackStackEntry, active) {
-                            navBackStackEntry?.destination?.route == null ||
-                                navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route } &&
+                            val route = navBackStackEntry?.destination?.route
+                            route != null &&
+                                route != Screens.Onboarding.route &&
+                                navigationItems.fastAny { it.route == route } &&
                                 !active
                         }
 
@@ -1402,6 +1394,7 @@ class MainActivity : ComponentActivity() {
                         StarDialog(
                             onDismissRequest = { showStarDialog = false },
                             onSupport = {
+                                navController.navigate("settings/support")
                                 coroutineScope.launch {
                                     try {
                                         withContext(Dispatchers.IO) {
@@ -2182,7 +2175,9 @@ class MainActivity : ComponentActivity() {
                                 NavHost(
                                     navController = navController,
                                     startDestination =
-                                        if (launchMusicRecognitionFromShortcut) {
+                                        if (initialOnboardingRequired) {
+                                            Screens.Onboarding.route
+                                        } else if (launchMusicRecognitionFromShortcut) {
                                             MusicRecognitionRoute
                                         } else {
                                             when (tabOpenedFromShortcut ?: defaultOpenTab) {

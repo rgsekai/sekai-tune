@@ -10,8 +10,8 @@ package moe.rgsekai.sekaitune.onboarding
 import com.google.common.collect.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.R
 import javax.inject.Inject
@@ -21,128 +21,60 @@ class ObserveOnboardingDataUseCase
     constructor(
         private val repository: OnboardingRepository,
     ) {
-        operator fun invoke(refreshSignals: Flow<Int>): Flow<OnboardingData> =
+        operator fun invoke(): Flow<OnboardingData> =
             repository
                 .observeShouldShowOnboarding()
-                .combine(refreshSignals) { shouldShowOnboarding, _ ->
-                    OnboardingData(
-                        shouldShowOnboarding = shouldShowOnboarding,
-                        permissions = repository.currentPermissions(),
-                    )
+                .map { shouldShowOnboarding ->
+                    OnboardingData(shouldShowOnboarding = shouldShowOnboarding)
                 }.flowOn(Dispatchers.IO)
     }
 
 class BuildOnboardingUiStateUseCase
     @Inject
     constructor() {
-        operator fun invoke(
-            data: OnboardingData,
-            currentPage: Int,
-        ): OnboardingUiState =
+        operator fun invoke(data: OnboardingData): OnboardingUiState =
             OnboardingUiState(
                 shouldShowOnboarding = data.shouldShowOnboarding,
-                currentPage = currentPage.coerceIn(0, pages.lastIndex),
                 variantLabelResId = variantLabelResId(),
                 versionName = BuildConfig.VERSION_NAME,
-                pages = pages,
-                permissions = ImmutableList.copyOf(data.permissions.map { it.toUiModel() }),
-                communityActions = communityActions,
+                socialLinks = socialLinks,
             )
 
         private fun variantLabelResId(): Int =
             if (BuildConfig.DISTRIBUTION == DISTRIBUTION_GMS) {
                 R.string.onboarding_gms_variant
             } else {
-                R.string.onboarding_foss_variant
-            }
-
-        private fun OnboardingPermissionData.toUiModel(): OnboardingPermissionUiModel =
-            OnboardingPermissionUiModel(
-                id = id,
-                titleResId = id.titleResId(),
-                descriptionResId = id.descriptionResId(),
-                iconResId = id.iconResId(),
-                status = status,
-                action = action,
-            )
-
-        private fun OnboardingPermissionId.titleResId(): Int =
-            when (this) {
-                OnboardingPermissionId.NOTIFICATIONS -> R.string.onboarding_permission_notifications_title
-                OnboardingPermissionId.LOCAL_AUDIO -> R.string.permission_storage_title
-                OnboardingPermissionId.MICROPHONE -> R.string.music_recognition_permission_title
-                OnboardingPermissionId.DEVICE_AUDIO_CAPTURE ->
-                    R.string.onboarding_permission_device_audio_capture_title
-                OnboardingPermissionId.BLUETOOTH_CONNECT -> R.string.onboarding_permission_bluetooth_connect_title
-                OnboardingPermissionId.NETWORK -> R.string.onboarding_permission_network_title
-                OnboardingPermissionId.PLAYBACK_SERVICE -> R.string.onboarding_permission_playback_service_title
-                OnboardingPermissionId.AUDIO_SETTINGS -> R.string.onboarding_permission_audio_settings_title
-                OnboardingPermissionId.APP_INSTALLATION -> R.string.onboarding_permission_app_installation_title
-                OnboardingPermissionId.BLUETOOTH_SCAN -> R.string.onboarding_permission_bluetooth_scan_title
-            }
-
-        private fun OnboardingPermissionId.descriptionResId(): Int =
-            when (this) {
-                OnboardingPermissionId.NOTIFICATIONS -> R.string.onboarding_permission_notifications_desc
-                OnboardingPermissionId.LOCAL_AUDIO -> R.string.permission_storage_desc
-                OnboardingPermissionId.MICROPHONE -> R.string.music_recognition_permission_desc
-                OnboardingPermissionId.DEVICE_AUDIO_CAPTURE ->
-                    R.string.onboarding_permission_device_audio_capture_desc
-                OnboardingPermissionId.BLUETOOTH_CONNECT -> R.string.onboarding_permission_bluetooth_connect_desc
-                OnboardingPermissionId.NETWORK -> R.string.onboarding_permission_network_desc
-                OnboardingPermissionId.PLAYBACK_SERVICE -> R.string.onboarding_permission_playback_service_desc
-                OnboardingPermissionId.AUDIO_SETTINGS -> R.string.onboarding_permission_audio_settings_desc
-                OnboardingPermissionId.APP_INSTALLATION -> R.string.onboarding_permission_app_installation_desc
-                OnboardingPermissionId.BLUETOOTH_SCAN -> R.string.onboarding_permission_bluetooth_scan_desc
-            }
-
-        private fun OnboardingPermissionId.iconResId(): Int =
-            when (this) {
-                OnboardingPermissionId.NOTIFICATIONS -> R.drawable.music_note
-                OnboardingPermissionId.LOCAL_AUDIO -> R.drawable.storage
-                OnboardingPermissionId.MICROPHONE -> R.drawable.mic
-                OnboardingPermissionId.DEVICE_AUDIO_CAPTURE -> R.drawable.screenshot
-                OnboardingPermissionId.BLUETOOTH_CONNECT -> R.drawable.bluetooth
-                OnboardingPermissionId.NETWORK -> R.drawable.wifi_proxy
-                OnboardingPermissionId.PLAYBACK_SERVICE -> R.drawable.library_music
-                OnboardingPermissionId.AUDIO_SETTINGS -> R.drawable.settings
-                OnboardingPermissionId.APP_INSTALLATION -> R.drawable.download
-                OnboardingPermissionId.BLUETOOTH_SCAN -> R.drawable.bluetooth
+                R.string.onboarding_non_gms_variant
             }
 
         private companion object {
             const val DISTRIBUTION_GMS = "gms"
 
-            val pages =
+            val socialLinks =
                 ImmutableList.of(
-                    OnboardingPageUiModel(
-                        id = OnboardingPageId.WELCOME,
-                        titleResId = R.string.onboarding_welcome_title,
-                        subtitleResId = R.string.onboarding_welcome_subtitle,
-                        iconResId = R.drawable.sekai_logo_clear,
-                    ),
-                    OnboardingPageUiModel(
-                        id = OnboardingPageId.PERMISSIONS,
-                        titleResId = R.string.onboarding_permissions_title,
-                        subtitleResId = R.string.onboarding_permissions_subtitle,
-                        iconResId = R.drawable.security,
-                    ),
-                    OnboardingPageUiModel(
-                        id = OnboardingPageId.COMMUNITY,
-                        titleResId = R.string.onboarding_community_title,
-                        subtitleResId = R.string.onboarding_community_subtitle,
-                        iconResId = R.drawable.star,
-                    ),
-                )
-
-            val communityActions =
-                ImmutableList.of(
-                    OnboardingCommunityActionUiModel(
+                    OnboardingSocialLinkUiModel(
                         id = "github",
-                        titleResId = R.string.support_development_star,
-                        descriptionResId = R.string.about_content_desc_github,
                         iconResId = R.drawable.github,
                         url = "https://github.com/rgsekai/sekai-tune",
+                        contentDescription = "GitHub",
+                    ),
+                    OnboardingSocialLinkUiModel(
+                        id = "website",
+                        iconResId = R.drawable.ic_website_color,
+                        url = "https://rgsekai.github.io/sekai-tune/",
+                        contentDescription = "Website",
+                    ),
+                    OnboardingSocialLinkUiModel(
+                        id = "instagram",
+                        iconResId = R.drawable.ic_instagram_color,
+                        url = "https://www.instagram.com/sekaitune?stkn=MWJ6dWFhemZveWRkOA==",
+                        contentDescription = "Instagram",
+                    ),
+                    OnboardingSocialLinkUiModel(
+                        id = "telegram",
+                        iconResId = R.drawable.ic_telegram_color,
+                        url = "https://t.me/+-mT3ps-V32g3ZWFl",
+                        contentDescription = "Telegram",
                     ),
                 )
         }
@@ -157,7 +89,3 @@ class CompleteOnboardingUseCase
             repository.markCompleted()
         }
     }
-
-
-
-

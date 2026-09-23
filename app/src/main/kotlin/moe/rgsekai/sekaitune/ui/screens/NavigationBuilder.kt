@@ -441,6 +441,31 @@ fun NavGraphBuilder.navigationBuilder(
             startUrl = backStackEntry.arguments?.getString(LOGIN_URL_ARGUMENT)?.let(Uri::decode),
         )
     }
+    composable(Screens.Onboarding.route) {
+        moe.rgsekai.sekaitune.ui.screens.onboarding.OnboardingRoute(
+            onNavigateToSupport = {
+                navController.navigate("settings/support") {
+                    popUpTo(Screens.Onboarding.route) {
+                        inclusive = true
+                    }
+                }
+            },
+            onNavigateToLogin = {
+                navController.navigate(buildLoginRoute()) {
+                    popUpTo(Screens.Onboarding.route) {
+                        inclusive = true
+                    }
+                }
+            },
+            onNavigateToHome = {
+                navController.navigate(Screens.Home.route) {
+                    popUpTo(Screens.Onboarding.route) {
+                        inclusive = true
+                    }
+                }
+            },
+        )
+    }
 }
 
 

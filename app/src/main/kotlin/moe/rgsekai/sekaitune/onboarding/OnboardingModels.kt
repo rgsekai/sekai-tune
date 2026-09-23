@@ -29,98 +29,31 @@ sealed interface OnboardingScreenState {
 @Immutable
 data class OnboardingUiState(
     val shouldShowOnboarding: Boolean,
-    val currentPage: Int,
     @StringRes val variantLabelResId: Int,
     val versionName: String,
-    val pages: ImmutableList<OnboardingPageUiModel>,
-    val permissions: ImmutableList<OnboardingPermissionUiModel>,
-    val communityActions: ImmutableList<OnboardingCommunityActionUiModel>,
+    val socialLinks: ImmutableList<OnboardingSocialLinkUiModel>,
 )
 
 @Immutable
-data class OnboardingPageUiModel(
-    val id: OnboardingPageId,
-    @StringRes val titleResId: Int,
-    @StringRes val subtitleResId: Int,
-    @DrawableRes val iconResId: Int,
-)
-
-enum class OnboardingPageId {
-    WELCOME,
-    PERMISSIONS,
-    COMMUNITY,
-}
-
-@Immutable
-data class OnboardingPermissionUiModel(
-    val id: OnboardingPermissionId,
-    @StringRes val titleResId: Int,
-    @StringRes val descriptionResId: Int,
-    @DrawableRes val iconResId: Int,
-    val status: OnboardingPermissionStatus,
-    val action: OnboardingPermissionAction?,
-)
-
-data class OnboardingPermissionData(
-    val id: OnboardingPermissionId,
-    val status: OnboardingPermissionStatus,
-    val action: OnboardingPermissionAction?,
-)
-
-enum class OnboardingPermissionId {
-    NOTIFICATIONS,
-    LOCAL_AUDIO,
-    MICROPHONE,
-    DEVICE_AUDIO_CAPTURE,
-    BLUETOOTH_CONNECT,
-    NETWORK,
-    PLAYBACK_SERVICE,
-    AUDIO_SETTINGS,
-    APP_INSTALLATION,
-    BLUETOOTH_SCAN,
-}
-
-enum class OnboardingPermissionStatus {
-    ALLOWED,
-    NEEDS_ACTION,
-    ALLOWED_BY_INSTALL,
-    UNAVAILABLE,
-}
-
-sealed interface OnboardingPermissionAction {
-    data class RequestRuntimePermission(
-        val permission: String,
-    ) : OnboardingPermissionAction
-
-    data object OpenInstallPackagesSettings : OnboardingPermissionAction
-}
-
-@Immutable
-data class OnboardingCommunityActionUiModel(
+data class OnboardingSocialLinkUiModel(
     val id: String,
-    @StringRes val titleResId: Int,
-    @StringRes val descriptionResId: Int,
     @DrawableRes val iconResId: Int,
     val url: String,
+    val contentDescription: String,
 )
 
 data class OnboardingData(
     val shouldShowOnboarding: Boolean,
-    val permissions: ImmutableList<OnboardingPermissionData>,
 )
 
 sealed interface OnboardingEvent {
-    data class RequestPermission(
-        val permission: String,
-    ) : OnboardingEvent
-
-    data object OpenInstallPackagesSettings : OnboardingEvent
-
     data class OpenUri(
         val url: String,
     ) : OnboardingEvent
+
+    data object NavigateToSupport : OnboardingEvent
+
+    data object NavigateToLogin : OnboardingEvent
+
+    data object NavigateToHome : OnboardingEvent
 }
-
-
-
-

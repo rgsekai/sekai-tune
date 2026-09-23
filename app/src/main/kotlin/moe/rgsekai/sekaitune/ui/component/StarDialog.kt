@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -28,7 +27,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,7 +39,6 @@ fun StarDialog(
     onSupport: () -> Unit,
     onLater: () -> Unit,
 ) {
-    val uriHandler = LocalUriHandler.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -62,20 +59,17 @@ fun StarDialog(
             )
 
             FilledTonalButton(
-                onClick = {
-                    uriHandler.openUri("https://github.com/rgsekai/sekai-tune")
-                    onSupport()
-                },
+                onClick = onSupport,
                 modifier = Modifier.fillMaxWidth(),
                 shapes = ButtonDefaults.shapes(),
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.star),
+                    painter = painterResource(id = R.drawable.coffee),
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(text = stringResource(R.string.support_development_star))
+                Text(text = stringResource(R.string.support_development_title))
             }
 
             TextButton(

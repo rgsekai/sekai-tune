@@ -10,114 +10,104 @@
 package moe.rgsekai.sekaitune.ui.screens.onboarding
 
 import android.content.Intent
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.common.collect.ImmutableList
 import moe.rgsekai.sekaitune.R
-import moe.rgsekai.sekaitune.onboarding.OnboardingCommunityActionUiModel
 import moe.rgsekai.sekaitune.onboarding.OnboardingEvent
-import moe.rgsekai.sekaitune.onboarding.OnboardingPageId
-import moe.rgsekai.sekaitune.onboarding.OnboardingPermissionAction
-import moe.rgsekai.sekaitune.onboarding.OnboardingPermissionStatus
-import moe.rgsekai.sekaitune.onboarding.OnboardingPermissionUiModel
 import moe.rgsekai.sekaitune.onboarding.OnboardingScreenState
+import moe.rgsekai.sekaitune.onboarding.OnboardingSocialLinkUiModel
 import moe.rgsekai.sekaitune.onboarding.OnboardingUiState
 import moe.rgsekai.sekaitune.onboarding.OnboardingViewModel
+
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+
+private const val GITHUB_REPO_URL = "https://github.com/rgsekai/sekai-tune"
 
 @Composable
 fun OnboardingRoute(
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = hiltViewModel(),
+    onNavigateToSupport: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {},
+    onNavigateToHome: () -> Unit = {},
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            viewModel.onPermissionResult()
-        }
-    val settingsLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            viewModel.onPermissionResult()
-        }
+    val uriHandler = LocalUriHandler.current
 
-    LaunchedEffect(context, viewModel) {
+    LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                is OnboardingEvent.RequestPermission -> {
-                    permissionLauncher.launch(event.permission)
-                }
-
-                OnboardingEvent.OpenInstallPackagesSettings -> {
-                    val intent =
-                        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                            .setData("package:${context.packageName}".toUri())
-                    runCatching {
-                        settingsLauncher.launch(intent)
-                    }
-                }
-
                 is OnboardingEvent.OpenUri -> {
-                    runCatching {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, event.url.toUri()))
-                    }
+                    runCatching { uriHandler.openUri(event.url) }
+                }
+                OnboardingEvent.NavigateToSupport -> {
+                    onNavigateToSupport()
+                }
+                OnboardingEvent.NavigateToLogin -> {
+                    onNavigateToLogin()
+                }
+                OnboardingEvent.NavigateToHome -> {
+                    onNavigateToHome()
                 }
             }
         }
@@ -125,11 +115,11 @@ fun OnboardingRoute(
 
     OnboardingScreen(
         state = state,
-        onNext = viewModel::onNext,
-        onBack = viewModel::onBack,
-        onComplete = viewModel::complete,
-        onPermissionAction = viewModel::onPermissionAction,
-        onCommunityAction = viewModel::onCommunityAction,
+        onStartListening = viewModel::complete,
+        onGiveStar = { viewModel.onOpenUri(GITHUB_REPO_URL) },
+        onSupport = viewModel::onSupportClick,
+        onSocialClick = { link -> viewModel.onOpenUri(link.url) },
+        onLoginWithGoogle = viewModel::onLoginClick,
         modifier = modifier,
     )
 }
@@ -137,57 +127,485 @@ fun OnboardingRoute(
 @Composable
 fun OnboardingScreen(
     state: OnboardingScreenState,
-    onNext: () -> Unit,
-    onBack: () -> Unit,
-    onComplete: () -> Unit,
-    onPermissionAction: (OnboardingPermissionAction) -> Unit,
-    onCommunityAction: (OnboardingCommunityActionUiModel) -> Unit,
+    onStartListening: () -> Unit,
+    onGiveStar: () -> Unit,
+    onSupport: () -> Unit,
+    onSocialClick: (OnboardingSocialLinkUiModel) -> Unit,
+    onLoginWithGoogle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color(0xFF07040D),
     ) { padding ->
-        when (state) {
-            OnboardingScreenState.Loading -> {
-                LoadingContent(contentPadding = padding)
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background Theme - Subtle Liquid Purple from bottom fading to pitch black at top
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                // Vertical gradient: top is pitch black/deep dark, bottom is a gentle subtle dark purple
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF020104), // Pure deep dark top
+                            Color(0xFF050308),
+                            Color(0xFF0A0512),
+                            Color(0xFF10071C),
+                            Color(0xFF160A26), // Subtle, refined dark purple bottom
+                        ),
+                    ),
+                )
 
-            OnboardingScreenState.Empty -> {
-                MessageContent(
-                    title = stringResource(R.string.onboarding_empty_title),
-                    subtitle = stringResource(R.string.onboarding_empty_subtitle),
-                    actionLabel = stringResource(R.string.onboarding_finish),
-                    onAction = onComplete,
-                    contentPadding = padding,
+                // Soft subtle ambient purple aura rising from the bottom
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF4C217D).copy(alpha = 0.18f),
+                            Color(0xFF2B104A).copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(size.width * 0.5f, size.height * 0.95f),
+                        radius = size.width * 0.85f,
+                    ),
+                    center = Offset(size.width * 0.5f, size.height * 0.95f),
+                    radius = size.width * 0.85f,
                 )
             }
 
-            is OnboardingScreenState.Error -> {
-                MessageContent(
-                    title = stringResource(state.messageResId),
-                    subtitle = stringResource(R.string.onboarding_empty_subtitle),
-                    actionLabel = stringResource(R.string.onboarding_finish),
-                    onAction = onComplete,
-                    contentPadding = padding,
-                )
+            when (state) {
+                OnboardingScreenState.Loading -> {
+                    LoadingContent(contentPadding = padding)
+                }
+
+                OnboardingScreenState.Empty -> {
+                    MessageContent(
+                        title = stringResource(R.string.onboarding_empty_title),
+                        subtitle = stringResource(R.string.onboarding_empty_subtitle),
+                        actionLabel = stringResource(R.string.onboarding_start_listening),
+                        onAction = onStartListening,
+                        contentPadding = padding,
+                    )
+                }
+
+                is OnboardingScreenState.Error -> {
+                    MessageContent(
+                        title = stringResource(state.messageResId),
+                        subtitle = stringResource(R.string.onboarding_empty_subtitle),
+                        actionLabel = stringResource(R.string.onboarding_start_listening),
+                        onAction = onStartListening,
+                        contentPadding = padding,
+                    )
+                }
+
+                is OnboardingScreenState.Success -> {
+                    WelcomeScreenContent(
+                        uiState = state.uiState,
+                        onStartListening = onStartListening,
+                        onGiveStar = onGiveStar,
+                        onSupport = onSupport,
+                        onSocialClick = onSocialClick,
+                        onLoginWithGoogle = onLoginWithGoogle,
+                        contentPadding = padding,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WelcomeScreenContent(
+    uiState: OnboardingUiState,
+    onStartListening: () -> Unit,
+    onGiveStar: () -> Unit,
+    onSupport: () -> Unit,
+    onSocialClick: (OnboardingSocialLinkUiModel) -> Unit,
+    onLoginWithGoogle: () -> Unit,
+    contentPadding: PaddingValues,
+) {
+    val scrollState = rememberScrollState()
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .widthIn(max = 480.dp)
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 44.dp, bottom = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // 1. Solid App Logo
+            AppLogo(
+                modifier = Modifier.padding(bottom = 22.dp),
+            )
+
+            // 2. Headline
+            Text(
+                text = stringResource(R.string.onboarding_welcome_title),
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 25.sp,
+                ),
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3. Badge Row (Edition + Version)
+            MetadataBadgeRow(uiState = uiState)
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 4. Subtext Tagline (Below edition & version badges)
+            Text(
+                text = stringResource(R.string.onboarding_welcome_tagline),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                ),
+                color = Color(0xFFB8B3C8),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(26.dp))
+
+            // 5. Card Container (Rounded Glass Surface)
+            ActionCardContainer(
+                socialLinks = uiState.socialLinks,
+                onGiveStar = onGiveStar,
+                onSupport = onSupport,
+                onSocialClick = onSocialClick,
+                onStartListening = onStartListening,
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 6. Below the card: "Login with Google to Sync" (Liquid Glass pill)
+            LoginWithGoogleButton(
+                onClick = onLoginWithGoogle,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppLogo(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.size(76.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Clean, crisp solid transparent Sekai Tune logo
+        Icon(
+            painter = painterResource(R.drawable.sekai_tune_logo_white_transparent),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(72.dp),
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MetadataBadgeRow(uiState: OnboardingUiState) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        BadgePill(text = stringResource(uiState.variantLabelResId))
+        BadgePill(
+            text =
+                stringResource(
+                    R.string.onboarding_version_label,
+                    uiState.versionName,
+                ),
+        )
+    }
+}
+
+@Composable
+private fun BadgePill(text: String) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0x35281745),
+        contentColor = Color(0xFFD6D1E8),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.20f),
+                    Color(0xFF8C64D8).copy(alpha = 0.16f),
+                ),
+            ),
+        ),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun ActionCardContainer(
+    socialLinks: ImmutableList<OnboardingSocialLinkUiModel>,
+    onGiveStar: () -> Unit,
+    onSupport: () -> Unit,
+    onSocialClick: (OnboardingSocialLinkUiModel) -> Unit,
+    onStartListening: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Liquid Glass Container matching exact screenshot proportions
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        color = Color(0x351F103A),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.26f),
+                    Color(0xFFA27BFF).copy(alpha = 0.18f),
+                    Color.White.copy(alpha = 0.06f),
+                ),
+            ),
+        ),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // 5a. Give a Star on GitHub (Solid white pill button)
+            LightPillButton(
+                icon = {
+                    Text(
+                        text = "⭐",
+                        fontSize = 16.sp,
+                    )
+                },
+                text = stringResource(R.string.onboarding_give_star_github),
+                onClick = onGiveStar,
+            )
+
+            // 5b. Support the development (Solid white pill button)
+            LightPillButton(
+                icon = {
+                    Text(
+                        text = "💖",
+                        fontSize = 16.sp,
+                    )
+                },
+                text = stringResource(R.string.onboarding_support_development),
+                onClick = onSupport,
+            )
+
+            // 5c. Connect with us card inner glass section
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0x40160B2A),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.18f),
+                            Color(0xFF8652DD).copy(alpha = 0.14f),
+                        ),
+                    ),
+                ),
+            ) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.onboarding_connect_with_us),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                        ),
+                        color = Color(0xFFB5ADC8),
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        socialLinks.forEach { link ->
+                            SocialIconButton(
+                                link = link,
+                                onClick = { onSocialClick(link) },
+                            )
+                        }
+                    }
+                }
             }
 
-            is OnboardingScreenState.Success -> {
-                OnboardingSuccessContent(
-                    uiState = state.uiState,
-                    onNext = onNext,
-                    onBack = onBack,
-                    onPermissionAction = onPermissionAction,
-                    onCommunityAction = onCommunityAction,
-                    contentPadding = padding,
+            // 5d. Start Listening Now (Primary Solid White Pill CTA)
+            Button(
+                onClick = onStartListening,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF0F081D),
+                ),
+                contentPadding = PaddingValues(vertical = 14.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.play),
+                    contentDescription = null,
+                    tint = Color(0xFF0F081D),
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(
+                    text = stringResource(R.string.onboarding_start_listening),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = Color(0xFF0F081D),
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun LightPillButton(
+    icon: @Composable () -> Unit,
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.White,
+            contentColor = Color(0xFF0F081D),
+        ),
+        contentPadding = PaddingValues(vertical = 13.dp, horizontal = 16.dp),
+    ) {
+        icon()
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+            ),
+            color = Color(0xFF0F081D),
+        )
+    }
+}
+
+@Composable
+private fun SocialIconButton(
+    link: OnboardingSocialLinkUiModel,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .size(44.dp)
+                .clickable(onClick = onClick),
+        shape = CircleShape,
+        color = Color(0x55351E5C),
+        contentColor = Color.White,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.35f),
+                    Color(0xFF9E71F0).copy(alpha = 0.18f),
+                ),
+            ),
+        ),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(link.iconResId),
+                contentDescription = link.contentDescription,
+                modifier = Modifier.size(20.dp),
+                tint = Color.Unspecified,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoginWithGoogleButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+        shape = RoundedCornerShape(28.dp),
+        color = Color(0x351F103A),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.24f),
+                    Color(0xFF8652DD).copy(alpha = 0.16f),
+                    Color.White.copy(alpha = 0.05f),
+                ),
+            ),
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 14.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Official Google 4-color icon
+            Icon(
+                painter = painterResource(R.drawable.ic_google_logo_color),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = Color.Unspecified,
+            )
+            Spacer(modifier = Modifier.size(10.dp))
+            Text(
+                text = stringResource(R.string.onboarding_login_with_google),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                ),
+                color = Color.White,
+            )
+        }
+    }
+}
+
 @Composable
 private fun LoadingContent(contentPadding: PaddingValues) {
     Box(
@@ -218,691 +636,30 @@ private fun MessageContent(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.widthIn(max = OnboardingContentMaxWidth),
+            modifier = Modifier.widthIn(max = 480.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = Color.White,
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color(0xFF9E9EA7),
             )
-            Button(onClick = onAction) {
+            Button(
+                onClick = onAction,
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                ),
+            ) {
                 Text(text = actionLabel)
             }
         }
     }
 }
-
-@Composable
-private fun OnboardingSuccessContent(
-    uiState: OnboardingUiState,
-    onNext: () -> Unit,
-    onBack: () -> Unit,
-    onPermissionAction: (OnboardingPermissionAction) -> Unit,
-    onCommunityAction: (OnboardingCommunityActionUiModel) -> Unit,
-    contentPadding: PaddingValues,
-) {
-    val pagerState =
-        rememberPagerState(
-            initialPage = uiState.currentPage,
-            pageCount = { uiState.pages.size },
-        )
-
-    LaunchedEffect(uiState.currentPage, uiState.pages.size) {
-        val targetPage = uiState.currentPage.coerceIn(0, uiState.pages.lastIndex)
-        if (pagerState.currentPage != targetPage) {
-            pagerState.animateScrollToPage(targetPage)
-        }
-    }
-
-    HorizontalPager(
-        state = pagerState,
-        userScrollEnabled = false,
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(contentPadding),
-    ) { pageIndex ->
-        when (uiState.pages[pageIndex].id) {
-            OnboardingPageId.WELCOME -> {
-                WelcomePage(
-                    uiState = uiState,
-                    pageIndex = pageIndex,
-                    onBack = onBack,
-                    onNext = onNext,
-                )
-            }
-
-            OnboardingPageId.PERMISSIONS -> {
-                PermissionsPage(
-                    uiState = uiState,
-                    pageIndex = pageIndex,
-                    onBack = onBack,
-                    onNext = onNext,
-                    onPermissionAction = onPermissionAction,
-                )
-            }
-
-            OnboardingPageId.COMMUNITY -> {
-                CommunityPage(
-                    uiState = uiState,
-                    pageIndex = pageIndex,
-                    onBack = onBack,
-                    onNext = onNext,
-                    onCommunityAction = onCommunityAction,
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun WelcomePage(
-    uiState: OnboardingUiState,
-    pageIndex: Int,
-    onBack: () -> Unit,
-    onNext: () -> Unit,
-) {
-    val page = uiState.pages[pageIndex]
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = OnboardingPagePadding,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-    ) {
-        item(key = page.id.name, contentType = "welcome") {
-            BoxWithConstraints(
-                modifier =
-                    Modifier
-                        .widthIn(max = OnboardingContentMaxWidth)
-                        .fillMaxWidth(),
-            ) {
-                if (maxWidth >= 620.dp) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(28.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1.05f),
-                            verticalArrangement = Arrangement.spacedBy(18.dp),
-                        ) {
-                            LargePageTitle(page.titleResId, page.subtitleResId)
-                            OnboardingMetadataPills(uiState = uiState)
-                        }
-                        SunnyIdentityPanel(
-                            iconResId = page.iconResId,
-                            modifier = Modifier.weight(0.95f),
-                        )
-                    }
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.spacedBy(30.dp),
-                    ) {
-                        LargePageTitle(page.titleResId, page.subtitleResId)
-                        OnboardingMetadataPills(uiState = uiState)
-                        Spacer(modifier = Modifier.heightIn(min = 24.dp))
-                        SunnyIdentityPanel(iconResId = page.iconResId)
-                    }
-                }
-            }
-        }
-        item(key = "welcome-actions", contentType = "actions") {
-            OnboardingInlineActions(
-                currentPage = pageIndex,
-                pageCount = uiState.pages.size,
-                onBack = onBack,
-                onNext = onNext,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SunnyIdentityPanel(
-    iconResId: Int,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .heightIn(min = 260.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(
-            modifier =
-                Modifier
-                    .fillMaxWidth(0.80f)
-                    .aspectRatio(1f),
-            shape = MaterialShapes.Sunny.toShape(0),
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            tonalElevation = 2.dp,
-            shadowElevation = 1.dp,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(iconResId),
-                    contentDescription = null,
-                    modifier = Modifier.size(150.dp),
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun OnboardingMetadataPills(uiState: OnboardingUiState) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        PassivePill(text = stringResource(uiState.variantLabelResId))
-        PassivePill(
-            text =
-                stringResource(
-                    R.string.onboarding_version_label,
-                    uiState.versionName,
-                ),
-        )
-    }
-}
-
-@Composable
-private fun PassivePill(text: String) {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun PermissionsPage(
-    uiState: OnboardingUiState,
-    pageIndex: Int,
-    onBack: () -> Unit,
-    onNext: () -> Unit,
-    onPermissionAction: (OnboardingPermissionAction) -> Unit,
-) {
-    val page = uiState.pages[pageIndex]
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = OnboardingPagePadding,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
-    ) {
-        item(key = page.id.name, contentType = "header") {
-            ExpressivePageHeader(
-                iconResId = page.iconResId,
-                titleResId = page.titleResId,
-                subtitleResId = page.subtitleResId,
-            )
-        }
-        itemsIndexed(
-            items = uiState.permissions,
-            key = { _, item -> item.id.name },
-            contentType = { _, item -> "permission-${item.id.name}" },
-        ) { index, item ->
-            PermissionRow(
-                permission = item,
-                index = index,
-                count = uiState.permissions.size,
-                onPermissionAction = onPermissionAction,
-            )
-        }
-        item(key = "permission-actions", contentType = "actions") {
-            OnboardingInlineActions(
-                currentPage = pageIndex,
-                pageCount = uiState.pages.size,
-                onBack = onBack,
-                onNext = onNext,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun CommunityPage(
-    uiState: OnboardingUiState,
-    pageIndex: Int,
-    onBack: () -> Unit,
-    onNext: () -> Unit,
-    onCommunityAction: (OnboardingCommunityActionUiModel) -> Unit,
-) {
-    val page = uiState.pages[pageIndex]
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = OnboardingPagePadding,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
-    ) {
-        item(key = page.id.name, contentType = "header") {
-            ExpressivePageHeader(
-                iconResId = page.iconResId,
-                titleResId = page.titleResId,
-                subtitleResId = page.subtitleResId,
-            )
-        }
-        item(key = "community-spotlight", contentType = "spotlight") {
-            CommunitySpotlight(actions = uiState.communityActions)
-        }
-        itemsIndexed(
-            items = uiState.communityActions,
-            key = { _, item -> item.id },
-            contentType = { _, item -> "community-${item.id}" },
-        ) { index, item ->
-            CommunityRow(
-                action = item,
-                index = index,
-                count = uiState.communityActions.size,
-                onCommunityAction = onCommunityAction,
-            )
-        }
-        item(key = "community-actions", contentType = "actions") {
-            OnboardingInlineActions(
-                currentPage = pageIndex,
-                pageCount = uiState.pages.size,
-                onBack = onBack,
-                onNext = onNext,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CommunitySpotlight(actions: ImmutableList<OnboardingCommunityActionUiModel>) {
-    Surface(
-        modifier =
-            Modifier
-                .widthIn(max = OnboardingContentMaxWidth)
-                .fillMaxWidth()
-                .padding(bottom = 14.dp),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 1.dp,
-    ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            actions.forEach { action ->
-                Surface(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .aspectRatio(1f),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painter = painterResource(action.iconResId),
-                            contentDescription = null,
-                            modifier = Modifier.size(30.dp),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun ExpressivePageHeader(
-    iconResId: Int,
-    titleResId: Int,
-    subtitleResId: Int,
-) {
-    Column(
-        modifier =
-            Modifier
-                .widthIn(max = OnboardingContentMaxWidth)
-                .fillMaxWidth()
-                .padding(bottom = 22.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        Surface(
-            modifier = Modifier.size(88.dp),
-            shape = MaterialShapes.Sunny.toShape(0),
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(iconResId),
-                    contentDescription = null,
-                    modifier = Modifier.size(34.dp),
-                )
-            }
-        }
-        LargePageTitle(titleResId = titleResId, subtitleResId = subtitleResId)
-    }
-}
-
-@Composable
-private fun LargePageTitle(
-    titleResId: Int,
-    subtitleResId: Int,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(titleResId),
-            style = MaterialTheme.typography.displaySmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.SemiBold,
-            fontStyle = FontStyle.Italic,
-        )
-        Text(
-            text = stringResource(subtitleResId),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun PermissionRow(
-    permission: OnboardingPermissionUiModel,
-    index: Int,
-    count: Int,
-    onPermissionAction: (OnboardingPermissionAction) -> Unit,
-) {
-    val onClick =
-        remember(permission.action, onPermissionAction) {
-            {
-                val action = permission.action
-                if (action != null) {
-                    onPermissionAction(action)
-                }
-            }
-        }
-
-    SegmentedListItem(
-        onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
-        modifier =
-            Modifier
-                .widthIn(max = OnboardingContentMaxWidth)
-                .fillMaxWidth()
-                .heightIn(min = 88.dp),
-        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        leadingContent = {
-            PermissionIcon(permission = permission)
-        },
-        supportingContent = {
-            Text(
-                text = stringResource(permission.descriptionResId),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        trailingContent = {
-            PermissionStatusAction(
-                permission = permission,
-                onPermissionAction = onPermissionAction,
-            )
-        },
-    ) {
-        Text(
-            text = stringResource(permission.titleResId),
-            style = MaterialTheme.typography.titleMedium,
-        )
-    }
-}
-
-@Composable
-private fun PermissionIcon(permission: OnboardingPermissionUiModel) {
-    val containerColor =
-        when (permission.status) {
-            OnboardingPermissionStatus.ALLOWED -> MaterialTheme.colorScheme.primary
-            OnboardingPermissionStatus.NEEDS_ACTION -> MaterialTheme.colorScheme.tertiary
-            OnboardingPermissionStatus.ALLOWED_BY_INSTALL -> MaterialTheme.colorScheme.secondary
-            OnboardingPermissionStatus.UNAVAILABLE -> MaterialTheme.colorScheme.surfaceVariant
-        }
-    val contentColor =
-        when (permission.status) {
-            OnboardingPermissionStatus.ALLOWED -> MaterialTheme.colorScheme.onPrimary
-            OnboardingPermissionStatus.NEEDS_ACTION -> MaterialTheme.colorScheme.onTertiary
-            OnboardingPermissionStatus.ALLOWED_BY_INSTALL -> MaterialTheme.colorScheme.onSecondary
-            OnboardingPermissionStatus.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
-        }
-
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = containerColor,
-        contentColor = contentColor,
-        modifier = Modifier.size(56.dp),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                painter = painterResource(permission.iconResId),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun PermissionStatusAction(
-    permission: OnboardingPermissionUiModel,
-    onPermissionAction: (OnboardingPermissionAction) -> Unit,
-) {
-    val action = permission.action
-
-    if (action != null) {
-        FilledTonalButton(
-            onClick = { onPermissionAction(action) },
-            shapes = ButtonDefaults.shapes(),
-            contentPadding = ButtonDefaults.SmallContentPadding,
-        ) {
-            Text(text = stringResource(R.string.allow))
-        }
-    } else {
-        Surface(
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ) {
-            Text(
-                text = stringResource(permission.status.labelResId()),
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun CommunityRow(
-    action: OnboardingCommunityActionUiModel,
-    index: Int,
-    count: Int,
-    onCommunityAction: (OnboardingCommunityActionUiModel) -> Unit,
-) {
-    val onClick = remember(action, onCommunityAction) { { onCommunityAction(action) } }
-
-    SegmentedListItem(
-        onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
-        modifier =
-            Modifier
-                .widthIn(max = OnboardingContentMaxWidth)
-                .fillMaxWidth()
-                .heightIn(min = 88.dp),
-        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        leadingContent = {
-            Surface(
-                modifier = Modifier.size(56.dp),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(action.iconResId),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-        },
-        supportingContent = {
-            Text(
-                text = stringResource(action.descriptionResId),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        trailingContent = {
-            Icon(
-                painter = painterResource(R.drawable.arrow_forward),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-    ) {
-        Text(
-            text = stringResource(action.titleResId),
-            style = MaterialTheme.typography.titleMedium,
-        )
-    }
-}
-
-@Composable
-private fun OnboardingInlineActions(
-    currentPage: Int,
-    pageCount: Int,
-    onBack: () -> Unit,
-    onNext: () -> Unit,
-) {
-    val showBack = currentPage > 0
-    val isLastPage = currentPage >= pageCount - 1
-    val nextLabel =
-        if (isLastPage) {
-            stringResource(R.string.onboarding_finish)
-        } else {
-            stringResource(R.string.next)
-        }
-
-    Column(
-        modifier =
-            Modifier
-                .widthIn(max = OnboardingContentMaxWidth)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(top = 28.dp, bottom = 8.dp),
-    ) {
-        AnimatedVisibility(
-            visible = !showBack,
-            enter =
-                expandVertically(MaterialTheme.motionScheme.fastSpatialSpec()) +
-                    fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
-            exit =
-                shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec()) +
-                    fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
-        ) {
-            OnboardingNextButton(
-                text = nextLabel,
-                onClick = onNext,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        AnimatedVisibility(
-            visible = showBack,
-            enter =
-                expandVertically(MaterialTheme.motionScheme.fastSpatialSpec()) +
-                    fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
-            exit =
-                shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec()) +
-                    fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = OnboardingActionButtonPadding,
-                ) {
-                    Text(
-                        text = stringResource(R.string.back_button_desc),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                OnboardingNextButton(
-                    text = nextLabel,
-                    onClick = onNext,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun OnboardingNextButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        contentPadding = OnboardingActionButtonPadding,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-private fun OnboardingPermissionStatus.labelResId(): Int =
-    when (this) {
-        OnboardingPermissionStatus.ALLOWED -> R.string.permission_status_allowed
-        OnboardingPermissionStatus.NEEDS_ACTION -> R.string.allow
-        OnboardingPermissionStatus.ALLOWED_BY_INSTALL -> R.string.onboarding_permission_allowed_by_install
-        OnboardingPermissionStatus.UNAVAILABLE -> R.string.onboarding_permission_unavailable
-    }
-
-private val OnboardingContentMaxWidth = 680.dp
-private val OnboardingPagePadding = PaddingValues(horizontal = 24.dp, vertical = 28.dp)
-private val OnboardingActionButtonPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
-
-
-
-
