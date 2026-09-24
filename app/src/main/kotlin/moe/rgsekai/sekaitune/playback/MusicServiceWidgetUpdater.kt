@@ -35,12 +35,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.extensions.SilentHandler
+import moe.rgsekai.sekaitune.extensions.mediaItems
+import moe.rgsekai.sekaitune.extensions.metadata
+import moe.rgsekai.sekaitune.utils.makeTimeString
 import moe.rgsekai.sekaitune.utils.reportException
+import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.widget.LoadWidgetInsightsUseCase
+import moe.rgsekai.sekaitune.widget.LoadWidgetShortcutsUseCase
 import moe.rgsekai.sekaitune.widget.MusicWidgetKeys
 import moe.rgsekai.sekaitune.widget.WidgetInsightsSnapshot
+import moe.rgsekai.sekaitune.widget.WidgetQueueItem
+import moe.rgsekai.sekaitune.widget.WidgetShortcutItem
+import moe.rgsekai.sekaitune.widget.WidgetShortcutType
+import moe.rgsekai.sekaitune.widget.WidgetShortcutsSnapshot
+import moe.rgsekai.sekaitune.widget.serializeWidgetQueueItems
 import moe.rgsekai.sekaitune.widget.toWidgetPreferenceValue
 import java.io.File
 
@@ -49,6 +58,7 @@ internal class MusicServiceWidgetUpdater(
     private val player: Player,
     private val scope: CoroutineScope,
     private val loadWidgetInsights: LoadWidgetInsightsUseCase,
+    private val loadWidgetShortcuts: LoadWidgetShortcutsUseCase,
 ) {
     private var progressJob: Job? = null
     private val updateMutex = Mutex()
@@ -122,6 +132,8 @@ internal class MusicServiceWidgetUpdater(
                 playbackPosition = player.playbackProgress(),
                 artPath = artFile?.absolutePath,
                 dominantColor = dominantColor,
+                mediaId = mediaId,
+                duration = if (player.duration > 0) (player.duration / 1000).toInt() else 0,
                 insights = WidgetInsightsSnapshot.Empty,
             )
 
@@ -154,15 +166,20 @@ internal class MusicServiceWidgetUpdater(
         if (ids.isEmpty()) return
 
         val targetSnapshot =
-            if (target.requiresInsights) {
-                snapshot.copy(insights = loadInsightsSnapshot())
-            } else {
-                snapshot
+            when {
+                target.requiresInsights -> snapshot.copy(insights = loadInsightsSnapshot())
+                target.requiresShortcuts -> snapshot.copy(shortcuts = loadShortcutsSnapshot())
+                else -> snapshot
             }
 
         ids.forEach { id ->
             updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
+                val prevMediaId = prefs[MusicWidgetKeys.TRACK_MEDIA_ID]
                 prefs.toMutablePreferences().apply {
+                    if (prevMediaId != null && targetSnapshot.mediaId != null && prevMediaId != targetSnapshot.mediaId) {
+                        remove(MusicWidgetKeys.LYRICS_TEXT)
+                        this[MusicWidgetKeys.LYRICS_STATUS] = "IDLE"
+                    }
                     writeSnapshot(targetSnapshot)
                 }
             }
@@ -179,6 +196,14 @@ internal class MusicServiceWidgetUpdater(
         this[MusicWidgetKeys.IS_LIKED] = snapshot.isLiked
         this[MusicWidgetKeys.PLAYBACK_POSITION] = snapshot.playbackPosition
 
+        val mediaId = snapshot.mediaId
+        if (mediaId != null) {
+            this[MusicWidgetKeys.TRACK_MEDIA_ID] = mediaId
+        } else {
+            remove(MusicWidgetKeys.TRACK_MEDIA_ID)
+        }
+        this[MusicWidgetKeys.TRACK_DURATION] = snapshot.duration
+
         val artPath = snapshot.artPath
         if (artPath != null) {
             this[MusicWidgetKeys.ART_PATH] = artPath
@@ -194,6 +219,47 @@ internal class MusicServiceWidgetUpdater(
         }
 
         writeInsights(snapshot.insights)
+        writeShortcuts(snapshot.shortcuts)
+    }
+
+    private fun MutablePreferences.writeShortcuts(shortcuts: WidgetShortcutsSnapshot) {
+        fun writeItem(
+            sc: WidgetShortcutItem,
+            titleKey: androidx.datastore.preferences.core.Preferences.Key<String>,
+            subKey: androidx.datastore.preferences.core.Preferences.Key<String>,
+            artKey: androidx.datastore.preferences.core.Preferences.Key<String>,
+            typeKey: androidx.datastore.preferences.core.Preferences.Key<String>,
+            idKey: androidx.datastore.preferences.core.Preferences.Key<String>,
+        ) {
+            if (sc.title.isNotBlank()) {
+                this[titleKey] = sc.title
+                this[subKey] = sc.subtitle
+                this[typeKey] = sc.type.name
+                this[idKey] = sc.targetId
+                if (sc.artPathOrUrl != null) this[artKey] = sc.artPathOrUrl else remove(artKey)
+            } else {
+                remove(titleKey)
+                remove(subKey)
+                remove(artKey)
+                remove(typeKey)
+                remove(idKey)
+            }
+        }
+
+        writeItem(shortcuts.shortcut1, MusicWidgetKeys.SHORTCUT_1_TITLE, MusicWidgetKeys.SHORTCUT_1_SUBTITLE, MusicWidgetKeys.SHORTCUT_1_ART, MusicWidgetKeys.SHORTCUT_1_TYPE, MusicWidgetKeys.SHORTCUT_1_ID)
+        writeItem(shortcuts.shortcut2, MusicWidgetKeys.SHORTCUT_2_TITLE, MusicWidgetKeys.SHORTCUT_2_SUBTITLE, MusicWidgetKeys.SHORTCUT_2_ART, MusicWidgetKeys.SHORTCUT_2_TYPE, MusicWidgetKeys.SHORTCUT_2_ID)
+        writeItem(shortcuts.shortcut3, MusicWidgetKeys.SHORTCUT_3_TITLE, MusicWidgetKeys.SHORTCUT_3_SUBTITLE, MusicWidgetKeys.SHORTCUT_3_ART, MusicWidgetKeys.SHORTCUT_3_TYPE, MusicWidgetKeys.SHORTCUT_3_ID)
+        writeItem(shortcuts.shortcut4, MusicWidgetKeys.SHORTCUT_4_TITLE, MusicWidgetKeys.SHORTCUT_4_SUBTITLE, MusicWidgetKeys.SHORTCUT_4_ART, MusicWidgetKeys.SHORTCUT_4_TYPE, MusicWidgetKeys.SHORTCUT_4_ID)
+        writeItem(shortcuts.shortcut5, MusicWidgetKeys.SHORTCUT_5_TITLE, MusicWidgetKeys.SHORTCUT_5_SUBTITLE, MusicWidgetKeys.SHORTCUT_5_ART, MusicWidgetKeys.SHORTCUT_5_TYPE, MusicWidgetKeys.SHORTCUT_5_ID)
+        writeItem(shortcuts.shortcut6, MusicWidgetKeys.SHORTCUT_6_TITLE, MusicWidgetKeys.SHORTCUT_6_SUBTITLE, MusicWidgetKeys.SHORTCUT_6_ART, MusicWidgetKeys.SHORTCUT_6_TYPE, MusicWidgetKeys.SHORTCUT_6_ID)
+        writeItem(shortcuts.shortcut7, MusicWidgetKeys.SHORTCUT_7_TITLE, MusicWidgetKeys.SHORTCUT_7_SUBTITLE, MusicWidgetKeys.SHORTCUT_7_ART, MusicWidgetKeys.SHORTCUT_7_TYPE, MusicWidgetKeys.SHORTCUT_7_ID)
+        writeItem(shortcuts.shortcut8, MusicWidgetKeys.SHORTCUT_8_TITLE, MusicWidgetKeys.SHORTCUT_8_SUBTITLE, MusicWidgetKeys.SHORTCUT_8_ART, MusicWidgetKeys.SHORTCUT_8_TYPE, MusicWidgetKeys.SHORTCUT_8_ID)
+
+        if (shortcuts.queueItems.isNotEmpty()) {
+            this[MusicWidgetKeys.QUEUE_ITEMS] = serializeWidgetQueueItems(shortcuts.queueItems)
+        } else {
+            remove(MusicWidgetKeys.QUEUE_ITEMS)
+        }
     }
 
     private fun MutablePreferences.writeInsights(insights: WidgetInsightsSnapshot) {
@@ -239,6 +305,60 @@ internal class MusicServiceWidgetUpdater(
             reportException(error)
             WidgetInsightsSnapshot.Empty
         }
+
+    private suspend fun loadShortcutsSnapshot(): WidgetShortcutsSnapshot =
+        try {
+            val queueItems = buildQueueItems()
+            val snapshot = loadWidgetShortcuts(queueItems)
+            
+            // Pre-cache shortcut art and top queue art in background
+            val urlsToCache = listOfNotNull(
+                snapshot.shortcut1.artPathOrUrl,
+                snapshot.shortcut2.artPathOrUrl,
+                snapshot.shortcut3.artPathOrUrl,
+                snapshot.shortcut4.artPathOrUrl,
+            ) + snapshot.queueItems.take(8).mapNotNull { it.artPathOrUrl }
+
+            urlsToCache.forEach { url ->
+                runCatching {
+                    val uri = Uri.parse(url)
+                    cacheAlbumArt(uri)
+                }
+            }
+
+            snapshot
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            reportException(error)
+            WidgetShortcutsSnapshot.Empty
+        }
+
+    private fun buildQueueItems(): List<WidgetQueueItem> {
+        val currentIdx = player.currentMediaItemIndex
+        val allItems = player.mediaItems
+        if (allItems.isEmpty()) return emptyList()
+
+        // Up next items starting after current track
+        val upcoming = if (currentIdx in allItems.indices) {
+            allItems.subList((currentIdx + 1).coerceAtMost(allItems.size), allItems.size)
+        } else {
+            allItems
+        }
+
+        return upcoming.take(20).mapNotNull { item ->
+            val meta = item.metadata ?: return@mapNotNull null
+            val durationSec = meta.duration ?: 0
+            val durationStr = if (durationSec > 0) makeTimeString(durationSec * 1000L) else ""
+            WidgetQueueItem(
+                title = meta.title ?: item.mediaMetadata.title?.toString() ?: "",
+                artist = meta.artists?.joinToString(", ") { it.name } ?: item.mediaMetadata.artist?.toString().orEmpty(),
+                artPathOrUrl = meta.thumbnailUrl ?: item.mediaMetadata.artworkUri?.toString(),
+                durationText = durationStr,
+                mediaId = meta.id ?: item.mediaId,
+            )
+        }
+    }
 
     private suspend fun cacheAlbumArt(uri: Uri): File? =
         withContext(Dispatchers.IO) {
@@ -288,9 +408,12 @@ internal class MusicServiceWidgetUpdater(
             try {
                 val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return@withContext null
                 val palette = Palette.from(bitmap).generate()
-                palette.getDarkVibrantColor(
-                    palette.getDominantColor(android.graphics.Color.DKGRAY),
-                )
+                palette.vibrantSwatch?.rgb
+                    ?: palette.dominantSwatch?.rgb
+                    ?: palette.mutedSwatch?.rgb
+                    ?: palette.darkVibrantSwatch?.rgb
+                    ?: palette.lightVibrantSwatch?.rgb
+                    ?: palette.getDominantColor(android.graphics.Color.DKGRAY)
             } catch (_: Exception) {
                 null
             }
@@ -309,13 +432,17 @@ internal class MusicServiceWidgetUpdater(
         val playbackPosition: Float,
         val artPath: String?,
         val dominantColor: Int?,
+        val mediaId: String?,
+        val duration: Int,
         val insights: WidgetInsightsSnapshot,
+        val shortcuts: WidgetShortcutsSnapshot = WidgetShortcutsSnapshot.Empty,
     )
 
     private data class WidgetTarget(
         val widgetClass: Class<out GlanceAppWidget>,
         val widget: GlanceAppWidget,
         val requiresInsights: Boolean = false,
+        val requiresShortcuts: Boolean = false,
     )
 
     private companion object {
@@ -329,12 +456,30 @@ internal class MusicServiceWidgetUpdater(
                     widgetClass = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget::class.java,
                     widget = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget(),
                 ),
+                WidgetTarget(
+                    widgetClass = moe.rgsekai.sekaitune.widget.NowPlayingLyricsWidget::class.java,
+                    widget = moe.rgsekai.sekaitune.widget.NowPlayingLyricsWidget(),
+                ),
+                WidgetTarget(
+                    widgetClass = moe.rgsekai.sekaitune.widget.YourLibraryShortcutsWidget::class.java,
+                    widget = moe.rgsekai.sekaitune.widget.YourLibraryShortcutsWidget(),
+                    requiresShortcuts = true,
+                ),
             )
         val progressWidgets: List<WidgetTarget> =
             listOf(
                 WidgetTarget(
                     widgetClass = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget::class.java,
                     widget = moe.rgsekai.sekaitune.widget.NowPlayingCardWidget(),
+                ),
+                WidgetTarget(
+                    widgetClass = moe.rgsekai.sekaitune.widget.NowPlayingLyricsWidget::class.java,
+                    widget = moe.rgsekai.sekaitune.widget.NowPlayingLyricsWidget(),
+                ),
+                WidgetTarget(
+                    widgetClass = moe.rgsekai.sekaitune.widget.YourLibraryShortcutsWidget::class.java,
+                    widget = moe.rgsekai.sekaitune.widget.YourLibraryShortcutsWidget(),
+                    requiresShortcuts = true,
                 ),
             )
     }

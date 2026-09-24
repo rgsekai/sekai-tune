@@ -973,6 +973,16 @@
     <string name="widget_play_pause_description">A minimal single-button widget to control playback.</string>
     <string name="widget_now_playing_card_name">Now Playing Card</string>
     <string name="widget_now_playing_card_description">Now playing music card with artwork, playback controls, progress bar, and like button.</string>
+    <string name="widget_now_playing_lyrics_name">Now Playing + Lyrics</string>
+    <string name="widget_now_playing_lyrics_description">Now playing card with synced lyrics, transport controls, and album art theming.</string>
+    <string name="widget_loading_lyrics">Loading lyrics…</string>
+    <string name="widget_no_lyrics_found">No lyrics available</string>
+    <string name="widget_no_song_playing">No song is currently playing</string>
+    <string name="widget_lyrics">Lyrics</string>
+    <string name="widget_your_library_shortcuts_name">Your Library Shortcuts</string>
+    <string name="widget_your_library_shortcuts_description">Now playing card with quick access shortcut tiles to your favorite playlists and songs, plus up-next queue preview.</string>
+    <string name="widget_queue_empty">Queue is empty</string>
+    <string name="widget_shortcuts_empty">No shortcuts available</string>
 </resources>
 
 

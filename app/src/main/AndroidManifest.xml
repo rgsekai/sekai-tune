@@ -310,6 +310,30 @@
                 android:resource="@xml/widget_now_playing_card_info" />
         </receiver>
 
+        <receiver
+            android:name=".widget.NowPlayingLyricsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_now_playing_lyrics_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_now_playing_lyrics_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.YourLibraryShortcutsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_your_library_shortcuts_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_your_library_shortcuts_info" />
+        </receiver>
+
 
         <meta-data
             android:name="com.google.android.gms.car.application"

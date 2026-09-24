@@ -302,6 +302,9 @@ class MusicService :
     internal lateinit var loadWidgetInsightsUseCase: LoadWidgetInsightsUseCase
 
     @Inject
+    internal lateinit var loadWidgetShortcutsUseCase: moe.rgsekai.sekaitune.widget.LoadWidgetShortcutsUseCase
+
+    @Inject
     lateinit var resolveAudioStreamUseCase: moe.rgsekai.sekaitune.playback.stream.ResolveAudioStreamUseCase
 
     @Inject
@@ -1064,6 +1067,7 @@ class MusicService :
                 player = player,
                 scope = scope,
                 loadWidgetInsights = loadWidgetInsightsUseCase,
+                loadWidgetShortcuts = loadWidgetShortcutsUseCase,
             )
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -7970,6 +7974,59 @@ class MusicService :
                             player.prepare()
                             player.play()
                         }
+                    }
+
+                    "moe.rgsekai.sekaitune.WIDGET_PLAY_LIKED_SONGS" -> {
+                        val likedSongs = database.likedSongs(
+                            sortType = moe.rgsekai.sekaitune.constants.SongSortType.CREATE_DATE,
+                            descending = true
+                        ).first()
+                        if (likedSongs.isNotEmpty()) {
+                            playQueue(
+                                ListQueue(
+                                    title = getString(R.string.liked),
+                                    items = likedSongs.map { it.toMediaItem() },
+                                ),
+                                playWhenReady = true,
+                            )
+                        }
+                    }
+
+                    "moe.rgsekai.sekaitune.WIDGET_PLAY_PLAYLIST" -> {
+                        val playlistId = intent.getStringExtra(moe.rgsekai.sekaitune.widget.EXTRA_PLAYLIST_ID)
+                        if (!playlistId.isNullOrBlank()) {
+                            val playlist = database.playlist(playlistId).first()
+                            val songs = database.playlistSongs(playlistId).first().map { it.song }
+                            if (songs.isNotEmpty()) {
+                                playQueue(
+                                    ListQueue(
+                                        title = playlist?.title ?: "Playlist",
+                                        items = songs.map { it.toMediaItem() },
+                                    ),
+                                    playWhenReady = true,
+                                )
+                            }
+                        }
+                    }
+
+                    "moe.rgsekai.sekaitune.WIDGET_PLAY_SONG" -> {
+                        val songId = intent.getStringExtra(moe.rgsekai.sekaitune.widget.EXTRA_SONG_ID)
+                        if (!songId.isNullOrBlank()) {
+                            val song = database.song(songId).first()
+                            if (song != null) {
+                                playQueue(
+                                    ListQueue(
+                                        title = song.title,
+                                        items = listOf(song.toMediaItem()),
+                                    ),
+                                    playWhenReady = true,
+                                )
+                            }
+                        }
+                    }
+
+                    "moe.rgsekai.sekaitune.WIDGET_TOGGLE_LIKE" -> {
+                        toggleLike()
                     }
                 }
             }

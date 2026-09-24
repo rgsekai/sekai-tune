@@ -51,6 +51,11 @@ internal data class WidgetPlaybackState(
     val playbackPosition: Float,
     val artPath: String?,
     val dominantColor: Int?,
+    val mediaId: String?,
+    val duration: Int,
+    val showLyrics: Boolean,
+    val lyricsText: String?,
+    val lyricsStatus: String?,
 )
 
 internal fun Preferences.toWidgetPlaybackState(context: Context): WidgetPlaybackState =
@@ -64,6 +69,11 @@ internal fun Preferences.toWidgetPlaybackState(context: Context): WidgetPlayback
         playbackPosition = (this[MusicWidgetKeys.PLAYBACK_POSITION] ?: 0f).coerceIn(0f, 1f),
         artPath = this[MusicWidgetKeys.ART_PATH],
         dominantColor = this[MusicWidgetKeys.DOMINANT_COLOR],
+        mediaId = this[MusicWidgetKeys.TRACK_MEDIA_ID],
+        duration = this[MusicWidgetKeys.TRACK_DURATION] ?: 0,
+        showLyrics = this[MusicWidgetKeys.SHOW_LYRICS] ?: false,
+        lyricsText = this[MusicWidgetKeys.LYRICS_TEXT],
+        lyricsStatus = this[MusicWidgetKeys.LYRICS_STATUS] ?: "IDLE",
     )
 
 internal data class WidgetPalette(
@@ -89,7 +99,7 @@ internal fun rememberWidgetPalette(dominantColor: Int?): WidgetPalette =
         val scheme = dynamicColorScheme(
             seedColor = seed,
             isDark = true,
-            style = PaletteStyle.TonalSpot,
+            style = PaletteStyle.Vibrant,
         )
 
         val primary = scheme.primary
@@ -98,10 +108,23 @@ internal fun rememberWidgetPalette(dominantColor: Int?): WidgetPalette =
         val onPrimaryContainer = scheme.onPrimaryContainer
         val secondaryContainer = scheme.secondaryContainer
         val onSecondaryContainer = scheme.onSecondaryContainer
-        val surface = scheme.surface
-        val onSurface = scheme.onSurface
+        
+        // Use a rich, distinct colored surface derived from the seed/primary container
+        // to achieve the Spotify-style mid-tone hue shift (plum, olive, rose, teal, etc.)
+        val surface = if (dominantColor != null) {
+            // Blend primaryContainer / surfaceVariant for vibrant yet legible backdrop
+            Color(
+                red = (seed.red * 0.35f + scheme.surfaceVariant.red * 0.65f).coerceIn(0f, 1f),
+                green = (seed.green * 0.35f + scheme.surfaceVariant.green * 0.65f).coerceIn(0f, 1f),
+                blue = (seed.blue * 0.35f + scheme.surfaceVariant.blue * 0.65f).coerceIn(0f, 1f),
+                alpha = 1f,
+            )
+        } else {
+            scheme.surface
+        }
+        val onSurface = Color.White
         val surfaceVariant = scheme.surfaceVariant
-        val onSurfaceVariant = scheme.onSurfaceVariant
+        val onSurfaceVariant = Color(0xCCFFFFFF)
         val outline = scheme.outline
 
         WidgetPalette(
@@ -116,8 +139,8 @@ internal fun rememberWidgetPalette(dominantColor: Int?): WidgetPalette =
             secondaryContainer = ColorProvider(secondaryContainer),
             onSecondaryContainer = ColorProvider(onSecondaryContainer),
             outline = ColorProvider(outline),
-            progress = ColorProvider(primary),
-            progressTrack = ColorProvider(outline.copy(alpha = 0.25f)),
+            progress = ColorProvider(Color.White),
+            progressTrack = ColorProvider(Color(0x40FFFFFF)),
         )
     }
 
@@ -199,6 +222,8 @@ internal fun skipPreviousAction(): Action = actionRunCallback<SkipPrevAction>()
 
 internal fun likeToggleAction(): Action = actionRunCallback<LikeAction>()
 
+internal fun lyricsToggleAction(): Action = actionRunCallback<LyricsToggleAction>()
+
 private object WidgetArtworkCache {
     private const val CacheSizeBytes = 4 * 1024 * 1024
 
@@ -211,31 +236,52 @@ private object WidgetArtworkCache {
         }
 
     fun decode(
-        path: String,
+        pathOrUrl: String,
         context: Context,
         targetSize: Dp,
     ): Bitmap? {
-        val file = File(path)
-        if (!file.exists() || file.length() == 0L) return null
-
+        if (pathOrUrl.isBlank()) return null
         val targetPx =
             (targetSize.value * context.resources.displayMetrics.density)
                 .toInt()
                 .coerceAtLeast(64)
-        val cacheKey = "${file.absolutePath}:${file.lastModified()}:$targetPx"
+        val cacheKey = "$pathOrUrl:$targetPx"
         cache.get(cacheKey)?.let { return it }
 
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.absolutePath, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-
-        val options =
-            BitmapFactory.Options().apply {
-                inSampleSize = calculateInSampleSize(bounds, targetPx, targetPx)
+        val file = File(pathOrUrl)
+        if (file.exists() && file.length() > 0L) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            if (bounds.outWidth > 0 && bounds.outHeight > 0) {
+                val options =
+                    BitmapFactory.Options().apply {
+                        inSampleSize = calculateInSampleSize(bounds, targetPx, targetPx)
+                    }
+                return BitmapFactory.decodeFile(file.absolutePath, options)?.also {
+                    cache.put(cacheKey, it)
+                }
             }
-        return BitmapFactory.decodeFile(file.absolutePath, options)?.also {
-            cache.put(cacheKey, it)
         }
+
+        // Support cached images from Coil / http / content URIs
+        if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://") || pathOrUrl.startsWith("content://")) {
+            val cachedFile = File(context.cacheDir, "widget_art_${Integer.toHexString(pathOrUrl.hashCode())}.jpg")
+            if (cachedFile.exists() && cachedFile.length() > 0L) {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(cachedFile.absolutePath, bounds)
+                if (bounds.outWidth > 0 && bounds.outHeight > 0) {
+                    val options =
+                        BitmapFactory.Options().apply {
+                            inSampleSize = calculateInSampleSize(bounds, targetPx, targetPx)
+                        }
+                    return BitmapFactory.decodeFile(cachedFile.absolutePath, options)?.also {
+                        cache.put(cacheKey, it)
+                    }
+                }
+            }
+        }
+
+        return null
     }
 }
 

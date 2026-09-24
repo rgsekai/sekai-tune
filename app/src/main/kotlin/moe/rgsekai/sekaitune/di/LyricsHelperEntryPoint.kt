@@ -10,6 +10,7 @@ package moe.rgsekai.sekaitune.di
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import moe.rgsekai.sekaitune.db.MusicDatabase
 import moe.rgsekai.sekaitune.lyrics.LyricsHelper
 import moe.rgsekai.sekaitune.lyrics.LyricsPreloadManager
 
@@ -19,6 +20,8 @@ interface LyricsHelperEntryPoint {
     fun lyricsHelper(): LyricsHelper
 
     fun lyricsPreloadManager(): LyricsPreloadManager
+
+    fun database(): MusicDatabase
 }
 
 
