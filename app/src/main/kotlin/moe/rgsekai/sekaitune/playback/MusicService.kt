@@ -6044,6 +6044,7 @@ class MusicService :
         if (!isCrossfading && !crossfadeHandoffInProgress) {
             scheduleCrossfade()
         }
+        widgetUpdater.update()
         widgetUpdater.updateProgressTracking()
     }
 

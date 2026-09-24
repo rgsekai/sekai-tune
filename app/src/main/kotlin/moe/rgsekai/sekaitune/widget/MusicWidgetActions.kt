@@ -182,7 +182,7 @@ private suspend fun toggleLyrics(
     }
 }
 
-private suspend fun fetchLyricsForWidget(
+internal suspend fun fetchLyricsForWidget(
     context: Context,
     glanceId: GlanceId,
     mediaId: String?,

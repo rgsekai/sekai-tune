@@ -643,7 +643,7 @@ object LyricsUtils {
             val mid = (low + high).ushr(1)
             val midTime = lines[mid].time
 
-            if (midTime < target) {
+            if (midTime <= target) {
                 low = mid + 1
             } else {
                 high = mid - 1

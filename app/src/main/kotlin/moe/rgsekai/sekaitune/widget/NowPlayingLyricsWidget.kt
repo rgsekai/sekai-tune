@@ -25,8 +25,6 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.cornerRadius
-import androidx.glance.appwidget.lazy.LazyColumn
-import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
@@ -369,7 +367,7 @@ private fun FullLyricsLayout(
                 modifier = GlanceModifier
                     .fillMaxWidth()
                     .defaultWeight()
-                    .padding(top = 8.dp, bottom = 4.dp),
+                    .padding(vertical = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 when {
@@ -405,39 +403,73 @@ private fun FullLyricsLayout(
                     }
                     else -> {
                         val parsedEntries = parseLyricsFlexible(state.lyricsText)
+                            .filter { it.text.isNotBlank() }
+
                         if (parsedEntries.isEmpty()) {
-                            val cleanText = LyricsUtils.displayLyricsText(state.lyricsText)
                             Text(
-                                text = cleanText.ifBlank { state.lyricsText },
+                                text = context.getString(R.string.widget_no_lyrics_found),
                                 style = TextStyle(
-                                    color = ColorProvider(Color.White),
+                                    color = ColorProvider(Color(0x99FFFFFF)),
                                     fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Start,
+                                    textAlign = TextAlign.Center,
                                 ),
                             )
                         } else {
-                            val positionMs = (state.playbackPosition * state.duration * 1000f).toLong()
-                            val currentIdx = LyricsUtils.findCurrentLineIndex(parsedEntries, positionMs)
+                            val isSynced = parsedEntries.any { it.time >= 0L }
+                            val currentIdx = if (isSynced) {
+                                val positionMs = (state.playbackPosition * state.duration * 1000f).toLong()
+                                LyricsUtils.findCurrentLineIndex(parsedEntries, positionMs)
+                            } else {
+                                ((state.playbackPosition.coerceIn(0f, 1f)) * (parsedEntries.size - 1)).toInt().coerceIn(0, parsedEntries.lastIndex)
+                            }
 
-                            LazyColumn(
-                                modifier = GlanceModifier.fillMaxSize(),
+                            // 7 symmetric slots (-3 to +3) keeping active line (offset 0) locked in the exact dead center
+                            val slots = listOf(-3, -2, -1, 0, 1, 2, 3)
+
+                            Column(
+                                modifier = GlanceModifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                itemsIndexed(parsedEntries) { index, entry ->
-                                    val isCurrent = index == currentIdx
+                                slots.forEach { offset ->
+                                    val entryIdx = currentIdx + offset
+                                    val entry = parsedEntries.getOrNull(entryIdx)
+                                    val absOffset = kotlin.math.abs(offset)
+
+                                    val textColor = when {
+                                        offset == 0 -> ColorProvider(Color.White)
+                                        absOffset == 1 -> ColorProvider(Color(0xEEFFFFFF))
+                                        absOffset == 2 -> ColorProvider(Color(0x99FFFFFF))
+                                        else -> ColorProvider(Color(0x4DFFFFFF))
+                                    }
+                                    val fontSize = when {
+                                        offset == 0 -> 26.sp
+                                        absOffset == 1 -> 19.sp
+                                        absOffset == 2 -> 16.sp
+                                        else -> 13.sp
+                                    }
+                                    val fontWeight = when {
+                                        offset == 0 -> FontWeight.Bold
+                                        absOffset == 1 -> FontWeight.Bold
+                                        absOffset == 2 -> FontWeight.Medium
+                                        else -> FontWeight.Normal
+                                    }
+
                                     Box(
                                         modifier = GlanceModifier
                                             .fillMaxWidth()
-                                            .padding(vertical = 6.dp),
+                                            .defaultWeight(),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
-                                            text = entry.text.ifBlank { "♪" },
+                                            text = entry?.text?.ifBlank { "♪" } ?: "\u00A0",
+                                            maxLines = 2,
                                             style = TextStyle(
-                                                color = if (isCurrent) ColorProvider(Color.White) else ColorProvider(Color(0x55FFFFFF)),
-                                                fontSize = if (isCurrent) 20.sp else 15.sp,
-                                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (entry != null) textColor else ColorProvider(Color.Transparent),
+                                                fontSize = fontSize,
+                                                fontWeight = fontWeight,
                                                 textAlign = TextAlign.Center,
                                             ),
                                         )
@@ -586,6 +618,13 @@ private fun parseLyricsFlexible(lyrics: String?): List<LyricsEntry> {
     return when {
         LyricsUtils.isTtml(normalized) -> runCatching { LyricsUtils.parseTtml(normalized) }.getOrElse { emptyList() }
         LyricsUtils.isLineSyncedLrc(normalized) -> runCatching { LyricsUtils.parseLyrics(normalized) }.getOrElse { emptyList() }
-        else -> emptyList()
+        else -> {
+            normalized.lines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("[") }
+                .map { LyricsEntry(time = -1L, text = it) }
+        }
     }
 }
+
+

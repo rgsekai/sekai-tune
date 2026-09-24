@@ -95,7 +95,7 @@ internal class MusicServiceWidgetUpdater(
 
     fun updateProgressTracking() {
         progressJob?.cancel()
-        if (player.isPlaying && player.duration > 0) {
+        if (player.isPlaying) {
             progressJob =
                 scope.launch(SilentHandler) {
                     while (isActive && player.isPlaying) {
@@ -143,6 +143,7 @@ internal class MusicServiceWidgetUpdater(
     }
 
     private suspend fun updateProgress(progress: Float) {
+        val currentDurationSec = if (player.duration > 0) (player.duration / 1000).toInt() else 0
         progressWidgets.forEach { target ->
             val ids = GlanceAppWidgetManager(service).getGlanceIds(target.widgetClass)
             if (ids.isEmpty()) return@forEach
@@ -151,6 +152,9 @@ internal class MusicServiceWidgetUpdater(
                 updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
                     prefs.toMutablePreferences().apply {
                         this[MusicWidgetKeys.PLAYBACK_POSITION] = progress
+                        if (currentDurationSec > 0 && (prefs[MusicWidgetKeys.TRACK_DURATION] ?: 0) <= 0) {
+                            this[MusicWidgetKeys.TRACK_DURATION] = currentDurationSec
+                        }
                     }
                 }
             }
@@ -172,19 +176,47 @@ internal class MusicServiceWidgetUpdater(
                 else -> snapshot
             }
 
+        val idsNeedingLyrics = mutableListOf<androidx.glance.GlanceId>()
+
         ids.forEach { id ->
             updateAppWidgetState(service, PreferencesGlanceStateDefinition, id) { prefs ->
                 val prevMediaId = prefs[MusicWidgetKeys.TRACK_MEDIA_ID]
+                val showLyrics = prefs[MusicWidgetKeys.SHOW_LYRICS] ?: false
+                val trackChanged = prevMediaId != null && targetSnapshot.mediaId != null && prevMediaId != targetSnapshot.mediaId
+                val existingLyrics = prefs[MusicWidgetKeys.LYRICS_TEXT]
+                val existingStatus = prefs[MusicWidgetKeys.LYRICS_STATUS]
+
+                if (showLyrics && target.widgetClass == moe.rgsekai.sekaitune.widget.NowPlayingLyricsWidget::class.java) {
+                    if (trackChanged || existingLyrics.isNullOrBlank() || existingStatus == "LOADING" || existingStatus == "IDLE") {
+                        idsNeedingLyrics.add(id)
+                    }
+                }
+
                 prefs.toMutablePreferences().apply {
-                    if (prevMediaId != null && targetSnapshot.mediaId != null && prevMediaId != targetSnapshot.mediaId) {
+                    if (trackChanged) {
                         remove(MusicWidgetKeys.LYRICS_TEXT)
-                        this[MusicWidgetKeys.LYRICS_STATUS] = "IDLE"
+                        this[MusicWidgetKeys.LYRICS_STATUS] = if (showLyrics) "LOADING" else "IDLE"
                     }
                     writeSnapshot(targetSnapshot)
                 }
             }
         }
         target.widget.updateAll(service)
+
+        if (idsNeedingLyrics.isNotEmpty() && targetSnapshot.mediaId != null && targetSnapshot.title.isNotBlank() && targetSnapshot.title != service.getString(R.string.no_track_playing)) {
+            scope.launch(Dispatchers.IO + SilentHandler) {
+                idsNeedingLyrics.forEach { id ->
+                    moe.rgsekai.sekaitune.widget.fetchLyricsForWidget(
+                        context = service,
+                        glanceId = id,
+                        mediaId = targetSnapshot.mediaId,
+                        title = targetSnapshot.title,
+                        artist = targetSnapshot.artist,
+                        duration = targetSnapshot.duration,
+                    )
+                }
+            }
+        }
     }
 
     private fun MutablePreferences.writeSnapshot(snapshot: WidgetSnapshot) {
