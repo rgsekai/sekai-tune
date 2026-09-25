@@ -267,14 +267,14 @@ fun QuickPicksSection(
             BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
                 val heroHeight =
                     when {
-                        maxWidth >= 840.dp -> 380.dp
-                        maxWidth >= 600.dp -> 356.dp
-                        else -> 332.dp
+                        maxWidth >= 840.dp -> 340.dp
+                        maxWidth >= 600.dp -> 316.dp
+                        else -> 292.dp
                     }
                 val heroMaxWidth =
-                    (maxWidth - 48.dp)
-                        .coerceAtLeast(232.dp)
-                        .coerceAtMost(440.dp)
+                    (maxWidth - 56.dp)
+                        .coerceAtLeast(220.dp)
+                        .coerceAtMost(390.dp)
                 val density = LocalDensity.current
                 val requestWidthPx = with(density) { heroMaxWidth.roundToPx().coerceAtLeast(1) }
                 val requestHeightPx = with(density) { heroHeight.roundToPx().coerceAtLeast(1) }
