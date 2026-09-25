@@ -145,7 +145,6 @@ fun Thumbnail(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val error by playerConnection.error.collectAsState()
-    val queueTitle by playerConnection.queueTitle.collectAsState()
 
     val swipeThumbnail by rememberPreference(SwipeThumbnailKey, true)
 
@@ -373,41 +372,15 @@ fun Thumbnail(
                     .fillMaxSize()
                     .statusBarsPadding(),
         ) {
-            Column(
+            // Thumbnail content
+            BoxWithConstraints(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Now Playing header
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.now_playing),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = textBackgroundColor,
-                    )
-                    // Show album title or queue title
-                    val playingFrom = queueTitle ?: mediaMetadata?.album?.title
-                    if (!playingFrom.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = playingFrom,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = textBackgroundColor.copy(alpha = 0.8f),
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee(),
-                        )
-                    }
-                }
-
-                // Thumbnail content
-                BoxWithConstraints(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
-                    val containerMaxWidth = maxWidth
+                val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
+                val containerMaxWidth = maxWidth
+                val containerMaxHeight = maxHeight
+                val thumbnailSize = minOf(containerMaxWidth - 40.dp, containerMaxHeight - 16.dp).coerceAtLeast(0.dp)
 
                     LazyHorizontalGrid(
                         state = thumbnailLazyGridState,
@@ -503,7 +476,7 @@ fun Thumbnail(
                                     Modifier
                                         .width(horizontalLazyGridItemWidth)
                                         .fillMaxSize()
-                                        .padding(horizontal = PlayerHorizontalPadding)
+                                        .padding(horizontal = 20.dp)
                                         .pointerInput(Unit) {
                                             detectTapGestures(
                                                 onDoubleTap = { offset ->
@@ -550,7 +523,7 @@ fun Thumbnail(
                                 Box(
                                     modifier =
                                         Modifier
-                                            .size(containerMaxWidth - (PlayerHorizontalPadding * 2))
+                                            .size(thumbnailSize)
                                             .clip(RoundedCornerShape(thumbnailCornerRadius.dp)),
                                 ) {
                                     if (hidePlayerThumbnail) {
@@ -698,7 +671,6 @@ fun Thumbnail(
                     }
                 }
             }
-        }
 
         // Seek effect
         LaunchedEffect(showSeekEffect) {
