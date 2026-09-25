@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -1517,6 +1518,103 @@ fun HomePageSectionTitle(
     )
 }
 
+/**
+ * Quick action pill with Music Together and Shuffle in a unified glass style
+ */
+@Composable
+fun HomeQuickActionsPill(
+    onMusicTogetherClick: () -> Unit,
+    onShuffleClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val glassColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f)
+    val glassBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    val musicTogetherLabel = stringResource(R.string.music_together).removePrefix("Sekai Tune ").trim()
 
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .height(48.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Music Together (Left half)
+        Surface(
+            onClick = onMusicTogetherClick,
+            shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = 8.dp, bottomEnd = 8.dp),
+            color = glassColor,
+            border = glassBorder,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.multi_user),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = musicTogetherLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
 
+        // Shuffle (Right half)
+        Surface(
+            onClick = onShuffleClick,
+            shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 24.dp, bottomEnd = 24.dp),
+            color = glassColor,
+            border = glassBorder,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.shuffle),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.shuffle),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
 

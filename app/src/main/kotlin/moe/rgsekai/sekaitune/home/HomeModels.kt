@@ -16,6 +16,7 @@ import moe.rgsekai.sekaitune.db.entities.Song
 import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
 import moe.rgsekai.sekaitune.innertube.pages.HomePage
 import moe.rgsekai.sekaitune.models.SimilarRecommendation
+import moe.rgsekai.sekaitune.playback.PlayerConnection
 
 sealed interface HomeScreenState {
     data object Loading : HomeScreenState
@@ -61,6 +62,10 @@ sealed interface HomeAction {
 
     data class LoadMore(
         val continuation: String?,
+    ) : HomeAction
+
+    data class Shuffle(
+        val playerConnection: PlayerConnection,
     ) : HomeAction
 }
 

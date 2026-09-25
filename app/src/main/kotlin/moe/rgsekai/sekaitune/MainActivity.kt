@@ -2018,118 +2018,12 @@ class MainActivity : ComponentActivity() {
                                                             end = FloatingToolbarHorizontalPadding,
                                                             bottom = bottomInset + floatingBarsBottomPadding,
                                                         ).height(navVisibleHeight),
-                                                onShuffleClick =
-                                                    if (shouldShowHomeShuffleButton) {
-                                                        {
-                                                            val useLocalSource =
-                                                                when {
-                                                                    allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> {
-                                                                        Random.nextFloat() <
-                                                                            0.5f
-                                                                    }
-
-                                                                    allLocalItems.isNotEmpty() -> {
-                                                                        true
-                                                                    }
-
-                                                                    else -> {
-                                                                        false
-                                                                    }
-                                                                }
-
-                                                            coroutineScope.launch(Dispatchers.Main) {
-                                                                if (useLocalSource) {
-                                                                    when (val luckyItem = allLocalItems.random()) {
-                                                                        is Song -> {
-                                                                            playerConnection?.playQueue(
-                                                                                if (luckyItem.song.isLocal) {
-                                                                                    ListQueue(items = listOf(luckyItem.toMediaItem()))
-                                                                                } else {
-                                                                                    YouTubeQueue.radio(luckyItem.toMediaMetadata())
-                                                                                },
-                                                                            )
-                                                                        }
-
-                                                                        is Album -> {
-                                                                            val albumWithSongs =
-                                                                                withContext(Dispatchers.IO) {
-                                                                                    database.albumWithSongs(luckyItem.id).first()
-                                                                                }
-
-                                                                            albumWithSongs?.let {
-                                                                                playerConnection?.playQueue(LocalAlbumRadio(it))
-                                                                            }
-                                                                        }
-
-                                                                        is Artist -> {
-                                                                            Unit
-                                                                        }
-
-                                                                        is Playlist -> {
-                                                                            Unit
-                                                                        }
-                                                                    }
-                                                                } else {
-                                                                    when (val luckyItem = allYtItems.random()) {
-                                                                        is SongItem -> {
-                                                                            playerConnection?.playQueue(
-                                                                                YouTubeQueue.radio(luckyItem.toMediaMetadata()),
-                                                                            )
-                                                                        }
-
-                                                                        is AlbumItem -> {
-                                                                            playerConnection?.playQueue(
-                                                                                YouTubeAlbumRadio(luckyItem.playlistId),
-                                                                            )
-                                                                        }
-
-                                                                        is ArtistItem -> {
-                                                                            luckyItem.radioEndpoint?.let {
-                                                                                playerConnection?.playQueue(YouTubeQueue(it))
-                                                                            }
-                                                                        }
-
-                                                                        is PlaylistItem -> {
-                                                                            luckyItem.playEndpoint?.let {
-                                                                                playerConnection?.playQueue(YouTubeQueue.playlist(it))
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    } else {
-                                                        null
-                                                    },
-                                                shuffleIconRes = if (shouldShowHomeShuffleButton) R.drawable.shuffle else null,
-                                                shuffleContentDescription =
-                                                    if (shouldShowHomeShuffleButton) {
-                                                        stringResource(
-                                                            R.string.shuffle,
-                                                        )
-                                                    } else {
-                                                        ""
-                                                    },
-                                                onMusicRecognitionClick =
-                                                    if (shouldShowHomeShuffleButton) {
-                                                        { navController.navigate(MusicRecognitionRoute) }
-                                                    } else {
-                                                        null
-                                                    },
-                                                musicRecognitionContentDescription =
-                                                    if (shouldShowHomeShuffleButton) {
-                                                        stringResource(
-                                                            R.string.music_recognition,
-                                                        )
-                                                    } else {
-                                                        ""
-                                                    },
-                                                onMusicTogetherClick =
-                                                    if (shouldShowHomeShuffleButton) {
-                                                        { navController.navigate("settings/music_together") }
-                                                    } else {
-                                                        null
-                                                    },
+                                                onShuffleClick = null,
+                                                shuffleIconRes = null,
+                                                shuffleContentDescription = "",
+                                                onMusicRecognitionClick = null,
+                                                musicRecognitionContentDescription = "",
+                                                onMusicTogetherClick = null,
                                                 isSelected = { screen ->
                                                     navBackStackEntry?.destination?.hierarchy?.any { it.route == screen.route } ==
                                                         true

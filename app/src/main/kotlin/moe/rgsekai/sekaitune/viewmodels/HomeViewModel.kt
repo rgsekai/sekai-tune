@@ -36,6 +36,7 @@ import moe.rgsekai.sekaitune.db.MusicDatabase
 import moe.rgsekai.sekaitune.db.entities.*
 import moe.rgsekai.sekaitune.extensions.filterBlockedArtists
 import moe.rgsekai.sekaitune.extensions.toEnum
+import moe.rgsekai.sekaitune.extensions.toMediaItem
 import moe.rgsekai.sekaitune.home.HomeAction
 import moe.rgsekai.sekaitune.home.HomePresentationPreferences
 import moe.rgsekai.sekaitune.home.HomeScreenState
@@ -52,7 +53,18 @@ import moe.rgsekai.sekaitune.innertube.pages.HomePage
 import moe.rgsekai.sekaitune.innertube.utils.completed
 import moe.rgsekai.sekaitune.innertube.utils.hasYouTubeLoginCookie
 import moe.rgsekai.sekaitune.models.SimilarRecommendation
+import moe.rgsekai.sekaitune.models.toMediaMetadata
+import moe.rgsekai.sekaitune.playback.PlayerConnection
+import moe.rgsekai.sekaitune.playback.queues.ListQueue
+import moe.rgsekai.sekaitune.playback.queues.LocalAlbumRadio
+import moe.rgsekai.sekaitune.playback.queues.YouTubeAlbumRadio
+import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
+import moe.rgsekai.sekaitune.innertube.models.AlbumItem
+import moe.rgsekai.sekaitune.innertube.models.ArtistItem
+import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.utils.SavedAccount
+import kotlin.random.Random
+import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.utils.SpeedDialPinType
 import moe.rgsekai.sekaitune.utils.SyncUtils
 import moe.rgsekai.sekaitune.utils.dataStore
@@ -720,6 +732,74 @@ class HomeViewModel
                 HomeAction.Refresh -> refresh()
                 is HomeAction.SelectChip -> toggleChip(action.chip)
                 is HomeAction.LoadMore -> loadMoreYouTubeItems(action.continuation)
+                is HomeAction.Shuffle -> shuffle(action.playerConnection)
+            }
+        }
+
+        fun shuffle(playerConnection: PlayerConnection) {
+            val localItems = _allLocalItems.value
+            val ytItems = _allYtItems.value
+            val useLocalSource =
+                when {
+                    localItems.isNotEmpty() && ytItems.isNotEmpty() -> Random.nextFloat() < 0.5f
+                    localItems.isNotEmpty() -> true
+                    else -> false
+                }
+
+            viewModelScope.launch(Dispatchers.Main) {
+                if (useLocalSource) {
+                    when (val luckyItem = localItems.random()) {
+                        is Song -> {
+                            playerConnection.playQueue(
+                                if (luckyItem.song.isLocal) {
+                                    ListQueue(items = listOf(luckyItem.toMediaItem()))
+                                } else {
+                                    YouTubeQueue.radio(luckyItem.toMediaMetadata())
+                                },
+                            )
+                        }
+
+                        is Album -> {
+                            val albumWithSongs =
+                                withContext(Dispatchers.IO) {
+                                    database.albumWithSongs(luckyItem.id).first()
+                                }
+
+                            albumWithSongs?.let {
+                                playerConnection.playQueue(LocalAlbumRadio(it))
+                            }
+                        }
+
+                        is Artist -> Unit
+                        is Playlist -> Unit
+                    }
+                } else if (ytItems.isNotEmpty()) {
+                    when (val luckyItem = ytItems.random()) {
+                        is SongItem -> {
+                            playerConnection.playQueue(
+                                YouTubeQueue.radio(luckyItem.toMediaMetadata()),
+                            )
+                        }
+
+                        is AlbumItem -> {
+                            playerConnection.playQueue(
+                                YouTubeAlbumRadio(luckyItem.playlistId),
+                            )
+                        }
+
+                        is ArtistItem -> {
+                            luckyItem.radioEndpoint?.let {
+                                playerConnection.playQueue(YouTubeQueue(it))
+                            }
+                        }
+
+                        is PlaylistItem -> {
+                            luckyItem.playEndpoint?.let {
+                                playerConnection.playQueue(YouTubeQueue.playlist(it))
+                            }
+                        }
+                    }
+                }
             }
         }
 
