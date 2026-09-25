@@ -62,7 +62,6 @@ fun ContentSettings(navController: NavController) {
     val (hideExplicit, onHideExplicitChange) = rememberPreference(key = HideExplicitKey, defaultValue = false)
     val (hideVideo, onHideVideoChange) = rememberPreference(key = HideVideoKey, defaultValue = false)
     val (lengthTop, onLengthTopChange) = rememberPreference(key = TopSize, defaultValue = "50")
-    val (quickPicks, onQuickPicksChange) = rememberEnumPreference(key = QuickPicksKey, defaultValue = QuickPicks.QUICK_PICKS)
 
     Column(
         Modifier
@@ -211,23 +210,6 @@ fun ContentSettings(navController: NavController) {
                     value = lengthTop,
                     isInputValid = { it.toIntOrNull()?.let { num -> num > 0 } == true },
                     onValueChange = onLengthTopChange,
-                )
-            }
-
-            item {
-                ListPreference(
-                    title = { Text(stringResource(R.string.set_quick_picks)) },
-                    icon = { Icon(painterResource(R.drawable.home_outlined), null) },
-                    selectedValue = quickPicks,
-                    values = listOf(QuickPicks.QUICK_PICKS, QuickPicks.LAST_LISTEN, QuickPicks.DONT_SHOW),
-                    valueText = {
-                        when (it) {
-                            QuickPicks.QUICK_PICKS -> stringResource(R.string.quick_picks)
-                            QuickPicks.LAST_LISTEN -> stringResource(R.string.last_song_listened)
-                            QuickPicks.DONT_SHOW -> stringResource(R.string.dont_show)
-                        }
-                    },
-                    onValueSelected = onQuickPicksChange,
                 )
             }
         }

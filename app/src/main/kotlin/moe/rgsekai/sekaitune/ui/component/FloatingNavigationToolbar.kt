@@ -277,54 +277,6 @@ private fun FloatingToolbarOverflowAction(
             tonalElevation = 6.dp,
         ) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.music_recognition)) },
-                onClick = {
-                    fabMenuExpanded = false
-                    onMusicRecognitionClick?.invoke()
-                },
-                leadingIcon = {
-                    Surface(
-                        modifier = Modifier.size(40.dp),
-                        shape = CircleShape,
-                        color = floatingToolbarMenuIconContainerColor(pureBlack = pureBlack),
-                        contentColor = floatingToolbarMenuIconContentColor(pureBlack = pureBlack),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(R.drawable.mic),
-                                contentDescription =
-                                    musicRecognitionContentDescription.ifEmpty {
-                                        stringResource(R.string.music_recognition)
-                                    },
-                            )
-                        }
-                    }
-                },
-                enabled = onMusicRecognitionClick != null,
-                colors =
-                    MenuDefaults.itemColors(
-                        textColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurface,
-                        leadingIconColor = if (pureBlack) Color.White.copy(alpha = 0.82f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledTextColor =
-                            if (pureBlack) {
-                                Color.White.copy(
-                                    alpha = 0.38f,
-                                )
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            },
-                        disabledLeadingIconColor =
-                            if (pureBlack) {
-                                Color.White.copy(
-                                    alpha = 0.38f,
-                                )
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                            },
-                    ),
-            )
-
-            DropdownMenuItem(
                 text = { Text(stringResource(R.string.music_together)) },
                 onClick = {
                     fabMenuExpanded = false

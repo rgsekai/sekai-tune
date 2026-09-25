@@ -393,7 +393,7 @@ fun QuickPicksSection(
                                 text = song.song.title,
                                 style = MaterialTheme.typography.titleLargeEmphasized,
                                 color = Color.White,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(

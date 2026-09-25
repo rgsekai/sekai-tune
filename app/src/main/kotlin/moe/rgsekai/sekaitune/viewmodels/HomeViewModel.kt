@@ -30,8 +30,6 @@ import moe.rgsekai.sekaitune.constants.DataSyncIdKey
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
 import moe.rgsekai.sekaitune.constants.HideVideoKey
 import moe.rgsekai.sekaitune.constants.InnerTubeCookieKey
-import moe.rgsekai.sekaitune.constants.QuickPicks
-import moe.rgsekai.sekaitune.constants.QuickPicksKey
 import moe.rgsekai.sekaitune.constants.SpeedDialSongIdsKey
 import moe.rgsekai.sekaitune.constants.YtmSyncKey
 import moe.rgsekai.sekaitune.db.MusicDatabase
@@ -184,12 +182,6 @@ class HomeViewModel
         private val loadError = MutableStateFlow<Int?>(null)
         private val isLoadingMore = MutableStateFlow(false)
 
-        private val quickPicksMode =
-            context.dataStore.data
-                .map {
-                    it[QuickPicksKey].toEnum(QuickPicks.QUICK_PICKS)
-                }.distinctUntilChanged()
-
         private val quickPicks = MutableStateFlow<List<Song>?>(null)
         private val speedDialItems = MutableStateFlow<List<LocalItem>>(emptyList())
         private val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
@@ -335,50 +327,13 @@ class HomeViewModel
             return database.allSongs().first().toQuickPickSample()
         }
 
-        private fun lastListenQuickPicksFlow(): Flow<List<Song>> =
-            database
-                .lastEventSongId()
-                .distinctUntilChanged()
-                .flatMapLatest { lastSongId ->
-                    flow {
-                        if (!lastSongId.isNullOrBlank() && database.hasRelatedSongs(lastSongId)) {
-                            val relatedSongs = database.getRelatedSongs(lastSongId).first().toQuickPickSample()
-                            if (relatedSongs.isNotEmpty()) {
-                                emit(relatedSongs)
-                                return@flow
-                            }
-                        }
-
-                        emitAll(
-                            database
-                                .quickPicks()
-                                .distinctUntilSongIdsChanged()
-                                .map { songs -> quickPicksWithFallback(songs) },
-                        )
-                    }
-                }
-
         private fun observeQuickPicks() {
             viewModelScope.launch(Dispatchers.IO) {
-                quickPicksMode
-                    .flatMapLatest { mode ->
-                        when (mode) {
-                            QuickPicks.QUICK_PICKS -> {
-                                database
-                                    .quickPicks()
-                                    .distinctUntilSongIdsChanged()
-                                    .map { songs -> quickPicksWithFallback(songs) }
-                            }
-
-                            QuickPicks.LAST_LISTEN -> {
-                                lastListenQuickPicksFlow()
-                            }
-
-                            QuickPicks.DONT_SHOW -> {
-                                flowOf(null)
-                            }
-                        }
-                    }.catch { throwable ->
+                database
+                    .quickPicks()
+                    .distinctUntilSongIdsChanged()
+                    .map { songs -> quickPicksWithFallback(songs) }
+                    .catch { throwable ->
                         reportException(throwable)
                         emit(quickPicksWithFallback(emptyList()))
                     }.collect { picks ->
@@ -389,20 +344,7 @@ class HomeViewModel
         }
 
         private suspend fun refreshQuickPicks() {
-            val picks =
-                when (quickPicksMode.first()) {
-                    QuickPicks.QUICK_PICKS -> {
-                        quickPicksWithFallback(database.quickPicks().first())
-                    }
-
-                    QuickPicks.LAST_LISTEN -> {
-                        lastListenQuickPicksFlow().first()
-                    }
-
-                    QuickPicks.DONT_SHOW -> {
-                        null
-                    }
-                }
+            val picks = quickPicksWithFallback(database.quickPicks().first())
             quickPicks.value = picks
             updateAllLocalItems()
         }
