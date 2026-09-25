@@ -1703,14 +1703,6 @@ class MainActivity : ComponentActivity() {
                                                         )
                                                     }
                                                     TranslucentTopAppBarIconButton(
-                                                        onClick = { navController.navigate("new_release") },
-                                                    ) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.new_release),
-                                                            contentDescription = stringResource(R.string.new_release_albums),
-                                                        )
-                                                    }
-                                                    TranslucentTopAppBarIconButton(
                                                         onClick = { navController.navigate("settings") },
                                                     ) {
                                                         BadgedBox(badge = {
