@@ -93,11 +93,8 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.session.CommandButton
-import androidx.media3.session.MediaController
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.SessionToken
-import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -1109,12 +1106,7 @@ class MusicService :
         updateNotification()
         player.repeatMode = REPEAT_MODE_OFF
 
-        ColdStartTimer.addStage("MusicService: Requesting Session Token")
-        val sessionToken = SessionToken(this, ComponentName(this, MusicService::class.java))
-        val controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
-        controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
         ColdStartTimer.addStage("MusicService onCreate End")
-        controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
         scope.launch(Dispatchers.IO) {
             val prefs = dataStore.data.first()
             val repeatMode = prefs[RepeatModeKey] ?: REPEAT_MODE_OFF
@@ -1359,6 +1351,14 @@ class MusicService :
                         isRestoringPersistentState = true
                     }
 
+                    // Parallelize stream pre-warm for the persisted queue target song (for WIDGET_PLAY_PAUSE / auto-resume)
+                    val targetMediaId = persistedQueue?.items?.getOrNull(persistedQueue.mediaItemIndex)?.id
+                        ?: persistedQueue?.items?.firstOrNull()?.id
+                    if (!targetMediaId.isNullOrBlank()) {
+                        ColdStartTimer.addStage("Pre-Warm Persisted Target Start: $targetMediaId")
+                        preResolveAudioStream(targetMediaId)
+                    }
+
                     var restoredQueue = false
                     try {
                         persistedQueue?.let { queue ->
@@ -1466,6 +1466,9 @@ class MusicService :
                 .filterVideo(hideVideo)
 
         withContext(Dispatchers.Main) {
+            if (hydrationGeneration != restoredQueueHydrationGeneration.get()) {
+                return@withContext
+            }
             currentQueue = continuationQueue
             queueTitle = initialStatus.title
 
@@ -6536,15 +6539,7 @@ class MusicService :
 
         val lowDataModeActive = isLowDataModeActive()
         val authFingerprint = YouTube.currentPlaybackAuthState().fingerprint
-        val streamRequest =
-            moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest(
-                mediaId = mediaId,
-                quality = if (lowDataModeActive) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality,
-                networkMetered = lowDataModeActive,
-                purpose = moe.rgsekai.sekaitune.playback.stream.StreamPurpose.PLAYBACK,
-                preferredStreamClient = preferredStreamClient,
-                authState = YouTube.currentPlaybackAuthState(),
-            )
+        val streamRequest = buildPlaybackAudioStreamRequest(mediaId)
 
         if (::resolveAudioStreamUseCase.isInitialized) {
             resolveAudioStreamUseCase.peek(streamRequest)
@@ -7943,41 +7938,45 @@ class MusicService :
         if (action?.startsWith("moe.rgsekai.sekaitune.WIDGET_") == true) {
             ColdStartTimer.addStage("MusicService onStartCommand: Widget Action identified")
             widgetUpdater.setBuffering(true)
-            scope.launch {
-                ColdStartTimer.addStage("MusicService: Waiting for Queue Restore")
-                queueRestoreCompleted.first { it }
-                ColdStartTimer.addStage("MusicService: Queue Restore Done, Executing Action: $action")
-                when (action) {
-                    "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE" -> {
-                        ColdStartTimer.addStage("Widget Action: Play/Pause")
-                        if (player.isPlaying) {
-                            player.pause()
-                        } else {
-                            if (player.playbackState == Player.STATE_IDLE) {
-                                player.prepare()
+
+            // Eager stream resolution: Kick off network stream resolution immediately on Dispatchers.IO for shortcut actions
+            when (action) {
+                "moe.rgsekai.sekaitune.WIDGET_PLAY_SONG" -> {
+                    val songId = intent.getStringExtra(moe.rgsekai.sekaitune.widget.EXTRA_SONG_ID)
+                    if (!songId.isNullOrBlank()) {
+                        preResolveAudioStream(songId)
+                    }
+                }
+
+                "moe.rgsekai.sekaitune.WIDGET_PLAY_PLAYLIST" -> {
+                    val playlistId = intent.getStringExtra(moe.rgsekai.sekaitune.widget.EXTRA_PLAYLIST_ID)
+                    if (!playlistId.isNullOrBlank()) {
+                        ioScope.launch {
+                            val firstSongId = database.playlistSongs(playlistId).first().firstOrNull()?.song?.id
+                            if (!firstSongId.isNullOrBlank()) {
+                                preResolveAudioStream(firstSongId)
                             }
-                            player.play()
-                            ColdStartTimer.addStage("Widget Action: Play Execution")
                         }
                     }
+                }
 
-                    "moe.rgsekai.sekaitune.WIDGET_SKIP_NEXT" -> {
-                        if (player.hasNextMediaItem()) {
-                            player.seekToNext()
-                            player.prepare()
-                            player.play()
+                "moe.rgsekai.sekaitune.WIDGET_PLAY_LIKED_SONGS" -> {
+                    ioScope.launch {
+                        val firstLikedSongId = database.likedSongs(
+                            sortType = moe.rgsekai.sekaitune.constants.SongSortType.CREATE_DATE,
+                            descending = true
+                        ).first().firstOrNull()?.id
+                        if (!firstLikedSongId.isNullOrBlank()) {
+                            preResolveAudioStream(firstLikedSongId)
                         }
                     }
+                }
+            }
 
-                    "moe.rgsekai.sekaitune.WIDGET_SKIP_PREV" -> {
-                        if (player.hasPreviousMediaItem()) {
-                            player.seekToPrevious()
-                            player.prepare()
-                            player.play()
-                        }
-                    }
-
+            scope.launch {
+                when (action) {
                     "moe.rgsekai.sekaitune.WIDGET_PLAY_LIKED_SONGS" -> {
+                        ColdStartTimer.addStage("Widget Action: Play Liked Songs (Bypassing Queue Restore)")
                         val likedSongs = database.likedSongs(
                             sortType = moe.rgsekai.sekaitune.constants.SongSortType.CREATE_DATE,
                             descending = true
@@ -7994,6 +7993,7 @@ class MusicService :
                     }
 
                     "moe.rgsekai.sekaitune.WIDGET_PLAY_PLAYLIST" -> {
+                        ColdStartTimer.addStage("Widget Action: Play Playlist (Bypassing Queue Restore)")
                         val playlistId = intent.getStringExtra(moe.rgsekai.sekaitune.widget.EXTRA_PLAYLIST_ID)
                         if (!playlistId.isNullOrBlank()) {
                             val playlist = database.playlist(playlistId).first()
@@ -8011,6 +8011,7 @@ class MusicService :
                     }
 
                     "moe.rgsekai.sekaitune.WIDGET_PLAY_SONG" -> {
+                        ColdStartTimer.addStage("Widget Action: Play Song (Bypassing Queue Restore)")
                         val songId = intent.getStringExtra(moe.rgsekai.sekaitune.widget.EXTRA_SONG_ID)
                         if (!songId.isNullOrBlank()) {
                             val song = database.song(songId).first()
@@ -8026,8 +8027,44 @@ class MusicService :
                         }
                     }
 
-                    "moe.rgsekai.sekaitune.WIDGET_TOGGLE_LIKE" -> {
-                        toggleLike()
+                    else -> {
+                        ColdStartTimer.addStage("MusicService: Waiting for Queue Restore")
+                        queueRestoreCompleted.first { it }
+                        ColdStartTimer.addStage("MusicService: Queue Restore Done, Executing Action: $action")
+                        when (action) {
+                            "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE" -> {
+                                ColdStartTimer.addStage("Widget Action: Play/Pause")
+                                if (player.isPlaying) {
+                                    player.pause()
+                                } else {
+                                    if (player.playbackState == Player.STATE_IDLE) {
+                                        player.prepare()
+                                    }
+                                    player.play()
+                                    ColdStartTimer.addStage("Widget Action: Play Execution")
+                                }
+                            }
+
+                            "moe.rgsekai.sekaitune.WIDGET_SKIP_NEXT" -> {
+                                if (player.hasNextMediaItem()) {
+                                    player.seekToNext()
+                                    player.prepare()
+                                    player.play()
+                                }
+                            }
+
+                            "moe.rgsekai.sekaitune.WIDGET_SKIP_PREV" -> {
+                                if (player.hasPreviousMediaItem()) {
+                                    player.seekToPrevious()
+                                    player.prepare()
+                                    player.play()
+                                }
+                            }
+
+                            "moe.rgsekai.sekaitune.WIDGET_TOGGLE_LIKE" -> {
+                                toggleLike()
+                            }
+                        }
                     }
                 }
             }
@@ -8037,6 +8074,35 @@ class MusicService :
         super.onStartCommand(intent, flags, startId)
         ColdStartTimer.addStage("MusicService onStartCommand Exit")
         return START_NOT_STICKY
+    }
+
+    private fun buildPlaybackAudioStreamRequest(mediaId: String): moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest {
+        val lowDataModeActive = isLowDataModeActive()
+        return moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest(
+            mediaId = mediaId,
+            quality = if (lowDataModeActive) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality,
+            networkMetered = lowDataModeActive,
+            purpose = moe.rgsekai.sekaitune.playback.stream.StreamPurpose.PLAYBACK,
+            preferredStreamClient = preferredStreamClient,
+            authState = YouTube.currentPlaybackAuthState(),
+        )
+    }
+
+    private fun preResolveAudioStream(mediaId: String) {
+        if (mediaId.isBlank() || mediaId.isLocalMediaId() || mediaId.startsWith("content://") || mediaId.startsWith("file://")) return
+        if (!::resolveAudioStreamUseCase.isInitialized) return
+        ioScope.launch {
+            ColdStartTimer.addStage("Pre-Resolve Stream Start for $mediaId")
+            val request = buildPlaybackAudioStreamRequest(mediaId)
+            runCatching {
+                resolveAudioStreamUseCase.preload(request)
+            }.onSuccess {
+                ColdStartTimer.addStage("Pre-Resolve Stream Success for $mediaId")
+            }.onFailure { error ->
+                ColdStartTimer.addStage("Pre-Resolve Stream Failure for $mediaId: ${error.message}")
+                Timber.tag("MusicService").w(error, "Pre-resolving audio stream failed for %s", mediaId)
+            }
+        }
     }
 
     override fun onUpdateNotification(

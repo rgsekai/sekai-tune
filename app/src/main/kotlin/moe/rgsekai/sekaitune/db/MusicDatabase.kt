@@ -26,8 +26,12 @@ import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
+import moe.rgsekai.sekaitune.utils.ColdStartTimer
 import moe.rgsekai.sekaitune.db.entities.AlbumArtistMap
 import moe.rgsekai.sekaitune.db.entities.AlbumEntity
 import moe.rgsekai.sekaitune.db.entities.ArtistEntity
@@ -63,18 +67,47 @@ private const val CURRENT_VERSION = 32
 
 class MusicDatabase(
     private val delegate: InternalDatabase,
+    private val initializer: (() -> Unit)? = null,
 ) : DatabaseDao by delegate.dao {
     val openHelper: SupportSQLiteOpenHelper
-        get() = delegate.openHelper
+        get() {
+            ensureWarmedUp()
+            return delegate.openHelper
+        }
 
-    fun query(block: MusicDatabase.() -> Unit) =
+    @Volatile
+    private var isWarmedUp = false
+    private val warmUpLock = Any()
+
+    fun warmUp() {
+        ensureWarmedUp()
+    }
+
+    private fun ensureWarmedUp() {
+        if (isWarmedUp || initializer == null) return
+        synchronized(warmUpLock) {
+            if (isWarmedUp) return
+            ColdStartTimer.addStage("Database Warm-Up Start")
+            try {
+                initializer.invoke()
+            } finally {
+                isWarmedUp = true
+                ColdStartTimer.addStage("Database Warm-Up End")
+            }
+        }
+    }
+
+    fun query(block: MusicDatabase.() -> Unit) {
+        ensureWarmedUp()
         with(delegate) {
             queryExecutor.execute {
                 block(this@MusicDatabase)
             }
         }
+    }
 
-    fun transaction(block: MusicDatabase.() -> Unit) =
+    fun transaction(block: MusicDatabase.() -> Unit) {
+        ensureWarmedUp()
         with(delegate) {
             transactionExecutor.execute {
                 runInTransaction {
@@ -82,13 +115,17 @@ class MusicDatabase(
                 }
             }
         }
+    }
 
-    suspend fun <R> withTransaction(block: suspend MusicDatabase.() -> R): R =
-        delegate.withTransaction {
+    suspend fun <R> withTransaction(block: suspend MusicDatabase.() -> R): R {
+        ensureWarmedUp()
+        return delegate.withTransaction {
             block(this@MusicDatabase)
         }
+    }
 
     suspend fun awaitIdle(timeoutMs: Long = 5_000L) {
+        ensureWarmedUp()
         withTimeout(timeoutMs) {
             awaitExecutor(delegate.queryExecutor)
             awaitExecutor(delegate.transactionExecutor)
@@ -198,29 +235,35 @@ abstract class InternalDatabase : RoomDatabase() {
             }
 
             var db = build()
-            try {
-                db.openHelper.writableDatabase
-            } catch (t: Throwable) {
-                if (!shouldResetDb(t)) throw t
-                Log.e(TAG, "Database open failed, attempting schema repair", t)
-                runCatching { db.close() }
-
-                val repaired =
-                    runCatching { SchemaTools.repairDatabaseFile(context = context, name = DB_NAME) }
-                        .onFailure { Log.e(TAG, "Schema repair failed, recreating database", it) }
-                        .isSuccess
-
-                db = build()
-                runCatching { db.openHelper.writableDatabase }.getOrElse { openError ->
-                    Log.e(TAG, "Database still failed to open after schema repair=$repaired, recreating database", openError)
-                    runCatching { db.close() }
-                    runCatching { context.deleteDatabase(DB_NAME) }
-                    db = build()
+            val warmUpAction: () -> Unit = {
+                try {
                     db.openHelper.writableDatabase
+                } catch (t: Throwable) {
+                    if (!shouldResetDb(t)) throw t
+                    Log.e(TAG, "Database open failed, attempting schema repair", t)
+                    runCatching { db.close() }
+
+                    val repaired =
+                        runCatching { SchemaTools.repairDatabaseFile(context = context, name = DB_NAME) }
+                            .onFailure { Log.e(TAG, "Schema repair failed, recreating database", it) }
+                            .isSuccess
+
+                    db = build()
+                    runCatching { db.openHelper.writableDatabase }.getOrElse { openError ->
+                        Log.e(TAG, "Database still failed to open after schema repair=$repaired, recreating database", openError)
+                        runCatching { db.close() }
+                        runCatching { context.deleteDatabase(DB_NAME) }
+                        db = build()
+                        db.openHelper.writableDatabase
+                    }
                 }
             }
 
-            return MusicDatabase(delegate = db)
+            val musicDb = MusicDatabase(delegate = db, initializer = warmUpAction)
+            CoroutineScope(Dispatchers.IO).launch {
+                musicDb.warmUp()
+            }
+            return musicDb
         }
     }
 }
