@@ -19,6 +19,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,9 +66,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -145,13 +149,6 @@ fun LyricsScreen(
 
     val playbackState by playerConnection.playbackState.collectAsStateWithLifecycle()
     val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
-    val deviceMusicVolumeController = rememberDeviceMusicVolumeController()
-    val onVolumeChange =
-        remember(deviceMusicVolumeController) {
-            { volume: Float ->
-                deviceMusicVolumeController.setVolumeFraction(volume)
-            }
-        }
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
 
     val (enableHapticFeedback) = rememberPreference(EnableHapticFeedbackKey, true)
@@ -333,15 +330,6 @@ fun LyricsScreen(
                     .windowInsetsPadding(WindowInsets.systemBars),
         ) {
             AppleMusicGrabber(onClick = onBackClick)
-            AppleMusicTrackHeader(
-                mediaMetadata = mediaMetadata,
-                onMoreClick = showLyricsMenu,
-                onDismissClick = onBackClick,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-            )
 
             if (orientation == Configuration.ORIENTATION_LANDSCAPE && showPlayerControls) {
                 Row(
@@ -356,6 +344,14 @@ fun LyricsScreen(
                         lyricsMode = lyricsMode,
                         sliderPositionProvider = { sliderPosition },
                         lyricsSyncOffset = lyricsSyncOffset,
+                        onSwipeLeft = {
+                            hapticClick()
+                            playerConnection.seekToNext()
+                        },
+                        onSwipeRight = {
+                            hapticClick()
+                            playerConnection.seekToPrevious()
+                        },
                         modifier =
                             Modifier
                                 .weight(1.15f)
@@ -376,7 +372,6 @@ fun LyricsScreen(
                             sliderPosition = sliderPosition,
                             isPlaying = isPlaying,
                             isLoading = isLoading,
-                            volume = deviceMusicVolumeController.volumeFraction,
                             onPositionChange = { sliderPosition = it },
                             onPositionChangeFinished = {
                                 sliderPosition?.let {
@@ -385,19 +380,12 @@ fun LyricsScreen(
                                 }
                                 sliderPosition = null
                             },
-                            onVolumeChange = onVolumeChange,
-                            onPreviousClick = {
-                                hapticClick()
-                                playerConnection.seekToPrevious()
-                            },
                             onPlayPauseClick = {
                                 hapticClick()
                                 player.togglePlayPause()
                             },
-                            onNextClick = {
-                                hapticClick()
-                                playerConnection.seekToNext()
-                            },
+                            onMoreClick = showLyricsMenu,
+                            onDismissClick = onBackClick,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -407,6 +395,14 @@ fun LyricsScreen(
                     lyricsMode = lyricsMode,
                     sliderPositionProvider = { sliderPosition },
                     lyricsSyncOffset = lyricsSyncOffset,
+                    onSwipeLeft = {
+                        hapticClick()
+                        playerConnection.seekToNext()
+                    },
+                    onSwipeRight = {
+                        hapticClick()
+                        playerConnection.seekToPrevious()
+                    },
                     modifier =
                         Modifier
                             .weight(1f)
@@ -420,7 +416,6 @@ fun LyricsScreen(
                         sliderPosition = sliderPosition,
                         isPlaying = isPlaying,
                         isLoading = isLoading,
-                        volume = deviceMusicVolumeController.volumeFraction,
                         onPositionChange = { sliderPosition = it },
                         onPositionChangeFinished = {
                             sliderPosition?.let {
@@ -429,23 +424,16 @@ fun LyricsScreen(
                             }
                             sliderPosition = null
                         },
-                        onVolumeChange = onVolumeChange,
-                        onPreviousClick = {
-                            hapticClick()
-                            playerConnection.seekToPrevious()
-                        },
                         onPlayPauseClick = {
                             hapticClick()
                             player.togglePlayPause()
                         },
-                        onNextClick = {
-                            hapticClick()
-                            playerConnection.seekToNext()
-                        },
+                        onMoreClick = showLyricsMenu,
+                        onDismissClick = onBackClick,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 40.dp),
+                                .padding(horizontal = 24.dp),
                     )
                 }
             }
@@ -470,13 +458,21 @@ private fun AppleMusicBackground(
                 ),
             )
         }
+    val topScrim =
+        remember {
+            Brush.verticalGradient(
+                0.0f to Color.Black.copy(alpha = 0.82f),
+                0.16f to Color.Black.copy(alpha = 0.48f),
+                0.35f to Color.Transparent,
+            )
+        }
     val bottomScrim =
         remember {
             Brush.verticalGradient(
-                listOf(
-                    Color.Transparent,
-                    Color.Black.copy(alpha = 0.28f),
-                ),
+                0.45f to Color.Transparent,
+                0.68f to Color.Black.copy(alpha = 0.50f),
+                0.85f to Color.Black.copy(alpha = 0.82f),
+                1.0f to Color.Black.copy(alpha = 0.96f),
             )
         }
 
@@ -500,7 +496,7 @@ private fun AppleMusicBackground(
                         Modifier
                             .fillMaxSize()
                             .blur(46.dp)
-                            .alpha(0.62f),
+                            .alpha(0.65f),
                 )
             }
         }
@@ -514,7 +510,13 @@ private fun AppleMusicBackground(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.18f)),
+                    .background(Color.Black.copy(alpha = 0.16f)),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(topScrim),
         )
         Box(
             modifier =
@@ -544,86 +546,6 @@ private fun AppleMusicGrabber(
                     onClick = onClick,
                 ),
     )
-}
-
-@Composable
-private fun AppleMusicTrackHeader(
-    mediaMetadata: MediaMetadata,
-    onMoreClick: () -> Unit,
-    onDismissClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val artistText =
-        remember(mediaMetadata.id, mediaMetadata.artists) {
-            mediaMetadata.artists.joinToString { it.name }
-        }
-
-    Row(
-        modifier = modifier.heightIn(min = 64.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(58.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(AppleMusicForeground.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AsyncImage(
-                model = mediaMetadata.thumbnailUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            if (mediaMetadata.thumbnailUrl == null) {
-                Icon(
-                    painter = painterResource(R.drawable.music_note),
-                    contentDescription = null,
-                    tint = AppleMusicForeground.copy(alpha = 0.72f),
-                    modifier = Modifier.size(26.dp),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = mediaMetadata.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = AppleMusicForeground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = artistText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = AppleMusicForeground.copy(alpha = 0.72f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        AppleMusicHeaderIconButton(
-            iconRes = R.drawable.close,
-            contentDescription = stringResource(R.string.close),
-            onClick = onDismissClick,
-        )
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        AppleMusicHeaderIconButton(
-            iconRes = R.drawable.more_horiz,
-            contentDescription = stringResource(R.string.more_options),
-            onClick = onMoreClick,
-        )
-    }
 }
 
 @Composable
@@ -667,18 +589,47 @@ private fun AppleMusicLyricsPane(
     lyricsMode: LyricsMode,
     sliderPositionProvider: () -> Long?,
     lyricsSyncOffset: Int,
+    onSwipeLeft: () -> Unit,
+    onSwipeRight: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LyricsContent(
-        lyricsMode = lyricsMode,
-        sliderPositionProvider = sliderPositionProvider,
-        lyricsSyncOffset = lyricsSyncOffset,
+    var totalDragX by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+    val minSwipeDistancePx = remember(density) { with(density) { 50.dp.toPx() } }
+
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
-        textColor = AppleMusicForeground,
-    )
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { totalDragX = 0f },
+                        onDragCancel = { totalDragX = 0f },
+                        onHorizontalDrag = { _, dragAmount ->
+                            totalDragX += dragAmount
+                        },
+                        onDragEnd = {
+                            if (totalDragX > minSwipeDistancePx) {
+                                onSwipeRight()
+                            } else if (totalDragX < -minSwipeDistancePx) {
+                                onSwipeLeft()
+                            }
+                            totalDragX = 0f
+                        },
+                    )
+                },
+    ) {
+        LyricsContent(
+            lyricsMode = lyricsMode,
+            sliderPositionProvider = sliderPositionProvider,
+            lyricsSyncOffset = lyricsSyncOffset,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
+            textColor = AppleMusicForeground,
+        )
+    }
 }
 
 @Composable
@@ -688,13 +639,11 @@ private fun AppleMusicControls(
     sliderPosition: Long?,
     isPlaying: Boolean,
     isLoading: Boolean,
-    volume: Float,
     onPositionChange: (Long) -> Unit,
     onPositionChangeFinished: () -> Unit,
-    onVolumeChange: (Float) -> Unit,
-    onPreviousClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
-    onNextClick: () -> Unit,
+    onMoreClick: () -> Unit,
+    onDismissClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val position = positionProvider()
@@ -702,64 +651,25 @@ private fun AppleMusicControls(
     val hasDuration = duration != C.TIME_UNSET && duration > 0L
     val safeDuration = if (hasDuration) duration else 1L
     val currentPosition = (sliderPosition ?: position).coerceIn(0L, safeDuration)
-    val remainingPosition = (safeDuration - currentPosition).coerceAtLeast(0L)
 
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AppleMusicSlider(
-            value = currentPosition.toFloat(),
-            valueRange = 0f..safeDuration.toFloat(),
-            activeColor = AppleMusicForeground.copy(alpha = 0.94f),
-            inactiveColor = AppleMusicForeground.copy(alpha = 0.28f),
-            trackHeight = 8.dp,
-            onValueChange = { onPositionChange(it.toLong()) },
-            onValueChangeFinished = onPositionChangeFinished,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Row(
+        Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(top = 20.dp, bottom = 14.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = makeTimeString(currentPosition),
-                style = MaterialTheme.typography.labelMedium,
-                color = AppleMusicForeground.copy(alpha = 0.54f),
-            )
-            Text(
-                text = if (hasDuration) "-${makeTimeString(remainingPosition)}" else "",
-                style = MaterialTheme.typography.labelMedium,
-                color = AppleMusicForeground.copy(alpha = 0.54f),
-            )
-        }
-
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 26.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AppleMusicTransportButton(
-                iconRes = R.drawable.skip_previous,
-                contentDescription = stringResource(R.string.widget_previous),
-                iconSize = 44.dp,
-                touchSize = 68.dp,
-                onClick = onPreviousClick,
-            )
             IconButton(
                 onClick = onPlayPauseClick,
-                modifier = Modifier.size(74.dp),
+                modifier = Modifier.size(80.dp),
             ) {
                 if (isLoading) {
                     CircularWavyProgressIndicator(
-                        modifier = Modifier.size(42.dp),
+                        modifier = Modifier.size(46.dp),
                         color = AppleMusicForeground,
                     )
                 } else {
@@ -772,50 +682,44 @@ private fun AppleMusicControls(
                                 stringResource(R.string.play)
                             },
                         tint = AppleMusicForeground,
-                        modifier = Modifier.size(54.dp),
+                        modifier = Modifier.size(62.dp),
                     )
                 }
             }
-            AppleMusicTransportButton(
-                iconRes = R.drawable.skip_next,
-                contentDescription = stringResource(R.string.next),
-                iconSize = 44.dp,
-                touchSize = 68.dp,
-                onClick = onNextClick,
-            )
         }
 
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 26.dp, bottom = 15.dp),
+                    .padding(bottom = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.volume_off),
-                contentDescription = stringResource(R.string.minimum_volume),
-                tint = AppleMusicForeground.copy(alpha = 0.66f),
-                modifier = Modifier.size(17.dp),
-            )
             AppleMusicSlider(
-                value = volume.coerceIn(0f, 1f),
-                valueRange = 0f..1f,
-                activeColor = AppleMusicForeground.copy(alpha = 0.88f),
-                inactiveColor = AppleMusicForeground.copy(alpha = 0.24f),
+                value = currentPosition.toFloat(),
+                valueRange = 0f..safeDuration.toFloat(),
+                activeColor = AppleMusicForeground.copy(alpha = 0.94f),
+                inactiveColor = AppleMusicForeground.copy(alpha = 0.28f),
                 trackHeight = 8.dp,
-                onValueChange = onVolumeChange,
-                onValueChangeFinished = {},
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
+                onValueChange = { onPositionChange(it.toLong()) },
+                onValueChangeFinished = onPositionChangeFinished,
+                modifier = Modifier.weight(1f),
             )
-            Icon(
-                painter = painterResource(R.drawable.volume_up),
-                contentDescription = stringResource(R.string.maximum_volume),
-                tint = AppleMusicForeground.copy(alpha = 0.66f),
-                modifier = Modifier.size(19.dp),
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            AppleMusicHeaderIconButton(
+                iconRes = R.drawable.more_horiz,
+                contentDescription = stringResource(R.string.more_options),
+                onClick = onMoreClick,
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            AppleMusicHeaderIconButton(
+                iconRes = R.drawable.close,
+                contentDescription = stringResource(R.string.close),
+                onClick = onDismissClick,
             )
         }
     }
