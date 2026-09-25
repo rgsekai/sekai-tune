@@ -981,7 +981,7 @@ class MainActivity : ComponentActivity() {
                     )
                     val playerDesignStyle by rememberEnumPreference(
                         key = PlayerDesignStyleKey,
-                        defaultValue = PlayerDesignStyle.V4,
+                        defaultValue = PlayerDesignStyle.V2,
                     )
 
                     val aodModeEnabled by remember(playerConnection) {

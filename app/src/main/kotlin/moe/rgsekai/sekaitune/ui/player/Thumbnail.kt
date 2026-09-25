@@ -164,7 +164,7 @@ fun Thumbnail(
     val lowDataModeActive = rememberLowDataModeActive()
     val playerDesignStyle by rememberEnumPreference(
         key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.V4,
+        defaultValue = PlayerDesignStyle.V2,
     )
     val (maxCanvasCacheSize, _) =
         rememberPreference(
@@ -436,7 +436,6 @@ fun Thumbnail(
                             val shouldUseCanvas =
                                 SekaiTuneCanvasEnabled &&
                                     playerDesignStyle != PlayerDesignStyle.V7 &&
-                                    playerDesignStyle != PlayerDesignStyle.V8 &&
                                     item.mediaId.isNotBlank() &&
                                     item.mediaId == currentMediaItem?.mediaId
                             val shouldFetchCanvas = shouldUseCanvas && (canvasMetered || !lowDataModeActive)
@@ -577,8 +576,7 @@ fun Thumbnail(
 
                                         val shouldCropArtwork =
                                             cropThumbnailToSquare &&
-                                                playerDesignStyle != PlayerDesignStyle.V7 &&
-                                                playerDesignStyle != PlayerDesignStyle.V8
+                                                playerDesignStyle != PlayerDesignStyle.V7
 
                                         val baseArtworkUrl =
                                             item.metadata?.thumbnailUrl?.highRes()
