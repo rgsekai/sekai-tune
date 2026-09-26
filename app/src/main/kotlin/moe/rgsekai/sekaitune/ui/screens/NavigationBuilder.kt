@@ -46,6 +46,7 @@ import moe.rgsekai.sekaitune.ui.screens.search.OnlineSearchResultRoutePrefix
 import moe.rgsekai.sekaitune.ui.screens.search.SearchScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AboutScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AccountSettings
+import moe.rgsekai.sekaitune.ui.screens.settings.AdvancedSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.AiIntegrationSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.AodCustomizedScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AppearanceSettings
@@ -421,6 +422,9 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/po_token") {
         PoTokenScreen(navController)
+    }
+    composable("settings/advanced") {
+        AdvancedSettings(navController)
     }
     composable("customize_background") {
         CustomizeBackground(navController)

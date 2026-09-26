@@ -23,10 +23,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -262,18 +264,30 @@ fun SettingsScreen(
                     }
                 }
 
-                // 2. THE NATIVE SETTINGS LIST (Make sure there is only ONE of these!)
-                itemsIndexed(
-                    items = settingsItems,
-                    key = { _, item -> item.key },
-                    contentType = { _, _ -> "settings_segment" },
-                ) { index, settingsItem ->
-                    SettingsSegmentedItem(
-                        item = settingsItem,
-                        index = index,
-                        count = settingsItems.size,
-                        modifier = Modifier.padding(horizontal = 26.dp),
-                    )
+                // 2. THE NATIVE SETTINGS LIST (Separated by logical pairs/groups)
+                settingsGroups.forEachIndexed { groupIndex, group ->
+                    if (group.items.isNotEmpty()) {
+                        if (groupIndex > 0) {
+                            item(
+                                key = "spacer_group_$groupIndex",
+                                contentType = "settings_group_spacer",
+                            ) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                            }
+                        }
+                        itemsIndexed(
+                            items = group.items,
+                            key = { _, item -> item.key },
+                            contentType = { _, _ -> "settings_segment" },
+                        ) { itemIndex, settingsItem ->
+                            SettingsSegmentedItem(
+                                item = settingsItem,
+                                index = itemIndex,
+                                count = group.items.size,
+                                modifier = Modifier.padding(horizontal = 26.dp),
+                            )
+                        }
+                    }
                 }
             }
         }

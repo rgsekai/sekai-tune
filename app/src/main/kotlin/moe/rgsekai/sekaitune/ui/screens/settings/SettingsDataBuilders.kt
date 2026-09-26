@@ -20,8 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.R
-
-@Composable
+@Composable
 fun buildSettingsGroups(
     navController: NavController,
     isAndroid12OrLater: Boolean,
@@ -29,9 +28,10 @@ fun buildSettingsGroups(
     context: Context,
 ): List<SettingsGroup> =
     buildList {
+        // 1. Account & Activity Pair
         add(
             SettingsGroup(
-                title = stringResource(R.string.settings),
+                title = stringResource(R.string.account),
                 items =
                     listOf(
                         SettingsItem(
@@ -50,6 +50,16 @@ fun buildSettingsGroups(
                             accentColor = MaterialTheme.colorScheme.primary,
                             onClick = { navController.navigate("stats") },
                         ),
+                    ),
+            ),
+        )
+
+        // 2. Appearance & Visuals Pair
+        add(
+            SettingsGroup(
+                title = stringResource(R.string.appearance),
+                items =
+                    listOf(
                         SettingsItem(
                             key = "appearance",
                             icon = painterResource(R.drawable.palette),
@@ -59,20 +69,30 @@ fun buildSettingsGroups(
                             onClick = { navController.navigate("settings/appearance") },
                         ),
                         SettingsItem(
+                            key = "canvas",
+                            icon = painterResource(R.drawable.slow_motion_video),
+                            title = stringResource(R.string.SekaiTune_canvas),
+                            subtitle = stringResource(R.string.canvas_settings_subtitle),
+                            accentColor = MaterialTheme.colorScheme.tertiary,
+                            onClick = { navController.navigate("settings/canvas") },
+                        ),
+                    ),
+            ),
+        )
+
+        // 3. Audio & Lyrics Pair
+        add(
+            SettingsGroup(
+                title = stringResource(R.string.settings_playback_title),
+                items =
+                    listOf(
+                        SettingsItem(
                             key = "playback",
                             icon = painterResource(R.drawable.music_note),
                             title = stringResource(R.string.settings_playback_title),
                             subtitle = stringResource(R.string.settings_playback_subtitle),
                             accentColor = MaterialTheme.colorScheme.tertiary,
                             onClick = { navController.navigate("settings/player") },
-                        ),
-                        SettingsItem(
-                            key = "behavior",
-                            icon = painterResource(R.drawable.swipe),
-                            title = stringResource(R.string.settings_behavior_title),
-                            subtitle = stringResource(R.string.settings_behavior_subtitle),
-                            accentColor = MaterialTheme.colorScheme.primary,
-                            onClick = { navController.navigate("settings/privacy") },
                         ),
                         SettingsItem(
                             key = "lyrics",
@@ -82,14 +102,42 @@ fun buildSettingsGroups(
                             accentColor = MaterialTheme.colorScheme.secondary,
                             onClick = { navController.navigate("settings/lyrics") },
                         ),
+                    ),
+            ),
+        )
+
+        // 4. Data & Storage Pair
+        add(
+            SettingsGroup(
+                title = stringResource(R.string.storage),
+                items =
+                    listOf(
                         SettingsItem(
-                            key = "canvas",
-                            icon = painterResource(R.drawable.slow_motion_video),
-                            title = stringResource(R.string.SekaiTune_canvas),
-                            subtitle = stringResource(R.string.canvas_settings_subtitle),
-                            accentColor = MaterialTheme.colorScheme.tertiary,
-                            onClick = { navController.navigate("settings/canvas") },
+                            key = "backup_restore",
+                            icon = painterResource(R.drawable.backup),
+                            title = stringResource(R.string.backup_restore),
+                            subtitle = stringResource(R.string.settings_backup_restore_subtitle),
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            onClick = { navController.navigate("settings/backup_restore") },
                         ),
+                        SettingsItem(
+                            key = "storage",
+                            icon = painterResource(R.drawable.storage),
+                            title = stringResource(R.string.storage),
+                            subtitle = stringResource(R.string.settings_storage_subtitle),
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            onClick = { navController.navigate("settings/storage") },
+                        ),
+                    ),
+            ),
+        )
+
+        // 5. Intelligence & Advanced Pair
+        add(
+            SettingsGroup(
+                title = stringResource(R.string.advanced),
+                items =
+                    listOf(
                         SettingsItem(
                             key = "ai_integration",
                             icon = painterResource(R.drawable.ai),
@@ -99,124 +147,23 @@ fun buildSettingsGroups(
                             onClick = { navController.navigate("settings/ai_integration") },
                         ),
                         SettingsItem(
-                            key = "backup_restore",
-                            icon = painterResource(R.drawable.backup),
-                            title = stringResource(R.string.backup_restore),
-                            subtitle = stringResource(R.string.settings_backup_restore_subtitle),
-                            accentColor = MaterialTheme.colorScheme.primary,
-                            onClick = { navController.navigate("settings/backup_restore") },
+                            key = "advanced",
+                            icon = painterResource(R.drawable.tune),
+                            title = stringResource(R.string.advanced),
+                            subtitle = stringResource(R.string.settings_advanced_subtitle),
+                            accentColor = MaterialTheme.colorScheme.tertiary,
+                            onClick = { navController.navigate("settings/advanced") },
                         ),
                     ),
             ),
         )
 
+        // 6. About & Support Group
         add(
             SettingsGroup(
-                title = stringResource(R.string.settings_section_player_content),
+                title = stringResource(R.string.about),
                 items =
                     buildList {
-                        add(
-                            SettingsItem(
-                                key = "content",
-                                icon = painterResource(R.drawable.language),
-                                title = stringResource(R.string.content),
-                                subtitle = stringResource(R.string.settings_content_subtitle),
-                                accentColor = MaterialTheme.colorScheme.primary,
-                                onClick = { navController.navigate("settings/content") },
-                            ),
-                        )
-                        add(
-                            SettingsItem(
-                                key = "internet",
-                                icon = painterResource(R.drawable.wifi_proxy),
-                                title = stringResource(R.string.internet),
-                                subtitle = stringResource(R.string.settings_internet_subtitle),
-                                accentColor = MaterialTheme.colorScheme.tertiary,
-                                onClick = { navController.navigate("settings/internet") },
-                            ),
-                        )
-                        add(
-                            SettingsItem(
-                                key = "po_token",
-                                icon = painterResource(R.drawable.token),
-                                title = stringResource(R.string.po_token_generation),
-                                subtitle = stringResource(R.string.settings_po_token_subtitle),
-                                accentColor = MaterialTheme.colorScheme.secondary,
-                                onClick = { navController.navigate("settings/po_token") },
-                            ),
-                        )
-                        add(
-                            SettingsItem(
-                                key = "storage",
-                                icon = painterResource(R.drawable.storage),
-                                title = stringResource(R.string.storage),
-                                subtitle = stringResource(R.string.settings_storage_subtitle),
-                                accentColor = MaterialTheme.colorScheme.primary,
-                                onClick = { navController.navigate("settings/storage") },
-                            ),
-                        )
-                        add(
-                            SettingsItem(
-                                key = "developer_options",
-                                icon = painterResource(R.drawable.experiment),
-                                title = stringResource(R.string.settings_developer_options_title),
-                                subtitle = stringResource(R.string.settings_developer_options_subtitle),
-                                accentColor = MaterialTheme.colorScheme.tertiary,
-                                onClick = { navController.navigate("settings/misc") },
-                            ),
-                        )
-                        if (isAndroid12OrLater) {
-                            add(
-                                SettingsItem(
-                                    key = "default_links",
-                                    icon = painterResource(R.drawable.link),
-                                    title = stringResource(R.string.default_links),
-                                    subtitle = stringResource(R.string.open_supported_links),
-                                    accentColor = MaterialTheme.colorScheme.secondary,
-                                    onClick = {
-                                        try {
-                                            @Suppress("InlinedApi")
-                                            val intent =
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                                                    Intent(
-                                                        Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
-                                                        Uri.parse("package:${context.packageName}"),
-                                                    )
-                                                } else {
-                                                    Intent(
-                                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                                        Uri.parse("package:${context.packageName}"),
-                                                    )
-                                                }
-                                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            when (e) {
-                                                is ActivityNotFoundException,
-                                                is SecurityException,
-                                                -> {
-                                                    Toast
-                                                        .makeText(
-                                                            context,
-                                                            R.string.open_app_settings_error,
-                                                            Toast.LENGTH_LONG,
-                                                        ).show()
-                                                }
-
-                                                else -> {
-                                                    Toast
-                                                        .makeText(
-                                                            context,
-                                                            R.string.open_app_settings_error,
-                                                            Toast.LENGTH_LONG,
-                                                        ).show()
-                                                }
-                                            }
-                                        }
-                                    },
-                                ),
-                            )
-                        }
                         if (BuildConfig.UPDATER_AVAILABLE) {
                             add(
                                 SettingsItem(
@@ -249,7 +196,7 @@ fun buildSettingsGroups(
                                 subtitle = stringResource(R.string.settings_support_subtitle),
                                 accentColor = MaterialTheme.colorScheme.tertiary,
                                 onClick = { navController.navigate("settings/support") },
-                            )
+                            ),
                         )
                         add(
                             SettingsItem(

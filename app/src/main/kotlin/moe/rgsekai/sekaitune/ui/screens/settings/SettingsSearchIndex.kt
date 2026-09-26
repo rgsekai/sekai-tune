@@ -146,6 +146,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "cat_advanced",
+                title = context.getString(R.string.advanced),
+                subtitle = context.getString(R.string.settings_advanced_subtitle),
+                category = playerContentCategory,
+                iconRes = R.drawable.tune,
+                route = "settings/advanced",
+                keywords = listOf("advanced", "network", "connectivity", "internet", "storage", "potoken", "developer", "debug", "links"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "cat_internet",
                 title = internetCategory,
                 subtitle = context.getString(R.string.settings_internet_subtitle),

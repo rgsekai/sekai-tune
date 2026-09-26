@@ -414,6 +414,14 @@
     <string name="settings_internet_subtitle">Proxy, DNS, and network playback behavior</string>
     <string name="settings_po_token_subtitle">Playback verification and visitor data</string>
     <string name="settings_storage_subtitle">Cache, downloads, and offline storage</string>
+    <string name="advanced">Advanced</string>
+    <string name="advanced_settings">Advanced</string>
+    <string name="settings_advanced_subtitle">Content, behavior, internet, and developer options</string>
+    <string name="content_and_behavior">Content &amp; Behavior</string>
+    <string name="network_and_connectivity">Network &amp; Connectivity</string>
+    <string name="playback_engine">Playback Engine</string>
+    <string name="storage_and_data">Storage &amp; Data</string>
+    <string name="developer_and_system">Developer &amp; System</string>
     <string name="settings_updates_subtitle">Version, release notes, and update channel</string>
     <string name="settings_about_subtitle">App info, licenses, and contributors</string>
     <string name="settings_account_subtitle">Sign in and manage account sync</string>
