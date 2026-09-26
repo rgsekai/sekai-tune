@@ -9,6 +9,7 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
@@ -326,26 +327,21 @@ fun AccountSettings(
                     }
 
                     if (hasUpdate) {
-                        BadgedBox(
-                            badge = {
-                                Badge(containerColor = MaterialTheme.colorScheme.error)
+                        IconButton(
+                            onClick = {
+                                if (BuildConfig.UPDATER_AVAILABLE) {
+                                    navController.navigate("settings/update")
+                                }
                             },
+                            onLongClick = {},
                         ) {
-                            OutlinedIconButton(
-                                onClick = { uriHandler.openUri(Updater.getLatestDownloadUrl()) },
-                                colors =
-                                    IconButtonDefaults.outlinedIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    ),
-                                border = null,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.update),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.error),
+                            )
                         }
                     }
                 },

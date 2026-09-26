@@ -770,6 +770,7 @@ val EnableUpdateNotificationKey = booleanPreferencesKey("enableUpdateNotificatio
 val LastUpdateCheckKey = longPreferencesKey("lastUpdateCheck")
 val MoriCipherManualRefreshHistoryKey = stringSetPreferencesKey("moriCipherManualRefreshHistory")
 val LastNotifiedVersionKey = stringPreferencesKey("lastNotifiedVersion")
+val UpdateDismissedVersionKey = stringPreferencesKey("update_dismissed_version")
 
 val GitHubContributorsEtagKey = stringPreferencesKey("github_contributors_etag")
 val GitHubContributorsJsonKey = stringPreferencesKey("github_contributors_json")

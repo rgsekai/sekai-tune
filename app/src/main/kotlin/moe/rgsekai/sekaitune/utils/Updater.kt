@@ -53,6 +53,7 @@ object Updater {
         private set
     private var latestReleaseTag: String? = null
 
+
     private val isUpdaterDistribution: Boolean
         get() =
             BuildConfig.UPDATER_AVAILABLE &&
@@ -358,6 +359,11 @@ object Updater {
             return "$StableReleaseBaseUrl/download/$tag/$artifactName"
         }
         return "$StableReleaseBaseUrl/latest/download/$artifactName"
+    }
+
+    fun getChangelogUrl(version: String): String {
+        val tag = latestReleaseTag ?: if (version.startsWith("v")) version else "v$version"
+        return "$StableReleaseBaseUrl/tag/$tag"
     }
 
     suspend fun getAllReleases(

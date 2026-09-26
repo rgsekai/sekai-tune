@@ -26,7 +26,14 @@ import android.view.WindowManager
 import android.webkit.MimeTypeMap
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import moe.rgsekai.sekaitune.constants.UpdateDismissedVersionKey
+import moe.rgsekai.sekaitune.ui.component.UpdatePromptDialog
+import moe.rgsekai.sekaitune.utils.AppUpdateInstaller
+import moe.rgsekai.sekaitune.utils.UpdateDownloadState
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -67,6 +74,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -118,8 +126,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -128,7 +138,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -599,88 +611,45 @@ class MainActivity : ComponentActivity() {
                     moe.rgsekai.sekaitune.ui.component
                         .MenuState()
                 }
-            val releaseNotesState = remember { mutableStateOf<String?>(null) }
-            val updateSheetContent: @Composable ColumnScope.() -> Unit = {
-                // receiver: ColumnScope
-                Text(
-                    text = stringResource(R.string.new_update_available),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(top = 16.dp),
-                )
+            val (dismissedUpdateVersion, onDismissedUpdateVersionChange) =
+                rememberPreference(UpdateDismissedVersionKey, defaultValue = "")
+            var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
+            var hasCheckedDismissedVersionOnLaunch by rememberSaveable { mutableStateOf(false) }
+            var updateIconTargetOffset by remember { mutableStateOf<Offset?>(null) }
+            val updateDownloadState by AppUpdateInstaller.downloadState.collectAsStateWithLifecycle()
 
-                Spacer(Modifier.height(8.dp))
-
-                androidx.compose.material3.OutlinedButton(
-                    onClick = {},
-                    contentPadding =
-                        androidx.compose.foundation.layout.PaddingValues(
-                            horizontal = 5.dp,
-                            vertical = 5.dp,
-                        ),
-                    shapes = ButtonDefaults.shapes(),
+            val installPermissionLauncher =
+                rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult(),
                 ) {
-                    Text(text = latestVersionName, style = MaterialTheme.typography.labelLarge)
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    val notes = releaseNotesState.value
-                    if (notes != null && notes.isNotBlank()) {
-                        MarkdownText(
-                            markdown = notes,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(end = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.release_notes_unavailable),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                    if (AppUpdateInstaller.canRequestPackageInstalls(this@MainActivity)) {
+                        val downloadUrl = Updater.getLatestDownloadUrl()
+                        AppUpdateInstaller.startDownloadAndInstall(this@MainActivity, downloadUrl)
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
-
-                androidx.compose.material3.Button(
-                    onClick = {
-                        bottomSheetPageState.dismiss()
-                        this@MainActivity.navController.navigate("settings/update") {
-                            launchSingleTop = true
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(text = stringResource(R.string.update_text))
+            val triggerUpdateFlow: () -> Unit = {
+                if (!AppUpdateInstaller.canRequestPackageInstalls(this@MainActivity)) {
+                    val intent = AppUpdateInstaller.createInstallPermissionIntent(this@MainActivity)
+                    installPermissionLauncher.launch(intent)
+                } else {
+                    val downloadUrl = Updater.getLatestDownloadUrl()
+                    AppUpdateInstaller.startDownloadAndInstall(this@MainActivity, downloadUrl)
                 }
             }
 
-            // fetch release notes and show sheet when a new version is detected
-            LaunchedEffect(latestVersionName) {
+            // Show prompt once per new version
+            LaunchedEffect(latestVersionName, dismissedUpdateVersion) {
                 if (
                     BuildConfig.UPDATER_AVAILABLE &&
                     Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
                 ) {
-                    val releaseNotesResult = Updater.getLatestReleaseNotes()
-                    releaseNotesResult
-                        .onSuccess {
-                            releaseNotesState.value = it
-                        }.onFailure {
-                            releaseNotesState.value = null
+                    if (!hasCheckedDismissedVersionOnLaunch) {
+                        hasCheckedDismissedVersionOnLaunch = true
+                        if (latestVersionName != dismissedUpdateVersion) {
+                            showUpdatePromptDialog = true
                         }
-
-                    bottomSheetPageState.show(updateSheetContent)
+                    }
                 }
             }
 
@@ -801,6 +770,28 @@ class MainActivity : ComponentActivity() {
                 DisposableEffect(navController) {
                     this@MainActivity.navController = navController
                     onDispose {}
+                }
+
+                if (showUpdatePromptDialog &&
+                    BuildConfig.UPDATER_AVAILABLE &&
+                    Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                ) {
+                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                    UpdatePromptDialog(
+                        latestVersion = latestVersionName,
+                        downloadState = updateDownloadState,
+                        targetBadgeOffset = updateIconTargetOffset,
+                        onDismiss = { showUpdatePromptDialog = false },
+                        onUpdateNow = triggerUpdateFlow,
+                        onLater = {
+                            onDismissedUpdateVersionChange(latestVersionName)
+                            showUpdatePromptDialog = false
+                        },
+                        onViewChangelog = {
+                            val url = Updater.getChangelogUrl(latestVersionName)
+                            runCatching { uriHandler.openUri(url) }
+                        },
+                    )
                 }
 
                 BoxWithConstraints(
@@ -1675,6 +1666,31 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 },
                                                 actions = {
+                                                    if (
+                                                        BuildConfig.UPDATER_AVAILABLE &&
+                                                        Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                                                    ) {
+                                                        TranslucentTopAppBarIconButton(
+                                                            modifier =
+                                                                Modifier.onGloballyPositioned { coordinates ->
+                                                                    if (coordinates.isAttached) {
+                                                                        val pos = coordinates.positionInWindow()
+                                                                        val size = coordinates.size
+                                                                        updateIconTargetOffset =
+                                                                            Offset(pos.x + size.width / 2f, pos.y + size.height / 2f)
+                                                                    }
+                                                                },
+                                                            onClick = { showUpdatePromptDialog = true },
+                                                        ) {
+                                                            Box(
+                                                                modifier =
+                                                                    Modifier
+                                                                        .size(10.dp)
+                                                                        .clip(CircleShape)
+                                                                        .background(Color(0xFFE53935)),
+                                                            )
+                                                        }
+                                                    }
                                                     TranslucentTopAppBarIconButton(
                                                         onClick = { navController.navigate("history") },
                                                     ) {
@@ -2737,10 +2753,12 @@ private const val TopAppBarIconButtonContainerAlpha = 0.48f
 @Composable
 private fun TranslucentTopAppBarIconButton(
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     IconButton(
         onClick = onClick,
+        modifier = modifier,
         colors =
             IconButtonDefaults.iconButtonColors(
                 containerColor =
