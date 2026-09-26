@@ -101,7 +101,8 @@ fun FloatingNavigationToolbar(
         FloatingToolbarDefaults.standardFloatingToolbarColors(
             toolbarContainerColor = toolbarContainerColor,
         )
-    val hasOverflowAction = onShuffleClick != null && shuffleIconRes != null
+    val mainItems = remember(items) { items.filterNot { it == Screens.Search } }
+    val isSearchSelected = isSelected(Screens.Search)
 
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
@@ -109,50 +110,44 @@ fun FloatingNavigationToolbar(
     ) {
         val showSelectedLabels = maxWidth >= 360.dp
 
-        if (hasOverflowAction) {
-            HorizontalFloatingToolbar(
-                expanded = true,
-                floatingActionButton = {
-                    FloatingToolbarOverflowAction(
-                        pureBlack = pureBlack,
-                        onShuffleClick = onShuffleClick,
-                        shuffleIconRes = shuffleIconRes,
-                        shuffleContentDescription = shuffleContentDescription,
-                        onMusicRecognitionClick = onMusicRecognitionClick,
-                        musicRecognitionContentDescription = musicRecognitionContentDescription,
-                        onMusicTogetherClick = onMusicTogetherClick,
+        HorizontalFloatingToolbar(
+            expanded = true,
+            floatingActionButton = {
+                FloatingToolbarDefaults.VibrantFloatingActionButton(
+                    onClick = { onItemClick(Screens.Search, isSearchSelected) },
+                    shape = CircleShape,
+                    containerColor =
+                        if (isSearchSelected) {
+                            floatingToolbarFabContainerColor()
+                        } else {
+                            floatingToolbarContainerColor(pureBlack)
+                        },
+                    contentColor =
+                        if (isSearchSelected) {
+                            floatingToolbarFabContentColor()
+                        } else {
+                            floatingToolbarItemContentColor(pureBlack)
+                        },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.search),
+                        contentDescription = stringResource(R.string.search),
                     )
-                },
-                modifier = Modifier.widthIn(max = 480.dp),
-                colors = toolbarColors,
-                scrollBehavior = scrollBehavior,
-                animationSpec = FloatingToolbarDefaults.animationSpec(),
-            ) {
-                ToolbarItemsContainer(
-                    items = items,
-                    pureBlack = pureBlack,
-                    showSelectedLabels = showSelectedLabels,
-                    isSelected = isSelected,
-                    onItemClick = onItemClick,
-                    onSearchItemDoubleClick = onSearchItemDoubleClick,
-                )
-            }
-        } else {
-            HorizontalFloatingToolbar(
-                expanded = true,
-                modifier = Modifier.widthIn(max = 420.dp),
-                colors = toolbarColors,
-                scrollBehavior = scrollBehavior,
-            ) {
-                ToolbarItemsContainer(
-                    items = items,
-                    pureBlack = pureBlack,
-                    showSelectedLabels = showSelectedLabels,
-                    isSelected = isSelected,
-                    onItemClick = onItemClick,
-                    onSearchItemDoubleClick = onSearchItemDoubleClick,
-                )
-            }
+                }
+            },
+            modifier = Modifier.widthIn(max = 480.dp),
+            colors = toolbarColors,
+            scrollBehavior = scrollBehavior,
+            animationSpec = FloatingToolbarDefaults.animationSpec(),
+        ) {
+            ToolbarItemsContainer(
+                items = mainItems,
+                pureBlack = pureBlack,
+                showSelectedLabels = showSelectedLabels,
+                isSelected = isSelected,
+                onItemClick = onItemClick,
+                onSearchItemDoubleClick = onSearchItemDoubleClick,
+            )
         }
     }
 }

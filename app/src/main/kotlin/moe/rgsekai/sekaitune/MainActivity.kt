@@ -30,7 +30,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -120,6 +122,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -1126,7 +1130,6 @@ class MainActivity : ComponentActivity() {
                         appBarScrollBehavior(
                             canScroll = {
                                 navBackStackEntry?.destination?.route?.startsWith(OnlineSearchResultRoutePrefix) == false &&
-                                    navBackStackEntry?.destination?.route != Screens.Library.route &&
                                     (playerBottomSheetState.isCollapsed || playerBottomSheetState.isDismissed)
                             },
                         )
@@ -1134,7 +1137,6 @@ class MainActivity : ComponentActivity() {
                         appBarScrollBehavior(
                             canScroll = {
                                 navBackStackEntry?.destination?.route?.startsWith(OnlineSearchResultRoutePrefix) == false &&
-                                    navBackStackEntry?.destination?.route != Screens.Library.route &&
                                     (playerBottomSheetState.isCollapsed || playerBottomSheetState.isDismissed)
                             },
                         )
@@ -1142,7 +1144,6 @@ class MainActivity : ComponentActivity() {
                         appBarScrollBehavior(
                             canScroll = {
                                 navBackStackEntry?.destination?.route?.startsWith(OnlineSearchResultRoutePrefix) == false &&
-                                    navBackStackEntry?.destination?.route != Screens.Library.route &&
                                     (playerBottomSheetState.isCollapsed || playerBottomSheetState.isDismissed)
                             },
                         )
@@ -1157,6 +1158,10 @@ class MainActivity : ComponentActivity() {
                                 when (screen) {
                                     Screens.Home -> {
                                         coroutineScope.launch { homeScrollBehavior.state.resetHeightOffset() }
+                                    }
+
+                                    Screens.NewRelease, Screens.Library -> {
+                                        coroutineScope.launch { topAppBarScrollBehavior.state.resetHeightOffset() }
                                     }
 
                                     else -> {}
@@ -1174,17 +1179,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     LaunchedEffect(currentRoute) {
-                        when (currentRoute) {
-                            Screens.Home.route -> {
-                                homeScrollBehavior.state.resetHeightOffset()
-                            }
-
-                            Screens.Search.route -> {
-                                searchScrollBehavior.state.resetHeightOffset()
-                            }
-
-                            else -> {}
-                        }
+                        homeScrollBehavior.state.resetHeightOffset()
+                        searchScrollBehavior.state.resetHeightOffset()
+                        topAppBarScrollBehavior.state.resetHeightOffset()
                     }
 
                     var previousRoute by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1548,6 +1545,25 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            val currentScrollBehavior =
+                                when (navBackStackEntry?.destination?.route) {
+                                    Screens.Home.route -> homeScrollBehavior
+                                    Screens.Search.route -> searchScrollBehavior
+                                    else -> topAppBarScrollBehavior
+                                }
+
+                            var headerHeightPx by remember { mutableStateOf(0) }
+                            val defaultHeaderHeightPx = with(LocalDensity.current) { (AppBarHeight + topInset).toPx() }
+                            LaunchedEffect(currentScrollBehavior, headerHeightPx) {
+                                val targetHeight = if (headerHeightPx > 0) headerHeightPx.toFloat() else defaultHeaderHeightPx
+                                val limit = -targetHeight
+                                val state = currentScrollBehavior.state
+                                if (state.heightOffsetLimit != limit) {
+                                    state.heightOffsetLimit = limit
+                                    state.heightOffset = state.heightOffset.coerceIn(limit, 0f)
+                                }
+                            }
+
                             Scaffold(
                                 topBar = {
                                     if (shouldShowTopBar) {
@@ -1563,42 +1579,7 @@ class MainActivity : ComponentActivity() {
                                             }
 
                                         val surfaceColor = MaterialTheme.colorScheme.surface
-                                        val currentScrollBehavior =
-                                            when (navBackStackEntry?.destination?.route) {
-                                                Screens.Home.route -> homeScrollBehavior
-
-                                                Screens.Search.route -> searchScrollBehavior
-
-                                                // Library hits else but is offset 0 (self-contained);
-                                                // sub-screens use the shared shell behavior.
-                                                else -> topAppBarScrollBehavior
-                                            }
                                         val isLibraryRoute = navBackStackEntry?.destination?.route == Screens.Library.route
-
-                                        // Rigid slide (Step 3): the header translates as a block via
-                                        // Modifier.offset while the M3 TopAppBar itself gets
-                                        // scrollBehavior = null (below), so it never collapses or
-                                        // double-renders. The floating behavior only listens to
-                                        // scroll (non-consuming) and updates heightOffset.
-                                        //
-                                        // heightOffsetLimit must be set from the measured header
-                                        // height. The header Box is a single shared shell composable
-                                        // whose size is identical for Home/Search, so onSizeChanged
-                                        // fires only once (size doesn't change on tab switch).
-                                        // Therefore: measure once here, then apply the limit to the
-                                        // CURRENT route's state via LaunchedEffect so every route gets
-                                        // its limit on entry (not just the first-measured one).
-                                        var headerHeightPx by remember { mutableStateOf(0) }
-                                        LaunchedEffect(currentScrollBehavior, headerHeightPx) {
-                                            if (headerHeightPx > 0 && !isLibraryRoute) {
-                                                val limit = -headerHeightPx.toFloat()
-                                                val state = currentScrollBehavior.state
-                                                if (state.heightOffsetLimit != limit) {
-                                                    state.heightOffsetLimit = limit
-                                                    state.heightOffset = state.heightOffset.coerceIn(limit, 0f)
-                                                }
-                                            }
-                                        }
 
                                         Box(
                                             modifier =
@@ -1956,47 +1937,93 @@ class MainActivity : ComponentActivity() {
                                 },
                                 bottomBar = {
                                     Box {
+                                        val navSlideDistance =
+                                            bottomInset + floatingBarsBottomPadding + navVisibleHeight
+
+                                        val rawScrollFraction =
+                                            if (currentScrollBehavior.state.heightOffsetLimit < 0f) {
+                                                (currentScrollBehavior.state.heightOffset / currentScrollBehavior.state.heightOffsetLimit).coerceIn(0f, 1f)
+                                            } else {
+                                                0f
+                                            }
+
+                                        val animatedScrollFraction by animateFloatAsState(
+                                            targetValue = rawScrollFraction,
+                                            animationSpec =
+                                                if (disableAnimations) {
+                                                    snap()
+                                                } else {
+                                                    spring(
+                                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow,
+                                                    )
+                                                },
+                                            label = "bottomToolbarScrollFraction",
+                                        )
+
+                                        val navHideFraction by animateFloatAsState(
+                                            targetValue =
+                                                if (bottomNavigationBarHeight == 0.dp) {
+                                                    1f
+                                                } else {
+                                                    1f - (bottomNavigationBarHeight.coerceAtMost(navVisibleHeight) / navVisibleHeight)
+                                                },
+                                            animationSpec =
+                                                if (disableAnimations) {
+                                                    snap()
+                                                } else {
+                                                    spring(
+                                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow,
+                                                    )
+                                                },
+                                            label = "navHideFraction",
+                                        )
+
+                                        val playerHideFraction = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                        val totalHideFraction = (animatedScrollFraction + navHideFraction + playerHideFraction).coerceIn(0f, 1f)
+
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
                                             navController = navController,
+                                            modifier =
+                                                Modifier.offset {
+                                                    val miniPlayerShiftDistance =
+                                                        if (shouldShowNavigationBar && !useRail) {
+                                                            (FloatingToolbarHeight + floatingBarsBottomPadding) *
+                                                                (1f - playerBottomSheetState.progress.coerceIn(0f, 1f))
+                                                        } else {
+                                                            0.dp
+                                                        }
+                                                    val shiftY = (miniPlayerShiftDistance * animatedScrollFraction).roundToPx()
+                                                    IntOffset(x = 0, y = shiftY)
+                                                },
                                             pureBlack = pureBlack,
                                         )
 
                                         if (useRail) return@Box
-
-                                        val navSlideDistance =
-                                            bottomInset + floatingBarsBottomPadding + navVisibleHeight
 
                                         Box(
                                             modifier =
                                                 Modifier
                                                     .align(Alignment.BottomCenter)
                                                     .height(navSlideDistance)
+                                                    .graphicsLayer {
+                                                        // Decrease size and collapse into the bottom center point of the screen intensely and smoothly
+                                                        val scale = (1f - 0.85f * totalHideFraction).coerceIn(0.15f, 1f)
+                                                        scaleX = scale
+                                                        scaleY = scale
+                                                        alpha = (1f - totalHideFraction * 1.15f).coerceIn(0f, 1f)
+                                                        transformOrigin = TransformOrigin(0.5f, 1f)
+                                                    }
                                                     .offset {
-                                                        if (bottomNavigationBarHeight == 0.dp) {
-                                                            IntOffset(
-                                                                x = 0,
-                                                                y = navSlideDistance.roundToPx(),
-                                                            )
-                                                        } else {
-                                                            val slideOffset =
-                                                                navSlideDistance *
-                                                                    playerBottomSheetState.progress.coerceIn(
-                                                                        0f,
-                                                                        1f,
-                                                                    )
-                                                            val hideOffset =
-                                                                navSlideDistance *
-                                                                    (
-                                                                        1 -
-                                                                            bottomNavigationBarHeight.coerceAtMost(navVisibleHeight) /
-                                                                            navVisibleHeight
-                                                                    )
-                                                            IntOffset(
-                                                                x = 0,
-                                                                y = (slideOffset + hideOffset).roundToPx(),
-                                                            )
-                                                        }
+                                                        val slideOffset = navSlideDistance * playerHideFraction
+                                                        val hideOffset = navSlideDistance * navHideFraction
+                                                        val scrollOffset = navSlideDistance * animatedScrollFraction
+                                                        IntOffset(
+                                                            x = 0,
+                                                            y = (slideOffset + hideOffset + scrollOffset).roundToPx().coerceAtMost(navSlideDistance.roundToPx()),
+                                                        )
                                                     },
                                         ) {
                                             FloatingNavigationToolbar(
