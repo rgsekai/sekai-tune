@@ -192,6 +192,7 @@ android {
         warningsAsErrors = false
         abortOnError = false
         checkDependencies = false
+        checkReleaseBuilds = false
     }
 
     androidResources {

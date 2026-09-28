@@ -174,3 +174,30 @@
 -dontwarn okio.**
 -keepattributes *Annotation*
 
+## SimpStream & Morideobfuscator
+-keep class moe.rgsekai.sekaitune.simpstream.** { *; }
+-dontwarn moe.rgsekai.sekaitune.simpstream.**
+-keep class moe.rgsekai.sekaitune.morideobfuscator.** { *; }
+-dontwarn moe.rgsekai.sekaitune.morideobfuscator.**
+
+## QuickJS-kt (JNI & Native bindings)
+-keep class com.dokar.quickjs.** { *; }
+-dontwarn com.dokar.quickjs.**
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+## PipePipe / BravePipe Extractors & NanoJSON
+-keep class com.github.bravepipe.** { *; }
+-keep class com.github.pipepipe.** { *; }
+-dontwarn com.github.bravepipe.**
+-dontwarn com.github.pipepipe.**
+-keep class com.grack.nanojson.** { *; }
+-dontwarn com.grack.nanojson.**
+
+## Protobuf & Firebase / Firestore optional proto stubs
+-dontwarn com.google.rpc.**
+-dontwarn com.google.type.**
+-dontwarn com.google.protobuf.**
+
+
