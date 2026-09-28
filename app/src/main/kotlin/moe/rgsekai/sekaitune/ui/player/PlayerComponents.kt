@@ -74,11 +74,15 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -116,6 +120,7 @@ import kotlinx.coroutines.withContext
 import me.saket.squiggles.SquigglySlider
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.LocalPlayerConnection
+import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
 import moe.rgsekai.sekaitune.canvas.ProceduralCanvasStyle
 import moe.rgsekai.sekaitune.constants.CanvasAudioReactiveKey
 import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
@@ -1371,6 +1376,8 @@ fun PlayerBackground(
     playerCustomBlur: Float,
     playerCustomContrast: Float,
     playerCustomBrightness: Float,
+    canvasArtwork: CanvasArtwork? = null,
+    isPlaying: Boolean = false,
 ) {
     val effectiveBlurRadius = blurRadius.coerceIn(0f, PlayerBackgroundMaxBlurRadius)
     val shouldApplyBlur = !disableBlur && effectiveBlurRadius > 0f
@@ -1851,6 +1858,388 @@ fun PlayerBackground(
                                         }
                                     },
                         )
+                    }
+                }
+            }
+
+            PlayerBackgroundStyle.APPLE_MUSIC -> {
+                AnimatedContent(
+                    targetState = backgroundThumbnailUrl,
+                    transitionSpec = {
+                        fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                    },
+                    label = "AppleMusicBackground",
+                ) { thumbnailUrl ->
+                    if (thumbnailUrl != null) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            // Blurred low-res base thumbnail
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(thumbnailUrl)
+                                    .size(128, 128)
+                                    .allowHardware(false)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let {
+                                        if (shouldApplyBlur) it.blur(150.dp) else it
+                                    },
+                            )
+
+                            // Clear Artwork / Live Canvas fading down with gradient alpha mask (DstIn)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.65f)
+                                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                                    .drawWithContent {
+                                        drawContent()
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                colorStops = arrayOf(
+                                                    0.00f to Color.Black,
+                                                    0.75f to Color.Black,
+                                                    0.92f to Color.Black.copy(alpha = 0.4f),
+                                                    1.00f to Color.Transparent,
+                                                ),
+                                            ),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(thumbnailUrl)
+                                        .size(coil3.size.Size.ORIGINAL)
+                                        .build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+
+                                val primaryCanvasUrl = canvasArtwork?.animatedVertical ?: canvasArtwork?.animated
+                                val fallbackCanvasUrl = canvasArtwork?.videoUrlVertical ?: canvasArtwork?.videoUrl
+                                val canvasRenderMode = remember(primaryCanvasUrl, fallbackCanvasUrl) {
+                                    when {
+                                        !primaryCanvasUrl.isNullOrBlank() ->
+                                            CanvasRenderMode.Video(
+                                                primaryUrl = primaryCanvasUrl,
+                                                fallbackUrl = fallbackCanvasUrl,
+                                            )
+                                        !fallbackCanvasUrl.isNullOrBlank() ->
+                                            CanvasRenderMode.Video(
+                                                primaryUrl = fallbackCanvasUrl,
+                                                fallbackUrl = null,
+                                            )
+                                        else -> CanvasRenderMode.None
+                                    }
+                                }
+
+                                if (canvasRenderMode !is CanvasRenderMode.None) {
+                                    CanvasArtworkPlayer(
+                                        renderMode = canvasRenderMode,
+                                        isPlaying = isPlaying,
+                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+                            }
+
+                            // Dark overlay for text contrast and depth
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.Black.copy(alpha = 0.05f),
+                                                Color.Black.copy(alpha = 0.4f),
+                                            ),
+                                        ),
+                                    ),
+                            )
+                        }
+                    }
+                }
+            }
+
+            PlayerBackgroundStyle.LIVE_MESH -> {
+                val infiniteTransition = rememberInfiniteTransition(label = "LiveMeshRotation")
+
+                val anchorRotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = -360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(80000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "anchorRotation",
+                )
+
+                val fastRotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(40000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "fastRotation",
+                )
+
+                val slowRotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(60000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "slowRotation",
+                )
+
+                AnimatedContent(
+                    targetState = backgroundThumbnailUrl,
+                    transitionSpec = {
+                        fadeIn(tween(1500)) togetherWith fadeOut(tween(1500))
+                    },
+                    label = "LiveMeshBackground",
+                ) { thumbnailUrl ->
+                    if (thumbnailUrl != null) {
+                        val matrix = remember {
+                            ColorMatrix().apply { setToSaturation(1.8f) }
+                        }
+                        val colorFilter = ColorFilter.colorMatrix(matrix)
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    scaleX = 1.7f
+                                    scaleY = 1.7f
+                                },
+                        ) {
+                            // Layer 1: anchor
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(thumbnailUrl)
+                                    .size(128, 128)
+                                    .allowHardware(false)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = colorFilter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let {
+                                        if (shouldApplyBlur) it.blur(100.dp) else it
+                                    }
+                                    .graphicsLayer {
+                                        rotationZ = anchorRotation
+                                    },
+                            )
+
+                            // Layer 2: fast rotation top-start
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(thumbnailUrl)
+                                    .size(128, 128)
+                                    .allowHardware(false)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = colorFilter,
+                                alignment = Alignment.TopStart,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let {
+                                        if (shouldApplyBlur) it.blur(120.dp) else it
+                                    }
+                                    .graphicsLayer {
+                                        rotationZ = fastRotation
+                                        alpha = 0.6f
+                                    },
+                            )
+
+                            // Layer 3: slow rotation bottom-end
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(thumbnailUrl)
+                                    .size(128, 128)
+                                    .allowHardware(false)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = colorFilter,
+                                alignment = Alignment.BottomEnd,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let {
+                                        if (shouldApplyBlur) it.blur(120.dp) else it
+                                    }
+                                    .graphicsLayer {
+                                        rotationZ = slowRotation
+                                        alpha = 0.5f
+                                    },
+                            )
+
+                            // Dark overlays for readability
+                            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f)))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.25f)),
+                                        ),
+                                    ),
+                            )
+                        }
+                    }
+                }
+            }
+
+            PlayerBackgroundStyle.LIQUID_GLASS -> {
+                val infiniteTransition = rememberInfiniteTransition(label = "LiquidGlassRotation")
+
+                val anchorRotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = -360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(80000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "liquidGlassAnchorRotation",
+                )
+
+                val fastRotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(40000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "liquidGlassFastRotation",
+                )
+
+                val slowRotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(60000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "liquidGlassSlowRotation",
+                )
+
+                AnimatedContent(
+                    targetState = backgroundThumbnailUrl,
+                    transitionSpec = {
+                        fadeIn(tween(1500)) togetherWith fadeOut(tween(1500))
+                    },
+                    label = "LiquidGlassBackground",
+                ) { thumbnailUrl ->
+                    if (thumbnailUrl != null) {
+                        val matrix = remember {
+                            ColorMatrix().apply { setToSaturation(2.0f) }
+                        }
+                        val colorFilter = ColorFilter.colorMatrix(matrix)
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    scaleX = 1.8f
+                                    scaleY = 1.8f
+                                },
+                        ) {
+                            // Layer 1: anchor
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(thumbnailUrl)
+                                    .size(128, 128)
+                                    .allowHardware(false)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = colorFilter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let {
+                                        if (shouldApplyBlur) it.blur(90.dp) else it
+                                    }
+                                    .graphicsLayer {
+                                        rotationZ = anchorRotation
+                                    },
+                            )
+
+                            // Layer 2: top-start refraction
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(thumbnailUrl)
+                                    .size(128, 128)
+                                    .allowHardware(false)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = colorFilter,
+                                alignment = Alignment.TopStart,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let {
+                                        if (shouldApplyBlur) it.blur(110.dp) else it
+                                    }
+                                    .graphicsLayer {
+                                        rotationZ = fastRotation
+                                        alpha = 0.7f
+                                    },
+                            )
+
+                            // Layer 3: bottom-end refraction
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(thumbnailUrl)
+                                    .size(128, 128)
+                                    .allowHardware(false)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = colorFilter,
+                                alignment = Alignment.BottomEnd,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let {
+                                        if (shouldApplyBlur) it.blur(110.dp) else it
+                                    }
+                                    .graphicsLayer {
+                                        rotationZ = slowRotation
+                                        alpha = 0.6f
+                                    },
+                            )
+
+                            // Frosted Liquid Glass Surface overlay & specular highlight
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color(0xFF121212).copy(alpha = 0.28f)),
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.12f),
+                                                Color.Transparent,
+                                                Color.Black.copy(alpha = 0.35f),
+                                            ),
+                                        ),
+                                    ),
+                            )
+                        }
                     }
                 }
             }

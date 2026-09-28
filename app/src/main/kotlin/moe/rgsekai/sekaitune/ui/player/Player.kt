@@ -479,7 +479,10 @@ fun BottomSheetPlayer(
         if (playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.COLORING ||
             playerBackground == PlayerBackgroundStyle.BLUR_GRADIENT ||
             playerBackground == PlayerBackgroundStyle.GLOW ||
-            playerBackground == PlayerBackgroundStyle.GLOW_ANIMATED
+            playerBackground == PlayerBackgroundStyle.GLOW_ANIMATED ||
+            playerBackground == PlayerBackgroundStyle.APPLE_MUSIC ||
+            playerBackground == PlayerBackgroundStyle.LIVE_MESH ||
+            playerBackground == PlayerBackgroundStyle.LIQUID_GLASS
         ) {
             val currentMetadata = mediaMetadata
             if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
@@ -550,12 +553,15 @@ fun BottomSheetPlayer(
         } else {
             when (playerBackground) {
                 PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-                PlayerBackgroundStyle.BLUR -> Color.White
-                PlayerBackgroundStyle.GRADIENT -> Color.White
-                PlayerBackgroundStyle.COLORING -> Color.White
-                PlayerBackgroundStyle.BLUR_GRADIENT -> Color.White
-                PlayerBackgroundStyle.GLOW -> Color.White
-                PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
+                PlayerBackgroundStyle.BLUR,
+                PlayerBackgroundStyle.GRADIENT,
+                PlayerBackgroundStyle.COLORING,
+                PlayerBackgroundStyle.BLUR_GRADIENT,
+                PlayerBackgroundStyle.GLOW,
+                PlayerBackgroundStyle.GLOW_ANIMATED,
+                PlayerBackgroundStyle.APPLE_MUSIC,
+                PlayerBackgroundStyle.LIVE_MESH,
+                PlayerBackgroundStyle.LIQUID_GLASS,
                 PlayerBackgroundStyle.CUSTOM -> Color.White
             }
         }
@@ -566,12 +572,15 @@ fun BottomSheetPlayer(
         } else {
             when (playerBackground) {
                 PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
-                PlayerBackgroundStyle.BLUR -> Color.Black
-                PlayerBackgroundStyle.GRADIENT -> Color.Black
-                PlayerBackgroundStyle.COLORING -> Color.Black
-                PlayerBackgroundStyle.BLUR_GRADIENT -> Color.Black
-                PlayerBackgroundStyle.GLOW -> Color.Black
-                PlayerBackgroundStyle.GLOW_ANIMATED -> Color.Black
+                PlayerBackgroundStyle.BLUR,
+                PlayerBackgroundStyle.GRADIENT,
+                PlayerBackgroundStyle.COLORING,
+                PlayerBackgroundStyle.BLUR_GRADIENT,
+                PlayerBackgroundStyle.GLOW,
+                PlayerBackgroundStyle.GLOW_ANIMATED,
+                PlayerBackgroundStyle.APPLE_MUSIC,
+                PlayerBackgroundStyle.LIVE_MESH,
+                PlayerBackgroundStyle.LIQUID_GLASS,
                 PlayerBackgroundStyle.CUSTOM -> Color.Black
             }
         }
@@ -1019,7 +1028,7 @@ fun BottomSheetPlayer(
             }
         val shouldUseV7Canvas =
             SekaiTuneCanvasEnabled &&
-                playerDesignStyle == PlayerDesignStyle.V7 &&
+                (playerDesignStyle == PlayerDesignStyle.V7 || playerBackground == PlayerBackgroundStyle.APPLE_MUSIC) &&
                 !aodModeEnabled
         val shouldFetchV7Canvas = shouldUseV7Canvas && (canvasMetered || !lowDataModeActive)
         val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback, spotifySpDc) {
@@ -1116,6 +1125,8 @@ fun BottomSheetPlayer(
                 playerCustomBlur = playerCustomBlur,
                 playerCustomContrast = playerCustomContrast,
                 playerCustomBrightness = playerCustomBrightness,
+                canvasArtwork = v7CanvasArtwork,
+                isPlaying = isPlaying,
             )
         }
 

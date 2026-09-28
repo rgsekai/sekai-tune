@@ -266,6 +266,10 @@
     <string name="coloring">Coloring</string>
     <string name="blur_gradient">Blur Gradient</string>
     <string name="glow">Glow</string>
+    <string name="glow_animated">Glow Animated</string>
+    <string name="apple_music">Apple Music</string>
+    <string name="live_mesh">Live Mesh</string>
+    <string name="player_background_liquid_glass">Liquid Glass</string>
     <string name="player_buttons_style">Player button colors</string>
     <string name="default_style">Default</string>
     <string name="secondary_color_style">Secondary</string>

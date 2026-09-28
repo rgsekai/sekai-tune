@@ -7,6 +7,7 @@
 
 package moe.rgsekai.sekaitune.ui.player
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
@@ -62,6 +63,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
@@ -76,6 +78,7 @@ import androidx.compose.ui.util.fastForEach
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.ui.AspectRatioFrameLayout
 import coil3.compose.AsyncImage
 import coil3.imageLoader
 import coil3.request.CachePolicy
@@ -191,12 +194,15 @@ fun Thumbnail(
     val textBackgroundColor =
         when (playerBackground) {
             PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-            PlayerBackgroundStyle.BLUR -> Color.White
-            PlayerBackgroundStyle.GRADIENT -> Color.White
-            PlayerBackgroundStyle.COLORING -> Color.White
-            PlayerBackgroundStyle.BLUR_GRADIENT -> Color.White
-            PlayerBackgroundStyle.GLOW -> Color.White
-            PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
+            PlayerBackgroundStyle.BLUR,
+            PlayerBackgroundStyle.GRADIENT,
+            PlayerBackgroundStyle.COLORING,
+            PlayerBackgroundStyle.BLUR_GRADIENT,
+            PlayerBackgroundStyle.GLOW,
+            PlayerBackgroundStyle.GLOW_ANIMATED,
+            PlayerBackgroundStyle.APPLE_MUSIC,
+            PlayerBackgroundStyle.LIVE_MESH,
+            PlayerBackgroundStyle.LIQUID_GLASS,
             PlayerBackgroundStyle.CUSTOM -> Color.White
         }
 
@@ -362,9 +368,11 @@ fun Thumbnail(
             }
         }
 
+        val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
         // Main thumbnail view
         AnimatedVisibility(
-            visible = error == null,
+            visible = error == null && !(playerBackground == PlayerBackgroundStyle.APPLE_MUSIC && !isLandscape),
             enter = fadeIn(),
             exit = fadeOut(),
             modifier =
@@ -543,8 +551,8 @@ fun Thumbnail(
                                             )
                                         }
                                     } else {
-                                        val primaryCanvasUrl = canvasArtwork?.animated
-                                        val fallbackCanvasUrl = canvasArtwork?.videoUrl
+                                        val primaryCanvasUrl = canvasArtwork?.animated ?: canvasArtwork?.animatedVertical ?: canvasArtwork?.videoUrl ?: canvasArtwork?.videoUrlVertical
+                                        val fallbackCanvasUrl = canvasArtwork?.videoUrl ?: canvasArtwork?.videoUrlVertical
                                         val hasAnimatedCanvas = !primaryCanvasUrl.isNullOrBlank() || !fallbackCanvasUrl.isNullOrBlank()
 
                                         val shouldCropArtwork =
@@ -624,8 +632,8 @@ fun Thumbnail(
                                                         .fillMaxSize()
                                                         .let { if (shouldCropArtwork) it.aspectRatio(1f) else it }
                                                         .graphicsLayer(
-                                                            renderEffect = BlurEffect(radiusX = blurRadiusPx, radiusY = blurRadiusPx),
-                                                            alpha = 0.6f,
+                                                             renderEffect = BlurEffect(radiusX = blurRadiusPx, radiusY = blurRadiusPx),
+                                                             alpha = 0.6f,
                                                         ),
                                             )
                                         } else if (thumbnailBgBlurEnabled) {
@@ -653,14 +661,15 @@ fun Thumbnail(
                                             contentScale = if (shouldCropArtwork) ContentScale.Crop else ContentScale.Fit,
                                             modifier =
                                                 Modifier
-                                                    .fillMaxSize()
-                                                    .let { if (shouldCropArtwork) it.aspectRatio(1f) else it },
+                                                .fillMaxSize()
+                                                .let { if (shouldCropArtwork) it.aspectRatio(1f) else it },
                                         )
 
                                         if (canvasRenderMode !is CanvasRenderMode.None) {
                                             CanvasArtworkPlayer(
                                                 renderMode = canvasRenderMode,
                                                 isPlaying = isPlaying,
+                                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                                                 modifier = Modifier.fillMaxSize(),
                                             )
                                         }

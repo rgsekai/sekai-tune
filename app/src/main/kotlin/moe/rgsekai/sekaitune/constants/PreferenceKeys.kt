@@ -564,6 +564,9 @@ enum class PlayerBackgroundStyle {
     BLUR_GRADIENT,
     GLOW,
     GLOW_ANIMATED,
+    APPLE_MUSIC,
+    LIVE_MESH,
+    LIQUID_GLASS,
 }
 
 enum class MiniPlayerBackgroundStyle {
