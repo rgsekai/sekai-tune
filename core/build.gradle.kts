@@ -16,10 +16,16 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.encoding)
     implementation(libs.brotli)
-    implementation(libs.newpipe.extractor) {
-        exclude(group = "com.google.protobuf", module = "protobuf-javalite")
-    }
+    implementation(libs.pipepipe.extractor)
+    implementation(libs.brave.extractor)
+    implementation(libs.quickjs)
     implementation(libs.re2j)
     implementation(libs.rhino)
     testImplementation(libs.junit)
+    testImplementation("org.json:json:20240303")
 }
+
+configurations.all {
+    exclude(group = "com.google.protobuf", module = "protobuf-java")
+}
+

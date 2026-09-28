@@ -34,6 +34,9 @@ junit = "4.13.2"
 turbine = "1.2.1"
 timber = "5.0.1"
 extractor = "0.26.3"
+pipepipe = "f8982ca9e7"
+brave-newpipe = "0fcaf19ecc"
+quickjs = "1.0.14"
 translator = "1.1.1"
 rhino = "1.9.1"
 markwon = "4.6.2"
@@ -126,6 +129,9 @@ turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 newpipe-extractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "extractor" }
+pipepipe-extractor = { module = "com.github.maxrave-dev:PipePipeExtractor", version.ref = "pipepipe" }
+brave-extractor = { module = "com.github.maxrave-dev:BravePipeExtractor", version.ref = "brave-newpipe" }
+quickjs = { module = "io.github.dokar3:quickjs-kt", version.ref = "quickjs" }
 translator = { module = "com.github.therealbush:translator", version.ref = "translator" }
 
 markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }

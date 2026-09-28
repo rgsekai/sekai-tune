@@ -30,21 +30,9 @@ internal fun resolveStreamChunkLength(
 }
 
 private fun String?.requiresOpenEndedRead(): Boolean {
-    val normalizedMimeType =
-        this
-            ?.substringBefore(";")
-            ?.trim()
-            ?.lowercase()
-            .orEmpty()
-    return normalizedMimeType == "audio/mp4" ||
-        normalizedMimeType == "video/mp4" ||
-        normalizedMimeType == "application/mp4" ||
-        normalizedMimeType == "audio/x-m4a" ||
-        normalizedMimeType == "audio/webm" ||
-        normalizedMimeType == "video/webm" ||
-        normalizedMimeType == "application/webm" ||
-        normalizedMimeType == "audio/ogg" ||
-        normalizedMimeType == "application/ogg"
+    // Standard audio formats like webm, mp4, ogg DO NOT require open-ended read.
+    // Bounded chunked range reads prevent googlevideo bandwidth throttling.
+    return false
 }
 
 

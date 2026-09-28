@@ -450,9 +450,6 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    // Track loading state: when buffering or when user is seeking
-    val isLoading = playbackState == STATE_BUFFERING || sliderPosition != null
-
     var gradientColors by remember {
         mutableStateOf<List<Color>>(emptyList())
     }
@@ -1083,7 +1080,6 @@ fun BottomSheetPlayer(
                 sliderStyle = sliderStyle,
                 playbackState = playbackState,
                 isPlaying = isPlaying,
-                isLoading = isLoading,
                 repeatMode = repeatMode,
                 canSkipPrevious = canSkipPrevious,
                 canSkipNext = canSkipNext,
@@ -1167,7 +1163,6 @@ fun BottomSheetPlayer(
                                     queueTitle = "",
                                     playbackState = playbackState,
                                     isPlaying = isPlaying,
-                                    isLoading = isLoading,
                                     canSkipPrevious = canSkipPrevious,
                                     canSkipNext = canSkipNext,
                                     currentSongLiked = currentSongLiked,
@@ -1270,7 +1265,6 @@ fun BottomSheetPlayer(
                                     queueTitle = "",
                                     playbackState = playbackState,
                                     isPlaying = isPlaying,
-                                    isLoading = isLoading,
                                     canSkipPrevious = canSkipPrevious,
                                     canSkipNext = canSkipNext,
                                     currentSongLiked = currentSongLiked,

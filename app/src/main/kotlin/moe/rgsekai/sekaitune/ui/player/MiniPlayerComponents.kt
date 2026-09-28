@@ -306,28 +306,19 @@ private fun MiniPlayerArtwork(
     mediaMetadata: MediaMetadata?,
     position: Long,
     duration: Long,
-    isLoading: Boolean,
     colors: MiniPlayerContentColors,
     modifier: Modifier = Modifier,
 ) {
     Box(
-        contentAlignment = Alignment.Center,
         modifier = modifier.size(47.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        if (isLoading) {
-            CircularWavyProgressIndicator(
-                modifier = Modifier.fillMaxSize(),
-                color = colors.progress,
-                trackColor = colors.progressTrack,
-            )
-        } else {
-            CircularWavyProgressIndicator(
-                progress = { if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f },
-                modifier = Modifier.fillMaxSize(),
-                color = colors.progress,
-                trackColor = colors.progressTrack,
-            )
-        }
+        CircularWavyProgressIndicator(
+            progress = { if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f },
+            modifier = Modifier.fillMaxSize(),
+            color = colors.progress,
+            trackColor = colors.progressTrack,
+        )
 
         Box(
             contentAlignment = Alignment.Center,
@@ -446,34 +437,29 @@ private fun MiniPlayerTransportControls(
             colors = colors,
         )
 
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(40.dp),
-        ) {
-            MiniPlayerTransportButton(
-                iconResId =
-                    when {
-                        playbackState == Player.STATE_ENDED -> R.drawable.replay
-                        isPlaying -> R.drawable.pause
-                        else -> R.drawable.play
-                    },
-                contentDescription =
-                    stringResource(
-                        if (playbackState == Player.STATE_ENDED || !isPlaying) R.string.play else R.string.widget_pause,
-                    ),
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (playbackState == Player.STATE_ENDED) {
-                        playerConnection.player.seekTo(0, 0)
-                        playerConnection.player.playWhenReady = true
-                    } else {
-                        playerConnection.player.togglePlayPause()
-                    }
+        MiniPlayerTransportButton(
+            iconResId =
+                when {
+                    playbackState == Player.STATE_ENDED -> R.drawable.replay
+                    isPlaying -> R.drawable.pause
+                    else -> R.drawable.play
                 },
-                isPrimary = true,
-                colors = colors,
-            )
-        }
+            contentDescription =
+                stringResource(
+                    if (playbackState == Player.STATE_ENDED || !isPlaying) R.string.play else R.string.widget_pause,
+                ),
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (playbackState == Player.STATE_ENDED) {
+                    playerConnection.player.seekTo(0, 0)
+                    playerConnection.player.playWhenReady = true
+                } else {
+                    playerConnection.player.togglePlayPause()
+                }
+            },
+            isPrimary = true,
+            colors = colors,
+        )
 
         MiniPlayerTransportButton(
             iconResId = R.drawable.skip_next,
@@ -502,8 +488,6 @@ fun NewMiniPlayerContent(
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
-    val isLoading = playbackState == Player.STATE_BUFFERING
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
@@ -515,7 +499,6 @@ fun NewMiniPlayerContent(
             mediaMetadata = mediaMetadata,
             position = position,
             duration = duration,
-            isLoading = isLoading,
             colors = colors,
         )
 

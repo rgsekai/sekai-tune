@@ -377,6 +377,7 @@ class MusicService :
         OkHttpClient
             .Builder()
             .proxy(YouTube.streamOkHttpProxy)
+            .connectionPool(okhttp3.ConnectionPool(15, 10, TimeUnit.MINUTES))
             .followRedirects(true)
             .followSslRedirects(true)
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -5612,20 +5613,28 @@ class MusicService :
     private fun updateNextStreamPreload() {
         if (!::nextStreamPreloader.isInitialized) return
         val currentMediaId = player.currentMediaItem?.mediaId?.trim()
-        val nextIndex = player.currentMediaItemIndex + 1
-        if (nextIndex in 0 until player.mediaItemCount) {
-            val nextItem = player.getMediaItemAt(nextIndex)
-            val nextVideoId = nextItem.mediaId.trim()
-            if (nextVideoId.isNotEmpty() && nextVideoId != currentMediaId) {
-                val isNetworkMetered = isLowDataModeActive()
-                val quality = if (isNetworkMetered) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality
-                nextStreamPreloader.preloadNext(
-                    videoId = nextVideoId,
-                    audioQuality = quality,
-                    preferredStreamClient = preferredStreamClient,
-                    networkMetered = isNetworkMetered,
-                )
+        val currentIndex = player.currentMediaItemIndex
+        val upcomingIds = mutableListOf<String>()
+        val maxUpcoming = 3
+        for (i in 1..maxUpcoming) {
+            val idx = currentIndex + i
+            if (idx in 0 until player.mediaItemCount) {
+                val item = player.getMediaItemAt(idx)
+                val vid = item.mediaId.trim()
+                if (vid.isNotEmpty() && vid != currentMediaId && !upcomingIds.contains(vid)) {
+                    upcomingIds.add(vid)
+                }
             }
+        }
+        if (upcomingIds.isNotEmpty()) {
+            val isNetworkMetered = isLowDataModeActive()
+            val quality = if (isNetworkMetered) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality
+            nextStreamPreloader.preloadQueue(
+                videoIds = upcomingIds,
+                audioQuality = quality,
+                preferredStreamClient = preferredStreamClient,
+                networkMetered = isNetworkMetered,
+            )
         }
     }
 
@@ -6396,11 +6405,20 @@ class MusicService :
         }
     }
 
+    private fun createDirectUpstreamDataSourceFactory(): DataSource.Factory {
+        val chunkedOkHttpFactory =
+            ChunkedDataSource.Factory(
+                OkHttpDataSource.Factory(mediaOkHttpClient),
+                ChunkedDataSource.DEFAULT_CHUNK_BYTES,
+            )
+        return DefaultDataSource.Factory(this, chunkedOkHttpFactory)
+    }
+
     private fun createPlayerCacheDataSourceFactory(cacheWriteEnabled: Boolean): CacheDataSource.Factory =
         CacheDataSource
             .Factory()
             .setCache(playerCache)
-            .setUpstreamDataSourceFactory(createResolvedUpstreamDataSourceFactory())
+            .setUpstreamDataSourceFactory(createDirectUpstreamDataSourceFactory())
             .apply {
                 if (!cacheWriteEnabled) {
                     setCacheWriteDataSinkFactory(null)
@@ -6428,28 +6446,19 @@ class MusicService :
                     allowCacheShortCircuit = true,
                 )
             }
-        val directFactory = createResolvedUpstreamDataSourceFactory()
+        val directFactory =
+            ResolvingDataSource.Factory(createDirectUpstreamDataSourceFactory()) { dataSpec ->
+                resolvePlaybackDataSpec(
+                    dataSpec = dataSpec,
+                    allowCacheShortCircuit = false,
+                )
+            }
 
         return DataSource.Factory {
             SchemeRoutingDataSource(
                 context = this@MusicService,
                 cachedFactory = cachedFactory,
                 directFactory = directFactory,
-            )
-        }
-    }
-
-    private fun createResolvedUpstreamDataSourceFactory(): DataSource.Factory {
-        val youtubeMediaFactory =
-            DefaultDataSource.Factory(
-                this,
-                OkHttpDataSource.Factory(mediaOkHttpClient),
-            )
-
-        return ResolvingDataSource.Factory(youtubeMediaFactory) { dataSpec ->
-            resolvePlaybackDataSpec(
-                dataSpec = dataSpec,
-                allowCacheShortCircuit = false,
             )
         }
     }
@@ -8187,8 +8196,8 @@ class MusicService :
         const val CROSSFADE_MAX_BUFFER_BEFORE_START_MS = 12_500L
         const val PRIMARY_MIN_BUFFER_MS = 20_000
         const val PRIMARY_MAX_BUFFER_MS = 60_000
-        const val PRIMARY_BUFFER_FOR_PLAYBACK_MS = 750
-        const val PRIMARY_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 2_500
+        const val PRIMARY_BUFFER_FOR_PLAYBACK_MS = 150
+        const val PRIMARY_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 1_000
         const val CROSSFADE_MIN_BUFFER_MS = 15_000
         const val CROSSFADE_MAX_BUFFER_MS = 45_000
         const val CROSSFADE_FRAME_MS = 32L

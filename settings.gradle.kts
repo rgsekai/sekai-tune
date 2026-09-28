@@ -35,6 +35,10 @@ dependencyResolutionManagement {
                 includeGroup("com.github.therealbush")
                 includeGroup("com.github.TeamNewPipe")
                 includeGroup("com.github.yausername") // <-- Allowed!
+                includeGroup("com.github.evermind-zz")
+                includeGroup("com.github.maxrave-dev")
+                includeGroup("com.github.maxrave-dev.PipePipeExtractor")
+                includeGroup("com.github.maxrave-dev.BravePipeExtractor")
             }
         }
     }

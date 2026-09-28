@@ -301,7 +301,6 @@ fun LyricsScreen(
         }
     }
 
-    val isLoading = playbackState == STATE_BUFFERING || sliderPosition != null
     val orientation = LocalConfiguration.current.orientation
 
     BackHandler(enabled = backHandlerEnabled, onBack = onBackClick)
@@ -371,7 +370,6 @@ fun LyricsScreen(
                             durationProvider = { durationState.longValue },
                             sliderPosition = sliderPosition,
                             isPlaying = isPlaying,
-                            isLoading = isLoading,
                             onPositionChange = { sliderPosition = it },
                             onPositionChangeFinished = {
                                 sliderPosition?.let {
@@ -415,7 +413,6 @@ fun LyricsScreen(
                         durationProvider = { durationState.longValue },
                         sliderPosition = sliderPosition,
                         isPlaying = isPlaying,
-                        isLoading = isLoading,
                         onPositionChange = { sliderPosition = it },
                         onPositionChangeFinished = {
                             sliderPosition?.let {
@@ -638,7 +635,6 @@ private fun AppleMusicControls(
     durationProvider: () -> Long,
     sliderPosition: Long?,
     isPlaying: Boolean,
-    isLoading: Boolean,
     onPositionChange: (Long) -> Unit,
     onPositionChangeFinished: () -> Unit,
     onPlayPauseClick: () -> Unit,
@@ -667,24 +663,17 @@ private fun AppleMusicControls(
                 onClick = onPlayPauseClick,
                 modifier = Modifier.size(80.dp),
             ) {
-                if (isLoading) {
-                    CircularWavyProgressIndicator(
-                        modifier = Modifier.size(46.dp),
-                        color = AppleMusicForeground,
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
-                        contentDescription =
-                            if (isPlaying) {
-                                stringResource(R.string.widget_pause)
-                            } else {
-                                stringResource(R.string.play)
-                            },
-                        tint = AppleMusicForeground,
-                        modifier = Modifier.size(62.dp),
-                    )
-                }
+                Icon(
+                    painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                    contentDescription =
+                        if (isPlaying) {
+                            stringResource(R.string.widget_pause)
+                        } else {
+                            stringResource(R.string.play)
+                        },
+                    tint = AppleMusicForeground,
+                    modifier = Modifier.size(62.dp),
+                )
             }
         }
 

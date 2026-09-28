@@ -11,6 +11,7 @@ import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest
 import moe.rgsekai.sekaitune.playback.stream.ResolveAudioStreamUseCase
 import moe.rgsekai.sekaitune.playback.stream.StreamPurpose
+import java.util.concurrent.ConcurrentHashMap
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,11 +21,54 @@ class NextStreamPreloader @Inject constructor(
     private val resolveAudioStreamUseCase: ResolveAudioStreamUseCase,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var currentJob: Job? = null
-    @Volatile
-    private var currentPreloadVideoId: String? = null
-    @Volatile
-    private var lastSuccessfulPreloadVideoId: String? = null
+    private var queueJob: Job? = null
+
+    fun preloadQueue(
+        videoIds: List<String>,
+        audioQuality: AudioQuality = AudioQuality.AUTO,
+        preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
+        networkMetered: Boolean = false,
+    ) {
+        val targets = videoIds.map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(MAX_QUEUE_PRELOAD_ITEMS)
+        if (targets.isEmpty()) return
+
+        synchronized(this) {
+            queueJob?.cancel()
+            queueJob = scope.launch {
+                for ((index, trimmedId) in targets.withIndex()) {
+                    val request = AudioStreamRequest(
+                        mediaId = trimmedId,
+                        quality = audioQuality,
+                        networkMetered = networkMetered,
+                        purpose = StreamPurpose.PLAYBACK,
+                        preferredStreamClient = preferredStreamClient,
+                        authState = YouTube.currentPlaybackAuthState(),
+                    )
+                    if (resolveAudioStreamUseCase.peek(request) != null) {
+                        Timber.tag(TAG).d("[Preload] Track %s already preloaded & cached (index=%d)", trimmedId, index)
+                        continue
+                    }
+                    val startMs = System.currentTimeMillis()
+                    Timber.tag(TAG).i("[Preload] Starting background stream preload for %s (queue pos %d) at %d ms", trimmedId, index + 1, startMs)
+                    val result = runCatching {
+                        resolveAudioStreamUseCase.preload(request)
+                    }
+                    if (result.isSuccess) {
+                        val durationMs = System.currentTimeMillis() - startMs
+                        Timber.tag(TAG).i("[Preload] Preload succeeded for %s (queue pos %d) in %d ms", trimmedId, index + 1, durationMs)
+                    } else {
+                        val error = result.exceptionOrNull()
+                        if (error is kotlinx.coroutines.CancellationException || error is java.io.InterruptedIOException) {
+                            Timber.tag(TAG).d("[Preload] Preload cancelled for %s (superseded)", trimmedId)
+                            break
+                        } else {
+                            Timber.tag(TAG).w(error, "[Preload] Preload failed for %s", trimmedId)
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     fun preloadNext(
         videoId: String,
@@ -32,64 +76,31 @@ class NextStreamPreloader @Inject constructor(
         preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
         networkMetered: Boolean = false,
     ) {
-        val trimmedId = videoId.trim()
-        if (trimmedId.isEmpty()) return
-
-        synchronized(this) {
-            if (currentPreloadVideoId == trimmedId) {
-                if (currentJob?.isActive == true) {
-                    Timber.tag(TAG).d("Preload already active for %s", trimmedId)
-                    return
-                }
-                if (lastSuccessfulPreloadVideoId == trimmedId) {
-                    Timber.tag(TAG).d("Preload already succeeded and cached for %s", trimmedId)
-                    return
-                }
-            }
-            currentJob?.cancel()
-            currentPreloadVideoId = trimmedId
-            currentJob = scope.launch {
-                val startMs = System.currentTimeMillis()
-                Timber.tag(TAG).i("[Preload] Starting background stream preload for %s at %d ms", trimmedId, startMs)
-                runCatching {
-                    resolveAudioStreamUseCase.preload(
-                        AudioStreamRequest(
-                            mediaId = trimmedId,
-                            quality = audioQuality,
-                            networkMetered = networkMetered,
-                            purpose = StreamPurpose.PLAYBACK,
-                            preferredStreamClient = preferredStreamClient,
-                            authState = YouTube.currentPlaybackAuthState(),
-                        ),
-                    )
-                }.onSuccess {
-                    val durationMs = System.currentTimeMillis() - startMs
-                    lastSuccessfulPreloadVideoId = trimmedId
-                    Timber.tag(TAG).i("[Preload] Preload succeeded for %s in %d ms", trimmedId, durationMs)
-                }.onFailure { error ->
-                    if (error is kotlinx.coroutines.CancellationException || error is java.io.InterruptedIOException) {
-                        Timber.tag(TAG).d("[Preload] Preload cancelled for %s (superseded)", trimmedId)
-                    } else {
-                        Timber.tag(TAG).w(error, "[Preload] Preload failed for %s", trimmedId)
-                    }
-                }
-            }
-        }
+        preloadQueue(listOf(videoId), audioQuality, preferredStreamClient, networkMetered)
     }
 
     fun cancelPreload() {
         synchronized(this) {
-            currentJob?.cancel()
-            currentJob = null
-            currentPreloadVideoId = null
-            lastSuccessfulPreloadVideoId = null
+            queueJob?.cancel()
+            queueJob = null
         }
     }
 
-    fun getPreloadedVideoId(): String? = currentPreloadVideoId
+    fun isPreloaded(videoId: String): Boolean {
+        val request = AudioStreamRequest(
+            mediaId = videoId.trim(),
+            quality = AudioQuality.AUTO,
+            networkMetered = false,
+            purpose = StreamPurpose.PLAYBACK,
+            preferredStreamClient = PlayerStreamClient.ANDROID_VR,
+            authState = YouTube.currentPlaybackAuthState(),
+        )
+        return resolveAudioStreamUseCase.peek(request) != null
+    }
 
     companion object {
         private const val TAG = "NextStreamPreloader"
+        private const val MAX_QUEUE_PRELOAD_ITEMS = 2
     }
 }
 

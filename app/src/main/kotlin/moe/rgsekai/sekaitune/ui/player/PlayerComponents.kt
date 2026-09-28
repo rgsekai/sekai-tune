@@ -138,6 +138,7 @@ import moe.rgsekai.sekaitune.ui.component.BottomSheetPageState
 import moe.rgsekai.sekaitune.ui.component.BottomSheetState
 import moe.rgsekai.sekaitune.ui.component.MenuState
 import moe.rgsekai.sekaitune.ui.component.PlayerSliderTrack
+import moe.rgsekai.sekaitune.ui.component.rememberDelayedBufferingState
 import moe.rgsekai.sekaitune.ui.component.ResizableIconButton
 import moe.rgsekai.sekaitune.ui.menu.PlayerMenu
 import moe.rgsekai.sekaitune.ui.theme.PlayerBackgroundColorUtils
@@ -380,6 +381,7 @@ fun PlayerSlider(
     duration: Long,
     isPlaying: Boolean,
     textButtonColor: Color,
+    isBuffering: Boolean = false,
     onValueChange: (Long) -> Unit,
     onValueChangeFinished: () -> Unit,
 ) {
@@ -394,6 +396,7 @@ fun PlayerSlider(
         onValueChangeFinished = onValueChangeFinished,
         activeColor = textButtonColor,
         isPlaying = isPlaying,
+        isBuffering = isBuffering,
         modifier = Modifier.padding(horizontal = PlayerHorizontalPadding),
     )
 }
@@ -408,6 +411,7 @@ fun StyledPlaybackSlider(
     onValueChangeFinished: () -> Unit,
     activeColor: Color,
     isPlaying: Boolean,
+    isBuffering: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     when (sliderStyle) {
@@ -418,6 +422,15 @@ fun StyledPlaybackSlider(
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
                 colors = PlayerSliderColors.standardSliderColors(activeColor),
+                thumb = { Spacer(modifier = Modifier.size(0.dp)) },
+                track = { sliderState ->
+                    PlayerSliderTrack(
+                        sliderState = sliderState,
+                        colors = PlayerSliderColors.standardSliderColors(activeColor),
+                        trackHeight = 4.dp,
+                        isBuffering = isBuffering,
+                    )
+                },
                 modifier = modifier,
             )
         }
@@ -432,7 +445,7 @@ fun StyledPlaybackSlider(
                 modifier = modifier,
                 squigglesSpec =
                     SquigglySlider.SquigglesSpec(
-                        amplitude = if (isPlaying) 2.dp else 0.dp,
+                        amplitude = if (isPlaying) 2.dp else if (isBuffering) 1.dp else 0.dp,
                         strokeWidth = 6.dp,
                     ),
             )
@@ -451,6 +464,7 @@ fun StyledPlaybackSlider(
                         sliderState = sliderState,
                         colors = PlayerSliderColors.thickSliderColors(activeColor),
                         trackHeight = 12.dp,
+                        isBuffering = isBuffering,
                     )
                 },
                 modifier = modifier,
@@ -467,7 +481,7 @@ fun StyledPlaybackSlider(
                 modifier = modifier,
                 squigglesSpec =
                     SquigglySlider.SquigglesSpec(
-                        amplitude = if (isPlaying) 2.dp else 0.dp,
+                        amplitude = if (isPlaying) 2.dp else if (isBuffering) 1.dp else 0.dp,
                         strokeWidth = 6.dp,
                     ),
             )
@@ -486,6 +500,7 @@ fun StyledPlaybackSlider(
                         sliderState = sliderState,
                         colors = PlayerSliderColors.simpleSliderColors(activeColor),
                         trackHeight = 3.dp,
+                        isBuffering = isBuffering,
                     )
                 },
                 modifier = modifier,
@@ -553,7 +568,6 @@ fun PlayerPlaybackControls(
     playerDesignStyle: PlayerDesignStyle,
     playbackState: Int,
     isPlaying: Boolean,
-    isLoading: Boolean,
     repeatMode: Int,
     canSkipPrevious: Boolean,
     canSkipNext: Boolean,
@@ -628,25 +642,18 @@ fun PlayerPlaybackControls(
                                 .size(width = playButtonWidth, height = playButtonHeight)
                                 .clip(RoundedCornerShape(32.dp)),
                     ) {
-                        if (isLoading) {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.size(42.dp),
-                                color = iconButtonColor,
-                            )
-                        } else {
-                            Icon(
-                                painter =
-                                    painterResource(
-                                        when {
-                                            playbackState == STATE_ENDED -> R.drawable.replay
-                                            isPlaying -> R.drawable.pause
-                                            else -> R.drawable.play
-                                        },
-                                    ),
-                                contentDescription = null,
-                                modifier = Modifier.size(42.dp),
-                            )
-                        }
+                        Icon(
+                            painter =
+                                painterResource(
+                                    when {
+                                        playbackState == STATE_ENDED -> R.drawable.replay
+                                        isPlaying -> R.drawable.pause
+                                        else -> R.drawable.play
+                                    },
+                                ),
+                            contentDescription = null,
+                            modifier = Modifier.size(42.dp),
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -695,7 +702,6 @@ fun PlayerControlsContent(
     sliderStyle: SliderStyle,
     playbackState: Int,
     isPlaying: Boolean,
-    isLoading: Boolean,
     repeatMode: Int,
     canSkipPrevious: Boolean,
     canSkipNext: Boolean,
@@ -762,6 +768,13 @@ fun PlayerControlsContent(
 
     Spacer(Modifier.height(12.dp))
 
+    val isBuffering =
+        rememberDelayedBufferingState(
+            playbackState = playbackState,
+            mediaId = mediaMetadata.id,
+            delayMillis = 1000L,
+        )
+
     PlayerSlider(
         sliderStyle = sliderStyle,
         sliderPosition = sliderPosition,
@@ -769,6 +782,7 @@ fun PlayerControlsContent(
         duration = duration,
         isPlaying = isPlaying,
         textButtonColor = textButtonColor,
+        isBuffering = isBuffering && sliderPosition == null,
         onValueChange = onSliderValueChange,
         onValueChangeFinished = onSliderValueChangeFinished,
     )
@@ -828,7 +842,6 @@ fun PlayerControlsContent(
         playerDesignStyle = playerDesignStyle,
         playbackState = playbackState,
         isPlaying = isPlaying,
-        isLoading = isLoading,
         repeatMode = repeatMode,
         canSkipPrevious = canSkipPrevious,
         canSkipNext = canSkipNext,
@@ -848,7 +861,6 @@ fun V8PlayerControlsContent(
     queueTitle: String?,
     playbackState: Int,
     isPlaying: Boolean,
-    isLoading: Boolean,
     canSkipPrevious: Boolean,
     canSkipNext: Boolean,
     currentSongLiked: Boolean,
@@ -966,6 +978,8 @@ fun V8PlayerControlsContent(
             Spacer(Modifier.height(16.dp))
 
             V8PlaybackProgress(
+                mediaId = mediaMetadata.id,
+                playbackState = playbackState,
                 sliderPosition = sliderPosition,
                 position = position,
                 duration = duration,
@@ -980,7 +994,6 @@ fun V8PlayerControlsContent(
             V8TransportControls(
                 playbackState = playbackState,
                 isPlaying = isPlaying,
-                isLoading = isLoading,
                 canSkipPrevious = canSkipPrevious,
                 canSkipNext = canSkipNext,
                 foreground = foreground,
@@ -1095,6 +1108,8 @@ private fun V8MetadataActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun V8PlaybackProgress(
+    mediaId: String?,
+    playbackState: Int,
     sliderPosition: Long?,
     position: Long,
     duration: Long,
@@ -1128,6 +1143,13 @@ private fun V8PlaybackProgress(
             thumbColor = Color.Transparent,
         )
 
+    val isBuffering =
+        rememberDelayedBufferingState(
+            playbackState = playbackState,
+            mediaId = mediaId,
+            delayMillis = 1000L,
+        )
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
             value = safeValue,
@@ -1143,6 +1165,7 @@ private fun V8PlaybackProgress(
                     sliderState = sliderState,
                     colors = sliderColors,
                     trackHeight = trackHeight,
+                    isBuffering = isBuffering && sliderPosition == null,
                 )
             },
             modifier = Modifier.fillMaxWidth().height(28.dp),
@@ -1189,7 +1212,6 @@ private fun V8PlaybackProgress(
 private fun V8TransportControls(
     playbackState: Int,
     isPlaying: Boolean,
-    isLoading: Boolean,
     canSkipPrevious: Boolean,
     canSkipNext: Boolean,
     foreground: Color,
@@ -1232,26 +1254,19 @@ private fun V8TransportControls(
                     },
             contentAlignment = Alignment.Center,
         ) {
-            if (isLoading) {
-                CircularWavyProgressIndicator(
-                    modifier = Modifier.size(54.dp),
-                    color = foreground,
-                )
-            } else {
-                Image(
-                    painter =
-                        painterResource(
-                            when {
-                                playbackState == STATE_ENDED -> R.drawable.replay
-                                isPlaying -> R.drawable.pause_applemusic
-                                else -> R.drawable.play_applemusic
-                            },
-                        ),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(foreground),
-                    modifier = Modifier.size(72.dp),
-                )
-            }
+            Image(
+                painter =
+                    painterResource(
+                        when {
+                            playbackState == STATE_ENDED -> R.drawable.replay
+                            isPlaying -> R.drawable.pause_applemusic
+                            else -> R.drawable.play_applemusic
+                        },
+                    ),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(foreground),
+                modifier = Modifier.size(72.dp),
+            )
         }
 
         Spacer(Modifier.width(8.dp))

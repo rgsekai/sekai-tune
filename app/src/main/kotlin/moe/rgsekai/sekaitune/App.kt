@@ -165,17 +165,40 @@ class App :
 
     private fun initializeDeferredAsync() {
         applicationScope.launch(Dispatchers.IO) {
-            val preWarmStart = System.currentTimeMillis()
-            Timber.tag("MoriPreWarm").i("MoriCipherRuntime.preWarm() START at timestamp: %d ms", preWarmStart)
-            runCatching {
-                MoriCipherRuntime.preWarm()
-            }.onSuccess {
-                val preWarmEnd = System.currentTimeMillis()
-                Timber.tag("MoriPreWarm").i("MoriCipherRuntime.preWarm() COMPLETED in %d ms (at %d ms)", preWarmEnd - preWarmStart, preWarmEnd)
-            }.onFailure { Timber.tag("MoriPreWarm").w(it, "Mori cipher runtime prewarm failed") }
-            MoriCipherRuntime
-                .refresh(force = false)
-                .onFailure { Timber.w(it, "Mori cipher background initialization failed") }
+            launch {
+                runCatching {
+                    YTPlayerUtils.preWarm()
+                }.onFailure {
+                    if (it !is kotlinx.coroutines.CancellationException) {
+                        Timber.tag("YTPlayerPreWarm").w(it, "YTPlayerUtils prewarm failed")
+                    }
+                }
+            }
+            launch {
+                runCatching {
+                    val visitorData = YouTube.visitorData ?: YouTube.visitorData().getOrNull()
+                    if (visitorData != null) {
+                        BotGuardTokenGenerator.preWarm(visitorData)
+                    }
+                }.onFailure {
+                    if (it !is kotlinx.coroutines.CancellationException) {
+                        Timber.tag("BotGuardPreWarm").w(it, "BotGuardTokenGenerator prewarm failed")
+                    }
+                }
+            }
+            launch {
+                val preWarmStart = System.currentTimeMillis()
+                Timber.tag("MoriPreWarm").i("MoriCipherRuntime.preWarm() START at timestamp: %d ms", preWarmStart)
+                runCatching {
+                    MoriCipherRuntime.preWarm()
+                }.onSuccess {
+                    val preWarmEnd = System.currentTimeMillis()
+                    Timber.tag("MoriPreWarm").i("MoriCipherRuntime.preWarm() COMPLETED in %d ms (at %d ms)", preWarmEnd - preWarmStart, preWarmEnd)
+                }.onFailure { Timber.tag("MoriPreWarm").w(it, "Mori cipher runtime prewarm failed") }
+                MoriCipherRuntime
+                    .refresh(force = false)
+                    .onFailure { Timber.w(it, "Mori cipher background initialization failed") }
+            }
         }
         applicationScope.launch(Dispatchers.IO) {
             runCatching {
