@@ -1871,47 +1871,57 @@ fun PlayerBackground(
                     label = "AppleMusicBackground",
                 ) { thumbnailUrl ->
                     if (thumbnailUrl != null) {
+                        val primaryCanvasUrl = canvasArtwork?.animatedVertical ?: canvasArtwork?.animated
+                        val fallbackCanvasUrl = canvasArtwork?.videoUrlVertical ?: canvasArtwork?.videoUrl
+                        val canvasRenderMode = remember(primaryCanvasUrl, fallbackCanvasUrl) {
+                            when {
+                                !primaryCanvasUrl.isNullOrBlank() ->
+                                    CanvasRenderMode.Video(
+                                        primaryUrl = primaryCanvasUrl,
+                                        fallbackUrl = fallbackCanvasUrl,
+                                    )
+                                !fallbackCanvasUrl.isNullOrBlank() ->
+                                    CanvasRenderMode.Video(
+                                        primaryUrl = fallbackCanvasUrl,
+                                        fallbackUrl = null,
+                                    )
+                                else -> CanvasRenderMode.None
+                            }
+                        }
+
                         Box(
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            // Blurred low-res base thumbnail
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(thumbnailUrl)
-                                    .size(128, 128)
-                                    .allowHardware(false)
-                                    .build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .let {
-                                        if (shouldApplyBlur) it.blur(150.dp) else it
-                                    },
-                            )
+                            if (canvasRenderMode !is CanvasRenderMode.None) {
+                                // Fullscreen Live Canvas Video with subtle soft blur
+                                CanvasArtworkPlayer(
+                                    renderMode = canvasRenderMode,
+                                    isPlaying = isPlaying,
+                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .let {
+                                            if (shouldApplyBlur) it.blur(3.dp) else it
+                                        },
+                                )
+                            } else {
+                                // Static Artwork with subtle blur base + sharp fullscreen artwork
+                                if (shouldApplyBlur) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(thumbnailUrl)
+                                            .size(128, 128)
+                                            .allowHardware(false)
+                                            .build(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .blur(40.dp)
+                                            .graphicsLayer(alpha = 0.5f),
+                                    )
+                                }
 
-                            // Clear Artwork / Live Canvas fading down with gradient alpha mask (DstIn)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(0.65f)
-                                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                                    .drawWithContent {
-                                        drawContent()
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                colorStops = arrayOf(
-                                                    0.00f to Color.Black,
-                                                    0.75f to Color.Black,
-                                                    0.92f to Color.Black.copy(alpha = 0.4f),
-                                                    1.00f to Color.Transparent,
-                                                ),
-                                            ),
-                                            blendMode = BlendMode.DstIn,
-                                        )
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
                                         .data(thumbnailUrl)
@@ -1919,46 +1929,35 @@ fun PlayerBackground(
                                         .build(),
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .let {
+                                            if (shouldApplyBlur) it.blur(3.dp) else it
+                                        },
                                 )
-
-                                val primaryCanvasUrl = canvasArtwork?.animatedVertical ?: canvasArtwork?.animated
-                                val fallbackCanvasUrl = canvasArtwork?.videoUrlVertical ?: canvasArtwork?.videoUrl
-                                val canvasRenderMode = remember(primaryCanvasUrl, fallbackCanvasUrl) {
-                                    when {
-                                        !primaryCanvasUrl.isNullOrBlank() ->
-                                            CanvasRenderMode.Video(
-                                                primaryUrl = primaryCanvasUrl,
-                                                fallbackUrl = fallbackCanvasUrl,
-                                            )
-                                        !fallbackCanvasUrl.isNullOrBlank() ->
-                                            CanvasRenderMode.Video(
-                                                primaryUrl = fallbackCanvasUrl,
-                                                fallbackUrl = null,
-                                            )
-                                        else -> CanvasRenderMode.None
-                                    }
-                                }
-
-                                if (canvasRenderMode !is CanvasRenderMode.None) {
-                                    CanvasArtworkPlayer(
-                                        renderMode = canvasRenderMode,
-                                        isPlaying = isPlaying,
-                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                }
                             }
 
-                            // Dark overlay for text contrast and depth
+                            // Base uniform dimming layer
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.22f)),
+                            )
+
+                            // Spotify-style dark gradient scrim overlay: highlights buttons and text with high contrast
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
                                         Brush.verticalGradient(
-                                            listOf(
-                                                Color.Black.copy(alpha = 0.05f),
-                                                Color.Black.copy(alpha = 0.4f),
+                                            colorStops = arrayOf(
+                                                0.00f to Color.Black.copy(alpha = 0.50f),
+                                                0.15f to Color.Black.copy(alpha = 0.20f),
+                                                0.35f to Color.Transparent,
+                                                0.55f to Color.Transparent,
+                                                0.72f to Color.Black.copy(alpha = 0.35f),
+                                                0.88f to Color.Black.copy(alpha = 0.65f),
+                                                1.00f to Color.Black.copy(alpha = 0.82f),
                                             ),
                                         ),
                                     ),

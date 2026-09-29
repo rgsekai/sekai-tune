@@ -7,6 +7,12 @@
 
 package moe.rgsekai.sekaitune.ui.player
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,18 +30,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.palette.graphics.Palette
+import coil3.compose.AsyncImage
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
@@ -163,7 +175,7 @@ private fun NewMiniPlayer(
             MiniPlayerBackgroundPalette.from(gradientColors)
         }
     val effectiveBackgroundStyle =
-        if (shouldUseArtworkBackground && backgroundPalette != null) {
+        if (shouldUseArtworkBackground && (backgroundPalette != null || !mediaMetadata?.thumbnailUrl.isNullOrBlank())) {
             miniPlayerBackgroundStyle
         } else {
             MiniPlayerBackgroundStyle.THEME
@@ -195,6 +207,7 @@ private fun NewMiniPlayer(
             MiniPlayerBackground(
                 style = effectiveBackgroundStyle,
                 palette = backgroundPalette,
+                thumbnailUrl = mediaMetadata?.thumbnailUrl,
                 modifier = Modifier.fillMaxSize(),
             )
             NewMiniPlayerContent(
@@ -259,8 +272,10 @@ private fun rememberMiniPlayerContentColors(useArtworkBackground: Boolean): Mini
 private fun MiniPlayerBackground(
     style: MiniPlayerBackgroundStyle,
     palette: MiniPlayerBackgroundPalette?,
+    thumbnailUrl: String?,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     when (style) {
         MiniPlayerBackgroundStyle.THEME -> {
             Box(
@@ -269,7 +284,7 @@ private fun MiniPlayerBackground(
         }
 
         MiniPlayerBackgroundStyle.GRADIENT -> {
-            val colors = requireNotNull(palette)
+            val colors = palette ?: return
             Box(modifier = modifier) {
                 Box(
                     modifier =
@@ -296,7 +311,7 @@ private fun MiniPlayerBackground(
         }
 
         MiniPlayerBackgroundStyle.GLOW -> {
-            val colors = requireNotNull(palette)
+            val colors = palette ?: return
             Box(
                 modifier =
                     modifier.drawWithCache {
@@ -337,6 +352,134 @@ private fun MiniPlayerBackground(
                         }
                     },
             )
+        }
+
+        MiniPlayerBackgroundStyle.LIVE_MESH -> {
+            val infiniteTransition = rememberInfiniteTransition(label = "miniLiveMesh")
+            val rotation by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(60000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+                label = "miniLiveMeshRotation",
+            )
+
+            Box(
+                modifier =
+                    modifier.graphicsLayer {
+                        scaleX = 1.5f
+                        scaleY = 1.5f
+                    },
+            ) {
+                if (!thumbnailUrl.isNullOrBlank()) {
+                    val matrix = remember { ColorMatrix().apply { setToSaturation(1.6f) } }
+                    AsyncImage(
+                        model =
+                            ImageRequest.Builder(context)
+                                .data(thumbnailUrl)
+                                .size(128, 128)
+                                .allowHardware(false)
+                                .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        colorFilter = ColorFilter.colorMatrix(matrix),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .blur(40.dp)
+                                .graphicsLayer { rotationZ = rotation },
+                    )
+                }
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+            }
+        }
+
+        MiniPlayerBackgroundStyle.LIQUID_GLASS -> {
+            val infiniteTransition = rememberInfiniteTransition(label = "miniLiquidGlass")
+            val rotation1 by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = -360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(80000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+                label = "miniLiquidGlassRotation1",
+            )
+            val rotation2 by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(40000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+                label = "miniLiquidGlassRotation2",
+            )
+
+            Box(
+                modifier =
+                    modifier.graphicsLayer {
+                        scaleX = 1.6f
+                        scaleY = 1.6f
+                    },
+            ) {
+                if (!thumbnailUrl.isNullOrBlank()) {
+                    val matrix = remember { ColorMatrix().apply { setToSaturation(1.8f) } }
+                    val colorFilter = ColorFilter.colorMatrix(matrix)
+
+                    AsyncImage(
+                        model =
+                            ImageRequest.Builder(context)
+                                .data(thumbnailUrl)
+                                .size(128, 128)
+                                .allowHardware(false)
+                                .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        colorFilter = colorFilter,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .blur(45.dp)
+                                .graphicsLayer { rotationZ = rotation1 },
+                    )
+                    AsyncImage(
+                        model =
+                            ImageRequest.Builder(context)
+                                .data(thumbnailUrl)
+                                .size(128, 128)
+                                .allowHardware(false)
+                                .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        colorFilter = colorFilter,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .blur(45.dp)
+                                .graphicsLayer {
+                                    rotationZ = rotation2
+                                    alpha = 0.6f
+                                },
+                    )
+                }
+                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF121212).copy(alpha = 0.28f)))
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.15f),
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.35f),
+                                    ),
+                                ),
+                            ),
+                )
+            }
         }
     }
 }
