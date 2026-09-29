@@ -57,6 +57,7 @@ import moe.rgsekai.sekaitune.ui.screens.settings.ChiperSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.ContentSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.CustomizeBackground
 import moe.rgsekai.sekaitune.ui.screens.settings.DebugSettings
+import moe.rgsekai.sekaitune.ui.screens.settings.GlassEffectSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.HiddenPlaylistsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IconScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.InternetSettings
@@ -345,6 +346,12 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/appearance") {
         AppearanceSettings(navController)
+    }
+    composable("settings/appearance/liquid_glass") {
+        GlassEffectSettings(navController)
+    }
+    composable("settings/liquid_glass") {
+        GlassEffectSettings(navController)
     }
     composable("settings/appearance/icon") {
         IconScreen(navController)

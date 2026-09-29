@@ -790,6 +790,23 @@ val GitHubReleasesFingerprintKey = stringPreferencesKey("github_releases_fingerp
 
 val LastCloudSyncTimestampKey = longPreferencesKey("last_cloud_sync_timestamp")
 
+// Liquid Glass
+val LiquidGlassGlobalEnabledKey = booleanPreferencesKey("liquidGlassGlobalEnabled")
+val LiquidGlassTextColorKey = intPreferencesKey("liquidGlassTextColor")
+val LiquidGlassSurfaceTintColorKey = intPreferencesKey("liquidGlassSurfaceTintColor")
+val LiquidGlassSurfaceOpacityKey = floatPreferencesKey("liquidGlassSurfaceOpacity")
+val LiquidGlassVibrancyKey = floatPreferencesKey("liquidGlassVibrancy")
+val LiquidGlassBlurRadiusKey = floatPreferencesKey("liquidGlassBlurRadius")
+val LiquidGlassLensHeightKey = floatPreferencesKey("liquidGlassLensHeight")
+val LiquidGlassLensAmountKey = floatPreferencesKey("liquidGlassLensAmount")
+val LiquidGlassChromaticAberrationKey = booleanPreferencesKey("liquidGlassChromaticAberration")
+val LiquidGlassDepthEffectKey = booleanPreferencesKey("liquidGlassDepthEffect")
+val LiquidGlassPlayerEnabledKey = booleanPreferencesKey("liquidGlassPlayerEnabled")
+val LiquidGlassMiniPlayerEnabledKey = booleanPreferencesKey("liquidGlassMiniPlayerEnabled")
+val LiquidGlassNavBarEnabledKey = booleanPreferencesKey("liquidGlassNavBarEnabled")
+
+
+
 
 
 

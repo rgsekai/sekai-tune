@@ -1,5 +1,7 @@
 import express from "express";
-import admin from "firebase-admin";
+import { initializeApp, cert } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 
 // ==========================================
 // 1. Firebase Admin Initialization
@@ -26,16 +28,16 @@ function initFirebase() {
     }
   }
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+  initializeApp({
+    credential: cert(serviceAccount),
   });
 
   console.log("Firebase Admin successfully initialized for project:", serviceAccount.project_id || "default");
 }
 
 initFirebase();
-const db = admin.firestore();
-const messaging = admin.messaging();
+const db = getFirestore();
+const messaging = getMessaging();
 
 const app = express();
 app.use(express.json());

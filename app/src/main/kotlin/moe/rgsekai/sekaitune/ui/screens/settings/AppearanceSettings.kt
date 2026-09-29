@@ -97,6 +97,8 @@ import moe.rgsekai.sekaitune.constants.PlayerButtonsStyleKey
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
 import moe.rgsekai.sekaitune.constants.PureBlackKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
 import moe.rgsekai.sekaitune.constants.RandomThemeOnStartupKey
@@ -848,6 +850,17 @@ fun AppearanceSettings(navController: NavController) {
                         description = stringResource(R.string.sensitivity_percentage, (swipeSensitivity * 100).roundToInt()),
                         icon = { Icon(painterResource(R.drawable.tune), null) },
                         onClick = { showSensitivityDialog = true },
+                    )
+                }
+            }
+
+            PreferenceGroup(title = stringResource(R.string.liquid_glass)) {
+                item {
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.liquid_glass_beta)) },
+                        description = stringResource(R.string.liquid_glass_performance_warning),
+                        icon = { Icon(painterResource(R.drawable.tune), null) },
+                        onClick = { navController.navigate("settings/appearance/liquid_glass") },
                     )
                 }
             }

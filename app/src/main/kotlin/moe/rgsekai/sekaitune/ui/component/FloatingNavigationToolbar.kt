@@ -26,6 +26,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -96,11 +97,36 @@ fun FloatingNavigationToolbar(
     onItemClick: (Screens, Boolean) -> Unit,
     onSearchItemDoubleClick: (() -> Unit)? = null,
 ) {
-    val toolbarContainerColor = floatingToolbarContainerColor(pureBlack = pureBlack)
+    val glassConfig = LocalGlassEffectConfig.current
+    val useGlass = glassConfig.isEnabledFor(GlassComponent.NAV_BAR)
+    val outlineColor = MaterialTheme.colorScheme.outline
+
+    val toolbarContainerColor =
+        if (useGlass) {
+            Color.Transparent
+        } else {
+            floatingToolbarContainerColor(pureBlack = pureBlack)
+        }
     val toolbarColors =
         FloatingToolbarDefaults.standardFloatingToolbarColors(
             toolbarContainerColor = toolbarContainerColor,
         )
+    val toolbarModifier =
+        if (useGlass) {
+            Modifier
+                .clip(RoundedCornerShape(percent = 50))
+                .liquidGlass(
+                    config = glassConfig,
+                    shape = RoundedCornerShape(percent = 50),
+                )
+                .border(
+                    1.dp,
+                    outlineColor.copy(alpha = 0.3f),
+                    RoundedCornerShape(percent = 50),
+                )
+        } else {
+            Modifier
+        }
     val mainItems = remember(items) { items.filterNot { it == Screens.Search } }
     val isSearchSelected = isSelected(Screens.Search)
 
@@ -113,29 +139,60 @@ fun FloatingNavigationToolbar(
         HorizontalFloatingToolbar(
             expanded = true,
             floatingActionButton = {
-                FloatingToolbarDefaults.VibrantFloatingActionButton(
-                    onClick = { onItemClick(Screens.Search, isSearchSelected) },
-                    shape = CircleShape,
-                    containerColor =
-                        if (isSearchSelected) {
-                            floatingToolbarFabContainerColor()
-                        } else {
-                            floatingToolbarContainerColor(pureBlack)
-                        },
-                    contentColor =
-                        if (isSearchSelected) {
-                            floatingToolbarFabContentColor()
-                        } else {
-                            floatingToolbarItemContentColor(pureBlack)
-                        },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.search),
-                        contentDescription = stringResource(R.string.search),
-                    )
+                if (useGlass) {
+                    FloatingToolbarDefaults.StandardFloatingActionButton(
+                        onClick = { onItemClick(Screens.Search, isSearchSelected) },
+                        shape = CircleShape,
+                        containerColor = Color.Transparent,
+                        contentColor =
+                            if (isSearchSelected) {
+                                floatingToolbarFabContainerColor()
+                            } else {
+                                if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurface
+                            },
+                        modifier =
+                            Modifier
+                                .clip(CircleShape)
+                                .liquidGlass(
+                                    config = glassConfig,
+                                    shape = CircleShape,
+                                )
+                                .border(
+                                    1.dp,
+                                    outlineColor.copy(alpha = 0.3f),
+                                    CircleShape,
+                                ),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.search),
+                            contentDescription = stringResource(R.string.search),
+                        )
+                    }
+                } else {
+                    FloatingToolbarDefaults.VibrantFloatingActionButton(
+                        onClick = { onItemClick(Screens.Search, isSearchSelected) },
+                        shape = CircleShape,
+                        containerColor =
+                            if (isSearchSelected) {
+                                floatingToolbarFabContainerColor()
+                            } else {
+                                floatingToolbarContainerColor(pureBlack)
+                            },
+                        contentColor =
+                            if (isSearchSelected) {
+                                floatingToolbarFabContentColor()
+                            } else {
+                                floatingToolbarItemContentColor(pureBlack)
+                            },
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.search),
+                            contentDescription = stringResource(R.string.search),
+                        )
+                    }
                 }
             },
-            modifier = Modifier.widthIn(max = 480.dp),
+            modifier = Modifier.widthIn(max = 480.dp).then(toolbarModifier),
             colors = toolbarColors,
             scrollBehavior = scrollBehavior,
             animationSpec = FloatingToolbarDefaults.animationSpec(),

@@ -212,6 +212,19 @@ import moe.rgsekai.sekaitune.constants.FloatingToolbarHorizontalPadding
 import moe.rgsekai.sekaitune.constants.FontPreferenceKey
 import moe.rgsekai.sekaitune.constants.HasPressedStarKey
 import moe.rgsekai.sekaitune.constants.LaunchCountKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassBlurRadiusKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassChromaticAberrationKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassDepthEffectKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassLensAmountKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassLensHeightKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassMiniPlayerEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassPlayerEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceOpacityKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceTintColorKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassTextColorKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassVibrancyKey
 import moe.rgsekai.sekaitune.constants.MiniPlayerBottomSpacing
 import moe.rgsekai.sekaitune.constants.MiniPlayerHeight
 import moe.rgsekai.sekaitune.constants.MiniPlayerLastAnchorKey
@@ -228,6 +241,11 @@ import moe.rgsekai.sekaitune.constants.SYSTEM_DEFAULT
 import moe.rgsekai.sekaitune.constants.SearchSource
 import moe.rgsekai.sekaitune.constants.SearchSourceKey
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
+import moe.rgsekai.sekaitune.ui.component.GlassEffectConfig
+import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.layerBackdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.rememberLayerBackdrop
 import moe.rgsekai.sekaitune.constants.UseSystemFontKey
 import moe.rgsekai.sekaitune.db.MusicDatabase
 import moe.rgsekai.sekaitune.db.entities.Album
@@ -979,6 +997,58 @@ class MainActivity : ComponentActivity() {
                         defaultValue = PlayerDesignStyle.V2,
                     )
 
+                    val (liquidGlassGlobalEnabled) = rememberPreference(LiquidGlassGlobalEnabledKey, defaultValue = false)
+                    val (liquidGlassVibrancy) = rememberPreference(LiquidGlassVibrancyKey, defaultValue = 1f)
+                    val (liquidGlassBlurRadius) = rememberPreference(LiquidGlassBlurRadiusKey, defaultValue = 8f)
+                    val (liquidGlassLensHeight) = rememberPreference(LiquidGlassLensHeightKey, defaultValue = 0.5f)
+                    val (liquidGlassLensAmount) = rememberPreference(LiquidGlassLensAmountKey, defaultValue = 0.5f)
+                    val (liquidGlassChromaticAberration) = rememberPreference(LiquidGlassChromaticAberrationKey, defaultValue = true)
+                    val (liquidGlassDepthEffect) = rememberPreference(LiquidGlassDepthEffectKey, defaultValue = true)
+                    val (liquidGlassSurfaceTintColorInt) = rememberPreference(LiquidGlassSurfaceTintColorKey, defaultValue = 0)
+                    val (liquidGlassSurfaceOpacity) = rememberPreference(LiquidGlassSurfaceOpacityKey, defaultValue = 0.4f)
+                    val (liquidGlassTextColorInt) = rememberPreference(LiquidGlassTextColorKey, defaultValue = 0)
+                    val (liquidGlassPlayerEnabled) = rememberPreference(LiquidGlassPlayerEnabledKey, defaultValue = true)
+                    val (liquidGlassMiniPlayerEnabled) = rememberPreference(LiquidGlassMiniPlayerEnabledKey, defaultValue = true)
+                    val (liquidGlassNavBarEnabled) = rememberPreference(LiquidGlassNavBarEnabledKey, defaultValue = true)
+
+                    val glassEffectConfig = remember(
+                        liquidGlassGlobalEnabled,
+                        liquidGlassVibrancy,
+                        liquidGlassBlurRadius,
+                        liquidGlassLensHeight,
+                        liquidGlassLensAmount,
+                        liquidGlassChromaticAberration,
+                        liquidGlassDepthEffect,
+                        liquidGlassSurfaceTintColorInt,
+                        liquidGlassSurfaceOpacity,
+                        liquidGlassTextColorInt,
+                        liquidGlassPlayerEnabled,
+                        liquidGlassMiniPlayerEnabled,
+                        liquidGlassNavBarEnabled,
+                    ) {
+                        GlassEffectConfig(
+                            globalEnabled = liquidGlassGlobalEnabled,
+                            vibrancy = liquidGlassVibrancy,
+                            blurRadius = liquidGlassBlurRadius,
+                            lensHeight = liquidGlassLensHeight,
+                            lensAmount = liquidGlassLensAmount,
+                            chromaticAberration = liquidGlassChromaticAberration,
+                            depthEffect = liquidGlassDepthEffect,
+                            surfaceTintColor = if (liquidGlassSurfaceTintColorInt == 0) Color.Unspecified else Color(liquidGlassSurfaceTintColorInt),
+                            surfaceOpacity = liquidGlassSurfaceOpacity,
+                            textColor = if (liquidGlassTextColorInt == 0) Color.Unspecified else Color(liquidGlassTextColorInt),
+                            playerEnabled = liquidGlassPlayerEnabled,
+                            miniPlayerEnabled = liquidGlassMiniPlayerEnabled,
+                            navBarEnabled = liquidGlassNavBarEnabled,
+                        )
+                    }
+
+                    val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                    val appBackdrop = rememberLayerBackdrop {
+                        drawRect(if (pureBlack) Color.Black else surfaceContainerColor)
+                        drawContent()
+                    }
+
                     val aodModeEnabled by remember(playerConnection) {
                         playerConnection?.aodModeEnabled ?: MutableStateFlow(false)
                     }.collectAsStateWithLifecycle()
@@ -1451,6 +1521,8 @@ class MainActivity : ComponentActivity() {
                         LocalDownloadUtil provides downloadUtil,
                         LocalShimmerTheme provides ShimmerTheme,
                         LocalSyncUtils provides syncUtils,
+                        LocalGlassEffectConfig provides glassEffectConfig,
+                        LocalAppBackdrop provides appBackdrop,
                         moe.rgsekai.sekaitune.ui.component.LocalBottomSheetPageState provides bottomSheetPageState,
                         moe.rgsekai.sekaitune.ui.component.LocalMenuState provides menuState,
                     ) {
@@ -2169,6 +2241,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     modifier =
                                         Modifier
+                                            .layerBackdrop(appBackdrop)
                                             .then(
                                                 if (isTvDevice) {
                                                     Modifier
