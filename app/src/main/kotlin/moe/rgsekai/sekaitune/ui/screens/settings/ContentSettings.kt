@@ -13,6 +13,9 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -65,9 +68,10 @@ fun ContentSettings(navController: NavController) {
 
     Column(
         Modifier
-            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = SettingsDimensions.ScreenBottomPadding),
+            .windowInsetsPadding(
+                LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal)
+            )
+            .verticalScroll(rememberScrollState()),
     ) {
         PreferenceGroup(title = stringResource(R.string.general)) {
             item {
@@ -213,6 +217,12 @@ fun ContentSettings(navController: NavController) {
                 )
             }
         }
+
+        Spacer(
+            Modifier.windowInsetsPadding(
+                LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom)
+            ).padding(bottom = SettingsDimensions.ScreenBottomPadding)
+        )
     }
 
     TopAppBar(

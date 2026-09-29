@@ -196,9 +196,8 @@ fun InternetSettings(navController: NavController) {
         Column(
             Modifier
                 .padding(top = topPadding)
-                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = SettingsDimensions.ScreenBottomPadding),
+                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal))
+                .verticalScroll(rememberScrollState()),
         ) {
             InternetWarningBox()
 
@@ -425,6 +424,12 @@ fun InternetSettings(navController: NavController) {
                     )
                 }
             }
+
+            Spacer(
+                Modifier.windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom)
+                ).padding(bottom = SettingsDimensions.ScreenBottomPadding)
+            )
         }
     }
 

@@ -60,7 +60,6 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassLensAmountKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassLensHeightKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassMiniPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
-import moe.rgsekai.sekaitune.constants.LiquidGlassPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceOpacityKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceTintColorKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassTextColorKey
@@ -125,9 +124,6 @@ fun GlassEffectSettings(navController: NavController) {
         Color.White
     }
     val textColor = if (textColorInt == 0) adaptiveTextColor else Color(textColorInt)
-    val (playerEnabled, onPlayerEnabledChange) = rememberPreference(
-        LiquidGlassPlayerEnabledKey, defaultValue = true
-    )
     val (miniPlayerEnabled, onMiniPlayerEnabledChange) = rememberPreference(
         LiquidGlassMiniPlayerEnabledKey, defaultValue = true
     )
@@ -285,15 +281,6 @@ fun GlassEffectSettings(navController: NavController) {
             PreferenceGroup(
                 title = stringResource(R.string.liquid_glass_per_component),
             ) {
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.liquid_glass_player)) },
-                        description = stringResource(R.string.liquid_glass_player_desc),
-                        icon = { Icon(painterResource(R.drawable.drag_handle), contentDescription = null) },
-                        checked = playerEnabled,
-                        onCheckedChange = onPlayerEnabledChange,
-                    )
-                }
                 item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.liquid_glass_mini_player)) },

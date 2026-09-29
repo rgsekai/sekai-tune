@@ -220,7 +220,6 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassLensAmountKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassLensHeightKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassMiniPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
-import moe.rgsekai.sekaitune.constants.LiquidGlassPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceOpacityKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceTintColorKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassTextColorKey
@@ -1007,7 +1006,6 @@ class MainActivity : ComponentActivity() {
                     val (liquidGlassSurfaceTintColorInt) = rememberPreference(LiquidGlassSurfaceTintColorKey, defaultValue = 0)
                     val (liquidGlassSurfaceOpacity) = rememberPreference(LiquidGlassSurfaceOpacityKey, defaultValue = 0.4f)
                     val (liquidGlassTextColorInt) = rememberPreference(LiquidGlassTextColorKey, defaultValue = 0)
-                    val (liquidGlassPlayerEnabled) = rememberPreference(LiquidGlassPlayerEnabledKey, defaultValue = true)
                     val (liquidGlassMiniPlayerEnabled) = rememberPreference(LiquidGlassMiniPlayerEnabledKey, defaultValue = true)
                     val (liquidGlassNavBarEnabled) = rememberPreference(LiquidGlassNavBarEnabledKey, defaultValue = true)
 
@@ -1022,7 +1020,6 @@ class MainActivity : ComponentActivity() {
                         liquidGlassSurfaceTintColorInt,
                         liquidGlassSurfaceOpacity,
                         liquidGlassTextColorInt,
-                        liquidGlassPlayerEnabled,
                         liquidGlassMiniPlayerEnabled,
                         liquidGlassNavBarEnabled,
                     ) {
@@ -1037,7 +1034,6 @@ class MainActivity : ComponentActivity() {
                             surfaceTintColor = if (liquidGlassSurfaceTintColorInt == 0) Color.Unspecified else Color(liquidGlassSurfaceTintColorInt),
                             surfaceOpacity = liquidGlassSurfaceOpacity,
                             textColor = if (liquidGlassTextColorInt == 0) Color.Unspecified else Color(liquidGlassTextColorInt),
-                            playerEnabled = liquidGlassPlayerEnabled,
                             miniPlayerEnabled = liquidGlassMiniPlayerEnabled,
                             navBarEnabled = liquidGlassNavBarEnabled,
                         )

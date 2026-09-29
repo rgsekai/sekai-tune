@@ -14,6 +14,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -58,6 +59,10 @@ import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyleKey
 import moe.rgsekai.sekaitune.constants.SwipeSensitivityKey
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
+import moe.rgsekai.sekaitune.ui.component.isGlassSupported
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import moe.rgsekai.sekaitune.ui.theme.PlayerColorExtractor
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
@@ -97,6 +102,9 @@ private fun NewMiniPlayer(
         key = MiniPlayerBackgroundStyleKey,
         defaultValue = MiniPlayerBackgroundStyle.THEME,
     )
+    val glassConfig = LocalGlassEffectConfig.current
+    val useGlass = (miniPlayerBackgroundStyle == MiniPlayerBackgroundStyle.LIQUID_GLASS || glassConfig.isEnabledFor(GlassComponent.MINI_PLAYER)) && isGlassSupported()
+
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     var gradientColors by remember {
         mutableStateOf<List<Color>>(emptyList())
@@ -109,7 +117,7 @@ private fun NewMiniPlayer(
             }
         }
     val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
-    val shouldUseArtworkBackground = miniPlayerBackgroundStyle != MiniPlayerBackgroundStyle.THEME
+    val shouldUseArtworkBackground = !useGlass && miniPlayerBackgroundStyle != MiniPlayerBackgroundStyle.THEME
 
     LaunchedEffect(
         mediaMetadata?.id,
@@ -183,8 +191,19 @@ private fun NewMiniPlayer(
 
     val contentColors =
         rememberMiniPlayerContentColors(
-            useArtworkBackground = effectiveBackgroundStyle != MiniPlayerBackgroundStyle.THEME,
+            useArtworkBackground = !useGlass && effectiveBackgroundStyle != MiniPlayerBackgroundStyle.THEME,
+            useGlass = useGlass,
+            glassTextColor = if (useGlass && glassConfig.textColor != Color.Unspecified) glassConfig.textColor else Color.Unspecified,
         )
+
+    val shape = RoundedCornerShape(percent = 50)
+    val outlineColor = if (useGlass) {
+        if (glassConfig.textColor != Color.Unspecified) glassConfig.textColor.copy(alpha = 0.3f)
+        else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    }
+    val bgTint = if (useGlass) Color.Transparent else if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
 
     SwipeableMiniPlayerBox(
         modifier = modifier,
@@ -202,14 +221,22 @@ private fun NewMiniPlayer(
                     .fillMaxWidth()
                     .height(64.dp)
                     .offset { IntOffset(offsetX.roundToInt(), 0) }
-                    .clip(RoundedCornerShape(32.dp)),
+                    .let { base ->
+                        if (useGlass) {
+                            base.clip(shape).liquidGlass(config = glassConfig, shape = shape)
+                        } else {
+                            base.clip(shape).background(bgTint)
+                        }.border(1.dp, outlineColor, shape)
+                    },
         ) {
-            MiniPlayerBackground(
-                style = effectiveBackgroundStyle,
-                palette = backgroundPalette,
-                thumbnailUrl = mediaMetadata?.thumbnailUrl,
-                modifier = Modifier.fillMaxSize(),
-            )
+            if (!useGlass) {
+                MiniPlayerBackground(
+                    style = effectiveBackgroundStyle,
+                    palette = backgroundPalette,
+                    thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             NewMiniPlayerContent(
                 position = position,
                 duration = duration,
@@ -221,10 +248,16 @@ private fun NewMiniPlayer(
 }
 
 @Composable
-private fun rememberMiniPlayerContentColors(useArtworkBackground: Boolean): MiniPlayerContentColors {
+private fun rememberMiniPlayerContentColors(
+    useArtworkBackground: Boolean,
+    useGlass: Boolean = false,
+    glassTextColor: Color = Color.Unspecified,
+): MiniPlayerContentColors {
     val colorScheme = MaterialTheme.colorScheme
     return remember(
         useArtworkBackground,
+        useGlass,
+        glassTextColor,
         colorScheme.primary,
         colorScheme.outline,
         colorScheme.onSurface,
@@ -234,7 +267,23 @@ private fun rememberMiniPlayerContentColors(useArtworkBackground: Boolean): Mini
         colorScheme.primaryContainer,
         colorScheme.onPrimaryContainer,
     ) {
-        if (useArtworkBackground) {
+        if (useGlass) {
+            val textColor = if (glassTextColor != Color.Unspecified) glassTextColor else Color.White
+            MiniPlayerContentColors(
+                title = textColor,
+                secondary = textColor.copy(alpha = 0.72f),
+                progress = textColor,
+                progressTrack = textColor.copy(alpha = 0.24f),
+                artworkContainer = Color.White.copy(alpha = 0.14f),
+                artworkBorder = textColor.copy(alpha = 0.22f),
+                primaryButtonContainer = Color.White.copy(alpha = 0.16f),
+                buttonBorder = textColor.copy(alpha = 0.24f),
+                buttonIcon = textColor,
+                disabledButtonIcon = textColor.copy(alpha = 0.38f),
+                togetherContainer = Color.White.copy(alpha = 0.16f),
+                togetherContent = textColor,
+            )
+        } else if (useArtworkBackground) {
             MiniPlayerContentColors(
                 title = Color.White,
                 secondary = Color.White.copy(alpha = 0.72f),
@@ -277,7 +326,7 @@ private fun MiniPlayerBackground(
 ) {
     val context = LocalContext.current
     when (style) {
-        MiniPlayerBackgroundStyle.THEME -> {
+        MiniPlayerBackgroundStyle.THEME, MiniPlayerBackgroundStyle.LIQUID_GLASS -> {
             Box(
                 modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
             )
@@ -393,92 +442,6 @@ private fun MiniPlayerBackground(
                     )
                 }
                 Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
-            }
-        }
-
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> {
-            val infiniteTransition = rememberInfiniteTransition(label = "miniLiquidGlass")
-            val rotation1 by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = -360f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(80000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart,
-                ),
-                label = "miniLiquidGlassRotation1",
-            )
-            val rotation2 by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 360f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(40000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart,
-                ),
-                label = "miniLiquidGlassRotation2",
-            )
-
-            Box(
-                modifier =
-                    modifier.graphicsLayer {
-                        scaleX = 1.6f
-                        scaleY = 1.6f
-                    },
-            ) {
-                if (!thumbnailUrl.isNullOrBlank()) {
-                    val matrix = remember { ColorMatrix().apply { setToSaturation(1.8f) } }
-                    val colorFilter = ColorFilter.colorMatrix(matrix)
-
-                    AsyncImage(
-                        model =
-                            ImageRequest.Builder(context)
-                                .data(thumbnailUrl)
-                                .size(128, 128)
-                                .allowHardware(false)
-                                .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        colorFilter = colorFilter,
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .blur(45.dp)
-                                .graphicsLayer { rotationZ = rotation1 },
-                    )
-                    AsyncImage(
-                        model =
-                            ImageRequest.Builder(context)
-                                .data(thumbnailUrl)
-                                .size(128, 128)
-                                .allowHardware(false)
-                                .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        colorFilter = colorFilter,
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .blur(45.dp)
-                                .graphicsLayer {
-                                    rotationZ = rotation2
-                                    alpha = 0.6f
-                                },
-                    )
-                }
-                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF121212).copy(alpha = 0.28f)))
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.White.copy(alpha = 0.15f),
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.35f),
-                                    ),
-                                ),
-                            ),
-                )
             }
         }
     }

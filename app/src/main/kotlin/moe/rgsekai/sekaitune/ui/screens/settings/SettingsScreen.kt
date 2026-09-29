@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -178,6 +179,7 @@ fun SettingsScreen(
             )
         },
     ) { innerPadding ->
+        val playerInsets = LocalPlayerAwareWindowInsets.current
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -185,14 +187,14 @@ fun SettingsScreen(
                 Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(
-                        LocalPlayerAwareWindowInsets.current.only(
-                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                        playerInsets.only(
+                            WindowInsetsSides.Horizontal,
                         ),
                     ),
             contentPadding =
                 PaddingValues(
                     top = innerPadding.calculateTopPadding(),
-                    bottom = SettingsDimensions.ScreenBottomPadding,
+                    bottom = SettingsDimensions.ScreenBottomPadding + playerInsets.asPaddingValues().calculateBottomPadding(),
                 ),
         ) {
             item(key = "search_bar", contentType = "settings_search_bar") {

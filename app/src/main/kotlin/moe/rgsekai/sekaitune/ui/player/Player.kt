@@ -1698,120 +1698,20 @@ private fun V7PlayerBackdrop(
                 canvasFallbackUrl = canvasFallback,
             )
         }
-    val backdropArtworkModel =
-        remember(backdropArtworkUrl, backdropArtworkSizePx) {
-            backdropArtworkUrl?.resize(backdropArtworkSizePx, backdropArtworkSizePx)
-        }
-    val backdropArtworkRequest = rememberOfflineArtworkImageRequest(backdropArtworkModel)
-    val sharpStageBottomScrim =
-        remember(backdropPalette) {
-            val blendColor = backdropPalette.bottom
-            Brush.verticalGradient(
-                colorStops =
-                    arrayOf(
-                        0f to Color.Transparent,
-                        V7SharpStageBottomScrimStartFraction to Color.Transparent,
-                        0.60f to blendColor.copy(alpha = 0.18f),
-                        0.76f to blendColor.copy(alpha = 0.52f),
-                        0.88f to blendColor.copy(alpha = 0.82f),
-                        1f to blendColor,
-                    ),
-            )
-        }
-    val backdropFloor =
-        remember(backdropPalette) {
-            Brush.verticalGradient(
-                colorStops =
-                    arrayOf(
-                        0f to backdropPalette.bottom,
-                        V7BackdropFloorBlackStartFraction to backdropPalette.bottom,
-                        1f to backdropPalette.bottom,
-                    ),
-            )
-        }
-    val backdropBlurRadius = V7BackdropBlurDp.dp * (backdropBlurAmount.toFloat() / 100f)
-    val needsBlur = !disableBlur && backdropBlurAmount > 0
-    val backdropImageModifier =
-        remember(disableBlur, needsBlur) {
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = V7BackdropBlurScale
-                    scaleY = V7BackdropBlurScale
-                    alpha = if (disableBlur || !needsBlur) 0.20f else 0.58f
-                }
-        }
-    val canvasStageModifier =
-        remember {
-            Modifier
-                .fillMaxSize()
-        }    BoxWithConstraints(
+    val shouldApplyBlur = !disableBlur
+
+    BoxWithConstraints(
         modifier =
             modifier
                 .fillMaxSize()
                 .background(backdropPalette.bottom),
     ) {
-        // Base blurred layer (fullscreen)
-        if (backdropArtworkModel != null) {
-            if (needsBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                AsyncImage(
-                    model = backdropArtworkRequest,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().blur(100.dp),
-                )
-            } else if (needsBlur) {
-                BackdropBlurApi30(
-                    model = backdropArtworkModel,
-                    blurAmount = backdropBlurAmount,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = V7BackdropBlurScale
-                                scaleY = V7BackdropBlurScale
-                                alpha = 0.75f
-                            },
-                )
-            } else {
-                AsyncImage(
-                    model = backdropArtworkRequest,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-
-        // Upper 65% clear artwork with vertical alpha fade mask
         AnimatedContent(
             targetState = backdropState,
             transitionSpec = {
-                fadeIn(tween(900)) togetherWith fadeOut(tween(900))
+                fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
             },
             label = label,
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.65f)
-                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(
-                            brush =
-                                Brush.verticalGradient(
-                                    colorStops =
-                                        arrayOf(
-                                            0.00f to Color.Black,
-                                            0.75f to Color.Black,
-                                            0.92f to Color.Black.copy(alpha = 0.40f),
-                                            1.00f to Color.Transparent,
-                                        ),
-                                ),
-                            blendMode = BlendMode.DstIn,
-                        )
-                    },
         ) { backdrop ->
             val sharpArtworkModel =
                 remember(backdrop.artworkUrl, backdropArtworkSizePx) {
@@ -1821,42 +1721,78 @@ private fun V7PlayerBackdrop(
 
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
             ) {
-                if (sharpArtworkModel != null) {
-                    AsyncImage(
-                        model = sharpArtworkRequest,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
                 if (canvasRenderMode !is CanvasRenderMode.None) {
+                    // Fullscreen Live Canvas Video with subtle soft blur
                     CanvasArtworkPlayer(
                         renderMode = canvasRenderMode,
                         isPlaying = isPlaying,
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-                        modifier = canvasStageModifier,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .let {
+                                if (shouldApplyBlur) it.blur(3.dp) else it
+                            },
                     )
-                }
-            }
-        }
+                } else {
+                    // Static Artwork with subtle blur base + sharp fullscreen artwork
+                    if (shouldApplyBlur) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(backdrop.artworkUrl)
+                                .size(128, 128)
+                                .allowHardware(false)
+                                .build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .blur(40.dp)
+                                .graphicsLayer(alpha = 0.5f),
+                        )
+                    }
 
-        // Dark overlay scrim
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Black.copy(alpha = 0.05f),
-                                Color.Black.copy(alpha = 0.40f),
+                    if (sharpArtworkModel != null) {
+                        AsyncImage(
+                            model = sharpArtworkRequest,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .let {
+                                    if (shouldApplyBlur) it.blur(3.dp) else it
+                                },
+                        )
+                    }
+                }
+
+                // Base uniform dimming layer
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.22f)),
+                )
+
+                // Spotify-style dark gradient scrim overlay: highlights buttons and text with high contrast
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to Color.Black.copy(alpha = 0.50f),
+                                    0.15f to Color.Black.copy(alpha = 0.20f),
+                                    0.35f to Color.Transparent,
+                                    0.55f to Color.Transparent,
+                                    0.72f to Color.Black.copy(alpha = 0.35f),
+                                    0.88f to Color.Black.copy(alpha = 0.65f),
+                                    1.00f to Color.Black.copy(alpha = 0.82f),
+                                ),
                             ),
                         ),
-                    ),
-        )
+                )
+            }
+        }
     }
 }
 

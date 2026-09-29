@@ -9,6 +9,7 @@ package moe.rgsekai.sekaitune.ui.screens.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -265,9 +266,8 @@ fun PlayerSettings(navController: NavController) {
         Column(
             Modifier
                 .padding(top = topPadding)
-                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = SettingsDimensions.ScreenBottomPadding),
+                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal))
+                .verticalScroll(rememberScrollState()),
         ) {
             PreferenceGroup(title = stringResource(R.string.player)) {
                 item {
@@ -596,6 +596,12 @@ fun PlayerSettings(navController: NavController) {
                     )
                 }
             }
+
+            Spacer(
+                Modifier.windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom)
+                ).padding(bottom = SettingsDimensions.ScreenBottomPadding)
+            )
         }
     }
 }

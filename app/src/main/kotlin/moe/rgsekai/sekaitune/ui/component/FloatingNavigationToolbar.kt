@@ -34,9 +34,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -101,32 +103,6 @@ fun FloatingNavigationToolbar(
     val useGlass = glassConfig.isEnabledFor(GlassComponent.NAV_BAR)
     val outlineColor = MaterialTheme.colorScheme.outline
 
-    val toolbarContainerColor =
-        if (useGlass) {
-            Color.Transparent
-        } else {
-            floatingToolbarContainerColor(pureBlack = pureBlack)
-        }
-    val toolbarColors =
-        FloatingToolbarDefaults.standardFloatingToolbarColors(
-            toolbarContainerColor = toolbarContainerColor,
-        )
-    val toolbarModifier =
-        if (useGlass) {
-            Modifier
-                .clip(RoundedCornerShape(percent = 50))
-                .liquidGlass(
-                    config = glassConfig,
-                    shape = RoundedCornerShape(percent = 50),
-                )
-                .border(
-                    1.dp,
-                    outlineColor.copy(alpha = 0.3f),
-                    RoundedCornerShape(percent = 50),
-                )
-        } else {
-            Modifier
-        }
     val mainItems = remember(items) { items.filterNot { it == Screens.Search } }
     val isSearchSelected = isSelected(Screens.Search)
 
@@ -139,51 +115,49 @@ fun FloatingNavigationToolbar(
         HorizontalFloatingToolbar(
             expanded = true,
             floatingActionButton = {
-                if (useGlass) {
-                    FloatingToolbarDefaults.StandardFloatingActionButton(
-                        onClick = { onItemClick(Screens.Search, isSearchSelected) },
-                        shape = CircleShape,
-                        containerColor = Color.Transparent,
-                        contentColor =
-                            if (isSearchSelected) {
-                                floatingToolbarFabContainerColor()
-                            } else {
-                                if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurface
-                            },
-                        modifier =
-                            Modifier
-                                .clip(CircleShape)
-                                .liquidGlass(
-                                    config = glassConfig,
-                                    shape = CircleShape,
-                                )
-                                .border(
-                                    1.dp,
-                                    outlineColor.copy(alpha = 0.3f),
-                                    CircleShape,
-                                ),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.search),
-                            contentDescription = stringResource(R.string.search),
-                        )
-                    }
-                } else {
-                    FloatingToolbarDefaults.VibrantFloatingActionButton(
-                        onClick = { onItemClick(Screens.Search, isSearchSelected) },
-                        shape = CircleShape,
-                        containerColor =
-                            if (isSearchSelected) {
-                                floatingToolbarFabContainerColor()
-                            } else {
-                                floatingToolbarContainerColor(pureBlack)
-                            },
-                        contentColor =
-                            if (isSearchSelected) {
-                                floatingToolbarFabContentColor()
-                            } else {
-                                floatingToolbarItemContentColor(pureBlack)
-                            },
+                Surface(
+                    onClick = { onItemClick(Screens.Search, isSearchSelected) },
+                    shape = CircleShape,
+                    color =
+                        if (useGlass) {
+                            if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else Color.Transparent
+                        } else if (isSearchSelected) {
+                            floatingToolbarFabContainerColor()
+                        } else {
+                            floatingToolbarContainerColor(pureBlack)
+                        },
+                    contentColor =
+                        if (isSearchSelected) {
+                            if (useGlass) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor()
+                        } else {
+                            floatingToolbarItemContentColor(pureBlack)
+                        },
+                    shadowElevation = 0.dp,
+                    tonalElevation = 0.dp,
+                    modifier =
+                        Modifier
+                            .size(56.dp)
+                            .then(
+                                if (useGlass) {
+                                    Modifier
+                                        .clip(CircleShape)
+                                        .liquidGlass(
+                                            config = glassConfig,
+                                            shape = CircleShape,
+                                        )
+                                        .border(
+                                            1.dp,
+                                            outlineColor.copy(alpha = 0.3f),
+                                            CircleShape,
+                                        )
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.search),
@@ -192,19 +166,48 @@ fun FloatingNavigationToolbar(
                     }
                 }
             },
-            modifier = Modifier.widthIn(max = 480.dp).then(toolbarModifier),
-            colors = toolbarColors,
+            modifier = Modifier.widthIn(max = 480.dp),
+            colors =
+                FloatingToolbarDefaults.standardFloatingToolbarColors(
+                    toolbarContainerColor =
+                        if (useGlass) {
+                            Color.Transparent
+                        } else {
+                            floatingToolbarContainerColor(pureBlack = pureBlack)
+                        },
+                ),
+            contentPadding = if (useGlass) PaddingValues(0.dp) else FloatingToolbarDefaults.ContentPadding,
             scrollBehavior = scrollBehavior,
             animationSpec = FloatingToolbarDefaults.animationSpec(),
         ) {
-            ToolbarItemsContainer(
-                items = mainItems,
-                pureBlack = pureBlack,
-                showSelectedLabels = showSelectedLabels,
-                isSelected = isSelected,
-                onItemClick = onItemClick,
-                onSearchItemDoubleClick = onSearchItemDoubleClick,
-            )
+            Box(
+                modifier =
+                    if (useGlass) {
+                        Modifier
+                            .clip(CircleShape)
+                            .liquidGlass(
+                                config = glassConfig,
+                                shape = CircleShape,
+                            )
+                            .border(
+                                1.dp,
+                                outlineColor.copy(alpha = 0.3f),
+                                CircleShape,
+                            )
+                            .padding(FloatingToolbarDefaults.ContentPadding)
+                    } else {
+                        Modifier
+                    },
+            ) {
+                ToolbarItemsContainer(
+                    items = mainItems,
+                    pureBlack = pureBlack,
+                    showSelectedLabels = showSelectedLabels,
+                    isSelected = isSelected,
+                    onItemClick = onItemClick,
+                    onSearchItemDoubleClick = onSearchItemDoubleClick,
+                )
+            }
         }
     }
 }

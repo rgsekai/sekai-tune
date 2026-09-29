@@ -39,20 +39,17 @@ data class GlassEffectConfig(
     val surfaceTintColor: Color = Color.Unspecified,
     val surfaceOpacity: Float = 0.4f,
     val textColor: Color = Color.Unspecified,
-    val playerEnabled: Boolean = true,
     val miniPlayerEnabled: Boolean = true,
     val navBarEnabled: Boolean = true,
 ) {
     fun isEnabledFor(component: GlassComponent): Boolean =
         globalEnabled && when (component) {
-            GlassComponent.PLAYER -> playerEnabled
             GlassComponent.MINI_PLAYER -> miniPlayerEnabled
             GlassComponent.NAV_BAR -> navBarEnabled
         }
 }
 
 enum class GlassComponent {
-    PLAYER,
     MINI_PLAYER,
     NAV_BAR,
 }

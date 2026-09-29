@@ -801,7 +801,6 @@ val LiquidGlassLensHeightKey = floatPreferencesKey("liquidGlassLensHeight")
 val LiquidGlassLensAmountKey = floatPreferencesKey("liquidGlassLensAmount")
 val LiquidGlassChromaticAberrationKey = booleanPreferencesKey("liquidGlassChromaticAberration")
 val LiquidGlassDepthEffectKey = booleanPreferencesKey("liquidGlassDepthEffect")
-val LiquidGlassPlayerEnabledKey = booleanPreferencesKey("liquidGlassPlayerEnabled")
 val LiquidGlassMiniPlayerEnabledKey = booleanPreferencesKey("liquidGlassMiniPlayerEnabled")
 val LiquidGlassNavBarEnabledKey = booleanPreferencesKey("liquidGlassNavBarEnabled")
 

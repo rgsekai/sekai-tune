@@ -29,8 +29,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -57,11 +59,13 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import moe.rgsekai.sekaitune.ui.component.ResizableIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -596,6 +600,8 @@ fun PlayerPlaybackControls(
                 val playButtonWidth = playButtonHeight * 1.6f
                 val sideButtonHeight = playButtonHeight * 0.8f
                 val sideButtonWidth = sideButtonHeight * 1.3f
+                val sideShape = RoundedCornerShape(32.dp)
+                val playShape = RoundedCornerShape(32.dp)
 
                 Row(
                     horizontalArrangement = Arrangement.Center,
@@ -616,7 +622,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(width = sideButtonWidth, height = sideButtonHeight)
-                                .clip(RoundedCornerShape(32.dp)),
+                                .clip(sideShape),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.skip_previous),
@@ -645,7 +651,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(width = playButtonWidth, height = playButtonHeight)
-                                .clip(RoundedCornerShape(32.dp)),
+                                .clip(playShape),
                     ) {
                         Icon(
                             painter =
@@ -677,7 +683,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(width = sideButtonWidth, height = sideButtonHeight)
-                                .clip(RoundedCornerShape(32.dp)),
+                                .clip(sideShape),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.skip_next),
@@ -1233,9 +1239,9 @@ private fun V8TransportControls(
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             ResizableIconButton(
                 icon = R.drawable.apple_skip_previous,
-                enabled = canSkipPrevious,
                 color = foreground,
-                modifier = Modifier.size(48.dp),
+                enabled = canSkipPrevious,
+                modifier = Modifier.size(52.dp),
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onPreviousClick()
@@ -1245,43 +1251,29 @@ private fun V8TransportControls(
 
         Spacer(Modifier.width(8.dp))
 
-        Box(
-            modifier =
-                Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onPlayPauseClick()
-                    },
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter =
-                    painterResource(
-                        when {
-                            playbackState == STATE_ENDED -> R.drawable.replay
-                            isPlaying -> R.drawable.pause_applemusic
-                            else -> R.drawable.play_applemusic
-                        },
-                    ),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(foreground),
-                modifier = Modifier.size(72.dp),
-            )
-        }
+        ResizableIconButton(
+            icon =
+                when {
+                    playbackState == STATE_ENDED -> R.drawable.replay
+                    isPlaying -> R.drawable.pause_applemusic
+                    else -> R.drawable.play_applemusic
+                },
+            color = foreground,
+            modifier = Modifier.size(76.dp),
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onPlayPauseClick()
+            },
+        )
 
         Spacer(Modifier.width(8.dp))
 
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             ResizableIconButton(
                 icon = R.drawable.apple_skip_next,
-                enabled = canSkipNext,
                 color = foreground,
-                modifier = Modifier.size(48.dp),
+                enabled = canSkipNext,
+                modifier = Modifier.size(52.dp),
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onNextClick()

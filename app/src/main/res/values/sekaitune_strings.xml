@@ -682,8 +682,6 @@
     <string name="liquid_glass_surface_opacity_desc">Opacity of the glass tint overlay for readability</string>
     <string name="liquid_glass_text_color">Glass Text Colour</string>
     <string name="liquid_glass_text_color_desc">Text colour used on glass surfaces</string>
-    <string name="liquid_glass_player">Glass Player</string>
-    <string name="liquid_glass_player_desc">Manage Glass Player settings</string>
     <string name="liquid_glass_mini_player">Glass Mini Player</string>
     <string name="liquid_glass_mini_player_desc">Manage Glass Mini Player settings</string>
     <string name="liquid_glass_nav_bar">Glass Navigation Bar</string>
