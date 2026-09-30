@@ -106,7 +106,7 @@ fun BottomSheetPage(
                         detectTapGestures {
                             state.dismiss()
                         }
-                    }.background(if (isGlass) Color.Transparent else MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f))
+                    }
                     .fillMaxSize(),
         )
     }

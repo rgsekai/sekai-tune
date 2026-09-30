@@ -765,7 +765,8 @@ fun YouTubeSongMenu(
                                 artist = artistName,
                             )
                             androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
-                        }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
                 }
             }

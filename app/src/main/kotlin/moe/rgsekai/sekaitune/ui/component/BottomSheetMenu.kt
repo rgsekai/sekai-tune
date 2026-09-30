@@ -120,8 +120,7 @@ fun BottomSheetMenu(
                                     sheetState.dismiss()
                                     onDismiss()
                                 }
-                            }
-                            .background(if (isGlass) Color.Transparent else Color.Black.copy(alpha = 0.45f)),
+                            },
                 )
             }
 
