@@ -10,15 +10,26 @@
 package moe.rgsekai.sekaitune.ui.component.backdrop.internal
 
 import android.graphics.BlurMaskFilter
+import androidx.collection.LruCache
 import androidx.compose.ui.graphics.Paint
 import moe.rgsekai.sekaitune.ui.component.backdrop.RuntimeShader
 import moe.rgsekai.sekaitune.ui.component.backdrop.asAndroidRuntimeShader
 
+private val blurMaskFilterCache = LruCache<Float, BlurMaskFilter>(16)
+
 internal fun Paint.blur(radius: Float) {
   this.asFrameworkPaint().maskFilter =
-    if (radius > 0f) BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL) else null
+    if (radius > 0f) {
+      blurMaskFilterCache.get(radius) ?: BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL).also {
+        blurMaskFilterCache.put(radius, it)
+      }
+    } else null
 }
 
 internal fun Paint.setRuntimeShader(runtimeShader: RuntimeShader?) {
-  this.asFrameworkPaint().shader = runtimeShader?.asAndroidRuntimeShader()
+  val fwPaint = this.asFrameworkPaint()
+  val androidShader = runtimeShader?.asAndroidRuntimeShader()
+  if (fwPaint.shader !== androidShader) {
+    fwPaint.shader = androidShader
+  }
 }

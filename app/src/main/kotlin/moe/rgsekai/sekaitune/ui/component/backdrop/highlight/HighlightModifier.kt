@@ -85,6 +85,9 @@ internal class HighlightNode(var shapeProvider: ShapeProvider, var highlight: ()
   private val runtimeShaderCache = RuntimeShaderCacheImpl()
 
   private var prevStyle: HighlightStyle? = null
+  private var prevSize: IntSize? = null
+  private var prevHighlight: Highlight? = null
+  private var prevOutline: Outline? = null
 
   override fun ContentDrawScope.draw() {
     val highlight = highlight()
@@ -110,18 +113,28 @@ internal class HighlightNode(var shapeProvider: ShapeProvider, var highlight: ()
           null
         }
 
-      configurePaint(highlight)
+      val needsRecord =
+        prevSize != safeSize ||
+          prevHighlight != highlight ||
+          prevOutline != outline
 
-      highlightLayer.alpha = highlight.alpha
-      highlightLayer.blendMode = highlight.style.blendMode
-      highlightLayer.record(safeSize) {
-        translate(1f, 1f) {
-          val canvas = drawContext.canvas
-          canvas.save()
-          canvas.clipOutline(outline, clipPath)
-          canvas.drawOutline(outline, paint)
-          canvas.restore()
+      if (needsRecord) {
+        configurePaint(highlight)
+
+        highlightLayer.alpha = highlight.alpha
+        highlightLayer.blendMode = highlight.style.blendMode
+        highlightLayer.record(safeSize) {
+          translate(1f, 1f) {
+            val canvas = drawContext.canvas
+            canvas.save()
+            canvas.clipOutline(outline, clipPath)
+            canvas.drawOutline(outline, paint)
+            canvas.restore()
+          }
         }
+        prevSize = safeSize
+        prevHighlight = highlight
+        prevOutline = outline
       }
 
       translate(-1f, -1f) { drawLayer(highlightLayer) }
@@ -131,6 +144,9 @@ internal class HighlightNode(var shapeProvider: ShapeProvider, var highlight: ()
   override fun onAttach() {
     val graphicsContext = requireGraphicsContext()
     highlightLayer = graphicsContext.createGraphicsLayer()
+    prevSize = null
+    prevHighlight = null
+    prevOutline = null
   }
 
   override fun onDetach() {
@@ -142,6 +158,9 @@ internal class HighlightNode(var shapeProvider: ShapeProvider, var highlight: ()
     clipPath = null
     runtimeShaderCache.clear()
     prevStyle = null
+    prevSize = null
+    prevHighlight = null
+    prevOutline = null
   }
 
   private fun DrawScope.configurePaint(highlight: Highlight) {

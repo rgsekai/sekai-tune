@@ -11,6 +11,7 @@ import android.app.Dialog
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
+import android.os.PowerManager
 import android.view.View
 import android.view.ViewParent
 import android.view.Window
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -110,9 +112,16 @@ internal const val PLAYER_BLUR_MULTIPLIER = 4f
 internal const val MIN_GLASS_RESOLUTION_SCALE = 0.33f
 internal const val FULL_QUALITY_BLUR_DP = 8f
 
-fun glassResolutionScale(blurRadiusDp: Float): Float {
+fun glassResolutionScale(context: Context? = null, blurRadiusDp: Float): Float {
     val t = (blurRadiusDp / FULL_QUALITY_BLUR_DP).coerceIn(0f, 1f)
-    return 1f - t * (1f - MIN_GLASS_RESOLUTION_SCALE)
+    var scale = 1f - t * (1f - MIN_GLASS_RESOLUTION_SCALE)
+    if (context != null) {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager?.isPowerSaveMode == true) {
+            scale = (scale * 0.75f).coerceAtLeast(0.25f)
+        }
+    }
+    return scale
 }
 
 fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.S
@@ -136,7 +145,10 @@ fun Modifier.liquidGlass(
     if (!isGlassSupported()) return this
     val backdrop = LocalAppBackdrop.current
     val density = LocalDensity.current
-    val resolutionScale = glassResolutionScale(blurRadiusDp)
+    val context = LocalContext.current
+    val resolutionScale = remember(blurRadiusDp, context) {
+        glassResolutionScale(context, blurRadiusDp)
+    }
     val blurPx = with(density) { blurRadiusDp.dp.toPx() } * resolutionScale
     val saturation = glassSaturation(config.vibrancy)
     val normLensHeight = if (config.lensHeight > 1f) (config.lensHeight / 100f).coerceIn(0f, 1f) else config.lensHeight.coerceIn(0f, 1f)
@@ -188,10 +200,12 @@ fun Modifier.liquidGlass(
     )
 }
 
+private val vibrancyHsvThreadLocal = ThreadLocal.withInitial { FloatArray(3) }
+
 fun adjustColorVibrancy(color: Color, vibrancy: Float): Color {
     val sat = glassSaturation(vibrancy)
     if (sat == 1f) return color
-    val hsv = FloatArray(3)
+    val hsv = vibrancyHsvThreadLocal.get() ?: FloatArray(3)
     android.graphics.Color.colorToHSV(color.toArgb(), hsv)
     hsv[1] = (hsv[1] * sat).coerceIn(0f, 1f)
     return Color(android.graphics.Color.HSVToColor((color.alpha * 255).toInt(), hsv))

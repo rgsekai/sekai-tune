@@ -274,7 +274,7 @@ private class DrawBackdropNode(
   private val layoutLayerBlock: GraphicsLayerScope.() -> Unit = {
     clip = true
     shape = shapeProvider.shape
-    compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+    compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Auto
   }
 
   private var layoutCoordinates: LayoutCoordinates? by mutableStateOf(null, neverEqualPolicy())
@@ -313,7 +313,7 @@ private class DrawBackdropNode(
 
   private val drawBackdropLayer: DrawScope.() -> Unit = {
     val layer = graphicsLayer
-    if (layer != null) {
+    if (layer != null && size.width > 0f && size.height > 0f) {
       val padding = padding
       val scale = backdropScale
 
