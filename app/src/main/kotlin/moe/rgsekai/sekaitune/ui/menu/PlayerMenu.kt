@@ -18,6 +18,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -85,6 +86,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -389,14 +391,8 @@ fun PlayerMenu(
     val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
     val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.POPUP_MENU)
 
-    Surface(
+    MenuSurfaceSection(
         shape = RoundedCornerShape(28.dp),
-        color =
-            if (isGlass) {
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -998,15 +994,12 @@ private fun PlayerVolumeCard(
 
     val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
     val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val sliderShape = RoundedCornerShape(18.dp)
+    val sliderRimColor = if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.10f)
 
-    Surface(
+    MenuSurfaceSection(
         shape = RoundedCornerShape(28.dp),
-        color =
-            if (isGlass) {
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(
@@ -1031,9 +1024,29 @@ private fun PlayerVolumeCard(
             }
 
             Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = if (isGlass) MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surfaceContainerHighest,
-                modifier = Modifier.fillMaxWidth(),
+                shape = sliderShape,
+                color =
+                    if (isGlass) {
+                        if (isLight) Color.White.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.28f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHighest
+                    },
+                border = if (isGlass) BorderStroke(1.dp, sliderRimColor) else null,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = sliderShape,
+                                    applyEdgeEffects = true,
+                                    blurRadiusDp = (glassConfig.blurRadius * 1.2f).coerceIn(12f, 50f),
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

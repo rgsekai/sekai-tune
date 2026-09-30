@@ -9,6 +9,7 @@
 
 package moe.rgsekai.sekaitune.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -36,7 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,32 +59,50 @@ fun NewActionButton(
 ) {
     val glassConfig = LocalGlassEffectConfig.current
     val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
-    val defaultContainerColor =
-        if (isGlass) {
-            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.60f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        }
-    val containerColor = if (backgroundColor.isSpecified) backgroundColor else defaultContainerColor
-    val actionContentColor = if (contentColor.isSpecified) contentColor else MaterialTheme.colorScheme.onSurfaceVariant
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
 
-    FilledTonalButton(
+    val defaultContainerColor = when {
+        backgroundColor.isSpecified -> backgroundColor
+        isGlass -> if (isLight) Color.White.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.38f)
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val actionContentColor = if (contentColor.isSpecified) contentColor else MaterialTheme.colorScheme.onSurfaceVariant
+    val buttonShape = ButtonDefaults.squareShape
+
+    val rimColor = if (isLight) {
+        Color.White.copy(alpha = 0.35f)
+    } else {
+        Color.White.copy(alpha = 0.14f)
+    }
+
+    Surface(
         onClick = onClick,
+        enabled = enabled,
+        shape = buttonShape,
+        color = defaultContainerColor,
+        border = if (isGlass && !backgroundColor.isSpecified) BorderStroke(1.dp, rimColor) else null,
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = 96.dp),
-        enabled = enabled,
-        shape = ButtonDefaults.squareShape,
-        colors =
-            ButtonDefaults.filledTonalButtonColors(
-                containerColor = containerColor,
-                contentColor = actionContentColor,
-            ),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp),
+                .heightIn(min = 96.dp)
+                .then(
+                    if (isGlass) {
+                        Modifier.liquidGlass(
+                            config = glassConfig,
+                            shape = buttonShape,
+                            applyEdgeEffects = true,
+                            blurRadiusDp = (glassConfig.blurRadius * 1.25f).coerceIn(12f, 50f),
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -93,10 +115,12 @@ fun NewActionButton(
 
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.5.sp,
-                    lineHeight = 13.5.sp,
-                ),
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.5.sp,
+                        lineHeight = 13.5.sp,
+                    ),
+                color = actionContentColor,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 softWrap = true,
@@ -243,21 +267,45 @@ fun NewIconButton(
     backgroundColor: Color = Color.Unspecified,
     contentColor: Color = Color.Unspecified,
 ) {
-    val containerColor = if (backgroundColor.isSpecified) backgroundColor else MaterialTheme.colorScheme.surfaceContainerHigh
-    val iconContentColor = if (contentColor.isSpecified) contentColor else MaterialTheme.colorScheme.onSurfaceVariant
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
 
-    FilledTonalIconButton(
+    val defaultContainerColor = when {
+        backgroundColor.isSpecified -> backgroundColor
+        isGlass -> if (isLight) Color.White.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.38f)
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val iconContentColor = if (contentColor.isSpecified) contentColor else MaterialTheme.colorScheme.onSurfaceVariant
+    val shape = CircleShape
+    val rimColor = if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.14f)
+
+    Surface(
         onClick = onClick,
-        modifier = modifier,
         enabled = enabled,
-        shapes = IconButtonDefaults.shapes(),
-        colors =
-            IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = containerColor,
-                contentColor = iconContentColor,
+        shape = shape,
+        color = defaultContainerColor,
+        border = if (isGlass && !backgroundColor.isSpecified) BorderStroke(1.dp, rimColor) else null,
+        modifier =
+            modifier.then(
+                if (isGlass) {
+                    Modifier.liquidGlass(
+                        config = glassConfig,
+                        shape = shape,
+                        applyEdgeEffects = true,
+                        blurRadiusDp = (glassConfig.blurRadius * 1.25f).coerceIn(12f, 50f),
+                    )
+                } else {
+                    Modifier
+                },
             ),
     ) {
-        icon()
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            icon()
+        }
     }
 }
 
@@ -280,20 +328,41 @@ fun NewMenuContainer(
 @Composable
 fun MenuSurfaceSection(
     modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.extraLarge,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val glassConfig = LocalGlassEffectConfig.current
     val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
+    val surfaceColor =
+        if (isGlass) {
+            if (isLight) Color.White.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        }
+
+    val rimColor = if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)
 
     Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        color =
-            if (isGlass) {
-                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.50f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
-        modifier = modifier.fillMaxWidth(),
+        shape = shape,
+        color = surfaceColor,
+        border = if (isGlass) BorderStroke(1.dp, rimColor) else null,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(
+                    if (isGlass) {
+                        Modifier.liquidGlass(
+                            config = glassConfig,
+                            shape = shape,
+                            applyEdgeEffects = true,
+                            blurRadiusDp = (glassConfig.blurRadius * 1.35f).coerceIn(16f, 60f),
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         Column(content = content)
     }

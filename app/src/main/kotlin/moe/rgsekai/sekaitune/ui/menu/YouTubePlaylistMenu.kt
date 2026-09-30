@@ -192,9 +192,8 @@ fun YouTubePlaylistMenu(
         },
     )
 
-    Surface(
+    MenuSurfaceSection(
         shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
         YouTubeListItem(
