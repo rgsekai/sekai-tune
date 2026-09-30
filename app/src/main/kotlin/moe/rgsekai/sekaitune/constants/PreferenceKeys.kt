@@ -803,6 +803,8 @@ val LiquidGlassChromaticAberrationKey = booleanPreferencesKey("liquidGlassChroma
 val LiquidGlassDepthEffectKey = booleanPreferencesKey("liquidGlassDepthEffect")
 val LiquidGlassMiniPlayerEnabledKey = booleanPreferencesKey("liquidGlassMiniPlayerEnabled")
 val LiquidGlassNavBarEnabledKey = booleanPreferencesKey("liquidGlassNavBarEnabled")
+val LiquidGlassPopupMenuEnabledKey = booleanPreferencesKey("liquidGlassPopupMenuEnabled")
+val LiquidGlassDialogEnabledKey = booleanPreferencesKey("liquidGlassDialogEnabled")
 
 
 

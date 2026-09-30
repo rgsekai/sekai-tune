@@ -45,6 +45,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -445,7 +446,7 @@ private fun AppIconSearchBar(
                                     contentDescription = null,
                                 )
                             }
-                            DropdownMenu(
+                            GlassDropdownMenu(
                                 expanded = isSortMenuExpanded,
                                 onDismissRequest = onDismissSortMenu,
                                 modifier = Modifier.widthIn(min = 184.dp),

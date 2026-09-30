@@ -37,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import moe.rgsekai.sekaitune.ui.component.GlassModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SnackbarDuration
@@ -779,7 +780,7 @@ private fun StorageLocationPickerSheet(
     val currentOptionId = options.firstOrNull { option -> option.isSelected }?.id
     val canApplySelection = currentOptionId != selectedOptionId
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,

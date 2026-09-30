@@ -238,7 +238,7 @@ class BottomSheetState(
         } else {
             val l0 = dismissedBound
             val l1 = (collapsedBound - dismissedBound) / 2
-            val l2 = (expandedBound - collapsedBound) / 2
+            val l2 = collapsedBound + (expandedBound - collapsedBound) / 2
             val l3 = expandedBound
 
             when (value) {
@@ -279,6 +279,11 @@ class BottomSheetState(
                         isTopReached = false
                     }
 
+                    if (!isExpanded && available.y < 0 && source == NestedScrollSource.UserInput) {
+                        dispatchRawDelta(available.y)
+                        return available
+                    }
+
                     return if (isTopReached && available.y < 0 && source == NestedScrollSource.UserInput) {
                         dispatchRawDelta(available.y)
                         available
@@ -305,7 +310,7 @@ class BottomSheetState(
                 }
 
                 override suspend fun onPreFling(available: Velocity): Velocity =
-                    if (isTopReached) {
+                    if (!isExpanded || isTopReached) {
                         val velocity = -available.y
                         performFling(velocity, null)
 

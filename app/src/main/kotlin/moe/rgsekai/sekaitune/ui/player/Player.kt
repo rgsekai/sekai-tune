@@ -20,6 +20,8 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.LayerBackdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.layerBackdrop
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -311,6 +313,7 @@ fun BottomSheetPlayer(
     navController: NavController,
     modifier: Modifier = Modifier,
     pureBlack: Boolean,
+    playerBackdrop: LayerBackdrop? = null,
 ) {
     val context = LocalContext.current
     val menuState = LocalMenuState.current
@@ -964,7 +967,19 @@ fun BottomSheetPlayer(
             )
         },
     ) {
-        val onSliderValueChange: (Long) -> Unit = {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (playerBackdrop != null) {
+                            Modifier.layerBackdrop(playerBackdrop)
+                        } else {
+                            Modifier
+                        },
+                    ),
+        ) {
+            val onSliderValueChange: (Long) -> Unit = {
             isUserSeeking = true
             sliderPosition = it
         }
@@ -1406,6 +1421,7 @@ fun BottomSheetPlayer(
                     onExit = { playerConnection.aodModeEnabled.value = false },
                 )
             }
+        }
         }
     }
 }

@@ -324,7 +324,7 @@ private fun FloatingToolbarOverflowAction(
             )
         }
 
-        DropdownMenu(
+        GlassDropdownMenu(
             expanded = fabMenuExpanded,
             onDismissRequest = { fabMenuExpanded = false },
             shape = RoundedCornerShape(24.dp),

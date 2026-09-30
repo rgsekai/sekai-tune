@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -94,6 +95,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import moe.rgsekai.sekaitune.ui.component.frostedGlass
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import androidx.core.net.toUri
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.offline.Download
@@ -383,9 +386,17 @@ fun PlayerMenu(
             mediaMetadata.artists.joinToString(separator = " • ") { it.name }
         }
 
+    val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.POPUP_MENU)
+
     Surface(
         shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color =
+            if (isGlass) {
+                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -985,9 +996,17 @@ private fun PlayerVolumeCard(
 ) {
     val safeVolume = volume.coerceIn(0f, 1f)
 
+    val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.POPUP_MENU)
+
     Surface(
         shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color =
+            if (isGlass) {
+                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(
@@ -1013,7 +1032,7 @@ private fun PlayerVolumeCard(
 
             Surface(
                 shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                color = if (isGlass) MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
@@ -1123,9 +1142,15 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
             )
     }
 
+    val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.DIALOG)
+
     AlertDialog(
+        modifier = if (isGlass) Modifier.frostedGlass(glassConfig, shape = AlertDialogDefaults.shape) else Modifier,
         properties = DialogProperties(usePlatformDefaultWidth = false),
         onDismissRequest = onDismiss,
+        containerColor = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+        tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
         title = {
             Text(stringResource(R.string.tempo_and_pitch))
         },
@@ -1764,13 +1789,18 @@ fun EqualizerDialog(
         }
     }
 
+    val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.DIALOG)
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxSize().then(
+                if (isGlass) Modifier.frostedGlass(glassConfig) else Modifier
+            ),
+            color = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surface,
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -1792,8 +1822,8 @@ fun EqualizerDialog(
                     },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                            containerColor = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surface,
+                            scrolledContainerColor = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surface,
                         ),
                 )
 

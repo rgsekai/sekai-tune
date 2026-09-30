@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -382,7 +383,7 @@ private fun LogcatTopBar(
                         contentDescription = stringResource(R.string.options_label),
                     )
                 }
-                DropdownMenu(
+                GlassDropdownMenu(
                     expanded = model?.isMenuExpanded == true,
                     onDismissRequest = { onSetMenuExpanded(false) },
                 ) {

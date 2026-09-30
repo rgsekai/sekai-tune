@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -94,11 +95,22 @@ fun DefaultDialog(
                     .navigationBarsPadding(),
             contentAlignment = Alignment.Center,
         ) {
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            ApplyWindowBlur(glassConfig, enabled = isGlass)
             Surface(
-                modifier = Modifier.heightIn(max = maxHeight),
+                modifier = Modifier
+                    .heightIn(max = maxHeight)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(glassConfig, shape = AlertDialogDefaults.shape)
+                        } else {
+                            Modifier
+                        }
+                    ),
                 shape = AlertDialogDefaults.shape,
-                color = AlertDialogDefaults.containerColor,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
+                color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+                tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
             ) {
                 Column(
                     modifier = modifier.padding(24.dp),
@@ -190,11 +202,22 @@ fun ActionPromptDialog(
                     .navigationBarsPadding(),
             contentAlignment = Alignment.Center,
         ) {
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            ApplyWindowBlur(glassConfig, enabled = isGlass)
             Surface(
-                modifier = Modifier.heightIn(max = maxHeight),
+                modifier = Modifier
+                    .heightIn(max = maxHeight)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(glassConfig, shape = AlertDialogDefaults.shape)
+                        } else {
+                            Modifier
+                        }
+                    ),
                 shape = AlertDialogDefaults.shape,
-                color = AlertDialogDefaults.containerColor,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
+                color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+                tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -274,11 +297,22 @@ fun ListDialog(
                     .navigationBarsPadding(),
             contentAlignment = Alignment.Center,
         ) {
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            ApplyWindowBlur(glassConfig, enabled = isGlass)
             Surface(
-                modifier = Modifier.heightIn(max = maxHeight),
+                modifier = Modifier
+                    .heightIn(max = maxHeight)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(glassConfig, shape = AlertDialogDefaults.shape)
+                        } else {
+                            Modifier
+                        }
+                    ),
                 shape = AlertDialogDefaults.shape,
-                color = AlertDialogDefaults.containerColor,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
+                color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+                tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,

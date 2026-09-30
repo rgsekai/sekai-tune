@@ -85,6 +85,9 @@ fun BottomSheetPage(
 ) {
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val sheetShape = ShapeDefaults.Large.top()
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
     AnimatedVisibility(
@@ -103,7 +106,7 @@ fun BottomSheetPage(
                         detectTapGestures {
                             state.dismiss()
                         }
-                    }.background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f))
+                    }.background(if (isGlass) Color.Transparent else MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f))
                     .fillMaxSize(),
         )
     }
@@ -129,8 +132,14 @@ fun BottomSheetPage(
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                     .padding(top = 100.dp) // Give enough space from top
-                    .clip(ShapeDefaults.Large.top())
-                    .background(background)
+                    .clip(sheetShape)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(glassConfig, shape = sheetShape)
+                        } else {
+                            Modifier.background(background)
+                        }
+                    )
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragEnd = {

@@ -53,6 +53,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import moe.rgsekai.sekaitune.ui.component.GlassModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -595,7 +596,7 @@ private fun SpotifyLoginSheet(
         }
     }
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         modifier = Modifier.fillMaxHeight(),
         onDismissRequest = onDismiss,
         sheetState = sheetState,

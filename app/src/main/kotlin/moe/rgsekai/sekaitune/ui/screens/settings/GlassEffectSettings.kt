@@ -50,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import kotlin.math.roundToInt
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.LiquidGlassBlurRadiusKey
@@ -60,6 +61,8 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassLensAmountKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassLensHeightKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassMiniPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassPopupMenuEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassDialogEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceOpacityKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceTintColorKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassTextColorKey
@@ -82,16 +85,16 @@ fun GlassEffectSettings(navController: NavController) {
         LiquidGlassGlobalEnabledKey, defaultValue = false
     )
     val (vibrancy, onVibrancyChange) = rememberPreference(
-        LiquidGlassVibrancyKey, defaultValue = 1f
+        LiquidGlassVibrancyKey, defaultValue = 70f
     )
     val (blurRadius, onBlurRadiusChange) = rememberPreference(
-        LiquidGlassBlurRadiusKey, defaultValue = 8f
+        LiquidGlassBlurRadiusKey, defaultValue = 30f
     )
     val (lensHeight, onLensHeightChange) = rememberPreference(
-        LiquidGlassLensHeightKey, defaultValue = 0.5f
+        LiquidGlassLensHeightKey, defaultValue = 50f
     )
     val (lensAmount, onLensAmountChange) = rememberPreference(
-        LiquidGlassLensAmountKey, defaultValue = 0.5f
+        LiquidGlassLensAmountKey, defaultValue = 50f
     )
     val (chromaticAberration, onChromaticAberrationChange) = rememberPreference(
         LiquidGlassChromaticAberrationKey, defaultValue = true
@@ -113,7 +116,7 @@ fun GlassEffectSettings(navController: NavController) {
         Color(surfaceTintColorInt)
     }
     val (surfaceOpacity, onSurfaceOpacityChange) = rememberPreference(
-        LiquidGlassSurfaceOpacityKey, defaultValue = 0.4f
+        LiquidGlassSurfaceOpacityKey, defaultValue = 60f
     )
     val (textColorInt, onTextColorChange) = rememberPreference(
         LiquidGlassTextColorKey, defaultValue = 0
@@ -129,6 +132,12 @@ fun GlassEffectSettings(navController: NavController) {
     )
     val (navBarEnabled, onNavBarEnabledChange) = rememberPreference(
         LiquidGlassNavBarEnabledKey, defaultValue = true
+    )
+    val (popupMenuEnabled, onPopupMenuEnabledChange) = rememberPreference(
+        LiquidGlassPopupMenuEnabledKey, defaultValue = true
+    )
+    val (dialogEnabled, onDialogEnabledChange) = rememberPreference(
+        LiquidGlassDialogEnabledKey, defaultValue = true
     )
 
     var showVibrancyDialog by rememberSaveable { mutableStateOf(false) }
@@ -299,6 +308,24 @@ fun GlassEffectSettings(navController: NavController) {
                         onCheckedChange = onNavBarEnabledChange,
                     )
                 }
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.liquid_glass_popup_menu)) },
+                        description = stringResource(R.string.liquid_glass_popup_menu_desc),
+                        icon = { Icon(painterResource(R.drawable.more_vert), contentDescription = null) },
+                        checked = popupMenuEnabled,
+                        onCheckedChange = onPopupMenuEnabledChange,
+                    )
+                }
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.liquid_glass_dialog)) },
+                        description = stringResource(R.string.liquid_glass_dialog_desc),
+                        icon = { Icon(painterResource(R.drawable.info), contentDescription = null) },
+                        checked = dialogEnabled,
+                        onCheckedChange = onDialogEnabledChange,
+                    )
+                }
             }
 
             Spacer(
@@ -314,7 +341,7 @@ fun GlassEffectSettings(navController: NavController) {
         DefaultDialog(
             onDismiss = { tempValue = vibrancy; showVibrancyDialog = false },
             buttons = {
-                TextButton(onClick = { tempValue = 1f }) { Text(stringResource(R.string.reset)) }
+                TextButton(onClick = { tempValue = 70f }) { Text(stringResource(R.string.reset)) }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = { tempValue = vibrancy; showVibrancyDialog = false }) { Text(stringResource(android.R.string.cancel)) }
                 TextButton(onClick = { onVibrancyChange(tempValue); showVibrancyDialog = false }) { Text(stringResource(android.R.string.ok)) }
@@ -322,8 +349,8 @@ fun GlassEffectSettings(navController: NavController) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
                 Text(text = stringResource(R.string.liquid_glass_vibrancy), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 16.dp))
-                Text(text = "%.2f".format(tempValue), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
-                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..2f, modifier = Modifier.fillMaxWidth())
+                Text(text = "${tempValue.roundToInt()}%", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
+                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..100f, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -333,7 +360,7 @@ fun GlassEffectSettings(navController: NavController) {
         DefaultDialog(
             onDismiss = { tempValue = blurRadius; showBlurRadiusDialog = false },
             buttons = {
-                TextButton(onClick = { tempValue = 8f }) { Text(stringResource(R.string.reset)) }
+                TextButton(onClick = { tempValue = 30f }) { Text(stringResource(R.string.reset)) }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = { tempValue = blurRadius; showBlurRadiusDialog = false }) { Text(stringResource(android.R.string.cancel)) }
                 TextButton(onClick = { onBlurRadiusChange(tempValue); showBlurRadiusDialog = false }) { Text(stringResource(android.R.string.ok)) }
@@ -341,8 +368,8 @@ fun GlassEffectSettings(navController: NavController) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
                 Text(text = stringResource(R.string.liquid_glass_blur_radius), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 16.dp))
-                Text(text = "%.0f dp".format(tempValue), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
-                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..100f, modifier = Modifier.fillMaxWidth())
+                Text(text = "${tempValue.roundToInt()} dp", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
+                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..50f, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -352,7 +379,7 @@ fun GlassEffectSettings(navController: NavController) {
         DefaultDialog(
             onDismiss = { tempValue = lensHeight; showLensHeightDialog = false },
             buttons = {
-                TextButton(onClick = { tempValue = 0.5f }) { Text(stringResource(R.string.reset)) }
+                TextButton(onClick = { tempValue = 50f }) { Text(stringResource(R.string.reset)) }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = { tempValue = lensHeight; showLensHeightDialog = false }) { Text(stringResource(android.R.string.cancel)) }
                 TextButton(onClick = { onLensHeightChange(tempValue); showLensHeightDialog = false }) { Text(stringResource(android.R.string.ok)) }
@@ -360,8 +387,8 @@ fun GlassEffectSettings(navController: NavController) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
                 Text(text = stringResource(R.string.liquid_glass_lens_height), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 16.dp))
-                Text(text = "%.2f".format(tempValue), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
-                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..1f, modifier = Modifier.fillMaxWidth())
+                Text(text = "${tempValue.roundToInt()}%", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
+                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..100f, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -371,7 +398,7 @@ fun GlassEffectSettings(navController: NavController) {
         DefaultDialog(
             onDismiss = { tempValue = lensAmount; showLensAmountDialog = false },
             buttons = {
-                TextButton(onClick = { tempValue = 0.5f }) { Text(stringResource(R.string.reset)) }
+                TextButton(onClick = { tempValue = 50f }) { Text(stringResource(R.string.reset)) }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = { tempValue = lensAmount; showLensAmountDialog = false }) { Text(stringResource(android.R.string.cancel)) }
                 TextButton(onClick = { onLensAmountChange(tempValue); showLensAmountDialog = false }) { Text(stringResource(android.R.string.ok)) }
@@ -379,8 +406,8 @@ fun GlassEffectSettings(navController: NavController) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
                 Text(text = stringResource(R.string.liquid_glass_lens_amount), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 16.dp))
-                Text(text = "%.2f".format(tempValue), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
-                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..1f, modifier = Modifier.fillMaxWidth())
+                Text(text = "${tempValue.roundToInt()}%", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
+                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..100f, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -390,7 +417,7 @@ fun GlassEffectSettings(navController: NavController) {
         DefaultDialog(
             onDismiss = { tempValue = surfaceOpacity; showSurfaceOpacityDialog = false },
             buttons = {
-                TextButton(onClick = { tempValue = 0.4f }) { Text(stringResource(R.string.reset)) }
+                TextButton(onClick = { tempValue = 60f }) { Text(stringResource(R.string.reset)) }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = { tempValue = surfaceOpacity; showSurfaceOpacityDialog = false }) { Text(stringResource(android.R.string.cancel)) }
                 TextButton(onClick = { onSurfaceOpacityChange(tempValue); showSurfaceOpacityDialog = false }) { Text(stringResource(android.R.string.ok)) }
@@ -398,8 +425,8 @@ fun GlassEffectSettings(navController: NavController) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
                 Text(text = stringResource(R.string.liquid_glass_surface_opacity), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 16.dp))
-                Text(text = "%.2f".format(tempValue), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
-                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..1f, modifier = Modifier.fillMaxWidth())
+                Text(text = "${tempValue.roundToInt()}%", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 16.dp))
+                Slider(value = tempValue, onValueChange = { tempValue = it }, valueRange = 0f..100f, modifier = Modifier.fillMaxWidth())
             }
         }
     }

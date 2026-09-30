@@ -67,6 +67,8 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
+import moe.rgsekai.sekaitune.ui.component.GlassModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -1244,7 +1246,7 @@ private fun ParticipantRow(
                                 contentDescription = stringResource(R.string.together_more_actions),
                             )
                         }
-                        DropdownMenu(
+                        GlassDropdownMenu(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false },
                         ) {
@@ -1368,7 +1370,7 @@ private fun ActivityLogBottomSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = MaterialTheme.shapes.extraLarge,

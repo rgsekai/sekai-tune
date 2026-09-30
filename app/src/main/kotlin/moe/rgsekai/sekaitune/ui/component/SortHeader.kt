@@ -116,7 +116,7 @@ inline fun <reified T : Enum<T>> SortHeader(
             }
         }
 
-        DropdownMenu(
+        GlassDropdownMenu(
             expanded = menuExpanded,
             onDismissRequest = { menuExpanded = false },
             modifier = Modifier.widthIn(min = 172.dp),

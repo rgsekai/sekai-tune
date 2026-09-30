@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -273,7 +274,7 @@ fun LibraryPlaylistsScreen(
                             )
                         }
 
-                        DropdownMenu(
+                        GlassDropdownMenu(
                             expanded = showSortMenu,
                             onDismissRequest = { showSortMenu = false },
                         ) {

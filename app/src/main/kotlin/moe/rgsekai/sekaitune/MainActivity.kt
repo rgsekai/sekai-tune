@@ -220,6 +220,8 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassLensAmountKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassLensHeightKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassMiniPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassPopupMenuEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassDialogEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceOpacityKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceTintColorKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassTextColorKey
@@ -240,6 +242,7 @@ import moe.rgsekai.sekaitune.constants.SYSTEM_DEFAULT
 import moe.rgsekai.sekaitune.constants.SearchSource
 import moe.rgsekai.sekaitune.constants.SearchSourceKey
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
+import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
 import moe.rgsekai.sekaitune.ui.component.GlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
 import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
@@ -997,17 +1000,19 @@ class MainActivity : ComponentActivity() {
                     )
 
                     val (liquidGlassGlobalEnabled) = rememberPreference(LiquidGlassGlobalEnabledKey, defaultValue = false)
-                    val (liquidGlassVibrancy) = rememberPreference(LiquidGlassVibrancyKey, defaultValue = 1f)
-                    val (liquidGlassBlurRadius) = rememberPreference(LiquidGlassBlurRadiusKey, defaultValue = 8f)
-                    val (liquidGlassLensHeight) = rememberPreference(LiquidGlassLensHeightKey, defaultValue = 0.5f)
-                    val (liquidGlassLensAmount) = rememberPreference(LiquidGlassLensAmountKey, defaultValue = 0.5f)
+                    val (liquidGlassVibrancy) = rememberPreference(LiquidGlassVibrancyKey, defaultValue = 70f)
+                    val (liquidGlassBlurRadius) = rememberPreference(LiquidGlassBlurRadiusKey, defaultValue = 30f)
+                    val (liquidGlassLensHeight) = rememberPreference(LiquidGlassLensHeightKey, defaultValue = 50f)
+                    val (liquidGlassLensAmount) = rememberPreference(LiquidGlassLensAmountKey, defaultValue = 50f)
                     val (liquidGlassChromaticAberration) = rememberPreference(LiquidGlassChromaticAberrationKey, defaultValue = true)
                     val (liquidGlassDepthEffect) = rememberPreference(LiquidGlassDepthEffectKey, defaultValue = true)
                     val (liquidGlassSurfaceTintColorInt) = rememberPreference(LiquidGlassSurfaceTintColorKey, defaultValue = 0)
-                    val (liquidGlassSurfaceOpacity) = rememberPreference(LiquidGlassSurfaceOpacityKey, defaultValue = 0.4f)
+                    val (liquidGlassSurfaceOpacity) = rememberPreference(LiquidGlassSurfaceOpacityKey, defaultValue = 60f)
                     val (liquidGlassTextColorInt) = rememberPreference(LiquidGlassTextColorKey, defaultValue = 0)
                     val (liquidGlassMiniPlayerEnabled) = rememberPreference(LiquidGlassMiniPlayerEnabledKey, defaultValue = true)
                     val (liquidGlassNavBarEnabled) = rememberPreference(LiquidGlassNavBarEnabledKey, defaultValue = true)
+                    val (liquidGlassPopupMenuEnabled) = rememberPreference(LiquidGlassPopupMenuEnabledKey, defaultValue = true)
+                    val (liquidGlassDialogEnabled) = rememberPreference(LiquidGlassDialogEnabledKey, defaultValue = true)
 
                     val glassEffectConfig = remember(
                         liquidGlassGlobalEnabled,
@@ -1022,6 +1027,8 @@ class MainActivity : ComponentActivity() {
                         liquidGlassTextColorInt,
                         liquidGlassMiniPlayerEnabled,
                         liquidGlassNavBarEnabled,
+                        liquidGlassPopupMenuEnabled,
+                        liquidGlassDialogEnabled,
                     ) {
                         GlassEffectConfig(
                             globalEnabled = liquidGlassGlobalEnabled,
@@ -1036,11 +1043,17 @@ class MainActivity : ComponentActivity() {
                             textColor = if (liquidGlassTextColorInt == 0) Color.Unspecified else Color(liquidGlassTextColorInt),
                             miniPlayerEnabled = liquidGlassMiniPlayerEnabled,
                             navBarEnabled = liquidGlassNavBarEnabled,
+                            popupMenuEnabled = liquidGlassPopupMenuEnabled,
+                            dialogEnabled = liquidGlassDialogEnabled,
                         )
                     }
 
                     val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
                     val appBackdrop = rememberLayerBackdrop {
+                        drawRect(if (pureBlack) Color.Black else surfaceContainerColor)
+                        drawContent()
+                    }
+                    val playerBackdrop = rememberLayerBackdrop {
                         drawRect(if (pureBlack) Color.Black else surfaceContainerColor)
                         drawContent()
                     }
@@ -1518,11 +1531,15 @@ class MainActivity : ComponentActivity() {
                         LocalShimmerTheme provides ShimmerTheme,
                         LocalSyncUtils provides syncUtils,
                         LocalGlassEffectConfig provides glassEffectConfig,
-                        LocalAppBackdrop provides appBackdrop,
+                        LocalAppBackdrop provides (if (playerBottomSheetState.isExpanded || playerBottomSheetState.progress > 0.05f) playerBackdrop else appBackdrop),
                         moe.rgsekai.sekaitune.ui.component.LocalBottomSheetPageState provides bottomSheetPageState,
                         moe.rgsekai.sekaitune.ui.component.LocalMenuState provides menuState,
                     ) {
-                        Row {
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize(),
+                        ) {
                             AnimatedVisibility(
                                 visible = useRail && shouldShowNavigationBar,
                                 enter = fadeIn(animationSpec = tween(durationMillis = if (disableAnimations) 0 else 150)),
@@ -2083,6 +2100,7 @@ class MainActivity : ComponentActivity() {
                                                     IntOffset(x = 0, y = shiftY)
                                                 },
                                             pureBlack = pureBlack,
+                                            playerBackdrop = playerBackdrop,
                                         )
 
                                         if (useRail) return@Box
@@ -2171,104 +2189,110 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                                NavHost(
-                                    navController = navController,
-                                    startDestination =
-                                        if (initialOnboardingRequired) {
-                                            Screens.Onboarding.route
-                                        } else if (launchMusicRecognitionFromShortcut) {
-                                            MusicRecognitionRoute
-                                        } else {
-                                            when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                                                NavigationTab.HOME -> Screens.Home.route
-                                                NavigationTab.LIBRARY -> Screens.Library.route
-                                                else -> Screens.Home.route
-                                            }
-                                        },
-                                    enterTransition = {
-                                        if (disableAnimations) {
-                                            fadeIn(tween(0))
-                                        } else if (initialState.destination.route in topLevelScreens &&
-                                            targetState.destination.route in topLevelScreens
-                                        ) {
-                                            fadeIn(tween(250))
-                                        } else {
-                                            fadeIn(tween(250)) + slideInHorizontally { it / 2 }
-                                        }
-                                    },
-                                    exitTransition = {
-                                        if (disableAnimations) {
-                                            fadeOut(tween(0))
-                                        } else if (initialState.destination.route in topLevelScreens &&
-                                            targetState.destination.route in topLevelScreens
-                                        ) {
-                                            fadeOut(tween(200))
-                                        } else {
-                                            fadeOut(tween(200)) + slideOutHorizontally { -it / 2 }
-                                        }
-                                    },
-                                    popEnterTransition = {
-                                        if (disableAnimations) {
-                                            fadeIn(tween(0))
-                                        } else if ((
-                                                initialState.destination.route in topLevelScreens ||
-                                                    initialState.destination.route?.startsWith(OnlineSearchResultRoutePrefix) == true
-                                            ) &&
-                                            targetState.destination.route in topLevelScreens
-                                        ) {
-                                            fadeIn(tween(250))
-                                        } else {
-                                            fadeIn(tween(250)) + slideInHorizontally { -it / 2 }
-                                        }
-                                    },
-                                    popExitTransition = {
-                                        if (disableAnimations) {
-                                            fadeOut(tween(0))
-                                        } else if ((
-                                                initialState.destination.route in topLevelScreens ||
-                                                    initialState.destination.route?.startsWith(OnlineSearchResultRoutePrefix) == true
-                                            ) &&
-                                            targetState.destination.route in topLevelScreens
-                                        ) {
-                                            fadeOut(tween(200))
-                                        } else {
-                                            fadeOut(tween(200)) + slideOutHorizontally { it / 2 }
-                                        }
-                                    },
+                                Box(
                                     modifier =
                                         Modifier
-                                            .layerBackdrop(appBackdrop)
-                                            .then(
-                                                if (isTvDevice) {
-                                                    Modifier
-                                                        .focusRequester(contentAreaFocusRequester)
-                                                        .focusGroup()
-                                                        .focusable()
-                                                } else {
-                                                    Modifier
-                                                },
-                                            ).nestedScroll(
-                                                // Step 2b: the NavHost-level connection now serves
-                                                // ONLY shell-driven sub-screens (Album/Artist/
-                                                // Playlist/...). Home and Search attach their own
-                                                // per-route connection inside their screen, so a
-                                                // departing screen's fling can no longer reach the
-                                                // incoming route's header state (fling carry-over is
-                                                // severed structurally). Library is self-contained
-                                                // and OnlineSearchResult is gated by canScroll=false,
-                                                // so routing them through this shared arm is harmless.
-                                                topAppBarScrollBehavior.nestedScrollConnection,
-                                            ),
+                                            .fillMaxSize()
+                                            .layerBackdrop(appBackdrop),
                                 ) {
-                                    navigationBuilder(
-                                        navController,
-                                        topAppBarScrollBehavior,
-                                        { latestVersionName },
-                                        disableAnimations,
-                                        onClearUpdateBadge = { latestVersionName = BuildConfig.VERSION_NAME },
-                                        homeScrollConnection = homeScrollBehavior.nestedScrollConnection,
-                                        searchScrollConnection = searchScrollBehavior.nestedScrollConnection,
-                                    )
+                                    NavHost(
+                                        navController = navController,
+                                        startDestination =
+                                            if (initialOnboardingRequired) {
+                                                Screens.Onboarding.route
+                                            } else if (launchMusicRecognitionFromShortcut) {
+                                                MusicRecognitionRoute
+                                            } else {
+                                                when (tabOpenedFromShortcut ?: defaultOpenTab) {
+                                                    NavigationTab.HOME -> Screens.Home.route
+                                                    NavigationTab.LIBRARY -> Screens.Library.route
+                                                    else -> Screens.Home.route
+                                                }
+                                            },
+                                        enterTransition = {
+                                            if (disableAnimations) {
+                                                fadeIn(tween(0))
+                                            } else if (initialState.destination.route in topLevelScreens &&
+                                                targetState.destination.route in topLevelScreens
+                                            ) {
+                                                fadeIn(tween(250))
+                                            } else {
+                                                fadeIn(tween(250)) + slideInHorizontally { it / 2 }
+                                            }
+                                        },
+                                        exitTransition = {
+                                            if (disableAnimations) {
+                                                fadeOut(tween(0))
+                                            } else if (initialState.destination.route in topLevelScreens &&
+                                                targetState.destination.route in topLevelScreens
+                                            ) {
+                                                fadeOut(tween(200))
+                                            } else {
+                                                fadeOut(tween(200)) + slideOutHorizontally { -it / 2 }
+                                            }
+                                        },
+                                        popEnterTransition = {
+                                            if (disableAnimations) {
+                                                fadeIn(tween(0))
+                                            } else if ((
+                                                    initialState.destination.route in topLevelScreens ||
+                                                        initialState.destination.route?.startsWith(OnlineSearchResultRoutePrefix) == true
+                                                ) &&
+                                                targetState.destination.route in topLevelScreens
+                                            ) {
+                                                fadeIn(tween(250))
+                                            } else {
+                                                fadeIn(tween(250)) + slideInHorizontally { -it / 2 }
+                                            }
+                                        },
+                                        popExitTransition = {
+                                            if (disableAnimations) {
+                                                fadeOut(tween(0))
+                                            } else if ((
+                                                    initialState.destination.route in topLevelScreens ||
+                                                        initialState.destination.route?.startsWith(OnlineSearchResultRoutePrefix) == true
+                                                ) &&
+                                                targetState.destination.route in topLevelScreens
+                                            ) {
+                                                fadeOut(tween(200))
+                                            } else {
+                                                fadeOut(tween(200)) + slideOutHorizontally { it / 2 }
+                                            }
+                                        },
+                                        modifier =
+                                            Modifier
+                                                .then(
+                                                    if (isTvDevice) {
+                                                        Modifier
+                                                            .focusRequester(contentAreaFocusRequester)
+                                                            .focusGroup()
+                                                            .focusable()
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                ).nestedScroll(
+                                                    // Step 2b: the NavHost-level connection now serves
+                                                    // ONLY shell-driven sub-screens (Album/Artist/
+                                                    // Playlist/...). Home and Search attach their own
+                                                    // per-route connection inside their screen, so a
+                                                    // departing screen's fling can no longer reach the
+                                                    // incoming route's header state (fling carry-over is
+                                                    // severed structurally). Library is self-contained
+                                                    // and OnlineSearchResult is gated by canScroll=false,
+                                                    // so routing them through this shared arm is harmless.
+                                                    topAppBarScrollBehavior.nestedScrollConnection,
+                                                ),
+                                    ) {
+                                        navigationBuilder(
+                                            navController,
+                                            topAppBarScrollBehavior,
+                                            { latestVersionName },
+                                            disableAnimations,
+                                            onClearUpdateBadge = { latestVersionName = BuildConfig.VERSION_NAME },
+                                            homeScrollConnection = homeScrollBehavior.nestedScrollConnection,
+                                            searchScrollConnection = searchScrollBehavior.nestedScrollConnection,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2862,7 +2886,7 @@ private fun OnlineSearchSortMenu(
             )
         }
 
-        DropdownMenu(
+        GlassDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {

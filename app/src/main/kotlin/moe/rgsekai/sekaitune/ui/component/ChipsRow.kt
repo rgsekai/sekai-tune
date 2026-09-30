@@ -172,7 +172,7 @@ fun <Int> ChoiceChipsRow(
                 enter = expandIn() + fadeIn(),
                 exit = shrinkOut() + fadeOut(),
             ) {
-                DropdownMenu(
+                GlassDropdownMenu(
                     modifier = Modifier.padding(start = 12.dp),
                     expanded = expanded,
                     onDismissRequest = {

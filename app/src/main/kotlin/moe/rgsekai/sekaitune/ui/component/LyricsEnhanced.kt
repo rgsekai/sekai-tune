@@ -972,7 +972,7 @@ private fun LyricsSelectionBottomSheet(
         )
     val selectedCount = selectedLineKeys.size
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,

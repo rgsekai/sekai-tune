@@ -189,26 +189,36 @@ fun TopSearch(
                 ).toDp()
         }
 
+        val glassConfig = LocalGlassEffectConfig.current
+        val isGlass = glassConfig.globalEnabled
+
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .height(topInset + AppBarHeight)
-                    .background(color = MaterialTheme.colorScheme.surface),
+                    .background(color = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surface),
         )
 
         Surface(
             shape = animatedShape,
-            color = colors.containerColor,
+            color = if (isGlass) Color.Transparent else colors.containerColor,
             contentColor = contentColorFor(colors.containerColor),
-            tonalElevation = tonalElevation,
+            tonalElevation = if (isGlass) 0.dp else tonalElevation,
             modifier =
                 Modifier
                     .padding(
                         top = animatedSurfaceTopPadding,
                         start = startPadding,
                         end = endPadding,
-                    ).size(width = width, height = height),
+                    ).size(width = width, height = height)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(glassConfig, shape = animatedShape)
+                        } else {
+                            Modifier
+                        }
+                    ),
         ) {
             Column {
                 SearchBarInputField(

@@ -63,6 +63,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import moe.rgsekai.sekaitune.ui.component.GlassModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
@@ -949,7 +950,7 @@ private fun MusicRecognitionSettingsBottomSheet(
             },
         )
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -1017,7 +1018,7 @@ private fun RecognitionHistoryBottomSheet(
     onOpenUri: (String) -> Unit,
 ) {
     val clearQuery = remember(onQueryChange) { { onQueryChange("") } }
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         modifier = Modifier.fillMaxSize(),

@@ -250,11 +250,19 @@ fun PreferenceEntry(
         }
     }
 
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.globalEnabled
+
     Card(
         shape = resolvedShape,
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor =
+                    if (isGlass) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.50f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                    },
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier =
@@ -453,7 +461,7 @@ private fun <T> PreferenceSelectionBottomSheet(
     onDismiss: () -> Unit,
     onValueSelected: (T) -> Unit,
 ) {
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),

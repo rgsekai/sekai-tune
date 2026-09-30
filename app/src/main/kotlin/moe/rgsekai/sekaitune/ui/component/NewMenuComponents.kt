@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun NewActionButton(
@@ -52,7 +53,15 @@ fun NewActionButton(
     backgroundColor: Color = Color.Unspecified,
     contentColor: Color = Color.Unspecified,
 ) {
-    val containerColor = if (backgroundColor.isSpecified) backgroundColor else MaterialTheme.colorScheme.surfaceContainerHigh
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val defaultContainerColor =
+        if (isGlass) {
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.60f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        }
+    val containerColor = if (backgroundColor.isSpecified) backgroundColor else defaultContainerColor
     val actionContentColor = if (contentColor.isSpecified) contentColor else MaterialTheme.colorScheme.onSurfaceVariant
 
     FilledTonalButton(
@@ -68,7 +77,7 @@ fun NewActionButton(
                 containerColor = containerColor,
                 contentColor = actionContentColor,
             ),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -84,12 +93,15 @@ fun NewActionButton(
 
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.5.sp,
+                    lineHeight = 13.5.sp,
+                ),
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
+                softWrap = true,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
             )
         }
     }
@@ -270,9 +282,17 @@ fun MenuSurfaceSection(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color =
+            if (isGlass) {
+                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.50f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(content = content)
