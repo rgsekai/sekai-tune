@@ -9,12 +9,15 @@
 
 package moe.rgsekai.sekaitune.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -40,6 +43,9 @@ fun StarDialog(
     onLater: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU) || glassConfig.isEnabledFor(GlassComponent.DIALOG)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
 
     GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -62,6 +68,16 @@ fun StarDialog(
                 onClick = onSupport,
                 modifier = Modifier.fillMaxWidth(),
                 shapes = ButtonDefaults.shapes(),
+                colors =
+                    if (isGlass) {
+                        ButtonDefaults.filledTonalButtonColors(
+                            containerColor = if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.15f),
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        )
+                    } else {
+                        ButtonDefaults.filledTonalButtonColors()
+                    },
+                border = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.15f)) else null,
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.coffee),

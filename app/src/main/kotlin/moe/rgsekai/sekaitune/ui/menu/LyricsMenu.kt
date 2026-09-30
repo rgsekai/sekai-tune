@@ -58,6 +58,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.luminance
+import moe.rgsekai.sekaitune.ui.component.ApplyWindowBlur
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -433,6 +438,12 @@ fun LyricsMenu(
             }
         }
 
+        val glassConfig = LocalGlassEffectConfig.current
+        val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+        val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+        ApplyWindowBlur(glassConfig, enabled = isGlass)
+        val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
         BasicAlertDialog(
             onDismissRequest = {},
             properties =
@@ -449,9 +460,22 @@ fun LyricsMenu(
         ) {
             Surface(
                 shape = AlertDialogDefaults.shape,
-                color = AlertDialogDefaults.containerColor,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
-                modifier = Modifier.widthIn(max = 560.dp),
+                color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+                border = dialogBorder,
+                tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
+                modifier = Modifier
+                    .widthIn(max = 560.dp)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(
+                                config = glassConfig,
+                                shape = AlertDialogDefaults.shape,
+                                applyEdgeEffects = true,
+                            )
+                        } else {
+                            Modifier
+                        }
+                    ),
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Icon(
@@ -807,6 +831,12 @@ private fun LyricsSearchResultDialog(
     onResultSelected: (LyricsSearchResultUiModel) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    ApplyWindowBlur(glassConfig, enabled = isGlass)
+    val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -831,10 +861,22 @@ private fun LyricsSearchResultDialog(
                     Modifier
                         .fillMaxWidth()
                         .widthIn(max = 640.dp)
-                        .heightIn(max = maxHeight),
+                        .heightIn(max = maxHeight)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
                 shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
+                color = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = dialogBorder,
+                tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     LyricsSearchResultHeader(
@@ -1412,6 +1454,12 @@ private fun SearchLyricsInputDialog(
     val contentArrangement = remember { Arrangement.spacedBy(20.dp) }
     val fieldArrangement = remember { Arrangement.spacedBy(16.dp) }
 
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    ApplyWindowBlur(glassConfig, enabled = isGlass)
+    val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
     BasicAlertDialog(
         onDismissRequest = onDismiss,
         modifier =
@@ -1422,9 +1470,22 @@ private fun SearchLyricsInputDialog(
     ) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
-            modifier = Modifier.widthIn(max = 520.dp),
+            color = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = dialogBorder,
+            tonalElevation = if (isGlass) 0.dp else 6.dp,
+            modifier = Modifier
+                .widthIn(max = 520.dp)
+                .then(
+                    if (isGlass) {
+                        Modifier.liquidGlass(
+                            config = glassConfig,
+                            shape = MaterialTheme.shapes.extraLarge,
+                            applyEdgeEffects = true,
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
         ) {
             Column(
                 modifier =

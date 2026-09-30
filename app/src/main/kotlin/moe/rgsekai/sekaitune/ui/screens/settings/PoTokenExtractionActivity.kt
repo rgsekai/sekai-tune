@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.AlertDialog
+import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -329,33 +329,15 @@ class PoTokenExtractionActivity : ComponentActivity() {
             )
 
             if (showAccountDialog) {
-                AlertDialog(
-                    onDismissRequest = { closeCanceled() },
+                DefaultDialog(
+                    onDismiss = { closeCanceled() },
                     title = {
                         Text(stringResource(R.string.po_token_account_notice_title))
                     },
-                    text = {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.po_token_account_notice_body),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = stringResource(R.string.po_token_account_notice_same_account),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = stringResource(R.string.po_token_account_notice_mismatch),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    buttons = {
+                        TextButton(onClick = { closeCanceled() }) {
+                            Text(stringResource(R.string.cancel))
                         }
-                    },
-                    confirmButton = {
                         TextButton(
                             onClick = {
                                 showAccountDialog = false
@@ -365,12 +347,27 @@ class PoTokenExtractionActivity : ComponentActivity() {
                             Text(stringResource(R.string.got_it))
                         }
                     },
-                    dismissButton = {
-                        TextButton(onClick = { closeCanceled() }) {
-                            Text(stringResource(R.string.cancel))
-                        }
-                    },
-                )
+                ) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.po_token_account_notice_body),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = stringResource(R.string.po_token_account_notice_same_account),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.po_token_account_notice_mismatch),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
             TopAppBar(

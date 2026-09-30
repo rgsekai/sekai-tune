@@ -17,6 +17,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -58,6 +59,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -77,8 +79,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -250,19 +254,11 @@ fun PreferenceEntry(
         }
     }
 
-    val glassConfig = LocalGlassEffectConfig.current
-    val isGlass = glassConfig.globalEnabled
-
     Card(
         shape = resolvedShape,
         colors =
             CardDefaults.cardColors(
-                containerColor =
-                    if (isGlass) {
-                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.50f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerLow
-                    },
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier =
@@ -271,7 +267,8 @@ fun PreferenceEntry(
                 .padding(
                     horizontal = if (inGroup) 0.dp else 16.dp,
                     vertical = if (inGroup) 0.dp else 3.dp,
-                ).graphicsLayer {
+                )
+                .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                 },
@@ -530,61 +527,93 @@ private fun PreferenceSelectionOption(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val shape = MaterialTheme.shapes.extraLarge
+
     val containerColor =
-        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh
+        when {
+            selected && isGlass -> adjustColorVibrancy(MaterialTheme.colorScheme.primary, glassConfig.vibrancy).copy(alpha = 0.82f)
+            selected -> MaterialTheme.colorScheme.primary
+            isGlass -> Color.Transparent
+            else -> MaterialTheme.colorScheme.surfaceContainerHigh
+        }
     val contentColor =
         if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
     val descriptionColor =
         if (selected) contentColor.copy(alpha = 0.78f) else MaterialTheme.colorScheme.onSurfaceVariant
 
-    Row(
+    val rimColor =
+        when {
+            selected && isGlass -> Color.White.copy(alpha = 0.35f)
+            isGlass -> if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.14f)
+            else -> null
+        }
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = shape,
+        color = containerColor,
+        border = if (isGlass && rimColor != null) BorderStroke(1.dp, rimColor) else null,
         modifier =
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = if (description == null) 72.dp else 96.dp)
                 .alpha(if (enabled) 1f else 0.5f)
-                .clip(MaterialTheme.shapes.extraLarge)
-                .background(containerColor)
-                .selectable(
-                    selected = selected,
-                    enabled = enabled,
-                    onClick = onClick,
-                    role = Role.RadioButton,
-                ).padding(horizontal = 24.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .then(
+                    if (isGlass) {
+                        Modifier.liquidGlass(
+                            config = glassConfig,
+                            shape = shape,
+                            applyEdgeEffects = true,
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.weight(1f),
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = contentColor,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (description != null) {
-                Spacer(Modifier.height(4.dp))
+            Column(
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.weight(1f),
+            ) {
                 Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = descriptionColor,
-                    maxLines = 3,
+                    text = text,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    color = contentColor,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (description != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = descriptionColor,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-        }
 
-        if (selected) {
-            Spacer(Modifier.width(16.dp))
-            Icon(
-                painter = painterResource(R.drawable.check),
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(28.dp),
-            )
+            if (selected) {
+                Spacer(Modifier.width(16.dp))
+                Icon(
+                    painter = painterResource(R.drawable.check),
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
         }
     }
 }

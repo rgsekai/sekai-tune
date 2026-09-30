@@ -54,6 +54,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -291,17 +293,36 @@ private fun LyricsShareStudioDialog(
             val maxDialogHeight = (maxHeight - outerPadding * 2).coerceAtLeast(1.dp)
             val maxDialogWidth = if (isCompactLayout) 560.dp else 980.dp
 
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+            ApplyWindowBlur(glassConfig, enabled = isGlass)
+            val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+            val dialogShape = MaterialTheme.shapes.extraLarge
+
             Surface(
                 modifier =
                     Modifier
                         .padding(outerPadding)
                         .fillMaxWidth()
                         .widthIn(max = maxDialogWidth)
-                        .heightIn(max = maxDialogHeight),
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        .heightIn(max = maxDialogHeight)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = dialogShape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
+                shape = dialogShape,
+                color = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = 6.dp,
+                border = dialogBorder,
+                tonalElevation = if (isGlass) 0.dp else 6.dp,
             ) {
                 LyricsShareStudioScaffold(
                     mediaMetadata = mediaMetadata,
@@ -325,34 +346,17 @@ private fun LyricsShareStudioDialog(
 
 @Composable
 private fun LyricsShareLoadingDialog() {
-    BasicAlertDialog(
-        onDismissRequest = {},
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    DefaultDialog(
+        onDismiss = {},
+        icon = { LoadingIndicator(modifier = Modifier.size(40.dp)) },
+        title = { Text(text = stringResource(R.string.generating_image), style = MaterialTheme.typography.titleLarge) },
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp),
-            modifier = Modifier.padding(24.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                LoadingIndicator(modifier = Modifier.size(40.dp))
-                Text(
-                    text = stringResource(R.string.generating_image),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = stringResource(R.string.please_wait),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
+        Text(
+            text = stringResource(R.string.please_wait),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

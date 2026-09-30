@@ -9,6 +9,7 @@
 
 package moe.rgsekai.sekaitune.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,6 +21,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -119,16 +122,34 @@ fun ThumbnailCornerRadiusModal(
                     else -> 0.95f
                 }
 
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+            ApplyWindowBlur(glassConfig, enabled = isGlass)
+            val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+            val dialogShape = RoundedCornerShape(30.dp)
+
             Surface(
                 modifier =
                     Modifier
                         .fillMaxWidth(dialogWidth)
                         .wrapContentHeight()
-                        .clip(RoundedCornerShape(30.dp))
-                        .padding(16.dp),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
+                        .padding(16.dp)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = dialogShape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
+                shape = dialogShape,
+                color = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surface,
+                border = dialogBorder,
+                tonalElevation = if (isGlass) 0.dp else 6.dp,
             ) {
                 Column(
                     modifier =

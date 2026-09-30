@@ -131,119 +131,118 @@ fun SpotifyPlaylistPickerDialog(
         }
     }
 
-    AlertDialog(
-        onDismissRequest = {
+    moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+        onDismiss = {
             if (addingPlaylistId == null) onDismiss()
         },
         title = { Text(stringResource(R.string.spotify_add_to_playlist)) },
-        text = {
-            when {
-                isLoading -> {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(140.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
+        buttons = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = addingPlaylistId == null,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    ) {
+        when {
+            isLoading -> {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(140.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
                 }
+            }
 
-                error != null -> {
-                    Text(
-                        text = error.orEmpty(),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+            error != null -> {
+                Text(
+                    text = error.orEmpty(),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
 
-                playlists.isEmpty() -> {
-                    Text(
-                        text = stringResource(R.string.spotify_no_playlists),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+            playlists.isEmpty() -> {
+                Text(
+                    text = stringResource(R.string.spotify_no_playlists),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
 
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        items(playlists, key = { it.id }) { playlist ->
-                            val isThisRowAdding = addingPlaylistId == playlist.id
-                            val isAnyRowAdding = addingPlaylistId != null
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    items(playlists, key = { it.id }) { playlist ->
+                        val isThisRowAdding = addingPlaylistId == playlist.id
+                        val isAnyRowAdding = addingPlaylistId != null
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable(enabled = !isAnyRowAdding) {
+                                        onSelect(playlist)
+                                    }
+                                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                        ) {
+                            val imageUrl = playlist.images.firstOrNull()?.url
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
                                 modifier =
                                     Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable(enabled = !isAnyRowAdding) {
-                                            onSelect(playlist)
-                                        }
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                            ) {
-                                val imageUrl = playlist.images.firstOrNull()?.url
-                                AsyncImage(
-                                    model = imageUrl,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier =
-                                        Modifier
-                                            .size(44.dp)
-                                            .clip(RoundedCornerShape(6.dp)),
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(6.dp)),
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = playlist.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
+                                val subtitle =
+                                    buildString {
+                                        playlist.owner?.displayName?.takeIf { it.isNotBlank() }?.let { append(it) }
+                                        val totalCount = playlist.tracks?.total ?: 0
+                                        if (totalCount > 0) {
+                                            if (isNotEmpty()) append(" • ")
+                                            append("$totalCount tracks")
+                                        }
+                                    }
+                                if (subtitle.isNotBlank()) {
                                     Text(
-                                        text = playlist.name,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        text = subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    val subtitle =
-                                        buildString {
-                                            playlist.owner?.displayName?.takeIf { it.isNotBlank() }?.let { append(it) }
-                                            val totalCount = playlist.tracks?.total ?: 0
-                                            if (totalCount > 0) {
-                                                if (isNotEmpty()) append(" • ")
-                                                append("$totalCount tracks")
-                                            }
-                                        }
-                                    if (subtitle.isNotBlank()) {
-                                        Text(
-                                            text = subtitle,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    }
                                 }
-                                if (isThisRowAdding) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(22.dp),
-                                        strokeWidth = 2.5.dp,
-                                    )
-                                }
+                            }
+                            if (isThisRowAdding) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    strokeWidth = 2.5.dp,
+                                )
                             }
                         }
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                enabled = addingPlaylistId == null,
-            ) {
-                Text(stringResource(android.R.string.cancel))
-            }
-        },
-    )
+        }
+    }
 }
 
 @androidx.compose.runtime.Immutable
@@ -349,44 +348,45 @@ fun AddToSpotifyPlaylistFlow(
 
     when {
         isResolving -> {
-            AlertDialog(
-                onDismissRequest = onDismiss,
+            moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+                onDismiss = onDismiss,
                 title = { Text(stringResource(R.string.spotify_add_to_playlist)) },
-                text = {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(80.dp),
-                        contentAlignment = Alignment.Center,
+                buttons = {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(12.dp))
-                            val loadingText =
-                                if (tracks.size > 1) {
-                                    stringResource(
-                                        R.string.spotify_resolving_batch,
-                                        resolvedProgress.first,
-                                        resolvedProgress.second,
-                                    )
-                                } else {
-                                    stringResource(R.string.spotify_searching)
-                                }
-                            Text(
-                                text = loadingText,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = onDismiss) {
                         Text(stringResource(android.R.string.cancel))
                     }
                 },
-            )
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val loadingText =
+                            if (tracks.size > 1) {
+                                stringResource(
+                                    R.string.spotify_resolving_batch,
+                                    resolvedProgress.first,
+                                    resolvedProgress.second,
+                                )
+                            } else {
+                                stringResource(R.string.spotify_searching)
+                            }
+                        Text(
+                            text = loadingText,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
         }
 
         resolveError != null -> {

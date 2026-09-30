@@ -561,11 +561,13 @@ private fun MusicTogetherDialogs(
         }
 
         is MusicTogetherDialogUiState.SendBuddyRequest -> {
-            AlertDialog(
-                onDismissRequest = viewModel::dismissDialog,
+            moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+                onDismiss = viewModel::dismissDialog,
                 title = { Text(text = stringResource(R.string.send_buddy_request)) },
-                text = { Text("Send buddy request to ${dialog.participantName}?") },
-                confirmButton = {
+                buttons = {
+                    TextButton(onClick = viewModel::dismissDialog) {
+                        Text(stringResource(R.string.dismiss))
+                    }
                     Button(
                         onClick = {
                             viewModel.confirmSendBuddyRequest(
@@ -578,12 +580,9 @@ private fun MusicTogetherDialogs(
                         Text(stringResource(R.string.send_buddy_request))
                     }
                 },
-                dismissButton = {
-                    TextButton(onClick = viewModel::dismissDialog) {
-                        Text(stringResource(R.string.dismiss))
-                    }
-                },
-            )
+            ) {
+                Text("Send buddy request to ${dialog.participantName}?")
+            }
         }
     }
 }
@@ -1797,10 +1796,8 @@ private fun WelcomeDialog(
     onGotIt: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
+    moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+        onDismiss = onDismiss,
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1814,70 +1811,11 @@ private fun WelcomeDialog(
                 )
             }
         },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm)) {
-                Text(
-                    text = stringResource(R.string.together_welcome_body),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                ) {
-                    Column(
-                        modifier = Modifier.padding(MusicTogetherSpacing.sm),
-                        verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
-                    ) {
-                        InstructionRow(
-                            iconResId = R.drawable.fire,
-                            titleResId = R.string.together_welcome_host_title,
-                            bodyResId = R.string.together_welcome_host_body,
-                            accent = MaterialTheme.colorScheme.primary,
-                        )
-                        InstructionRow(
-                            iconResId = R.drawable.link,
-                            titleResId = R.string.together_welcome_join_title,
-                            bodyResId = R.string.together_welcome_join_body,
-                            accent = MaterialTheme.colorScheme.tertiary,
-                        )
-                        InstructionRow(
-                            iconResId = R.drawable.lock,
-                            titleResId = R.string.together_welcome_permissions_title,
-                            bodyResId = R.string.together_welcome_permissions_body,
-                            accent = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
-                }
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.large)
-                            .toggleable(
-                                value = dontShowAgain,
-                                role = Role.Checkbox,
-                                onValueChange = onDontShowAgainChange,
-                            ).padding(vertical = MusicTogetherSpacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xs),
-                ) {
-                    Checkbox(
-                        checked = dontShowAgain,
-                        onCheckedChange = null,
-                    )
-                    Text(
-                        text = stringResource(R.string.together_dont_show_again),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-        },
-        confirmButton = {
+        buttons = {
             Button(
                 onClick = onGotIt,
                 shapes = ButtonDefaults.shapes(),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.check),
@@ -1888,7 +1826,66 @@ private fun WelcomeDialog(
                 Text(text = stringResource(R.string.got_it))
             }
         },
-    )
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm)) {
+            Text(
+                text = stringResource(R.string.together_welcome_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Column(
+                    modifier = Modifier.padding(MusicTogetherSpacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
+                ) {
+                    InstructionRow(
+                        iconResId = R.drawable.fire,
+                        titleResId = R.string.together_welcome_host_title,
+                        bodyResId = R.string.together_welcome_host_body,
+                        accent = MaterialTheme.colorScheme.primary,
+                    )
+                    InstructionRow(
+                        iconResId = R.drawable.link,
+                        titleResId = R.string.together_welcome_join_title,
+                        bodyResId = R.string.together_welcome_join_body,
+                        accent = MaterialTheme.colorScheme.tertiary,
+                    )
+                    InstructionRow(
+                        iconResId = R.drawable.lock,
+                        titleResId = R.string.together_welcome_permissions_title,
+                        bodyResId = R.string.together_welcome_permissions_body,
+                        accent = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .toggleable(
+                            value = dontShowAgain,
+                            role = Role.Checkbox,
+                            onValueChange = onDontShowAgainChange,
+                        ).padding(vertical = MusicTogetherSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xs),
+            ) {
+                Checkbox(
+                    checked = dontShowAgain,
+                    onCheckedChange = null,
+                )
+                Text(
+                    text = stringResource(R.string.together_dont_show_again),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -1928,19 +1925,13 @@ private fun ConfirmParticipantDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
+    moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+        onDismiss = onDismiss,
         title = { Text(text = stringResource(titleResId)) },
-        text = {
-            Text(
-                text = stringResource(bodyResId, participantName),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        confirmButton = {
+        buttons = {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+                Text(text = stringResource(R.string.dismiss))
+            }
             Button(
                 onClick = onConfirm,
                 colors =
@@ -1954,12 +1945,13 @@ private fun ConfirmParticipantDialog(
                 Text(text = stringResource(confirmResId))
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
-                Text(text = stringResource(R.string.dismiss))
-            }
-        },
-    )
+    ) {
+        Text(
+            text = stringResource(bodyResId, participantName),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 private object MusicTogetherSpacing {

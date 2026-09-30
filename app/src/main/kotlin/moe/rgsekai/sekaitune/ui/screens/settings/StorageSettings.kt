@@ -27,8 +27,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -679,41 +679,34 @@ private fun StorageMigrationProgressDialog(migration: StorageMigrationUiModel) {
             StorageMigrationUiPhase.DOWNLOADS -> stringResource(R.string.storage_migration_downloads_progress, migration.percent)
         }
 
-    BasicAlertDialog(
-        onDismissRequest = {},
-        modifier = Modifier.padding(24.dp),
+    DefaultDialog(
+        onDismiss = {},
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-                modifier =
-                    Modifier
-                        .size(280.dp)
-                        .padding(24.dp),
-            ) {
-                CircularWavyProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.size(64.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = progressText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = stringResource(R.string.storage_migration_warning),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            CircularWavyProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.size(64.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = progressText,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = stringResource(R.string.storage_migration_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
@@ -729,41 +722,34 @@ private fun StorageCacheClearProgressDialog(cacheClear: StorageCacheClearUiModel
             StorageCacheClearUiKind.CANVAS -> stringResource(R.string.storage_clear_canvas_cache_progress, cacheClear.percent)
         }
 
-    BasicAlertDialog(
-        onDismissRequest = {},
-        modifier = Modifier.padding(24.dp),
+    DefaultDialog(
+        onDismiss = {},
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-                modifier =
-                    Modifier
-                        .size(280.dp)
-                        .padding(24.dp),
-            ) {
-                CircularWavyProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.size(64.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = progressText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = stringResource(R.string.storage_cache_clear_warning),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            CircularWavyProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.size(64.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = progressText,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = stringResource(R.string.storage_cache_clear_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

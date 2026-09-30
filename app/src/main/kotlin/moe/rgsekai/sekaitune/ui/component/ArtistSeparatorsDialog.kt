@@ -37,6 +37,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,23 +71,16 @@ fun ArtistSeparatorsDialog(
     var newSymbolInput by remember { mutableStateOf("") }
 
     if (showAddSymbolDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddSymbolDialog = false },
+        DefaultDialog(
+            onDismiss = { showAddSymbolDialog = false },
             title = { Text(stringResource(R.string.add_symbol)) },
-            text = {
-                OutlinedTextField(
-                    value = newSymbolInput,
-                    onValueChange = {
-                        if (it.length <= 1) {
-                            newSymbolInput = it
-                        }
-                    },
-                    label = { Text(stringResource(R.string.enter_symbol)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            confirmButton = {
+            buttons = {
+                TextButton(onClick = {
+                    newSymbolInput = ""
+                    showAddSymbolDialog = false
+                }, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(android.R.string.cancel))
+                }
                 Button(
                     onClick = {
                         if (newSymbolInput.isNotEmpty() && !separatorsList.contains(newSymbolInput)) {
@@ -100,29 +95,51 @@ fun ArtistSeparatorsDialog(
                     Text(stringResource(R.string.add_symbol))
                 }
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    newSymbolInput = ""
-                    showAddSymbolDialog = false
-                }, shapes = ButtonDefaults.shapes()) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        )
+        ) {
+            OutlinedTextField(
+                value = newSymbolInput,
+                onValueChange = {
+                    if (it.length <= 1) {
+                        newSymbolInput = it
+                    }
+                },
+                label = { Text(stringResource(R.string.enter_symbol)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        val glassConfig = LocalGlassEffectConfig.current
+        val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+        val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+        ApplyWindowBlur(glassConfig, enabled = isGlass)
+        val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
         Surface(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(
+                                config = glassConfig,
+                                shape = AlertDialogDefaults.shape,
+                                applyEdgeEffects = true,
+                            )
+                        } else {
+                            Modifier
+                        },
+                    ),
             shape = AlertDialogDefaults.shape,
-            color = AlertDialogDefaults.containerColor,
-            tonalElevation = AlertDialogDefaults.TonalElevation,
+            color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+            border = dialogBorder,
+            tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),

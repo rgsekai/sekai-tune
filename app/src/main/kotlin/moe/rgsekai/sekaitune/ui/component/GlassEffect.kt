@@ -65,6 +65,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetDefaults
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.unit.Dp
@@ -321,12 +322,19 @@ fun GlassDropdownMenu(
 ) {
     val glassConfig = LocalGlassEffectConfig.current
     val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val effectiveBorder = if (isGlass) border ?: BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else border
+
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
         modifier = modifier.then(
             if (isGlass) {
-                Modifier.liquidGlass(glassConfig, shape = shape)
+                Modifier.liquidGlass(
+                    config = glassConfig,
+                    shape = shape,
+                    applyEdgeEffects = true,
+                )
             } else {
                 Modifier
             }
@@ -338,7 +346,7 @@ fun GlassDropdownMenu(
         containerColor = if (isGlass) Color.Transparent else containerColor,
         tonalElevation = if (isGlass) 0.dp else tonalElevation,
         shadowElevation = if (isGlass) 0.dp else shadowElevation,
-        border = if (isGlass) null else border,
+        border = effectiveBorder,
         content = content,
     )
 }
@@ -360,7 +368,10 @@ fun GlassModalBottomSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val glassConfig = LocalGlassEffectConfig.current
-    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU) || glassConfig.isEnabledFor(GlassComponent.DIALOG)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val effectiveBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
     if (isGlass) {
         ModalBottomSheet(
             onDismissRequest = onDismissRequest,
@@ -370,28 +381,36 @@ fun GlassModalBottomSheet(
             containerColor = Color.Transparent,
             contentColor = contentColor,
             tonalElevation = 0.dp,
-            scrimColor = scrimColor,
+            scrimColor = Color.Black.copy(alpha = 0.25f),
             dragHandle = null,
             contentWindowInsets = contentWindowInsets,
             properties = properties,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .liquidGlass(
-                        config = glassConfig,
-                        shape = shape,
-                    ),
+            ApplyWindowBlur(glassConfig, enabled = true)
+            Surface(
+                shape = shape,
+                color = Color.Transparent,
+                border = effectiveBorder,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(
+                            config = glassConfig,
+                            shape = shape,
+                            applyEdgeEffects = true,
+                        ),
             ) {
-                if (dragHandle != null) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        dragHandle()
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (dragHandle != null) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            dragHandle()
+                        }
                     }
+                    content()
                 }
-                content()
             }
         }
     } else {

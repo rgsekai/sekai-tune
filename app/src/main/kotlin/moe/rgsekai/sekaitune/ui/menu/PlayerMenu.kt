@@ -45,7 +45,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -1027,7 +1027,7 @@ private fun PlayerVolumeCard(
                 shape = sliderShape,
                 color =
                     if (isGlass) {
-                        if (isLight) Color.White.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.28f)
+                        Color.Transparent
                     } else {
                         MaterialTheme.colorScheme.surfaceContainerHighest
                     },
@@ -1041,7 +1041,6 @@ private fun PlayerVolumeCard(
                                     config = glassConfig,
                                     shape = sliderShape,
                                     applyEdgeEffects = true,
-                                    blurRadiusDp = (glassConfig.blurRadius * 1.2f).coerceIn(12f, 50f),
                                 )
                             } else {
                                 Modifier
@@ -1155,19 +1154,12 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
             )
     }
 
-    val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
-    val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.DIALOG)
-
-    AlertDialog(
-        modifier = if (isGlass) Modifier.frostedGlass(glassConfig, shape = AlertDialogDefaults.shape) else Modifier,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-        onDismissRequest = onDismiss,
-        containerColor = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
-        tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
+    DefaultDialog(
+        onDismiss = onDismiss,
         title = {
             Text(stringResource(R.string.tempo_and_pitch))
         },
-        dismissButton = {
+        buttons = {
             TextButton(
                 onClick = {
                     tempo = 1f
@@ -1178,8 +1170,7 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
             ) {
                 Text(stringResource(R.string.reset))
             }
-        },
-        confirmButton = {
+            Spacer(Modifier.weight(1f))
             TextButton(
                 onClick = onDismiss,
                 shapes = ButtonDefaults.shapes(),
@@ -1187,7 +1178,7 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
                 Text(stringResource(android.R.string.ok))
             }
         },
-        text = {
+    ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(18.dp),
                 modifier =
@@ -1456,9 +1447,8 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
                     }
                 }
             }
-        },
-    )
-}
+        }
+    }
 
 private enum class PitchMode {
     Semitones,

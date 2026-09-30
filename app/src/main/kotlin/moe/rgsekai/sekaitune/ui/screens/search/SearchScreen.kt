@@ -7,7 +7,9 @@
 
 package moe.rgsekai.sekaitune.ui.screens.search
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +62,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -85,8 +88,11 @@ import moe.rgsekai.sekaitune.models.toMediaMetadata
 import moe.rgsekai.sekaitune.musicrecognition.MusicRecognitionRoute
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
 import moe.rgsekai.sekaitune.search.SearchDiscoveryUiModel
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.LocalMenuState
 import moe.rgsekai.sekaitune.ui.component.NavigationTitle
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import moe.rgsekai.sekaitune.ui.component.YouTubeGridItem
 import moe.rgsekai.sekaitune.ui.component.YouTubeListItem
 import moe.rgsekai.sekaitune.ui.component.shimmer.ShimmerHost
@@ -313,50 +319,62 @@ fun SearchScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchEntryField(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SearchBar(
-        inputField = {
-            SearchBarDefaults.InputField(
-                query = "",
-                onQueryChange = { onClick() },
-                onSearch = { onClick() },
-                expanded = false,
-                onExpandedChange = { expanded ->
-                    if (expanded) onClick()
-                },
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.search_yt_music),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.search),
-                        contentDescription = null,
-                    )
-                },
-                trailingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.language),
-                        contentDescription = null,
-                    )
-                },
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.NAV_BAR) || glassConfig.globalEnabled
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val pillBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)) else null
+
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color =
+            if (isGlass) {
+                if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            },
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = pillBorder,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(56.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.search),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
             )
-        },
-        expanded = false,
-        onExpandedChange = { expanded ->
-            if (expanded) onClick()
-        },
-        windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
-        modifier = modifier.fillMaxWidth(),
-    ) {}
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = stringResource(R.string.search_yt_music),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                painter = painterResource(R.drawable.language),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
 }
 
 @Composable
@@ -364,14 +382,26 @@ private fun MusicRecognitionPill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.NAV_BAR) || glassConfig.globalEnabled
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val pillBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)) else null
+
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color =
+            if (isGlass) {
+                if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            },
         contentColor = MaterialTheme.colorScheme.onSurface,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp),
+        border = pillBorder,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(56.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

@@ -9,7 +9,9 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +40,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -101,7 +105,9 @@ import moe.rgsekai.sekaitune.paxsenix.models.ProviderStats
 import moe.rgsekai.sekaitune.ui.component.ActionPromptDialog
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import moe.rgsekai.sekaitune.ui.component.EnumListPreference
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
 import moe.rgsekai.sekaitune.ui.component.IconButton
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.NumberPickerPreference
 import moe.rgsekai.sekaitune.ui.component.PreferenceEntry
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
@@ -228,14 +234,34 @@ fun LyricsSettings(
         )
     }
 
-    Column(
-        Modifier
-            .windowInsetsPadding(
-                LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.lyrics)) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = navController::navigateUp,
+                        onLongClick = navController::backToMain,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.arrow_back),
+                            contentDescription = null,
+                        )
+                    }
+                },
             )
-            .verticalScroll(rememberScrollState()),
-    ) {
-        var showLyricsTextSizeDialog by rememberSaveable { mutableStateOf(false) }
+        },
+    ) { innerPadding ->
+        Column(
+            Modifier
+                .padding(top = innerPadding.calculateTopPadding())
+                .windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+                )
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = SettingsDimensions.ScreenBottomPadding),
+        ) {
+            var showLyricsTextSizeDialog by rememberSaveable { mutableStateOf(false) }
 
         if (showLyricsTextSizeDialog) {
             var tempTextSize by remember { mutableFloatStateOf(lyricsTextSize) }
@@ -650,21 +676,7 @@ fun LyricsSettings(
             }
         }
     }
-
-    TopAppBar(
-        title = { Text(stringResource(R.string.lyrics)) },
-        navigationIcon = {
-            IconButton(
-                onClick = navController::navigateUp,
-                onLongClick = navController::backToMain,
-            ) {
-                Icon(
-                    painterResource(R.drawable.arrow_back),
-                    contentDescription = null,
-                )
-            }
-        },
-    )
+}
 }
 
 private enum class PaxsenixServerStatus { Operational, Degraded, Down }
@@ -722,6 +734,10 @@ private fun LyricsProviderOrderDialog(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = 12.dp),
             )
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
             LazyColumn(
                 state = lazyListState,
                 modifier =
@@ -734,22 +750,47 @@ private fun LyricsProviderOrderDialog(
                         val isFirst = index == 0
                         val containerColor =
                             if (isFirst) {
-                                MaterialTheme.colorScheme.primaryContainer
+                                if (isGlass) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = if (isLight) 0.85f else 0.70f)
+                                } else {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                }
                             } else {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
+                                if (isGlass) {
+                                    if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                }
                             }
                         val contentColor =
                             if (isFirst) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
+                                if (isGlass) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
                             } else {
                                 MaterialTheme.colorScheme.onSurface
                             }
+                        val itemBorder = if (isGlass) {
+                            BorderStroke(
+                                1.dp,
+                                if (isFirst) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                } else {
+                                    if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)
+                                }
+                            )
+                        } else null
 
                         Row(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = if (index < providers.size - 1) 4.dp else 0.dp)
+                                    .then(
+                                        if (itemBorder != null) {
+                                            Modifier.border(itemBorder, RoundedCornerShape(8.dp))
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(containerColor)
                                     .padding(horizontal = 12.dp, vertical = 10.dp),

@@ -59,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -274,14 +275,28 @@ private fun EditableTagRow(
     onChangeColor: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
     SegmentedListItem(
         selected = false,
         onClick = onEdit,
         shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
         colors =
             ListItemDefaults.segmentedColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                containerColor =
+                    if (isGlass) {
+                        if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    },
+                selectedContainerColor =
+                    if (isGlass) {
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+                    } else {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    },
             ),
         leadingContent = {
             PlaylistTagColorSwatch(
@@ -366,13 +381,24 @@ private fun AddEditTagDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
 
+                    val glassConfig = LocalGlassEffectConfig.current
+                    val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+                    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+                    val cardBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)) else null
+
                     Surface(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .clickable(onClick = onColorClick),
                         shape = MaterialTheme.shapes.extraLarge,
-                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        color =
+                            if (isGlass) {
+                                if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainer
+                            },
+                        border = cardBorder,
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
@@ -540,11 +566,22 @@ private fun PlaylistTagsLoadingContent(modifier: Modifier = Modifier) {
 
 @Composable
 private fun PlaylistTagsEmptyContent(modifier: Modifier = Modifier) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val cardBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)) else null
+
     Surface(
         modifier =
             modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color =
+            if (isGlass) {
+                if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            },
+        border = cardBorder,
     ) {
         Column(
             modifier =
@@ -681,15 +718,33 @@ private fun PlaylistTagsDialogScaffold(
                     .navigationBarsPadding(),
             contentAlignment = Alignment.Center,
         ) {
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+            ApplyWindowBlur(glassConfig, enabled = isGlass)
+            val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
             Surface(
                 modifier =
                     Modifier
                         .widthIn(max = 560.dp)
                         .fillMaxWidth()
-                        .heightIn(max = maxHeight),
+                        .heightIn(max = maxHeight)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = AlertDialogDefaults.shape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                 shape = AlertDialogDefaults.shape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
+                color = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = dialogBorder,
+                tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
                 content = content,
             )
         }

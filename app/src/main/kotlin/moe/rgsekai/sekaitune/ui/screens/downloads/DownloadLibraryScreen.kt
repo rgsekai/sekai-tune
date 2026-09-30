@@ -420,21 +420,20 @@ private fun DownloadLibraryScreenContent(
 
     val pendingRemoval = state.pendingRemoval
     if (pendingRemoval != null) {
-        AlertDialog(
-            onDismissRequest = onDismissRemoveConfirmation,
+        moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+            onDismiss = onDismissRemoveConfirmation,
             title = { Text(stringResource(R.string.remove_download)) },
-            text = { Text(stringResource(pendingRemoval.confirmationMessageRes())) },
-            confirmButton = {
+            buttons = {
+                TextButton(onClick = onDismissRemoveConfirmation) {
+                    Text(stringResource(android.R.string.cancel))
+                }
                 TextButton(onClick = onConfirmRemove) {
                     Text(stringResource(R.string.delete))
                 }
             },
-            dismissButton = {
-                TextButton(onClick = onDismissRemoveConfirmation) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        )
+        ) {
+            Text(stringResource(pendingRemoval.confirmationMessageRes()))
+        }
     }
 }
 

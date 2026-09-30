@@ -10,6 +10,7 @@ package moe.rgsekai.sekaitune.ui.component
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -63,6 +64,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -190,7 +192,18 @@ fun TopSearch(
         }
 
         val glassConfig = LocalGlassEffectConfig.current
-        val isGlass = glassConfig.globalEnabled
+        val isGlass = glassConfig.globalEnabled && !active
+        val searchBarBorder =
+            if (isGlass) {
+                BorderStroke(
+                    1.dp,
+                    if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
+                        Color.White.copy(alpha = 0.30f)
+                    } else {
+                        Color.White.copy(alpha = 0.12f)
+                    },
+                )
+            } else null
 
         Box(
             modifier =
@@ -205,6 +218,7 @@ fun TopSearch(
             color = if (isGlass) Color.Transparent else colors.containerColor,
             contentColor = contentColorFor(colors.containerColor),
             tonalElevation = if (isGlass) 0.dp else tonalElevation,
+            border = searchBarBorder,
             modifier =
                 Modifier
                     .padding(

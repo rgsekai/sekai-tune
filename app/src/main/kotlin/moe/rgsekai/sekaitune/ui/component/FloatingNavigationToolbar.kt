@@ -23,6 +23,7 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -71,6 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
@@ -100,8 +102,19 @@ fun FloatingNavigationToolbar(
     onSearchItemDoubleClick: (() -> Unit)? = null,
 ) {
     val glassConfig = LocalGlassEffectConfig.current
-    val useGlass = glassConfig.isEnabledFor(GlassComponent.NAV_BAR)
-    val outlineColor = MaterialTheme.colorScheme.outline
+    val useGlass = glassConfig.isEnabledFor(GlassComponent.NAV_BAR) && isGlassSupported()
+    val barShape = RoundedCornerShape(percent = 50)
+    val outlineColor =
+        if (useGlass) {
+            if (glassConfig.textColor != Color.Unspecified) {
+                glassConfig.textColor.copy(alpha = 0.3f)
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            }
+        } else {
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        }
+    val glassTextColor = if (glassConfig.textColor != Color.Unspecified) glassConfig.textColor else Color.White
 
     val mainItems = remember(items) { items.filterNot { it == Screens.Search } }
     val isSearchSelected = isSelected(Screens.Search)
@@ -120,7 +133,7 @@ fun FloatingNavigationToolbar(
                     shape = CircleShape,
                     color =
                         if (useGlass) {
-                            if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else Color.Transparent
+                            if (isSearchSelected) glassTextColor.copy(alpha = 0.18f) else Color.Transparent
                         } else if (isSearchSelected) {
                             floatingToolbarFabContainerColor()
                         } else {
@@ -128,12 +141,13 @@ fun FloatingNavigationToolbar(
                         },
                     contentColor =
                         if (isSearchSelected) {
-                            if (useGlass) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor()
+                            if (useGlass) glassTextColor else floatingToolbarFabContentColor()
                         } else {
-                            floatingToolbarItemContentColor(pureBlack)
+                            if (useGlass) glassTextColor.copy(alpha = 0.72f) else floatingToolbarItemContentColor(pureBlack)
                         },
                     shadowElevation = 0.dp,
                     tonalElevation = 0.dp,
+                    border = if (useGlass) BorderStroke(1.dp, outlineColor) else null,
                     modifier =
                         Modifier
                             .size(56.dp)
@@ -144,11 +158,6 @@ fun FloatingNavigationToolbar(
                                         .liquidGlass(
                                             config = glassConfig,
                                             shape = CircleShape,
-                                        )
-                                        .border(
-                                            1.dp,
-                                            outlineColor.copy(alpha = 0.3f),
-                                            CircleShape,
                                         )
                                 } else {
                                     Modifier
@@ -184,16 +193,12 @@ fun FloatingNavigationToolbar(
                 modifier =
                     if (useGlass) {
                         Modifier
-                            .clip(CircleShape)
+                            .clip(barShape)
                             .liquidGlass(
                                 config = glassConfig,
-                                shape = CircleShape,
+                                shape = barShape,
                             )
-                            .border(
-                                1.dp,
-                                outlineColor.copy(alpha = 0.3f),
-                                CircleShape,
-                            )
+                            .border(1.dp, outlineColor, barShape)
                             .padding(FloatingToolbarDefaults.ContentPadding)
                     } else {
                         Modifier
@@ -203,6 +208,8 @@ fun FloatingNavigationToolbar(
                     items = mainItems,
                     pureBlack = pureBlack,
                     showSelectedLabels = showSelectedLabels,
+                    useGlass = useGlass,
+                    glassTextColor = glassTextColor,
                     isSelected = isSelected,
                     onItemClick = onItemClick,
                     onSearchItemDoubleClick = onSearchItemDoubleClick,
@@ -217,6 +224,8 @@ private fun ToolbarItemsContainer(
     items: List<Screens>,
     pureBlack: Boolean,
     showSelectedLabels: Boolean,
+    useGlass: Boolean,
+    glassTextColor: Color,
     isSelected: (Screens) -> Boolean,
     onItemClick: (Screens, Boolean) -> Unit,
     onSearchItemDoubleClick: (() -> Unit)?,
@@ -258,7 +267,12 @@ private fun ToolbarItemsContainer(
                         .width(slidingPillWidth)
                         .fillMaxHeight()
                         .background(
-                            color = floatingToolbarSelectedItemContainerColor(pureBlack),
+                            color =
+                                if (useGlass) {
+                                    glassTextColor.copy(alpha = 0.18f)
+                                } else {
+                                    floatingToolbarSelectedItemContainerColor(pureBlack)
+                                },
                             shape = RoundedCornerShape(24.dp),
                         ),
             )
@@ -284,6 +298,8 @@ private fun ToolbarItemsContainer(
                     selected = selected,
                     showSelectedLabel = showSelectedLabels,
                     pureBlack = pureBlack,
+                    useGlass = useGlass,
+                    glassTextColor = glassTextColor,
                     onClick = onClick,
                     onDoubleClick = onDoubleClick,
                     modifier =
@@ -425,6 +441,8 @@ private fun FloatingNavigationToolbarItem(
     selected: Boolean,
     showSelectedLabel: Boolean,
     pureBlack: Boolean,
+    useGlass: Boolean,
+    glassTextColor: Color,
     onClick: () -> Unit,
     onDoubleClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -437,7 +455,9 @@ private fun FloatingNavigationToolbarItem(
         transitionSpec = { spring(stiffness = Spring.StiffnessMedium) },
         label = "contentColor",
     ) { isSelected ->
-        if (isSelected) {
+        if (useGlass) {
+            if (isSelected) glassTextColor else glassTextColor.copy(alpha = 0.72f)
+        } else if (isSelected) {
             floatingToolbarSelectedItemContentColor(pureBlack)
         } else {
             floatingToolbarItemContentColor(pureBlack)

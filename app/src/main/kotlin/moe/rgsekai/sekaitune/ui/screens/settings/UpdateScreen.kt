@@ -42,9 +42,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -461,8 +461,8 @@ fun UpdateScreen(
     }
 
     if (updateSheetLoading) {
-        AlertDialog(
-            onDismissRequest = {},
+        DefaultDialog(
+            onDismiss = {},
             icon = {
                 LoadingIndicator(
                     modifier = Modifier.size(24.dp),
@@ -474,8 +474,7 @@ fun UpdateScreen(
                     style = MaterialTheme.typography.headlineSmall,
                 )
             },
-            confirmButton = {},
-        )
+        ) {}
     }
 
     if (showUpdateDownloadDialog) {
@@ -497,8 +496,8 @@ fun UpdateScreen(
                 append(updateSheetVersion ?: "?")
             }
 
-        AlertDialog(
-            onDismissRequest = {},
+        DefaultDialog(
+            onDismiss = {},
             title = {
                 Text(
                     text = downloadTitle,
@@ -507,40 +506,7 @@ fun UpdateScreen(
                     modifier = centeredDialogContentModifier,
                 )
             },
-            text = {
-                Column(
-                    modifier = centeredDialogContentModifier,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (progress != null) {
-                        Box(
-                            modifier = determinateProgressModifier,
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularWavyProgressIndicator(
-                                progress = { animatedProgress },
-                                modifier = determinateIndicatorModifier,
-                            )
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.download_progress_percent,
-                                        (animatedProgress * 100f).roundToInt().coerceIn(0, 100),
-                                    ),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    } else {
-                        CircularWavyProgressIndicator(
-                            modifier = indeterminateIndicatorModifier,
-                        )
-                    }
-                }
-            },
-            confirmButton = {
+            buttons = {
                 TextButton(
                     onClick = {
                         updateDownloadJob?.cancel()
@@ -548,16 +514,49 @@ fun UpdateScreen(
                         updateDownloadProgress = null
                         showUpdateDownloadDialog = false
                     },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(text = stringResource(android.R.string.cancel))
                 }
             },
-        )
+        ) {
+            Column(
+                modifier = centeredDialogContentModifier,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (progress != null) {
+                    Box(
+                        modifier = determinateProgressModifier,
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularWavyProgressIndicator(
+                            progress = { animatedProgress },
+                            modifier = determinateIndicatorModifier,
+                        )
+                        Text(
+                            text =
+                                stringResource(
+                                    R.string.download_progress_percent,
+                                    (animatedProgress * 100f).roundToInt().coerceIn(0, 100),
+                                ),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                } else {
+                    CircularWavyProgressIndicator(
+                        modifier = indeterminateIndicatorModifier,
+                    )
+                }
+            }
+        }
     }
 
     if (showUpdateUpToDateDialog) {
-        AlertDialog(
-            onDismissRequest = { showUpdateUpToDateDialog = false },
+        DefaultDialog(
+            onDismiss = { showUpdateUpToDateDialog = false },
             icon = {
                 Surface(
                     shape = CircleShape,
@@ -582,31 +581,28 @@ fun UpdateScreen(
                     textAlign = TextAlign.Center,
                 )
             },
-            text = {
-                Text(
-                    text = updateSheetVersion ?: BuildConfig.VERSION_NAME,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            buttons = {
+                OutlinedButton(
+                    onClick = { showUpdateUpToDateDialog = false },
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                )
-            },
-            confirmButton = {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    OutlinedButton(
-                        onClick = { showUpdateUpToDateDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.ok))
-                    }
+                ) {
+                    Text(stringResource(android.R.string.ok))
                 }
             },
-        )
+        ) {
+            Text(
+                text = updateSheetVersion ?: BuildConfig.VERSION_NAME,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 
     if (showUpdateErrorDialog) {
-        AlertDialog(
-            onDismissRequest = { showUpdateErrorDialog = false },
+        DefaultDialog(
+            onDismiss = { showUpdateErrorDialog = false },
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.error),
@@ -621,19 +617,21 @@ fun UpdateScreen(
                     style = MaterialTheme.typography.headlineSmall,
                 )
             },
-            text = {
-                Text(
-                    text = updateSheetError ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showUpdateErrorDialog = false }) {
+            buttons = {
+                TextButton(
+                    onClick = { showUpdateErrorDialog = false },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(stringResource(android.R.string.ok))
                 }
             },
-        )
+        ) {
+            Text(
+                text = updateSheetError ?: "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

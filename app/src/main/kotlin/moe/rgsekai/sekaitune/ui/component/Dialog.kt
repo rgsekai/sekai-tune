@@ -9,6 +9,7 @@
 
 package moe.rgsekai.sekaitune.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -58,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -97,19 +99,33 @@ fun DefaultDialog(
         ) {
             val glassConfig = LocalGlassEffectConfig.current
             val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
             ApplyWindowBlur(glassConfig, enabled = isGlass)
+            val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
             Surface(
-                modifier = Modifier
-                    .heightIn(max = maxHeight)
-                    .then(
-                        if (isGlass) {
-                            Modifier.liquidGlass(glassConfig, shape = AlertDialogDefaults.shape)
-                        } else {
-                            Modifier
-                        }
-                    ),
+                modifier =
+                    Modifier
+                        .heightIn(max = maxHeight)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = AlertDialogDefaults.shape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                 shape = AlertDialogDefaults.shape,
-                color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+                color =
+                    if (isGlass) {
+                        Color.Transparent
+                    } else {
+                        AlertDialogDefaults.containerColor
+                    },
+                border = dialogBorder,
                 tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
             ) {
                 Column(
@@ -204,19 +220,34 @@ fun ActionPromptDialog(
         ) {
             val glassConfig = LocalGlassEffectConfig.current
             val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
             ApplyWindowBlur(glassConfig, enabled = isGlass)
+            val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
             Surface(
-                modifier = Modifier
-                    .heightIn(max = maxHeight)
-                    .then(
-                        if (isGlass) {
-                            Modifier.liquidGlass(glassConfig, shape = AlertDialogDefaults.shape)
-                        } else {
-                            Modifier
-                        }
-                    ),
+                modifier =
+                    Modifier
+                        .heightIn(max = maxHeight)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = AlertDialogDefaults.shape,
+                                    applyEdgeEffects = true,
+                                    blurRadiusDp = (glassConfig.blurRadius * 1.35f).coerceIn(16f, 60f),
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                 shape = AlertDialogDefaults.shape,
-                color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+                color =
+                    if (isGlass) {
+                        if (isLight) Color.White.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.35f)
+                    } else {
+                        AlertDialogDefaults.containerColor
+                    },
+                border = dialogBorder,
                 tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
             ) {
                 Column(
@@ -299,19 +330,34 @@ fun ListDialog(
         ) {
             val glassConfig = LocalGlassEffectConfig.current
             val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
             ApplyWindowBlur(glassConfig, enabled = isGlass)
+            val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
             Surface(
-                modifier = Modifier
-                    .heightIn(max = maxHeight)
-                    .then(
-                        if (isGlass) {
-                            Modifier.liquidGlass(glassConfig, shape = AlertDialogDefaults.shape)
-                        } else {
-                            Modifier
-                        }
-                    ),
+                modifier =
+                    Modifier
+                        .heightIn(max = maxHeight)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = AlertDialogDefaults.shape,
+                                    applyEdgeEffects = true,
+                                    blurRadiusDp = (glassConfig.blurRadius * 1.35f).coerceIn(16f, 60f),
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                 shape = AlertDialogDefaults.shape,
-                color = if (isGlass) Color.Transparent else AlertDialogDefaults.containerColor,
+                color =
+                    if (isGlass) {
+                        if (isLight) Color.White.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.35f)
+                    } else {
+                        AlertDialogDefaults.containerColor
+                    },
+                border = dialogBorder,
                 tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
             ) {
                 Column(

@@ -8,7 +8,7 @@
 package moe.rgsekai.sekaitune.buddy
 
 import android.os.Build
-import androidx.compose.material3.AlertDialog
+import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -97,23 +97,25 @@ fun BuddyInviteObserver(
     }
 
     activeRequest?.let { request ->
-        AlertDialog(
-            onDismissRequest = {
+        DefaultDialog(
+            onDismiss = {
                 promptedRequestIds.add(request.id)
                 activeRequest = null
             },
             title = {
                 Text(text = stringResource(R.string.together_buddy_request_title))
             },
-            text = {
-                Text(
-                    text = stringResource(
-                        R.string.together_buddy_request_received_from,
-                        request.fromDisplayName.ifBlank { "A user" },
-                    )
-                )
-            },
-            confirmButton = {
+            buttons = {
+                TextButton(
+                    onClick = {
+                        promptedRequestIds.add(request.id)
+                        activeRequest = null
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(R.string.together_decline_action))
+                }
+                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.weight(1f))
                 TextButton(
                     onClick = {
                         promptedRequestIds.add(request.id)
@@ -127,23 +129,19 @@ fun BuddyInviteObserver(
                     Text(stringResource(R.string.together_buddy_view_requests))
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        promptedRequestIds.add(request.id)
-                        activeRequest = null
-                    },
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(stringResource(R.string.together_decline_action))
-                }
-            },
-        )
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.together_buddy_request_received_from,
+                    request.fromDisplayName.ifBlank { "A user" },
+                )
+            )
+        }
     }
 
     activeInvite?.let { invite ->
-        AlertDialog(
-            onDismissRequest = {
+        DefaultDialog(
+            onDismiss = {
                 val sessionId = invite.sessionId
                 promptedSessionIds.add(sessionId)
                 activeInvite = null
@@ -155,16 +153,22 @@ fun BuddyInviteObserver(
             title = {
                 Text(text = stringResource(R.string.together_invite_dialog_title))
             },
-            text = {
-                Text(
-                    text = stringResource(
-                        R.string.together_invite_dialog_text,
-                        invite.hostDisplayName,
-                        invite.code,
-                    )
-                )
-            },
-            confirmButton = {
+            buttons = {
+                TextButton(
+                    onClick = {
+                        val sessionId = invite.sessionId
+                        promptedSessionIds.add(sessionId)
+                        activeInvite = null
+                        BuddyNotificationManager.cancelInviteNotification(context, sessionId)
+                        coroutineScope.launch(Dispatchers.IO) {
+                            buddyRepository.dismissSessionInvite(sessionId)
+                        }
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(R.string.together_decline_action))
+                }
+                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.weight(1f))
                 TextButton(
                     onClick = {
                         val sessionId = invite.sessionId
@@ -194,22 +198,14 @@ fun BuddyInviteObserver(
                     Text(stringResource(R.string.together_join_action))
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        val sessionId = invite.sessionId
-                        promptedSessionIds.add(sessionId)
-                        activeInvite = null
-                        BuddyNotificationManager.cancelInviteNotification(context, sessionId)
-                        coroutineScope.launch(Dispatchers.IO) {
-                            buddyRepository.dismissSessionInvite(sessionId)
-                        }
-                    },
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(stringResource(R.string.together_decline_action))
-                }
-            },
-        )
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.together_invite_dialog_text,
+                    invite.hostDisplayName,
+                    invite.code,
+                )
+            )
+        }
     }
 }

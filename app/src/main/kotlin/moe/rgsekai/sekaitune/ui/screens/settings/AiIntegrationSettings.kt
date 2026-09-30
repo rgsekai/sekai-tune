@@ -59,6 +59,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import moe.rgsekai.sekaitune.ui.component.GlassModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
@@ -173,16 +174,32 @@ fun AiIntegrationSettings(
     val canUseModelPicker = provider != AiProvider.NONE && provider != AiProvider.CUSTOM && apiKey.isNotBlank()
     val canTestApi = hasApiConfiguration && hasModelConfiguration && !actionState.isTesting
 
-    Column(
-        modifier = Modifier
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = SettingsDimensions.ScreenBottomPadding)
-    ) {
-        // 1. THIS SPACER IS UPDATED TO ADD .height(24.dp) TO FIX THE CUT-OFF SHAPE
-        Spacer(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)).height(24.dp))
-
-        PreferenceGroup(title = "Account Integration") {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.ai_integration)) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = navController::navigateUp,
+                        onLongClick = navController::backToMain,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.arrow_back),
+                            contentDescription = stringResource(R.string.back_button_desc),
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(top = innerPadding.calculateTopPadding())
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = SettingsDimensions.ScreenBottomPadding)
+        ) {
+            PreferenceGroup(title = "Account Integration") {
             item {
                 if (firebaseUser != null) {
                     val syncState by authViewModel.syncStatus.collectAsStateWithLifecycle()
@@ -467,21 +484,7 @@ fun AiIntegrationSettings(
             }
         }
     }
-
-    TopAppBar(
-        title = { Text(stringResource(R.string.ai_integration)) },
-        navigationIcon = {
-            IconButton(
-                onClick = navController::navigateUp,
-                onLongClick = navController::backToMain,
-            ) {
-                Icon(
-                    painterResource(R.drawable.arrow_back),
-                    contentDescription = stringResource(R.string.back_button_desc),
-                )
-            }
-        },
-    )
+    }
 
     if (showApiKeyDialog) {
         ApiKeyDialog(

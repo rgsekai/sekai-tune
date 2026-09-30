@@ -12,6 +12,7 @@ package moe.rgsekai.sekaitune.ui.menu
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -70,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -92,9 +94,13 @@ import moe.rgsekai.sekaitune.constants.InnerTubeCookieKey
 import moe.rgsekai.sekaitune.db.entities.Playlist
 import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.innertube.utils.hasYouTubeLoginCookie
+import moe.rgsekai.sekaitune.ui.component.ApplyWindowBlur
 import moe.rgsekai.sekaitune.ui.component.CreatePlaylistDialog
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.PlaylistListItem
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import java.time.LocalDateTime
 import java.util.Locale
@@ -308,16 +314,39 @@ fun AddToPlaylistDialog(
                         .navigationBarsPadding(),
                 contentAlignment = Alignment.Center,
             ) {
-                Surface(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 560.dp)
-                            .heightIn(max = maxHeight),
-                    shape = AlertDialogDefaults.shape,
-                    color = AlertDialogDefaults.containerColor,
-                    tonalElevation = AlertDialogDefaults.TonalElevation,
-                ) {
+            val glassConfig = LocalGlassEffectConfig.current
+            val isGlass = glassConfig.isEnabledFor(GlassComponent.DIALOG)
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+            ApplyWindowBlur(glassConfig, enabled = isGlass)
+            val dialogBorder = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f)) else null
+
+            Surface(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 560.dp)
+                        .heightIn(max = maxHeight)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = AlertDialogDefaults.shape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
+                shape = AlertDialogDefaults.shape,
+                color =
+                    if (isGlass) {
+                        Color.Transparent
+                    } else {
+                        AlertDialogDefaults.containerColor
+                    },
+                border = dialogBorder,
+                tonalElevation = if (isGlass) 0.dp else AlertDialogDefaults.TonalElevation,
+            ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(start = 24.dp, end = 16.dp, top = 24.dp, bottom = 16.dp),

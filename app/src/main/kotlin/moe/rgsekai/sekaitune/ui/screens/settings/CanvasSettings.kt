@@ -39,8 +39,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -659,37 +659,39 @@ private fun CanvasSettingsDialogs(model: CanvasSettingsUiModel, onAction: (Canva
     val onDismiss = remember(onAction) { { onAction(CanvasSettingsAction.DismissDialog) } }
     val onConfirmClear = remember(onAction) { { onAction(CanvasSettingsAction.ClearCache) } }
     when (model.dialog) {
-        CanvasSettingsDialog.CACHE_LIMIT -> AlertDialog(
-            onDismissRequest = onDismiss,
+        CanvasSettingsDialog.CACHE_LIMIT -> DefaultDialog(
+            onDismiss = onDismiss,
             title = { Text(stringResource(R.string.max_cache_size)) },
-            text = {
-                LazyColumn(modifier = Modifier.heightIn(max = 420.dp).selectableGroup()) {
-                    items(model.cacheOptions.values, key = CanvasCacheOption::limitMb, contentType = { "cache_limit" }) { option ->
-                        val onSelect = remember(onAction, option.limitMb) {
-                            { onAction(CanvasSettingsAction.SetCacheLimit(option.limitMb)) }
-                        }
-                        CanvasChoiceRow(
-                            title = when (option.limitMb) {
-                                0 -> stringResource(R.string.disable)
-                                -1 -> stringResource(R.string.unlimited)
-                                else -> option.formattedSize
-                            },
-                            selected = model.configuration.cacheLimitMb == option.limitMb,
-                            enabled = !model.busy,
-                            onClick = onSelect,
-                        )
+            buttons = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        ) {
+            LazyColumn(modifier = Modifier.heightIn(max = 420.dp).selectableGroup()) {
+                items(model.cacheOptions.values, key = CanvasCacheOption::limitMb, contentType = { "cache_limit" }) { option ->
+                    val onSelect = remember(onAction, option.limitMb) {
+                        { onAction(CanvasSettingsAction.SetCacheLimit(option.limitMb)) }
                     }
+                    CanvasChoiceRow(
+                        title = when (option.limitMb) {
+                            0 -> stringResource(R.string.disable)
+                            -1 -> stringResource(R.string.unlimited)
+                            else -> option.formattedSize
+                        },
+                        selected = model.configuration.cacheLimitMb == option.limitMb,
+                        enabled = !model.busy,
+                        onClick = onSelect,
+                    )
                 }
-            },
-            confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-        )
-        CanvasSettingsDialog.CLEAR_CACHE -> AlertDialog(
-            onDismissRequest = onDismiss,
+            }
+        }
+        CanvasSettingsDialog.CLEAR_CACHE -> DefaultDialog(
+            onDismiss = onDismiss,
             title = { Text(stringResource(R.string.clear_canvas_cache)) },
-            text = { Text(stringResource(R.string.clear_canvas_cache_dialog)) },
-            confirmButton = { TextButton(onClick = onConfirmClear, enabled = !model.busy) { Text(stringResource(android.R.string.ok)) } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-        )
+            buttons = {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = onConfirmClear, enabled = !model.busy) { Text(stringResource(android.R.string.ok)) }
+            },
+        ) {
+            Text(stringResource(R.string.clear_canvas_cache_dialog))
+        }
         null -> Unit
     }
 }

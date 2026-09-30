@@ -890,8 +890,8 @@ private fun StatsYearPickerDialog(
     onSelectYear: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
+    moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+        onDismiss = onDismiss,
         title = {
             Text(
                 text = stringResource(R.string.year_in_music),
@@ -899,7 +899,12 @@ private fun StatsYearPickerDialog(
                 fontWeight = FontWeight.Bold,
             )
         },
-        text = {
+        buttons = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.dismiss))
+            }
+        },
+    ) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(
                     items = availableYears,
@@ -931,13 +936,7 @@ private fun StatsYearPickerDialog(
                     )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.dismiss))
-            }
-        },
-    )
+        }
 }
 
 @Composable

@@ -79,7 +79,7 @@ fun NewActionButton(
         onClick = onClick,
         enabled = enabled,
         shape = buttonShape,
-        color = defaultContainerColor,
+        color = if (isGlass && !backgroundColor.isSpecified) Color.Transparent else defaultContainerColor,
         border = if (isGlass && !backgroundColor.isSpecified) BorderStroke(1.dp, rimColor) else null,
         modifier =
             modifier
@@ -91,7 +91,6 @@ fun NewActionButton(
                             config = glassConfig,
                             shape = buttonShape,
                             applyEdgeEffects = true,
-                            blurRadiusDp = (glassConfig.blurRadius * 1.25f).coerceIn(12f, 50f),
                         )
                     } else {
                         Modifier
@@ -284,7 +283,7 @@ fun NewIconButton(
         onClick = onClick,
         enabled = enabled,
         shape = shape,
-        color = defaultContainerColor,
+        color = if (isGlass && !backgroundColor.isSpecified) Color.Transparent else defaultContainerColor,
         border = if (isGlass && !backgroundColor.isSpecified) BorderStroke(1.dp, rimColor) else null,
         modifier =
             modifier.then(
@@ -293,7 +292,6 @@ fun NewIconButton(
                         config = glassConfig,
                         shape = shape,
                         applyEdgeEffects = true,
-                        blurRadiusDp = (glassConfig.blurRadius * 1.25f).coerceIn(12f, 50f),
                     )
                 } else {
                     Modifier
@@ -346,7 +344,7 @@ fun MenuSurfaceSection(
 
     Surface(
         shape = shape,
-        color = surfaceColor,
+        color = if (isGlass) Color.Transparent else surfaceColor,
         border = if (isGlass) BorderStroke(1.dp, rimColor) else null,
         modifier =
             modifier
@@ -357,7 +355,6 @@ fun MenuSurfaceSection(
                             config = glassConfig,
                             shape = shape,
                             applyEdgeEffects = true,
-                            blurRadiusDp = (glassConfig.blurRadius * 1.35f).coerceIn(16f, 60f),
                         )
                     } else {
                         Modifier

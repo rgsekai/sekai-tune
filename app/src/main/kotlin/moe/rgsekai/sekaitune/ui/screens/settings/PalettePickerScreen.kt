@@ -1169,21 +1169,20 @@ fun ThemeCreatorScreen(navController: NavController) {
         }
 
     if (showImportErrorDialog) {
-        AlertDialog(
-            onDismissRequest = { showImportErrorDialog = false },
-            confirmButton = {
+        moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+            onDismiss = { showImportErrorDialog = false },
+            buttons = {
                 TextButton(onClick = { showImportErrorDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(text = stringResource(android.R.string.ok))
                 }
             },
             title = { Text(text = stringResource(R.string.theme_import_failed_title)) },
-            text = {
-                Text(
-                    text = if (importErrorText.isBlank()) stringResource(R.string.theme_import_failed) else importErrorText,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            },
-        )
+        ) {
+            Text(
+                text = if (importErrorText.isBlank()) stringResource(R.string.theme_import_failed) else importErrorText,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 
     Scaffold(

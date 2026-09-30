@@ -646,9 +646,8 @@ fun BottomSheetPlayer(
         mutableFloatStateOf(30f)
     }
     if (showSleepTimerDialog) {
-        AlertDialog(
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-            onDismissRequest = { showSleepTimerDialog = false },
+        moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+            onDismiss = { showSleepTimerDialog = false },
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.bedtime),
@@ -656,7 +655,13 @@ fun BottomSheetPlayer(
                 )
             },
             title = { Text(stringResource(R.string.sleep_timer)) },
-            confirmButton = {
+            buttons = {
+                TextButton(
+                    onClick = { showSleepTimerDialog = false },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(android.R.string.cancel))
+                }
                 TextButton(
                     onClick = {
                         showSleepTimerDialog = false
@@ -667,44 +672,35 @@ fun BottomSheetPlayer(
                     Text(stringResource(android.R.string.ok))
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { showSleepTimerDialog = false },
-                    shapes = ButtonDefaults.shapes(),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text =
+                        pluralStringResource(
+                            R.plurals.minute,
+                            sleepTimerValue.roundToInt(),
+                            sleepTimerValue.roundToInt(),
+                        ),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+
+                Slider(
+                    value = sleepTimerValue,
+                    onValueChange = { sleepTimerValue = it },
+                    valueRange = 5f..120f,
+                    steps = (120 - 5) / 5 - 1,
+                )
+
+                OutlinedIconButton(
+                    onClick = {
+                        showSleepTimerDialog = false
+                        playerConnection.service.sleepTimer.start(-1)
+                    },
                 ) {
-                    Text(stringResource(android.R.string.cancel))
+                    Text(stringResource(R.string.end_of_song))
                 }
-            },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text =
-                            pluralStringResource(
-                                R.plurals.minute,
-                                sleepTimerValue.roundToInt(),
-                                sleepTimerValue.roundToInt(),
-                            ),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-
-                    Slider(
-                        value = sleepTimerValue,
-                        onValueChange = { sleepTimerValue = it },
-                        valueRange = 5f..120f,
-                        steps = (120 - 5) / 5 - 1,
-                    )
-
-                    OutlinedIconButton(
-                        onClick = {
-                            showSleepTimerDialog = false
-                            playerConnection.service.sleepTimer.start(-1)
-                        },
-                    ) {
-                        Text(stringResource(R.string.end_of_song))
-                    }
-                }
-            },
-        )
+            }
+        }
     }
 
     var showChoosePlaylistDialog by rememberSaveable {

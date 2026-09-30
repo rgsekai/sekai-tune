@@ -35,7 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
+import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -124,21 +124,19 @@ fun BuddyListScreen(
 
     // Confirmation dialog for removing a buddy
     state.pendingRemoveBuddy?.let { buddy ->
-        AlertDialog(
-            onDismissRequest = viewModel::dismissRemoveBuddyDialog,
+        DefaultDialog(
+            onDismiss = viewModel::dismissRemoveBuddyDialog,
             title = {
                 Text(
                     text = "Remove Buddy",
                     fontWeight = FontWeight.Bold,
                 )
             },
-            text = {
-                Text(
-                    text = "Are you sure you want to remove ${buddy.displayName} as a buddy?",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
+            buttons = {
+                TextButton(onClick = viewModel::dismissRemoveBuddyDialog) {
+                    Text("Cancel")
+                }
+                Spacer(Modifier.weight(1f))
                 Button(
                     onClick = viewModel::confirmRemoveBuddy,
                     colors = ButtonDefaults.buttonColors(
@@ -149,43 +147,41 @@ fun BuddyListScreen(
                     Text("Remove")
                 }
             },
-            dismissButton = {
-                TextButton(onClick = viewModel::dismissRemoveBuddyDialog) {
-                    Text("Cancel")
-                }
-            },
-        )
+        ) {
+            Text(
+                text = "Are you sure you want to remove ${buddy.displayName} as a buddy?",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 
     // Confirmation dialog for inviting a buddy to active session
     state.pendingInviteBuddy?.let { buddy ->
-        AlertDialog(
-            onDismissRequest = viewModel::dismissInviteBuddyDialog,
+        DefaultDialog(
+            onDismiss = viewModel::dismissInviteBuddyDialog,
             title = {
                 Text(
                     text = "Invite Buddy",
                     fontWeight = FontWeight.Bold,
                 )
             },
-            text = {
-                Text(
-                    text = "Invite ${buddy.displayName.ifBlank { "your buddy" }} to your active Together Online session?",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
+            buttons = {
+                TextButton(onClick = viewModel::dismissInviteBuddyDialog) {
+                    Text("Cancel")
+                }
+                Spacer(Modifier.weight(1f))
                 Button(
                     onClick = viewModel::confirmInviteBuddy,
                 ) {
                     Text("Invite")
                 }
             },
-            dismissButton = {
-                TextButton(onClick = viewModel::dismissInviteBuddyDialog) {
-                    Text("Cancel")
-                }
-            },
-        )
+        ) {
+            Text(
+                text = "Invite ${buddy.displayName.ifBlank { "your buddy" }} to your active Together Online session?",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 
     Scaffold(

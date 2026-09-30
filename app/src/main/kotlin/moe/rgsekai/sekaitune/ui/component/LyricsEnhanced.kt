@@ -757,91 +757,77 @@ fun LyricsEnhanced(
 
     if (showShareDialog && shareDialogData != null) {
         val (lyricsText, songTitle, artists) = shareDialogData!!
-        BasicAlertDialog(onDismissRequest = { showShareDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(28.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier =
-                    Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(0.85f),
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+        DefaultDialog(
+            onDismiss = { showShareDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.share_lyrics),
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            buttons = {
+                androidx.compose.material3.TextButton(
+                    onClick = { showShareDialog = false },
+                ) {
                     Text(
-                        text = stringResource(R.string.share_lyrics),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
+                        text = stringResource(R.string.cancel),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                shareLyricsAsText(
+                                    context = context,
+                                    payload = LyricsSharePayload(lyricsText, songTitle, artists),
+                                    songId = mediaMetadata?.id,
+                                )
+                                showShareDialog = false
+                            }.padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.share),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.share_as_text),
+                        fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    shareLyricsAsText(
-                                        context = context,
-                                        payload = LyricsSharePayload(lyricsText, songTitle, artists),
-                                        songId = mediaMetadata?.id,
-                                    )
-                                    showShareDialog = false
-                                }.padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.share),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = stringResource(R.string.share_as_text),
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    shareDialogData = Triple(lyricsText, songTitle, artists)
-                                    showShareImageDialog = true
-                                    showShareDialog = false
-                                }.padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.share),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = stringResource(R.string.share_as_image),
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.cancel),
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Medium,
-                            modifier =
-                                Modifier
-                                    .clickable { showShareDialog = false }
-                                    .padding(vertical = 8.dp, horizontal = 12.dp),
-                        )
-                    }
+                }
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                shareDialogData = Triple(lyricsText, songTitle, artists)
+                                showShareImageDialog = true
+                                showShareDialog = false
+                            }.padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.share),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.share_as_image),
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
         }
