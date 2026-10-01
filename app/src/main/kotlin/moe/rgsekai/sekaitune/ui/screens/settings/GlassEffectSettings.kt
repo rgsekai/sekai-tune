@@ -63,6 +63,7 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassMiniPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassPopupMenuEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassDialogEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassQueueEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceOpacityKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceTintColorKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassTextColorKey
@@ -138,6 +139,9 @@ fun GlassEffectSettings(navController: NavController) {
     )
     val (dialogEnabled, onDialogEnabledChange) = rememberPreference(
         LiquidGlassDialogEnabledKey, defaultValue = true
+    )
+    val (queueEnabled, onQueueEnabledChange) = rememberPreference(
+        LiquidGlassQueueEnabledKey, defaultValue = true
     )
 
     var showVibrancyDialog by rememberSaveable { mutableStateOf(false) }
@@ -324,6 +328,15 @@ fun GlassEffectSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.info), contentDescription = null) },
                         checked = dialogEnabled,
                         onCheckedChange = onDialogEnabledChange,
+                    )
+                }
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.liquid_glass_queue)) },
+                        description = stringResource(R.string.liquid_glass_queue_desc),
+                        icon = { Icon(painterResource(R.drawable.queue_music), contentDescription = null) },
+                        checked = queueEnabled,
+                        onCheckedChange = onQueueEnabledChange,
                     )
                 }
             }

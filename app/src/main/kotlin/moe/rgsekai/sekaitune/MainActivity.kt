@@ -222,6 +222,7 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassMiniPlayerEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassPopupMenuEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassDialogEnabledKey
+import moe.rgsekai.sekaitune.constants.LiquidGlassQueueEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceOpacityKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassSurfaceTintColorKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassTextColorKey
@@ -1013,6 +1014,7 @@ class MainActivity : ComponentActivity() {
                     val (liquidGlassNavBarEnabled) = rememberPreference(LiquidGlassNavBarEnabledKey, defaultValue = true)
                     val (liquidGlassPopupMenuEnabled) = rememberPreference(LiquidGlassPopupMenuEnabledKey, defaultValue = true)
                     val (liquidGlassDialogEnabled) = rememberPreference(LiquidGlassDialogEnabledKey, defaultValue = true)
+                    val (liquidGlassQueueEnabled) = rememberPreference(LiquidGlassQueueEnabledKey, defaultValue = true)
 
                     val glassEffectConfig = remember(
                         liquidGlassGlobalEnabled,
@@ -1029,6 +1031,7 @@ class MainActivity : ComponentActivity() {
                         liquidGlassNavBarEnabled,
                         liquidGlassPopupMenuEnabled,
                         liquidGlassDialogEnabled,
+                        liquidGlassQueueEnabled,
                     ) {
                         GlassEffectConfig(
                             globalEnabled = liquidGlassGlobalEnabled,
@@ -1045,6 +1048,7 @@ class MainActivity : ComponentActivity() {
                             navBarEnabled = liquidGlassNavBarEnabled,
                             popupMenuEnabled = liquidGlassPopupMenuEnabled,
                             dialogEnabled = liquidGlassDialogEnabled,
+                            queueEnabled = liquidGlassQueueEnabled,
                         )
                     }
 

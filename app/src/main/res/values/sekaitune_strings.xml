@@ -690,6 +690,8 @@
     <string name="liquid_glass_popup_menu_desc">Manage Glass Pop-up Menu settings</string>
     <string name="liquid_glass_dialog">Glass Dialog Boxes</string>
     <string name="liquid_glass_dialog_desc">Manage Glass Dialog Boxes settings</string>
+    <string name="liquid_glass_queue">Glass Queue</string>
+    <string name="liquid_glass_queue_desc">Manage Glass Queue settings</string>
     <string name="color_picker_hex">Hex</string>
 </resources>
 

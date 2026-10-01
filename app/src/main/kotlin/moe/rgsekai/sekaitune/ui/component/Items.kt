@@ -138,6 +138,9 @@ import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.reportException
 import kotlin.math.roundToInt
 
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.luminance
+
 const val ActiveBoxAlpha = 0.6f
 
 @Composable
@@ -148,21 +151,22 @@ inline fun ListItem(
     thumbnailContent: @Composable () -> Unit,
     crossinline trailingContent: @Composable RowScope.() -> Unit = {},
     isActive: Boolean = false,
+    showActiveBackground: Boolean = true,
 ) {
     val titleColor =
-        if (isActive) {
+        if (isActive && showActiveBackground) {
             MaterialTheme.colorScheme.onSecondaryContainer
         } else {
             MaterialTheme.colorScheme.onSurface
         }
     val subtitleContentColor =
-        if (isActive) {
+        if (isActive && showActiveBackground) {
             MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         }
     val trailingContentColor =
-        if (isActive) {
+        if (isActive && showActiveBackground) {
             MaterialTheme.colorScheme.onSecondaryContainer
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
@@ -176,7 +180,7 @@ inline fun ListItem(
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
                 .then(
-                    if (isActive) {
+                    if (isActive && showActiveBackground) {
                         Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.secondaryContainer)
@@ -225,17 +229,19 @@ fun ListItem(
     thumbnailContent: @Composable () -> Unit,
     trailingContent: @Composable RowScope.() -> Unit = {},
     isActive: Boolean = false,
+    showActiveBackground: Boolean = true,
 ) = ListItem(
     title = title,
     modifier = modifier,
     isActive = isActive,
+    showActiveBackground = showActiveBackground,
     subtitle = {
         badges()
         if (!subtitle.isNullOrEmpty()) {
             Text(
                 text = subtitle,
                 color =
-                    if (isActive) {
+                    if (isActive && showActiveBackground) {
                         MaterialTheme.colorScheme.onSecondaryContainer.copy(
                             alpha = 0.7f,
                         )
@@ -1284,6 +1290,7 @@ fun MediaMetadataListItem(
     isActive: Boolean = false,
     isPlaying: Boolean = false,
     shouldLoadImage: Boolean = true,
+    showActiveBackground: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     ListItem(
@@ -1308,6 +1315,7 @@ fun MediaMetadataListItem(
         trailingContent = trailingContent,
         modifier = modifier,
         isActive = isActive,
+        showActiveBackground = showActiveBackground,
     )
 }
 

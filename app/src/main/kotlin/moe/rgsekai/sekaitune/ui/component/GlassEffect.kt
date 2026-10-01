@@ -90,6 +90,7 @@ data class GlassEffectConfig(
     val navBarEnabled: Boolean = true,
     val popupMenuEnabled: Boolean = true,
     val dialogEnabled: Boolean = true,
+    val queueEnabled: Boolean = true,
 ) {
     fun isEnabledFor(component: GlassComponent): Boolean =
         globalEnabled && when (component) {
@@ -97,6 +98,7 @@ data class GlassEffectConfig(
             GlassComponent.NAV_BAR -> navBarEnabled
             GlassComponent.POPUP_MENU -> popupMenuEnabled
             GlassComponent.DIALOG -> dialogEnabled
+            GlassComponent.QUEUE -> queueEnabled
         }
 }
 
@@ -105,6 +107,7 @@ enum class GlassComponent {
     NAV_BAR,
     POPUP_MENU,
     DIALOG,
+    QUEUE,
 }
 
 internal const val LENS_MAX_DP = 48f

@@ -21,8 +21,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -115,12 +117,19 @@ import moe.rgsekai.sekaitune.extensions.move
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
 import moe.rgsekai.sekaitune.models.MediaMetadata
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import moe.rgsekai.sekaitune.ui.component.BottomSheet
 import moe.rgsekai.sekaitune.ui.component.BottomSheetState
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
 import moe.rgsekai.sekaitune.ui.component.LocalBottomSheetPageState
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.LocalMenuState
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
 import moe.rgsekai.sekaitune.ui.component.TextFieldDialog
+import moe.rgsekai.sekaitune.ui.component.isGlassSupported
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import moe.rgsekai.sekaitune.ui.menu.AddToPlaylistDialog
 import moe.rgsekai.sekaitune.ui.menu.PlayerMenu
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
@@ -153,6 +162,9 @@ fun Queue(
     val clipboardManager = LocalClipboard.current
     val menuState = LocalMenuState.current
     val bottomSheetPageState = LocalBottomSheetPageState.current
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.QUEUE) && isGlassSupported()
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
 
     val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isPlaying.collectAsState()
@@ -625,11 +637,34 @@ fun Queue(
             }
         }
 
+        val queueShape = remember { RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp) }
+        val queueItemShape = remember { RoundedCornerShape(18.dp) }
+        val defaultItemShape = remember { RoundedCornerShape(0.dp) }
+        val primaryColor = MaterialTheme.colorScheme.primary
+        val secondaryContainerColor = MaterialTheme.colorScheme.secondaryContainer
+        val queueRimColor = remember(isLight) { if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f) }
+        val queueActiveRimColor = remember { Color.White.copy(alpha = 0.35f) }
+        val queueSelectedRimColor = remember(primaryColor) { primaryColor.copy(alpha = 0.60f) }
+        val defaultGlassItemBorder = remember(queueRimColor) { BorderStroke(1.dp, queueRimColor) }
+        val activeGlassItemBorder = remember(queueActiveRimColor) { BorderStroke(1.dp, queueActiveRimColor) }
+        val selectedGlassItemBorder = remember(queueSelectedRimColor) { BorderStroke(1.dp, queueSelectedRimColor) }
+
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(backgroundColor),
+                    .clip(queueShape)
+                    .then(
+                        if (isGlass) {
+                            Modifier.liquidGlass(
+                                config = glassConfig,
+                                shape = queueShape,
+                                applyEdgeEffects = true,
+                            )
+                        } else {
+                            Modifier.background(backgroundColor)
+                        },
+                    ),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 CurrentSongHeader(
@@ -797,12 +832,29 @@ fun Queue(
                                     }
 
                                     val trackMetadata = window.mediaItem.metadata ?: return@Row
+                                    val isSelectedSong = selection && trackMetadata in selectedSongs
+
+                                    val itemContainerColor = when {
+                                        isSelectedSong -> primaryColor.copy(alpha = 0.35f)
+                                        isActive -> if (isGlass) Color.White.copy(alpha = 0.20f) else secondaryContainerColor
+                                        isGlass -> Color.Transparent
+                                        else -> backgroundColor
+                                    }
+
+                                    val itemBorder = when {
+                                        isSelectedSong -> selectedGlassItemBorder
+                                        isActive -> activeGlassItemBorder
+                                        isGlass -> defaultGlassItemBorder
+                                        else -> null
+                                    }
+
                                     MediaMetadataListItem(
                                         mediaMetadata = trackMetadata,
-                                        isSelected = selection && trackMetadata in selectedSongs,
+                                        isSelected = isSelectedSong,
                                         isActive = isActive,
                                         isPlaying = isPlaying && isActive,
                                         shouldLoadImage = shouldLoadImages,
+                                        showActiveBackground = !isGlass,
                                         trailingContent = {
                                             IconButton(
                                                 onClick = {
@@ -853,7 +905,30 @@ fun Queue(
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
-                                                .background(backgroundColor)
+                                                .padding(
+                                                    horizontal = if (isGlass) 12.dp else 0.dp,
+                                                    vertical = if (isGlass) 3.5.dp else 0.dp,
+                                                )
+                                                .clip(if (isGlass) queueItemShape else defaultItemShape)
+                                                .then(
+                                                    if (isGlass) {
+                                                        Modifier.liquidGlass(
+                                                            config = glassConfig,
+                                                            shape = queueItemShape,
+                                                            applyEdgeEffects = true,
+                                                        )
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                )
+                                                .background(itemContainerColor)
+                                                .then(
+                                                    if (itemBorder != null) {
+                                                        Modifier.border(itemBorder, queueItemShape)
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                )
                                                 .combinedClickable(
                                                     onClick = {
                                                         if (selection) {
@@ -1022,10 +1097,12 @@ private fun QueueSelectionFloatingToolbar(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val toolbarContainerColor = if (pureBlack) Color.Black else colorScheme.surfaceContainerHigh
-    val toolbarContentColor = if (pureBlack) Color.White else colorScheme.onSurface
-    val fabContainerColor = if (pureBlack) Color.White.copy(alpha = 0.12f) else colorScheme.surfaceContainerHighest
-    val fabContentColor = if (pureBlack) Color.White else colorScheme.onSurface
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.QUEUE)
+    val toolbarContainerColor = if (isGlass) colorScheme.surfaceContainerHigh.copy(alpha = 0.55f) else if (pureBlack) Color.Black else colorScheme.surfaceContainerHigh
+    val toolbarContentColor = if (pureBlack && !isGlass) Color.White else colorScheme.onSurface
+    val fabContainerColor = if (isGlass) colorScheme.primary.copy(alpha = 0.35f) else if (pureBlack) Color.White.copy(alpha = 0.12f) else colorScheme.surfaceContainerHighest
+    val fabContentColor = if (isGlass) colorScheme.primary else if (pureBlack) Color.White else colorScheme.onSurface
 
     HorizontalFloatingToolbar(
         expanded = true,

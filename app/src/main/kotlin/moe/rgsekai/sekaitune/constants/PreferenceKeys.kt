@@ -805,6 +805,7 @@ val LiquidGlassMiniPlayerEnabledKey = booleanPreferencesKey("liquidGlassMiniPlay
 val LiquidGlassNavBarEnabledKey = booleanPreferencesKey("liquidGlassNavBarEnabled")
 val LiquidGlassPopupMenuEnabledKey = booleanPreferencesKey("liquidGlassPopupMenuEnabled")
 val LiquidGlassDialogEnabledKey = booleanPreferencesKey("liquidGlassDialogEnabled")
+val LiquidGlassQueueEnabledKey = booleanPreferencesKey("liquidGlassQueueEnabled")
 
 
 

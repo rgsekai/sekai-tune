@@ -963,19 +963,7 @@ fun BottomSheetPlayer(
             )
         },
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (playerBackdrop != null) {
-                            Modifier.layerBackdrop(playerBackdrop)
-                        } else {
-                            Modifier
-                        },
-                    ),
-        ) {
-            val onSliderValueChange: (Long) -> Unit = {
+        val onSliderValueChange: (Long) -> Unit = {
             isUserSeeking = true
             sliderPosition = it
         }
@@ -1143,7 +1131,19 @@ fun BottomSheetPlayer(
 
 // distance
 
-        when (LocalConfiguration.current.orientation) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (playerBackdrop != null) {
+                            Modifier.layerBackdrop(playerBackdrop)
+                        } else {
+                            Modifier
+                        },
+                    ),
+        ) {
+            when (LocalConfiguration.current.orientation) {
             Configuration.ORIENTATION_LANDSCAPE -> {
                 if (playerDesignStyle == PlayerDesignStyle.V7) {
                     Box(
@@ -1341,6 +1341,7 @@ fun BottomSheetPlayer(
                 }
             }
         }
+        }
 
         val queueOnBackgroundColor = if (useBlackBackground) Color.White else MaterialTheme.colorScheme.onSurface
         val queueSurfaceColor = if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surface
@@ -1417,7 +1418,6 @@ fun BottomSheetPlayer(
                     onExit = { playerConnection.aodModeEnabled.value = false },
                 )
             }
-        }
         }
     }
 }

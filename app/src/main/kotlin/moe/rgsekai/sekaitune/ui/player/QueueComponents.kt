@@ -10,6 +10,7 @@
 package moe.rgsekai.sekaitune.ui.player
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -64,6 +65,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
+import moe.rgsekai.sekaitune.ui.component.isGlassSupported
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
 
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
@@ -129,12 +135,14 @@ fun CurrentSongHeader(
 ) {
     val view = LocalView.current
     val (enableHapticFeedback) = rememberPreference(EnableHapticFeedbackKey, true)
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlassQueue = glassConfig.isEnabledFor(GlassComponent.QUEUE)
 
     Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(backgroundColor)
+                .background(if (isGlassQueue) Color.Transparent else backgroundColor)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
                 .bottomSheetDraggable(sheetState)
                 .padding(horizontal = 16.dp)
@@ -153,143 +161,192 @@ fun CurrentSongHeader(
                         .width(48.dp)
                         .height(5.dp)
                         .clip(RoundedCornerShape(2.5.dp))
-                        .background(onBackgroundColor.copy(alpha = 0.4f)),
+                        .background(if (isGlassQueue) onBackgroundColor.copy(alpha = 0.5f) else onBackgroundColor.copy(alpha = 0.4f)),
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            AsyncImage(
-                model = mediaMetadata?.thumbnailUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(onBackgroundColor.copy(alpha = 0.06f)),
-            )
+        val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+        val rimColor = remember(isLight) { if (isLight) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.12f) }
+        val defaultRimBorder = remember(rimColor) { BorderStroke(1.dp, rimColor) }
+        val activeRimBorder = remember { BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)) }
 
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = mediaMetadata?.title ?: "",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = onBackgroundColor,
-                )
-                Text(
-                    text = mediaMetadata?.artists?.joinToString(", ") { it.name } ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = onBackgroundColor.copy(alpha = 0.6f),
-                )
-            }
-
-            IconButton(
-                onClick = onToggleLike,
-                modifier = Modifier.size(44.dp),
-                colors =
-                    IconButtonDefaults.iconButtonColors(
-                        contentColor =
-                            if (liked) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                onBackgroundColor
-                            },
+        val nowPlayingShape = remember { RoundedCornerShape(22.dp) }
+        val thumbShape = remember { RoundedCornerShape(12.dp) }
+        Surface(
+            shape = nowPlayingShape,
+            color = Color.Transparent,
+            border = if (isGlassQueue) defaultRimBorder else null,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isGlassQueue) {
+                            Modifier.liquidGlass(
+                                config = glassConfig,
+                                shape = nowPlayingShape,
+                                applyEdgeEffects = true,
+                            )
+                        } else {
+                            Modifier
+                        }
                     ),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Icon(
-                    painter =
-                        painterResource(
-                            if (liked) {
-                                R.drawable.favorite
-                            } else {
-                                R.drawable.favorite_border
-                            },
-                        ),
-                    contentDescription = stringResource(R.string.action_like),
-                    modifier = Modifier.size(26.dp),
+                AsyncImage(
+                    model = mediaMetadata?.thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier =
+                        Modifier
+                            .size(if (isGlassQueue) 56.dp else 64.dp)
+                            .clip(thumbShape)
+                            .then(
+                                if (isGlassQueue) {
+                                    Modifier.border(1.dp, onBackgroundColor.copy(alpha = 0.18f), thumbShape)
+                                } else {
+                                    Modifier.background(onBackgroundColor.copy(alpha = 0.06f))
+                                }
+                            ),
                 )
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = mediaMetadata?.title ?: "",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = onBackgroundColor,
+                    )
+                    Text(
+                        text = mediaMetadata?.artists?.joinToString(", ") { it.name } ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = onBackgroundColor.copy(alpha = 0.6f),
+                    )
+                }
+
+                IconButton(
+                    onClick = onToggleLike,
+                    modifier = Modifier.size(44.dp),
+                    colors =
+                        IconButtonDefaults.iconButtonColors(
+                            contentColor =
+                                if (liked) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    onBackgroundColor
+                                },
+                        ),
+                ) {
+                    Icon(
+                        painter =
+                            painterResource(
+                                if (liked) {
+                                    R.drawable.favorite
+                                } else {
+                                    R.drawable.favorite_border
+                                },
+                            ),
+                        contentDescription = stringResource(R.string.action_like),
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        Row(
+        val infoBarShape = remember { RoundedCornerShape(22.dp) }
+        Surface(
+            shape = infoBarShape,
+            color = if (isGlassQueue) Color.Transparent else onBackgroundColor.copy(alpha = 0.06f),
+            border = if (isGlassQueue) defaultRimBorder else null,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(onBackgroundColor.copy(alpha = 0.06f))
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+                    .then(
+                        if (isGlassQueue) {
+                            Modifier.liquidGlass(
+                                config = glassConfig,
+                                shape = infoBarShape,
+                                applyEdgeEffects = true,
+                            )
+                        } else {
+                            Modifier
+                        }
+                    ),
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                IconButton(
-                    onClick = onLockClick,
-                    modifier = Modifier.size(40.dp),
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            contentColor = onBackgroundColor.copy(alpha = 0.7f),
-                        ),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
-                    Icon(
-                        painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
+                    IconButton(
+                        onClick = onLockClick,
+                        modifier = Modifier.size(40.dp),
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                contentColor = onBackgroundColor.copy(alpha = 0.7f),
+                            ),
+                    ) {
+                        Icon(
+                            painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    IconButton(
+                        onClick = onMenuClick,
+                        modifier = Modifier.size(40.dp),
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                contentColor = onBackgroundColor.copy(alpha = 0.7f),
+                            ),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.more_vert),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    IconButton(
+                        onClick = onClearQueueClick,
+                        modifier = Modifier.size(40.dp),
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.delete),
+                            contentDescription = stringResource(R.string.clear),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onMenuClick,
-                    modifier = Modifier.size(40.dp),
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            contentColor = onBackgroundColor.copy(alpha = 0.7f),
-                        ),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.more_vert),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-                IconButton(
-                    onClick = onClearQueueClick,
-                    modifier = Modifier.size(40.dp),
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.delete),
-                        contentDescription = stringResource(R.string.clear),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
 
-            Text(
-                text =
-                    pluralStringResource(R.plurals.n_song, songCount, songCount) +
-                        "  •  " + makeTimeString(queueDuration * 1000L),
-                style = MaterialTheme.typography.labelMedium,
-                color = onBackgroundColor.copy(alpha = 0.55f),
-                modifier = Modifier.padding(end = 14.dp),
-            )
+                Text(
+                    text =
+                        pluralStringResource(R.plurals.n_song, songCount, songCount) +
+                            "  •  " + makeTimeString(queueDuration * 1000L),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = onBackgroundColor.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(end = 14.dp),
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -299,20 +356,14 @@ fun CurrentSongHeader(
             horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val uncheckedColors =
-                ToggleButtonDefaults.toggleButtonColors(
-                    containerColor = onBackgroundColor.copy(alpha = 0.12f),
-                    contentColor = onBackgroundColor,
-                )
-            val checkedColors =
-                ToggleButtonDefaults.toggleButtonColors(
-                    checkedContainerColor = onBackgroundColor.copy(alpha = 0.22f),
-                    checkedContentColor = onBackgroundColor,
-                )
+            val leadingShape = ButtonGroupDefaults.connectedLeadingButtonShapes().shape
+            val trailingShape = ButtonGroupDefaults.connectedTrailingButtonShapes().shape
 
-            ToggleButton(
-                checked = shuffleModeEnabled,
-                onCheckedChange = {
+            val shuffleBorder = if (isGlassQueue) (if (shuffleModeEnabled) activeRimBorder else defaultRimBorder) else null
+            val repeatBorder = if (isGlassQueue) (if (repeatMode != Player.REPEAT_MODE_OFF) activeRimBorder else defaultRimBorder) else null
+
+            Surface(
+                onClick = {
                     if (enableHapticFeedback) {
                         view.performHapticFeedback(
                             android.view.HapticFeedbackConstants.CONTEXT_CLICK,
@@ -321,20 +372,37 @@ fun CurrentSongHeader(
                     }
                     onShuffleClick()
                 },
-                modifier = Modifier.weight(1f).size(48.dp),
-                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-                colors = if (shuffleModeEnabled) checkedColors else uncheckedColors,
+                shape = leadingShape,
+                color = if (isGlassQueue) (if (shuffleModeEnabled) Color.White.copy(alpha = 0.22f) else Color.Transparent) else (if (shuffleModeEnabled) onBackgroundColor.copy(alpha = 0.22f) else onBackgroundColor.copy(alpha = 0.12f)),
+                border = shuffleBorder,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .then(
+                            if (isGlassQueue) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = leadingShape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.shuffle),
-                    contentDescription = stringResource(R.string.action_shuffle_on),
-                    modifier = Modifier.size(22.dp),
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.shuffle),
+                        contentDescription = stringResource(R.string.action_shuffle_on),
+                        tint = if (isGlassQueue && shuffleModeEnabled) Color.White else onBackgroundColor,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
 
-            ToggleButton(
-                checked = repeatMode != Player.REPEAT_MODE_OFF,
-                onCheckedChange = {
+            Surface(
+                onClick = {
                     if (enableHapticFeedback) {
                         view.performHapticFeedback(
                             android.view.HapticFeedbackConstants.CONTEXT_CLICK,
@@ -343,33 +411,98 @@ fun CurrentSongHeader(
                     }
                     onRepeatClick()
                 },
-                modifier = Modifier.weight(1f).size(48.dp),
-                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                colors = if (repeatMode != Player.REPEAT_MODE_OFF) checkedColors else uncheckedColors,
-            ) {
-                Icon(
-                    painter =
-                        painterResource(
-                            when (repeatMode) {
-                                Player.REPEAT_MODE_ONE -> R.drawable.repeat_one_on
-                                Player.REPEAT_MODE_ALL -> R.drawable.repeat_on
-                                else -> R.drawable.repeat
-                            },
+                shape = trailingShape,
+                color = if (isGlassQueue) (if (repeatMode != Player.REPEAT_MODE_OFF) Color.White.copy(alpha = 0.22f) else Color.Transparent) else (if (repeatMode != Player.REPEAT_MODE_OFF) onBackgroundColor.copy(alpha = 0.22f) else onBackgroundColor.copy(alpha = 0.12f)),
+                border = repeatBorder,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .then(
+                            if (isGlassQueue) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = trailingShape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            }
                         ),
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                )
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter =
+                            painterResource(
+                                when (repeatMode) {
+                                    Player.REPEAT_MODE_ONE -> R.drawable.repeat_one_on
+                                    Player.REPEAT_MODE_ALL -> R.drawable.repeat_on
+                                    else -> R.drawable.repeat
+                                },
+                            ),
+                        contentDescription = null,
+                        tint = if (isGlassQueue && repeatMode != Player.REPEAT_MODE_OFF) Color.White else onBackgroundColor,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // YouTube Music style Auto-play Header with Switch
-        Row(
+        // YouTube Music style Auto-play Header with Switch in its own liquid glass container
+        val autoplayShape = remember { RoundedCornerShape(20.dp) }
+        Surface(
+            onClick = {
+                if (enableHapticFeedback) {
+                    view.performHapticFeedback(
+                        android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                        android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                    )
+                }
+                onInfiniteQueueClick()
+            },
+            shape = autoplayShape,
+            color = Color.Transparent,
+            border = if (isGlassQueue) defaultRimBorder else null,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clickable {
+                    .then(
+                        if (isGlassQueue) {
+                            Modifier.liquidGlass(
+                                config = glassConfig,
+                                shape = autoplayShape,
+                                applyEdgeEffects = true,
+                            )
+                        } else {
+                            Modifier
+                        }
+                    ),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.autoplay),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = onBackgroundColor,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.autoplay_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onBackgroundColor.copy(alpha = 0.55f),
+                    )
+                }
+
+                androidx.compose.material3.Switch(
+                    checked = infiniteQueueEnabled,
+                    onCheckedChange = {
                         if (enableHapticFeedback) {
                             view.performHapticFeedback(
                                 android.view.HapticFeedbackConstants.CONTEXT_CLICK,
@@ -378,125 +511,117 @@ fun CurrentSongHeader(
                         }
                         onInfiniteQueueClick()
                     },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.autoplay),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = onBackgroundColor,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = stringResource(R.string.autoplay_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onBackgroundColor.copy(alpha = 0.55f),
+                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                        checkedThumbColor = if (isGlassQueue) Color.White else backgroundColor,
+                        checkedTrackColor = if (isGlassQueue) Color.White.copy(alpha = 0.35f) else onBackgroundColor,
+                        uncheckedThumbColor = onBackgroundColor.copy(alpha = 0.6f),
+                        uncheckedTrackColor = if (isGlassQueue) Color.White.copy(alpha = 0.10f) else onBackgroundColor.copy(alpha = 0.10f),
+                        uncheckedBorderColor = if (isGlassQueue) Color.White.copy(alpha = 0.20f) else onBackgroundColor.copy(alpha = 0.18f),
+                    ),
                 )
             }
-
-            androidx.compose.material3.Switch(
-                checked = infiniteQueueEnabled,
-                onCheckedChange = {
-                    if (enableHapticFeedback) {
-                        view.performHapticFeedback(
-                            android.view.HapticFeedbackConstants.CONTEXT_CLICK,
-                            android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
-                        )
-                    }
-                    onInfiniteQueueClick()
-                },
-                colors = androidx.compose.material3.SwitchDefaults.colors(
-                    checkedThumbColor = backgroundColor,
-                    checkedTrackColor = onBackgroundColor,
-                    uncheckedThumbColor = onBackgroundColor.copy(alpha = 0.6f),
-                    uncheckedTrackColor = onBackgroundColor.copy(alpha = 0.12f),
-                    uncheckedBorderColor = onBackgroundColor.copy(alpha = 0.2f),
-                ),
-            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Dual Queue Selector (Online vs Local)
-        Row(
+        // Dual Queue Selector (Online vs Local) in its own liquid glass container
+        val dualQueueShape = remember { RoundedCornerShape(20.dp) }
+        Surface(
+            onClick = {
+                if (enableHapticFeedback) {
+                    view.performHapticFeedback(
+                        android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                        android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                    )
+                }
+                onToggleActiveQueue()
+            },
+            shape = dualQueueShape,
+            color = if (isGlassQueue) Color.Transparent else onBackgroundColor.copy(alpha = 0.05f),
+            border = if (isGlassQueue) defaultRimBorder else null,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(onBackgroundColor.copy(alpha = 0.05f))
-                    .clickable {
-                        if (enableHapticFeedback) {
-                            view.performHapticFeedback(
-                                android.view.HapticFeedbackConstants.CONTEXT_CLICK,
-                                android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                    .then(
+                        if (isGlassQueue) {
+                            Modifier.liquidGlass(
+                                config = glassConfig,
+                                shape = dualQueueShape,
+                                applyEdgeEffects = true,
                             )
+                        } else {
+                            Modifier
                         }
-                        onToggleActiveQueue()
-                    }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+                    ),
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    painter =
-                        painterResource(
-                            if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
-                                R.drawable.storage
-                            } else {
-                                R.drawable.language
-                            },
-                        ),
-                    contentDescription = null,
-                    tint = onBackgroundColor,
-                    modifier = Modifier.size(20.dp),
-                )
-                Column {
-                    Text(
-                        text =
-                            stringResource(
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        painter =
+                            painterResource(
                                 if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
-                                    R.string.queue_local
+                                    R.drawable.storage
                                 } else {
-                                    R.string.queue_online
+                                    R.drawable.language
                                 },
                             ),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = onBackgroundColor,
+                        contentDescription = null,
+                        tint = onBackgroundColor,
+                        modifier = Modifier.size(20.dp),
                     )
-                    Text(
-                        text =
-                            stringResource(
-                                if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
-                                    R.string.switch_to_online_queue
-                                } else {
-                                    R.string.switch_to_local_queue
-                                },
-                            ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = onBackgroundColor.copy(alpha = 0.55f),
-                    )
+                    Column {
+                        Text(
+                            text =
+                                stringResource(
+                                    if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                        R.string.queue_local
+                                    } else {
+                                        R.string.queue_online
+                                    },
+                                ),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = onBackgroundColor,
+                        )
+                        Text(
+                            text =
+                                stringResource(
+                                    if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                        R.string.switch_to_online_queue
+                                    } else {
+                                        R.string.switch_to_local_queue
+                                    },
+                                ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = onBackgroundColor.copy(alpha = 0.55f),
+                        )
+                    }
                 }
-            }
 
-            Icon(
-                painter = painterResource(R.drawable.swipe),
-                contentDescription = null,
-                tint = onBackgroundColor.copy(alpha = 0.6f),
-                modifier = Modifier.size(18.dp),
-            )
+                Icon(
+                    painter = painterResource(R.drawable.swipe),
+                    contentDescription = null,
+                    tint = onBackgroundColor.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
         // Queue Filter Chips Row (All, Discover, Familiar, Popular, Deep cuts)
+        val chipShape = remember { RoundedCornerShape(100.dp) }
+        val chipBorderUnselected = if (isGlassQueue) defaultRimBorder else remember(onBackgroundColor) { BorderStroke(1.dp, onBackgroundColor.copy(alpha = 0.14f)) }
+        val chipBorderSelected = if (isGlassQueue) activeRimBorder else null
+
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -507,60 +632,73 @@ fun CurrentSongHeader(
                 key = { it.name },
             ) { filter ->
                 val isSelected = filter == selectedFilter
-                val chipShape = RoundedCornerShape(100.dp)
+                val chipContainerColor = if (isGlassQueue) {
+                    if (isSelected) Color.White.copy(alpha = 0.22f) else Color.Transparent
+                } else {
+                    if (isSelected) onBackgroundColor else onBackgroundColor.copy(alpha = 0.08f)
+                }
 
-                Box(
-                    modifier =
-                        Modifier
-                            .clip(chipShape)
-                            .then(
-                                if (isSelected) {
-                                    Modifier.background(onBackgroundColor)
-                                } else {
-                                    Modifier
-                                        .background(onBackgroundColor.copy(alpha = 0.08f))
-                                        .border(1.dp, onBackgroundColor.copy(alpha = 0.16f), chipShape)
-                                }
+                Surface(
+                    onClick = {
+                        if (enableHapticFeedback) {
+                            view.performHapticFeedback(
+                                android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                                android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
                             )
-                            .clickable {
-                                if (enableHapticFeedback) {
-                                    view.performHapticFeedback(
-                                        android.view.HapticFeedbackConstants.CONTEXT_CLICK,
-                                        android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
-                                    )
-                                }
-                                onFilterSelected(filter)
-                            }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center,
+                        }
+                        onFilterSelected(filter)
+                    },
+                    shape = chipShape,
+                    color = chipContainerColor,
+                    border = if (isSelected) chipBorderSelected else chipBorderUnselected,
+                    modifier =
+                        Modifier.then(
+                            if (isGlassQueue) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = chipShape,
+                                    applyEdgeEffects = false,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                 ) {
                     Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         if (isSelected && infiniteQueueLoading) {
                             CircularWavyProgressIndicator(
                                 modifier = Modifier.size(14.dp),
-                                color = backgroundColor,
+                                color = if (isGlassQueue) Color.White else backgroundColor,
                             )
                         }
                         Text(
                             text = stringResource(filter.titleRes),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) backgroundColor else onBackgroundColor.copy(alpha = 0.85f),
+                            color =
+                                if (isSelected) {
+                                    if (isGlassQueue) Color.White else backgroundColor
+                                } else {
+                                    onBackgroundColor.copy(alpha = 0.85f)
+                                },
                         )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        if (!isGlassQueue) {
+            Spacer(modifier = Modifier.height(14.dp))
 
-        HorizontalDivider(
-            color = onBackgroundColor.copy(alpha = 0.08f),
-            thickness = 1.dp,
-        )
+            HorizontalDivider(
+                color = onBackgroundColor.copy(alpha = 0.08f),
+                thickness = 1.dp,
+            )
+        }
     }
 }
 
