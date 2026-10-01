@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -219,13 +220,14 @@ fun BuddyListScreen(
             )
         },
     ) { innerPadding ->
+        val playerInsets = LocalPlayerAwareWindowInsets.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
                 .windowInsetsPadding(
-                    LocalPlayerAwareWindowInsets.current.only(
-                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                    playerInsets.only(
+                        WindowInsetsSides.Horizontal
                     )
                 ),
         ) {
@@ -318,9 +320,10 @@ private fun BuddiesTabContent(
             iconResId = R.drawable.multi_user,
         )
     } else {
+        val playerBottomPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 12.dp + playerBottomPadding),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(
@@ -444,9 +447,10 @@ private fun RequestsTabContent(
             iconResId = R.drawable.link,
         )
     } else {
+        val playerBottomPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 12.dp + playerBottomPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (incomingRequests.isNotEmpty()) {

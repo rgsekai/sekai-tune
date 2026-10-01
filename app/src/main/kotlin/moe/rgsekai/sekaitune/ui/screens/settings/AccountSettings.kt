@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
@@ -356,13 +357,14 @@ fun AccountSettings(
             )
         },
     ) { innerPadding ->
+        val playerInsets = LocalPlayerAwareWindowInsets.current
         LazyColumn(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(
-                        LocalPlayerAwareWindowInsets.current.only(
-                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                        playerInsets.only(
+                            WindowInsetsSides.Horizontal,
                         ),
                     ),
             contentPadding =
@@ -370,7 +372,7 @@ fun AccountSettings(
                     start = 16.dp,
                     top = innerPadding.calculateTopPadding() + 8.dp,
                     end = 16.dp,
-                    bottom = SettingsDimensions.ScreenBottomPadding,
+                    bottom = SettingsDimensions.ScreenBottomPadding + playerInsets.asPaddingValues().calculateBottomPadding(),
                 ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

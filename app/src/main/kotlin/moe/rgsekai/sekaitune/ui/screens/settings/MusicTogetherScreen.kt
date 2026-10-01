@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -241,21 +242,22 @@ fun MusicTogetherScreen(
                 scrollBehavior = scrollBehavior,
             )
         },
-        contentWindowInsets = WindowInsets.safeDrawing,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.surface,
         modifier =
             Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
+        val playerInsets = LocalPlayerAwareWindowInsets.current
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(top = innerPadding.calculateTopPadding())
                     .windowInsetsPadding(
-                        LocalPlayerAwareWindowInsets.current.only(
-                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                        playerInsets.only(
+                            WindowInsetsSides.Horizontal,
                         ),
                     ),
         ) {
@@ -319,7 +321,7 @@ private fun MusicTogetherContent(
                         .weight(1.25f)
                         .fillMaxHeight()
                         .widthIn(max = 720.dp),
-                contentPadding = PaddingValues(bottom = MusicTogetherSpacing.lg),
+                contentPadding = PaddingValues(bottom = MusicTogetherSpacing.lg + LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()),
                 verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
             ) {
                 item(contentType = "mode_note") {
@@ -391,6 +393,7 @@ private fun MusicTogetherContent(
             }
         }
     } else {
+        val playerBottomPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -399,7 +402,7 @@ private fun MusicTogetherContent(
                     start = MusicTogetherSpacing.sm,
                     top = MusicTogetherSpacing.xs,
                     end = MusicTogetherSpacing.sm,
-                    bottom = SettingsDimensions.ScreenBottomPadding,
+                    bottom = SettingsDimensions.ScreenBottomPadding + playerBottomPadding,
                 ),
             verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
         ) {

@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -67,6 +69,7 @@ fun HiddenPlaylistsScreen(navController: NavController) {
     val hiddenPlaylists = allPlaylists.filter { it.playlist.isHidden }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.hidden_playlists)) },
@@ -84,12 +87,15 @@ fun HiddenPlaylistsScreen(navController: NavController) {
             )
         },
     ) { innerPadding ->
+        val playerInsets = LocalPlayerAwareWindowInsets.current
         if (hiddenPlaylists.isEmpty()) {
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
+                        .padding(top = innerPadding.calculateTopPadding())
+                        .windowInsetsPadding(playerInsets.only(WindowInsetsSides.Horizontal))
+                        .padding(bottom = playerInsets.asPaddingValues().calculateBottomPadding() + 32.dp)
                         .padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -113,8 +119,8 @@ fun HiddenPlaylistsScreen(navController: NavController) {
                     Modifier
                         .fillMaxSize()
                         .windowInsetsPadding(
-                            LocalPlayerAwareWindowInsets.current.only(
-                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                            playerInsets.only(
+                                WindowInsetsSides.Horizontal,
                             ),
                         ),
                 contentPadding =
@@ -122,7 +128,7 @@ fun HiddenPlaylistsScreen(navController: NavController) {
                         start = 16.dp,
                         top = innerPadding.calculateTopPadding() + 8.dp,
                         end = 16.dp,
-                        bottom = SettingsDimensions.ScreenBottomPadding,
+                        bottom = SettingsDimensions.ScreenBottomPadding + playerInsets.asPaddingValues().calculateBottomPadding(),
                     ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

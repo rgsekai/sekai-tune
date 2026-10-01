@@ -64,7 +64,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import moe.rgsekai.sekaitune.ui.component.GlassComponent
 import moe.rgsekai.sekaitune.ui.component.GlassModalBottomSheet
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
+import moe.rgsekai.sekaitune.ui.component.MenuSurfaceSection
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
@@ -786,6 +792,10 @@ private fun LocalSongScanSheet(
         label = "contentAlpha",
     )
 
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
     GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -804,8 +814,22 @@ private fun LocalSongScanSheet(
         ) {
             Surface(
                 shape = RoundedCornerShape(32.dp),
-                color = heroContainerColor,
-                modifier = Modifier.size(80.dp),
+                color = if (isGlass) (if (isLight) Color.White.copy(alpha = 0.40f) else Color.White.copy(alpha = 0.12f)) else heroContainerColor,
+                border = if (isGlass) BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.14f)) else null,
+                modifier =
+                    Modifier
+                        .size(80.dp)
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = RoundedCornerShape(32.dp),
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     AnimatedContent(
@@ -853,9 +877,8 @@ private fun LocalSongScanSheet(
                 enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
                 exit = shrinkVertically(spring(stiffness = Spring.StiffnessLow)) + fadeOut(),
             ) {
-                Surface(
+                MenuSurfaceSection(
                     shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -875,15 +898,14 @@ private fun LocalSongScanSheet(
                             text = stringResource(R.string.scanning_device),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
             }
 
-            Surface(
+            MenuSurfaceSection(
                 shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -898,10 +920,31 @@ private fun LocalSongScanSheet(
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color =
-                                    if (hasStoragePermission) {
-                                        MaterialTheme.colorScheme.primaryContainer
+                                    if (isGlass) {
+                                        if (hasStoragePermission) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                        } else {
+                                            MaterialTheme.colorScheme.error.copy(alpha = 0.25f)
+                                        }
                                     } else {
-                                        MaterialTheme.colorScheme.errorContainer
+                                        if (hasStoragePermission) {
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.errorContainer
+                                        }
+                                    },
+                                border =
+                                    if (isGlass) {
+                                        BorderStroke(
+                                            1.dp,
+                                            if (hasStoragePermission) {
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.40f)
+                                            } else {
+                                                MaterialTheme.colorScheme.error.copy(alpha = 0.40f)
+                                            },
+                                        )
+                                    } else {
+                                        null
                                     },
                             ) {
                                 Row(
@@ -917,9 +960,9 @@ private fun LocalSongScanSheet(
                                         contentDescription = null,
                                         tint =
                                             if (hasStoragePermission) {
-                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                                if (isGlass) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer
                                             } else {
-                                                MaterialTheme.colorScheme.onErrorContainer
+                                                if (isGlass) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onErrorContainer
                                             },
                                         modifier = Modifier.size(14.dp),
                                     )
@@ -934,9 +977,9 @@ private fun LocalSongScanSheet(
                                         fontWeight = FontWeight.SemiBold,
                                         color =
                                             if (hasStoragePermission) {
-                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                                if (isGlass) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer
                                             } else {
-                                                MaterialTheme.colorScheme.onErrorContainer
+                                                if (isGlass) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onErrorContainer
                                             },
                                     )
                                 }
@@ -945,7 +988,7 @@ private fun LocalSongScanSheet(
                     )
 
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isGlass) 0.25f else 0.5f),
                         modifier = Modifier.padding(horizontal = 20.dp),
                     )
 
@@ -960,9 +1003,8 @@ private fun LocalSongScanSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Surface(
+            MenuSurfaceSection(
                 shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -1111,12 +1153,25 @@ private fun LocalSongScanSheet(
                             } else {
                                 MaterialTheme.colorScheme.onTertiary
                             },
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        disabledContainerColor = if (isGlass) (if (isLight) Color.White.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f)) else MaterialTheme.colorScheme.surfaceContainerHighest,
                         disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     ),
                 shape = RoundedCornerShape(28.dp),
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = RoundedCornerShape(28.dp),
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
             ) {
                 AnimatedContent(
                     targetState = scanState.isScanning,
@@ -1170,11 +1225,23 @@ private fun LocalSongScanSheet(
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.errorContainer,
+                    color = if (isGlass) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.errorContainer,
+                    border = if (isGlass) BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)) else null,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp),
+                            .padding(top = 12.dp)
+                            .then(
+                                if (isGlass) {
+                                    Modifier.liquidGlass(
+                                        config = glassConfig,
+                                        shape = RoundedCornerShape(20.dp),
+                                        applyEdgeEffects = true,
+                                    )
+                                } else {
+                                    Modifier
+                                },
+                            ),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1209,9 +1276,56 @@ private fun LocalSongScanSettingCard(
     onActionClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
+    val cardColor =
+        if (isGlass) {
+            if (isLight) Color.White.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.07f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        }
+
+    val cardBorder =
+        if (isGlass) {
+            BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.10f))
+        } else {
+            null
+        }
+
+    val iconContainerColor =
+        if (isGlass) {
+            if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        }
+
+    val actionContainerColor =
+        if (isGlass) {
+            if (isLight) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer
+        }
+
+    val actionBorder =
+        if (isGlass) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.40f))
+        } else {
+            null
+        }
+
+    val actionContentColor =
+        if (isGlass) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        }
+
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = cardColor,
+        border = cardBorder,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -1225,7 +1339,7 @@ private fun LocalSongScanSettingCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    color = iconContainerColor,
                     modifier = Modifier.size(44.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -1256,7 +1370,8 @@ private fun LocalSongScanSettingCard(
                     if (actionLabel != null && onActionClick != null) {
                         Surface(
                             shape = RoundedCornerShape(18.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            color = actionContainerColor,
+                            border = actionBorder,
                             modifier = Modifier.padding(top = 8.dp),
                         ) {
                             Row(
@@ -1271,13 +1386,13 @@ private fun LocalSongScanSettingCard(
                                 Icon(
                                     painter = painterResource(R.drawable.add),
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    tint = actionContentColor,
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Text(
                                     text = actionLabel,
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    color = actionContentColor,
                                 )
                             }
                         }
@@ -1297,6 +1412,10 @@ private fun LocalSongFolderChip(
     onRemove: () -> Unit,
 ) {
     val context = LocalContext.current
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
     val isTree = remember(folderPath) { LocalSongScanConfig.isTreeUri(folderPath) }
     val displayLabel =
         remember(folderPath) {
@@ -1324,10 +1443,41 @@ private fun LocalSongFolderChip(
             }
         }
 
+    val chipColor =
+        if (isGlass) {
+            if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
+        }
+
+    val chipBorder =
+        BorderStroke(
+            1.dp,
+            if (isGlass) {
+                if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.15f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
+            },
+        )
+
+    val chipContentColor =
+        if (isGlass) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        }
+
+    val removeButtonColor =
+        if (isGlass) {
+            if (isLight) Color.White.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.18f)
+        } else {
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
+        }
+
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = chipColor,
+        border = chipBorder,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1337,17 +1487,17 @@ private fun LocalSongFolderChip(
             Icon(
                 painter = painterResource(if (isTree) R.drawable.backup else R.drawable.snippet_folder),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                tint = chipContentColor,
                 modifier = Modifier.size(16.dp),
             )
             Text(
                 text = displayLabel,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = chipContentColor,
             )
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                color = removeButtonColor,
                 modifier = Modifier.alpha(if (enabled) 1f else 0.5f),
             ) {
                 Box(
@@ -1360,7 +1510,7 @@ private fun LocalSongFolderChip(
                     Icon(
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        tint = chipContentColor,
                         modifier = Modifier.size(14.dp),
                     )
                 }
@@ -1376,6 +1526,17 @@ private fun ScanSheetInfoRow(
     description: String,
     trailing: (@Composable () -> Unit)?,
 ) {
+    val glassConfig = LocalGlassEffectConfig.current
+    val isGlass = glassConfig.isEnabledFor(GlassComponent.POPUP_MENU)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
+    val iconContainerColor =
+        if (isGlass) {
+            if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -1386,7 +1547,7 @@ private fun ScanSheetInfoRow(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            color = iconContainerColor,
             modifier = Modifier.size(44.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
