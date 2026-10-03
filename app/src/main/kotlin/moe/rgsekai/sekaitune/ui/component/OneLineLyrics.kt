@@ -19,6 +19,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +30,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -43,6 +45,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.constants.LyricsRomanizeChineseKey
 import moe.rgsekai.sekaitune.constants.LyricsRomanizeHindiKey
@@ -56,6 +60,7 @@ import moe.rgsekai.sekaitune.lyrics.LyricsUtils
 import moe.rgsekai.sekaitune.models.MediaMetadata
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.reportException
+import timber.log.Timber
 
 @Composable
 fun OneLineLyrics(
@@ -71,6 +76,8 @@ fun OneLineLyrics(
 ) {
     if (!showOneLineLyrics || mediaMetadata == null) return
 
+    val currentPositionState = rememberUpdatedState(sliderPosition ?: position)
+
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyricsEntity by playerConnection.currentLyrics.collectAsState(initial = null)
 
@@ -82,7 +89,7 @@ fun OneLineLyrics(
         }
 
     val isSynced =
-        remember(lyrics) {
+        remember(lyrics, mediaMetadata.id) {
             lyrics != null &&
                 lyrics != LyricsEntity.LYRICS_NOT_FOUND &&
                 (LyricsUtils.isLineSyncedLrc(lyrics) || LyricsUtils.isTtml(lyrics))
@@ -90,7 +97,7 @@ fun OneLineLyrics(
 
     if (!isSynced || lyrics == null) return
 
-    val isTtmlLyrics = remember(lyrics) { LyricsUtils.isTtml(lyrics) }
+    val isTtmlLyrics = remember(lyrics, mediaMetadata.id) { LyricsUtils.isTtml(lyrics) }
     val leadMs = if (isTtmlLyrics) 0L else 300L
 
     val (romanizeChinese) = rememberPreference(LyricsRomanizeChineseKey, defaultValue = true)
@@ -117,7 +124,7 @@ fun OneLineLyrics(
         }
 
     val lines: List<LyricsEntry> =
-        remember(lyrics, mediaMetadata.duration) {
+        remember(lyrics, mediaMetadata.id, mediaMetadata.duration) {
             when {
                 LyricsUtils.isTtml(lyrics) -> {
                     listOf(LyricsEntry.HEAD_LYRICS_ENTRY) +
@@ -133,11 +140,11 @@ fun OneLineLyrics(
             }
         }
 
-    val romanizedLines = remember(lines, romanizationPreferences) {
+    val romanizedLines = remember(mediaMetadata.id, lines, romanizationPreferences) {
         mutableStateMapOf<Int, String>()
     }
 
-    LaunchedEffect(lines, romanizationPreferences) {
+    LaunchedEffect(mediaMetadata.id, lines, romanizationPreferences) {
         romanizedLines.clear()
         if (!romanizationPreferences.isEnabled) return@LaunchedEffect
 
@@ -181,18 +188,18 @@ fun OneLineLyrics(
         }
     }
 
-    val currentLineIndex by remember(lines, lyricsSyncOffset, leadMs) {
+    val currentLineIndex by remember(mediaMetadata.id, lines, lyricsSyncOffset, leadMs) {
         derivedStateOf {
             if (lines.isEmpty()) -1
             else {
-                val effectivePosition = (sliderPosition ?: position) + lyricsSyncOffset.toLong()
+                val effectivePosition = currentPositionState.value + lyricsSyncOffset.toLong()
                 LyricsUtils.findCurrentLineIndex(lines, effectivePosition, leadMs)
             }
         }
     }
 
     val currentLineText =
-        remember(lines, currentLineIndex, romanizedLines.toMap()) {
+        remember(mediaMetadata.id, lines, currentLineIndex, romanizedLines.toMap()) {
             if (currentLineIndex < 0 || currentLineIndex >= lines.size) {
                 null
             } else {
@@ -207,56 +214,82 @@ fun OneLineLyrics(
             }
         }
 
+    LaunchedEffect(mediaMetadata.id, currentLineIndex) {
+        Timber.tag("OneLineLyrics").d(
+            "Line index changed: mediaId=${mediaMetadata.id}, lineIndex=$currentLineIndex, lineText=\"${currentLineText ?: ""}\""
+        )
+    }
+
+    LaunchedEffect(mediaMetadata.id, showOneLineLyrics) {
+        while (isActive) {
+            delay(1000L)
+            Timber.tag("OneLineLyrics").d(
+                "Expanded tick: mediaId=${mediaMetadata.id}, isExpandedOrExpanding=true, position=${currentPositionState.value}, linesCount=${lines.size}, lineIndex=$currentLineIndex, lineText=\"${currentLineText ?: ""}\""
+            )
+        }
+    }
+
     val hasActiveLine = currentLineText != null
 
-    AnimatedVisibility(
-        visible = hasActiveLine,
-        enter = fadeIn(tween(250)),
-        exit = fadeOut(tween(200)),
-        modifier = modifier,
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        contentAlignment = when (textAlign) {
+            TextAlign.Center -> Alignment.Center
+            TextAlign.End -> Alignment.BottomEnd
+            else -> Alignment.BottomStart
+        },
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onShowLyrics,
-                    ),
-            contentAlignment = when (textAlign) {
-                TextAlign.Center -> Alignment.Center
-                TextAlign.End -> Alignment.CenterEnd
-                else -> Alignment.CenterStart
-            },
+        AnimatedVisibility(
+            visible = hasActiveLine,
+            enter = fadeIn(tween(250)),
+            exit = fadeOut(tween(200)),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            AnimatedContent(
-                targetState = currentLineText.orEmpty(),
-                transitionSpec = {
-                    val enter = slideInVertically(animationSpec = tween(250)) { it / 3 } + fadeIn(animationSpec = tween(250))
-                    val exit = slideOutVertically(animationSpec = tween(250)) { -it / 3 } + fadeOut(animationSpec = tween(200))
-                    enter togetherWith exit
-                },
-                label = "oneLineLyricsTransition",
-            ) { targetText ->
-                Text(
-                    text = targetText,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
-                        lineHeight = 22.sp,
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.85f),
-                            offset = Offset(0f, 2f),
-                            blurRadius = 8f,
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onShowLyrics,
                         ),
-                    ),
-                    color = textColor,
-                    textAlign = textAlign,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                contentAlignment = when (textAlign) {
+                    TextAlign.Center -> Alignment.Center
+                    TextAlign.End -> Alignment.BottomEnd
+                    else -> Alignment.BottomStart
+                },
+            ) {
+                AnimatedContent(
+                    targetState = currentLineText.orEmpty(),
+                    transitionSpec = {
+                        val enter = slideInVertically(animationSpec = tween(250)) { it / 3 } + fadeIn(animationSpec = tween(250))
+                        val exit = slideOutVertically(animationSpec = tween(250)) { -it / 3 } + fadeOut(animationSpec = tween(200))
+                        enter togetherWith exit
+                    },
+                    label = "oneLineLyricsTransition",
+                ) { targetText ->
+                    Text(
+                        text = targetText,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            lineHeight = 22.sp,
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.35f),
+                                offset = Offset(0f, 1.5f),
+                                blurRadius = 6f,
+                            ),
+                        ),
+                        color = textColor,
+                        textAlign = textAlign,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }

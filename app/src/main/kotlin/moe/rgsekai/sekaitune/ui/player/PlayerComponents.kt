@@ -237,8 +237,7 @@ fun PlayerTitleSection(
             mediaMetadata = mediaMetadata,
             navController = navController,
             state = state,
-        )
-    AnimatedContent(
+        )    AnimatedContent(
         targetState = mediaMetadata.title,
         transitionSpec = { fadeIn() togetherWith fadeOut() },
         label = "",
@@ -247,7 +246,8 @@ fun PlayerTitleSection(
             title = title,
             explicit = mediaMetadata.explicit,
             color = textBackgroundColor,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
+            fontSize = 18.5.sp,
             fontWeight = FontWeight.Bold,
             modifier =
                 Modifier
@@ -262,12 +262,12 @@ fun PlayerTitleSection(
         )
     }
 
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(2.dp))
 
     ClickableArtists(
         artists = mediaMetadata.artists,
         onArtistClick = actions.onArtistClick,
-        style = MaterialTheme.typography.titleMedium.copy(color = textBackgroundColor, fontSize = 16.sp),
+        style = MaterialTheme.typography.bodyMedium.copy(color = textBackgroundColor.copy(alpha = 0.72f), fontSize = 14.5.sp),
         onLongClick = actions.onCopyArtists,
         modifier =
             Modifier
@@ -294,7 +294,7 @@ fun PlayerTopActions(
 ) {
     val haptic = LocalHapticFeedback.current
     val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsState()
-    when (playerDesignStyle) {
+    when (playerDesignStyle) {
         PlayerDesignStyle.V2 -> {
             val shareShape =
                 RoundedCornerShape(
@@ -313,13 +313,13 @@ fun PlayerTopActions(
                 )
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier =
                         Modifier
-                            .size(42.dp)
+                            .size(36.dp)
                             .clip(shareShape)
                             .background(textButtonColor)
                             .clickable {
@@ -342,14 +342,14 @@ fun PlayerTopActions(
                         modifier =
                             Modifier
                                 .align(Alignment.Center)
-                                .size(24.dp),
+                                .size(20.dp),
                     )
                 }
 
                 Box(
                     modifier =
                         Modifier
-                            .size(42.dp)
+                            .size(36.dp)
                             .clip(favShape)
                             .background(textButtonColor)
                             .clickable {
@@ -370,7 +370,7 @@ fun PlayerTopActions(
                         modifier =
                             Modifier
                                 .align(Alignment.Center)
-                                .size(24.dp),
+                                .size(20.dp),
                     )
                 }
             }
@@ -758,7 +758,7 @@ fun PlayerControlsContent(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = PlayerHorizontalPadding)
-                .padding(bottom = 6.dp),
+                .padding(bottom = 12.dp),
     )
 
     Row(
@@ -796,7 +796,7 @@ fun PlayerControlsContent(
         )
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(2.dp))
 
     val isBuffering =
         rememberDelayedBufferingState(
@@ -1022,7 +1022,7 @@ fun V8PlayerControlsContent(
                 onArtistClick = onArtistClick,
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(2.dp))
 
             V8PlaybackProgress(
                 mediaId = mediaMetadata.id,
@@ -1082,13 +1082,14 @@ private fun V8MetadataActions(
     ) {
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             PlayerTitleText(
                 title = title,
                 explicit = explicit,
                 color = foreground,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
+                fontSize = 18.5.sp,
                 fontWeight = FontWeight.Bold,
                 modifier =
                     Modifier
@@ -1102,7 +1103,7 @@ private fun V8MetadataActions(
             ClickableArtists(
                 artists = artists,
                 onArtistClick = onArtistClick,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.5.sp),
                 color = foreground.copy(alpha = 0.72f),
                 modifier = Modifier.basicMarquee(),
             )
@@ -1115,7 +1116,7 @@ private fun V8MetadataActions(
             Box(
                 modifier =
                     Modifier
-                        .size(40.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .background(foreground.copy(alpha = 0.20f))
                         .clickable(onClick = onMenuClick),
@@ -1125,14 +1126,14 @@ private fun V8MetadataActions(
                     painter = painterResource(R.drawable.more_vert),
                     contentDescription = stringResource(R.string.more_options),
                     tint = foreground,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
 
             Box(
                 modifier =
                     Modifier
-                        .size(40.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .background(foreground.copy(alpha = 0.20f))
                         .clickable(onClick = onToggleLike),
@@ -1145,7 +1146,7 @@ private fun V8MetadataActions(
                         ),
                     contentDescription = stringResource(R.string.action_like),
                     tint = foreground,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }

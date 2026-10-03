@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.db.MusicDatabase
 import moe.rgsekai.sekaitune.db.entities.LyricsEntity
 import moe.rgsekai.sekaitune.models.MediaMetadata
+import moe.rgsekai.sekaitune.utils.NetworkConnectivityObserver
 import moe.rgsekai.sekaitune.utils.reportException
 import java.util.Collections
 import java.util.LinkedHashMap
@@ -91,9 +92,13 @@ object LyricsFetchManager {
             // Proceed to fetch if DB query fails
         }
 
+        val isConnected = NetworkConnectivityObserver(context).isCurrentlyConnected()
+        if (!isConnected) {
+            return
+        }
+
         // 2. Join in-flight fetch if available, or create one
         var deferredToAwait: Deferred<Unit>? = null
-        var shouldExecute = false
 
         coroutineScope {
             inFlightMutex.withLock {
@@ -126,7 +131,6 @@ object LyricsFetchManager {
                     }
                     inFlightFetches[mediaId] = deferred
                     deferredToAwait = deferred
-                    shouldExecute = true
                 }
             }
 

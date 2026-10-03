@@ -732,11 +732,19 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    LaunchedEffect(mediaMetadata?.id, playbackState, aodModeEnabled) {
+    LaunchedEffect(mediaMetadata?.id, playbackState, aodModeEnabled, state.isExpandedOrExpanding) {
+        if (!state.isExpandedOrExpanding) {
+            return@LaunchedEffect
+        }
         val startTime = SystemClock.elapsedRealtime()
         if (playbackState == STATE_READY) {
+            val initialPos = playerConnection.player.currentPosition
+            val initialDur = playerConnection.player.duration
+            position = initialPos
+            if (initialDur > 0L && initialDur != C.TIME_UNSET) {
+                duration = initialDur
+            }
             while (isActive) {
-                delay(if (aodModeEnabled) 500L else 100L)
                 val isTransitioning = playerConnection.player.currentMediaItem?.mediaId != mediaMetadata?.id
                 val currentPlayerPosition = playerConnection.player.currentPosition
                 val currentPlayerDuration = playerConnection.player.duration
@@ -769,6 +777,7 @@ fun BottomSheetPlayer(
                         }
                     }
                 }
+                delay(if (aodModeEnabled) 500L else 100L)
             }
         } else {
             mediaMetadata?.let {
@@ -1366,11 +1375,13 @@ fun BottomSheetPlayer(
                             )
                         }
 
+                        Spacer(Modifier.height(10.dp))
+
                         enrichedMetadata?.let {
                             controlsContent(it)
                         }
 
-                        Spacer(Modifier.height(30.dp))
+                        Spacer(Modifier.height(24.dp))
                     }
                 }
             }
