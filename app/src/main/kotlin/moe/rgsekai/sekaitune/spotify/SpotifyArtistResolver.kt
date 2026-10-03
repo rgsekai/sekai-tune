@@ -16,7 +16,9 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import moe.rgsekai.sekaitune.innertube.YouTube
+import moe.rgsekai.sekaitune.innertube.models.ArtistItem
+import moe.rgsekai.sekaitune.innertube.models.SongItem
 import timber.log.Timber
 import java.text.Normalizer
 
@@ -29,6 +31,14 @@ sealed interface SpotifyArtistResolution {
     data object NoMatch : SpotifyArtistResolution
 }
 
+sealed interface YtmArtistResolution {
+    data class Matched(
+        val channelId: String,
+    ) : YtmArtistResolution
+
+    data object NoMatch : YtmArtistResolution
+}
+
 object SpotifyArtistResolver {
     private const val CACHE_MAX_SIZE = 256
 
@@ -39,10 +49,31 @@ object SpotifyArtistResolver {
             ): Boolean = size > CACHE_MAX_SIZE
         }
 
+    private val spotifyToYtmCache =
+        object : LinkedHashMap<String, YtmArtistResolution>(CACHE_MAX_SIZE, 0.75f, true) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<String, YtmArtistResolution>?,
+            ): Boolean = size > CACHE_MAX_SIZE
+        }
+
     fun getCached(channelId: String): SpotifyArtistResolution? =
         synchronized(cache) {
             cache[channelId]
         }
+
+    fun getCachedYtm(spotifyArtistId: String): YtmArtistResolution? =
+        synchronized(spotifyToYtmCache) {
+            spotifyToYtmCache[spotifyArtistId]
+        }
+
+    fun seedSpotifyToYtm(
+        spotifyArtistId: String,
+        channelId: String,
+    ) {
+        synchronized(spotifyToYtmCache) {
+            spotifyToYtmCache[spotifyArtistId] = YtmArtistResolution.Matched(channelId)
+        }
+    }
 
     fun updateCachedFollowState(
         spotifyArtistId: String,
@@ -146,11 +177,95 @@ object SpotifyArtistResolver {
                         saved = isSaved,
                     )
                 synchronized(cache) { cache[channelId] = matched }
+                seedSpotifyToYtm(candidate.id, channelId)
                 return@withContext matched
             }
 
             val noMatch = SpotifyArtistResolution.NoMatch
             synchronized(cache) { cache[channelId] = noMatch }
+            noMatch
+        }
+
+    suspend fun resolveSpotifyToYtmArtist(
+        spotifyArtistId: String,
+        spotifyArtistName: String,
+    ): YtmArtistResolution =
+        withContext(Dispatchers.IO) {
+            val cached = synchronized(spotifyToYtmCache) { spotifyToYtmCache[spotifyArtistId] }
+            if (cached != null) return@withContext cached
+
+            if (spotifyArtistId.isBlank() || spotifyArtistName.isBlank()) {
+                val noMatch = YtmArtistResolution.NoMatch
+                synchronized(spotifyToYtmCache) { spotifyToYtmCache[spotifyArtistId] = noMatch }
+                return@withContext noMatch
+            }
+
+            val normSpotifyName = normalizeArtistName(spotifyArtistName)
+            if (normSpotifyName.isBlank()) {
+                val noMatch = YtmArtistResolution.NoMatch
+                synchronized(spotifyToYtmCache) { spotifyToYtmCache[spotifyArtistId] = noMatch }
+                return@withContext noMatch
+            }
+
+            val searchResult =
+                YouTube
+                    .search(
+                        query = spotifyArtistName,
+                        filter = YouTube.SearchFilter.FILTER_ARTIST,
+                    ).getOrNull()
+
+            val ytmCandidates =
+                searchResult?.items
+                    ?.filterIsInstance<ArtistItem>()
+                    .orEmpty()
+                    .take(3)
+
+            if (ytmCandidates.isEmpty()) {
+                val noMatch = YtmArtistResolution.NoMatch
+                synchronized(spotifyToYtmCache) { spotifyToYtmCache[spotifyArtistId] = noMatch }
+                return@withContext noMatch
+            }
+
+            val spotifyTopTracks =
+                Spotify.artistTopTracks(spotifyArtistId).getOrNull()?.tracks.orEmpty()
+            val normalizedSpotifySongs =
+                spotifyTopTracks
+                    .map { normalizeSongTitle(it.name) }
+                    .filter { it.isNotBlank() }
+
+            for (candidate in ytmCandidates) {
+                val normCandidateName = normalizeArtistName(candidate.title)
+                if (normCandidateName != normSpotifyName) {
+                    continue
+                }
+
+                val candidatePage = YouTube.artist(candidate.id).getOrNull()
+                val ytmSongs =
+                    candidatePage?.sections
+                        ?.flatMap { it.items }
+                        ?.filterIsInstance<SongItem>()
+                        ?.map { normalizeSongTitle(it.title) }
+                        ?.filter { it.isNotBlank() }
+                        .orEmpty()
+
+                val hasOverlap =
+                    if (normalizedSpotifySongs.isEmpty() || ytmSongs.isEmpty()) {
+                        false
+                    } else {
+                        normalizedSpotifySongs.any { spotifySong -> ytmSongs.contains(spotifySong) }
+                    }
+
+                if (hasOverlap) {
+                    val matched = YtmArtistResolution.Matched(candidate.id)
+                    synchronized(spotifyToYtmCache) {
+                        spotifyToYtmCache[spotifyArtistId] = matched
+                    }
+                    return@withContext matched
+                }
+            }
+
+            val noMatch = YtmArtistResolution.NoMatch
+            synchronized(spotifyToYtmCache) { spotifyToYtmCache[spotifyArtistId] = noMatch }
             noMatch
         }
 

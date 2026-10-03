@@ -29,6 +29,7 @@ import moe.rgsekai.sekaitune.constants.SpotifyAccountNameKey
 import moe.rgsekai.sekaitune.constants.SpotifyLibraryPlaylistsCacheKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
 import moe.rgsekai.sekaitune.constants.SpotifySpKeyKey
+import moe.rgsekai.sekaitune.spotify.models.SpotifyArtist
 import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylist
 import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylistTracksRef
 import moe.rgsekai.sekaitune.spotify.models.SpotifyTrack
@@ -46,6 +47,9 @@ class SpotifyLibraryRepository
     ) {
         private val _playlists = MutableStateFlow<List<SpotifyPlaylist>>(emptyList())
         val playlists: StateFlow<List<SpotifyPlaylist>> = _playlists.asStateFlow()
+
+        private val _followedArtists = MutableStateFlow<List<SpotifyArtist>>(emptyList())
+        val followedArtists: StateFlow<List<SpotifyArtist>> = _followedArtists.asStateFlow()
 
         private val _isRefreshing = MutableStateFlow(false)
         val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -186,6 +190,7 @@ class SpotifyLibraryRepository
                     prefs.remove(SpotifyLibraryPlaylistsCacheKey)
                 }
                 _playlists.value = emptyList()
+                _followedArtists.value = emptyList()
                 _errorMessage.value = null
                 Spotify.accessToken = null
                 runCatching { clearWebAuthSession(context) }
@@ -209,6 +214,10 @@ class SpotifyLibraryRepository
                                 loaded,
                             )
                     }
+                    runCatching {
+                        val artistsLoaded = fetchAllFollowedArtists()
+                        _followedArtists.value = artistsLoaded
+                    }
                     loaded
                 } catch (error: CancellationException) {
                     throw error
@@ -220,6 +229,49 @@ class SpotifyLibraryRepository
                     _isRefreshing.value = false
                 }
             }
+
+        suspend fun refreshFollowedArtists(): List<SpotifyArtist> =
+            withContext(Dispatchers.IO) {
+                _isRefreshing.value = true
+                _errorMessage.value = null
+                try {
+                    ensureAuthenticated()
+                    val loaded = fetchAllFollowedArtists()
+                    _followedArtists.value = loaded
+                    loaded
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Throwable) {
+                    reportException(error)
+                    _errorMessage.value = error.message
+                    _followedArtists.value
+                } finally {
+                    _isRefreshing.value = false
+                }
+            }
+
+        private suspend fun fetchAllFollowedArtists(): List<SpotifyArtist> {
+            val artists = ArrayList<SpotifyArtist>()
+            var offset = 0
+            val limit = 50
+
+            while (true) {
+                val page =
+                    spotifyCallWithTokenRetry {
+                        Spotify
+                            .myArtists(
+                                limit = limit,
+                                offset = offset,
+                            ).getOrThrow()
+                    }
+                if (page.items.isEmpty()) break
+                artists += page.items
+                offset += page.items.size
+                if (offset >= page.total || page.items.size < limit) break
+            }
+
+            return artists
+        }
 
         suspend fun playlist(playlistId: String): SpotifyPlaylist =
             withContext(Dispatchers.IO) {
@@ -244,7 +296,7 @@ class SpotifyLibraryRepository
                                     playlistId = playlistId,
                                     limit = limit,
                                     offset = offset,
-                                ).getOrThrow()
+                                    ).getOrThrow()
                         }
                     if (page.items.isEmpty()) break
                     val pageTracks = page.items.mapNotNull { it.track?.takeUnless(SpotifyTrack::isLocal) }
@@ -266,6 +318,12 @@ class SpotifyLibraryRepository
                         Spotify.addToLibrary(listOf(uri)).getOrThrow()
                     }
                     SpotifyArtistResolver.updateCachedFollowState(cleanId, true)
+                    if (_followedArtists.value.none { it.id == cleanId }) {
+                        runCatching {
+                            val artist = spotifyCallWithTokenRetry { Spotify.artist(cleanId).getOrThrow() }
+                            _followedArtists.value = listOf(artist) + _followedArtists.value
+                        }
+                    }
                 }
             }
 
@@ -279,6 +337,7 @@ class SpotifyLibraryRepository
                         Spotify.removeFromLibrary(listOf(uri)).getOrThrow()
                     }
                     SpotifyArtistResolver.updateCachedFollowState(cleanId, false)
+                    _followedArtists.value = _followedArtists.value.filterNot { it.id == cleanId }
                 }
             }
 

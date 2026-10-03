@@ -570,6 +570,14 @@
     <string name="spotify_reload_playlist">Reload Playlist</string>
     <string name="spotify_reload_playlist_desc">Refresh Spotify playlists from your account.</string>
     <string name="spotify_no_tracks">No Spotify tracks found.</string>
+    <string name="spotify_artists_tab">Artists</string>
+    <string name="spotify_playlists_tab">Playlists</string>
+    <string name="spotify_artist_subtitle">Spotify artist</string>
+    <string name="spotify_no_artists">No followed Spotify artists.</string>
+    <string name="spotify_artist_not_found_on_ytm">Couldn’t find this artist on YouTube Music.</string>
+    <string name="spotify_filter">Spotify</string>
+    <string name="follow_on_spotify">Follow on Spotify</string>
+    <string name="following_on_spotify">Following on Spotify</string>
     <string name="login_success">Logged in successfully</string>
     <string name="ai_integration">AI Integration</string>
     <string name="ai_integration_desc">Configure AI translation and personalized user automates.</string>

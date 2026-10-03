@@ -72,6 +72,7 @@ import moe.rgsekai.sekaitune.constants.AppBarHeight
 import moe.rgsekai.sekaitune.constants.ChipSortTypeKey
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.constants.LibraryFilter
+import moe.rgsekai.sekaitune.constants.ShowSpotifyFollowArtistKey
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
 import moe.rgsekai.sekaitune.constants.ShowTagsInLibraryKey
 import moe.rgsekai.sekaitune.db.entities.TagEntity
@@ -87,12 +88,14 @@ fun LibraryScreen(navController: NavController) {
     val allTags by database.allTags().collectAsState(initial = emptyList())
     val (showTagsInLibrary) = rememberPreference(ShowTagsInLibraryKey, defaultValue = true)
     val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
+    val (showSpotifyFollowArtist) = rememberPreference(ShowSpotifyFollowArtistKey, defaultValue = true)
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
     var showTagsManagementDialog by rememberSaveable { mutableStateOf(false) }
     val activeSelectedTagIds = if (showTagsInLibrary) selectedTagIds else emptySet()
+    val showSpotifyChip = showSpotifyPlaylists || showSpotifyFollowArtist
     val libraryFilters =
-        remember(showSpotifyPlaylists) {
-            if (showSpotifyPlaylists) {
+        remember(showSpotifyChip) {
+            if (showSpotifyChip) {
                 listOf(
                     LibraryFilter.LIBRARY,
                     LibraryFilter.PLAYLISTS,

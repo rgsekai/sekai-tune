@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.spotify.models.SpotifyArtist
 import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylist
 import javax.inject.Inject
 
@@ -27,6 +29,9 @@ class SpotifyLibraryViewModel
         val playlists: StateFlow<List<SpotifyPlaylist>> =
             repository.playlists.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+        val followedArtists: StateFlow<List<SpotifyArtist>> =
+            repository.followedArtists.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
         val isRefreshing: StateFlow<Boolean> =
             repository.isRefreshing.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
@@ -36,12 +41,39 @@ class SpotifyLibraryViewModel
         init {
             viewModelScope.launch(Dispatchers.IO) {
                 repository.restoreCachedPlaylists()
+                if (repository.followedArtists.value.isEmpty()) {
+                    runCatching { repository.refreshFollowedArtists() }
+                }
             }
         }
 
         fun refreshPlaylists() {
             viewModelScope.launch(Dispatchers.IO) {
                 repository.refreshPlaylists()
+            }
+        }
+
+        fun refreshFollowedArtists() {
+            viewModelScope.launch(Dispatchers.IO) {
+                repository.refreshFollowedArtists()
+            }
+        }
+
+        fun refreshAll() {
+            viewModelScope.launch(Dispatchers.IO) {
+                repository.refreshPlaylists()
+            }
+        }
+
+        fun unfollowArtist(
+            artistId: String,
+            onResult: (Boolean) -> Unit = {},
+        ) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val result = repository.unfollowArtist(artistId)
+                withContext(Dispatchers.Main) {
+                    onResult(result.isSuccess)
+                }
             }
         }
     }
