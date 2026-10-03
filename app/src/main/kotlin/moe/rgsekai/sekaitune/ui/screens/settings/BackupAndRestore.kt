@@ -96,6 +96,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.ShowSpotifyFollowArtistKey
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
 import moe.rgsekai.sekaitune.db.entities.Song
 import moe.rgsekai.sekaitune.spotify.SpotifyAccountUiState
@@ -158,6 +159,7 @@ fun BackupAndRestore(
     val backupRestoreProgress by viewModel.backupRestoreProgress.collectAsStateWithLifecycle()
     val spotifyState by spotifyAccountViewModel.uiState.collectAsStateWithLifecycle()
     val (showSpotifyPlaylists, onShowSpotifyPlaylistsChange) = rememberPreference(ShowSpotifyPlaylistsKey, false)
+    val (showSpotifyFollowArtist, onShowSpotifyFollowArtistChange) = rememberPreference(ShowSpotifyFollowArtistKey, false)
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -298,8 +300,10 @@ fun BackupAndRestore(
                 spotifyAccountPreferences(
                     state = spotifyState,
                     showPlaylists = showSpotifyPlaylists,
+                    showFollowArtist = showSpotifyFollowArtist,
                     onConnectClick = { showSpotifyLogin = true },
                     onShowPlaylistsChange = onShowSpotifyPlaylistsChange,
+                    onShowFollowArtistChange = onShowSpotifyFollowArtistChange,
                     onReloadClick = spotifyAccountViewModel::reloadPlaylists,
                     onLogoutClick = {
                         spotifyAccountViewModel.logout()
@@ -421,8 +425,10 @@ fun BackupAndRestore(
 private fun PreferenceGroupScope.spotifyAccountPreferences(
     state: SpotifyAccountUiState,
     showPlaylists: Boolean,
+    showFollowArtist: Boolean,
     onConnectClick: () -> Unit,
     onShowPlaylistsChange: (Boolean) -> Unit,
+    onShowFollowArtistChange: (Boolean) -> Unit,
     onReloadClick: () -> Unit,
     onLogoutClick: () -> Unit,
 ) {
@@ -487,6 +493,17 @@ private fun PreferenceGroupScope.spotifyAccountPreferences(
             icon = { Icon(painterResource(R.drawable.spotify_icon), null) },
             checked = showPlaylists,
             onCheckedChange = onShowPlaylistsChange,
+            isEnabled = !state.isLoading,
+        )
+    }
+
+    item {
+        SwitchPreference(
+            title = { Text(stringResource(R.string.spotify_follow_artist)) },
+            description = stringResource(R.string.spotify_follow_artist_desc),
+            icon = { Icon(painterResource(R.drawable.spotify_icon), null) },
+            checked = showFollowArtist,
+            onCheckedChange = onShowFollowArtistChange,
             isEnabled = !state.isLoading,
         )
     }

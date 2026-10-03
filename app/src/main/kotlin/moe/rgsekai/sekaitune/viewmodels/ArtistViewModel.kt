@@ -51,6 +51,26 @@ import moe.rgsekai.sekaitune.utils.get
 import moe.rgsekai.sekaitune.utils.reportException
 import javax.inject.Inject
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import moe.rgsekai.sekaitune.constants.ShowSpotifyFollowArtistKey
+import moe.rgsekai.sekaitune.constants.SpotifyAccessTokenKey
+import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
+import moe.rgsekai.sekaitune.innertube.models.SongItem
+import moe.rgsekai.sekaitune.spotify.SpotifyArtistResolution
+import moe.rgsekai.sekaitune.spotify.SpotifyArtistResolver
+import moe.rgsekai.sekaitune.spotify.SpotifyLibraryRepository
+
+sealed interface SpotifyFollowState {
+    data object Hidden : SpotifyFollowState
+    data class Follow(val spotifyArtistId: String) : SpotifyFollowState
+    data class Following(val spotifyArtistId: String) : SpotifyFollowState
+    data object Busy : SpotifyFollowState
+}
+
 sealed interface ArtistBlockState {
     data object Loading : ArtistBlockState
 
@@ -101,6 +121,7 @@ class ArtistViewModel
         private val database: MusicDatabase,
         observeArtistBlocked: ObserveArtistBlockedUseCase,
         private val setArtistBlocked: SetArtistBlockedUseCase,
+        private val spotifyRepository: SpotifyLibraryRepository,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         val artistId = savedStateHandle.get<String>("artistId")!!
@@ -108,6 +129,10 @@ class ArtistViewModel
         private val eventChannel = Channel<ArtistEvent>(capacity = Channel.BUFFERED)
         val events = eventChannel.receiveAsFlow()
         private var blockJob: Job? = null
+        private var resolveSpotifyJob: Job? = null
+
+        private val _spotifyFollowState = MutableStateFlow<SpotifyFollowState>(SpotifyFollowState.Hidden)
+        val spotifyFollowState: StateFlow<SpotifyFollowState> = _spotifyFollowState.asStateFlow()
 
         val libraryArtist =
             database
@@ -150,6 +175,23 @@ class ArtistViewModel
                         fetchArtistsFromYTM()
                     }
             }
+
+            // Observe Spotify follow settings and auth changes
+            viewModelScope.launch {
+                combine(
+                    context.dataStore.data.map { it[ShowSpotifyFollowArtistKey] ?: false }.distinctUntilChanged(),
+                    context.dataStore.data.map {
+                        it[SpotifyAccessTokenKey].orEmpty().isNotBlank() || it[SpotifySpDcKey].orEmpty().isNotBlank()
+                    }.distinctUntilChanged(),
+                ) { show, connected -> show && connected }
+                    .collect { enabled ->
+                        if (!enabled) {
+                            _spotifyFollowState.value = SpotifyFollowState.Hidden
+                        } else {
+                            artistPage?.let { resolveSpotifyFollow(it) }
+                        }
+                    }
+            }
         }
 
         fun fetchArtistsFromYTM() {
@@ -170,7 +212,9 @@ class ArtistViewModel
                                     )
                                 }
 
-                        artistPage = page.copy(sections = filteredSections)
+                        val updatedPage = page.copy(sections = filteredSections)
+                        artistPage = updatedPage
+                        resolveSpotifyFollow(updatedPage)
 
                         withContext(Dispatchers.IO) {
                             database.artist(artistId).firstOrNull()?.artist?.let { artistEntity ->
@@ -179,6 +223,105 @@ class ArtistViewModel
                         }
                     }.onFailure {
                         reportException(it)
+                    }
+            }
+        }
+
+        private fun resolveSpotifyFollow(page: ArtistPage) {
+            resolveSpotifyJob?.cancel()
+            resolveSpotifyJob =
+                viewModelScope.launch {
+                    val prefs = context.dataStore.data.first()
+                    val showFollowArtist = prefs[ShowSpotifyFollowArtistKey] ?: false
+                    val token = prefs[SpotifyAccessTokenKey].orEmpty()
+                    val spDc = prefs[SpotifySpDcKey].orEmpty()
+                    val isSpotifyConnected = token.isNotBlank() || spDc.isNotBlank()
+
+                    if (!showFollowArtist || !isSpotifyConnected) {
+                        _spotifyFollowState.value = SpotifyFollowState.Hidden
+                        return@launch
+                    }
+
+                    val artistName = page.artist.title
+                    val songTitles =
+                        page.sections
+                            .flatMap { it.items }
+                            .filterIsInstance<SongItem>()
+                            .map { it.title }
+                            .distinct()
+                            .take(15)
+
+                    if (artistName.isBlank() || songTitles.isEmpty()) {
+                        _spotifyFollowState.value = SpotifyFollowState.Hidden
+                        return@launch
+                    }
+
+                    try {
+                        spotifyRepository.ensureAuthenticated()
+                        val resolution =
+                            SpotifyArtistResolver.resolveToSpotifyArtist(
+                                channelId = artistId,
+                                ytmName = artistName,
+                                ytmTopSongTitles = songTitles,
+                            )
+                        when (resolution) {
+                            is SpotifyArtistResolution.Matched -> {
+                                _spotifyFollowState.value =
+                                    if (resolution.saved) {
+                                        SpotifyFollowState.Following(resolution.spotifyArtistId)
+                                    } else {
+                                        SpotifyFollowState.Follow(resolution.spotifyArtistId)
+                                    }
+                            }
+
+                            SpotifyArtistResolution.NoMatch -> {
+                                _spotifyFollowState.value = SpotifyFollowState.Hidden
+                            }
+                        }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Throwable) {
+                        _spotifyFollowState.value = SpotifyFollowState.Hidden
+                    }
+                }
+        }
+
+        fun followSpotifyArtist() {
+            val currentState = _spotifyFollowState.value
+            val targetArtistId =
+                when (currentState) {
+                    is SpotifyFollowState.Follow -> currentState.spotifyArtistId
+                    else -> return
+                }
+
+            _spotifyFollowState.value = SpotifyFollowState.Following(targetArtistId)
+            viewModelScope.launch {
+                spotifyRepository
+                    .followArtist(targetArtistId)
+                    .onFailure { error ->
+                        if (error is CancellationException) throw error
+                        _spotifyFollowState.value = SpotifyFollowState.Follow(targetArtistId)
+                        eventChannel.send(ArtistEvent.ShowMessage(R.string.spotify_follow_failed))
+                    }
+            }
+        }
+
+        fun unfollowSpotifyArtist() {
+            val currentState = _spotifyFollowState.value
+            val targetArtistId =
+                when (currentState) {
+                    is SpotifyFollowState.Following -> currentState.spotifyArtistId
+                    else -> return
+                }
+
+            _spotifyFollowState.value = SpotifyFollowState.Follow(targetArtistId)
+            viewModelScope.launch {
+                spotifyRepository
+                    .unfollowArtist(targetArtistId)
+                    .onFailure { error ->
+                        if (error is CancellationException) throw error
+                        _spotifyFollowState.value = SpotifyFollowState.Following(targetArtistId)
+                        eventChannel.send(ArtistEvent.ShowMessage(R.string.spotify_unfollow_failed))
                     }
             }
         }

@@ -256,6 +256,32 @@ class SpotifyLibraryRepository
                 tracks
             }
 
+        suspend fun followArtist(artistId: String): Result<Unit> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    ensureAuthenticated()
+                    val uri = if (artistId.startsWith("spotify:artist:")) artistId else "spotify:artist:$artistId"
+                    val cleanId = uri.substringAfterLast(":")
+                    spotifyCallWithTokenRetry {
+                        Spotify.addToLibrary(listOf(uri)).getOrThrow()
+                    }
+                    SpotifyArtistResolver.updateCachedFollowState(cleanId, true)
+                }
+            }
+
+        suspend fun unfollowArtist(artistId: String): Result<Unit> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    ensureAuthenticated()
+                    val uri = if (artistId.startsWith("spotify:artist:")) artistId else "spotify:artist:$artistId"
+                    val cleanId = uri.substringAfterLast(":")
+                    spotifyCallWithTokenRetry {
+                        Spotify.removeFromLibrary(listOf(uri)).getOrThrow()
+                    }
+                    SpotifyArtistResolver.updateCachedFollowState(cleanId, false)
+                }
+            }
+
         suspend fun ensureAuthenticated(forceRefresh: Boolean = false) {
             val session = restoreSession(forceRefresh = forceRefresh)
             if (!session.isAuthenticated) {

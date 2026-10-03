@@ -558,6 +558,15 @@
     <string name="spotify_waiting_for_login">Waiting for Spotify login</string>
     <string name="spotify_show_playlist">Show Playlist</string>
     <string name="spotify_show_playlist_desc">Show Spotify playlists in Library.</string>
+    <string name="spotify_follow_artist">Artist follow</string>
+    <string name="spotify_follow_artist_desc">Show a Follow on Spotify button on artist profiles.</string>
+    <string name="spotify_follow">Follow</string>
+    <string name="spotify_following">Following</string>
+    <string name="spotify_unfollow_dialog_title">Unfollow on Spotify?</string>
+    <string name="spotify_unfollow_dialog_message">Do you want to unfollow %1$s on Spotify?</string>
+    <string name="spotify_follow_failed">Failed to follow on Spotify</string>
+    <string name="spotify_unfollow_failed">Failed to unfollow on Spotify</string>
+    <string name="spotify_unfollow">Unfollow</string>
     <string name="spotify_reload_playlist">Reload Playlist</string>
     <string name="spotify_reload_playlist_desc">Refresh Spotify playlists from your account.</string>
     <string name="spotify_no_tracks">No Spotify tracks found.</string>
