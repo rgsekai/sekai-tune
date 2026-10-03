@@ -746,6 +746,8 @@
     <string name="ambient_show_artist_name_desc">Display current artist name</string>
     <string name="ambient_show_lyrics">Show lyrics</string>
     <string name="ambient_show_lyrics_desc">Display synchronized lyrics alongside artwork</string>
+    <string name="ambient_volume_gesture">Artwork volume gesture</string>
+    <string name="ambient_volume_gesture_desc">Swipe up or down on the album art to adjust volume</string>
 </resources>
 
 

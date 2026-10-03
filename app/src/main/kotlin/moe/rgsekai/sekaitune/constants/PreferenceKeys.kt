@@ -53,6 +53,7 @@ val AmbientShowProgressBarKey = booleanPreferencesKey("ambientShowProgressBar")
 val AmbientShowTitleKey = booleanPreferencesKey("ambientShowTitle")
 val AmbientShowArtistKey = booleanPreferencesKey("ambientShowArtist")
 val AmbientShowLyricsKey = booleanPreferencesKey("ambientShowLyrics")
+val AmbientVolumeGestureEnabledKey = booleanPreferencesKey("ambientVolumeGestureEnabled")
 
 
 val AodThumbnailShapeKey = stringPreferencesKey("aodThumbnailShape")

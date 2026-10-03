@@ -15,8 +15,9 @@ import android.media.AudioManager
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -73,10 +75,12 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.toBitmap
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.LocalDatabase
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.canvas.CanvasRequestPolicy
 import moe.rgsekai.sekaitune.canvas.CanvasSource
@@ -88,6 +92,7 @@ import moe.rgsekai.sekaitune.constants.AmbientShowArtistKey
 import moe.rgsekai.sekaitune.constants.AmbientShowLyricsKey
 import moe.rgsekai.sekaitune.constants.AmbientShowProgressBarKey
 import moe.rgsekai.sekaitune.constants.AmbientShowTitleKey
+import moe.rgsekai.sekaitune.constants.AmbientVolumeGestureEnabledKey
 import moe.rgsekai.sekaitune.constants.CanvasAudioReactiveKey
 import moe.rgsekai.sekaitune.constants.CanvasFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasMeteredKey
@@ -97,7 +102,9 @@ import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.LyricsMode
 import moe.rgsekai.sekaitune.constants.LyricsModeKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
+import moe.rgsekai.sekaitune.di.LyricsHelperEntryPoint
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
+import moe.rgsekai.sekaitune.lyrics.LyricsFetchManager
 import moe.rgsekai.sekaitune.ui.component.LyricsEnhanced
 import moe.rgsekai.sekaitune.ui.component.LyricsV2
 import moe.rgsekai.sekaitune.ui.component.PlayerSliderTrack
@@ -116,18 +123,42 @@ import kotlin.math.abs
 @Composable
 fun AmbientModeScreen(navController: NavController) {
     val context = LocalContext.current
+    val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val isPlaying by playerConnection.isPlaying.collectAsState()
 
     val artScale by rememberPreference(AmbientArtScaleKey, 0.85f)
     val ambientCanvasEnabled by rememberPreference(AmbientCanvasEnabledKey, true)
+    val ambientVolumeGestureEnabled by rememberPreference(AmbientVolumeGestureEnabledKey, true)
     val showProgressBar by rememberPreference(AmbientShowProgressBarKey, true)
     val showTitle by rememberPreference(AmbientShowTitleKey, true)
     val showArtist by rememberPreference(AmbientShowArtistKey, true)
     val showLyrics by rememberPreference(AmbientShowLyricsKey, true)
 
     val lyricsMode by rememberEnumPreference(LyricsModeKey, LyricsMode.ENHANCED)
+
+    val currentLyrics by database.lyrics(mediaMetadata?.id.orEmpty()).collectAsState(initial = null)
+    val lyricsHelper =
+        remember(context) {
+            EntryPointAccessors
+                .fromApplication(
+                    context.applicationContext,
+                    LyricsHelperEntryPoint::class.java,
+                ).lyricsHelper()
+        }
+
+    LaunchedEffect(mediaMetadata?.id, showLyrics, currentLyrics?.lyrics) {
+        val currentMeta = mediaMetadata ?: return@LaunchedEffect
+        if (!showLyrics || currentLyrics?.lyrics != null) return@LaunchedEffect
+        LyricsFetchManager.fetchLyricsForSong(
+            context = context,
+            database = database,
+            lyricsHelper = lyricsHelper,
+            mediaMetadata = currentMeta,
+            force = true,
+        )
+    }
 
     // Canvas settings
     val spotifySpDc by rememberPreference(SpotifySpDcKey, "")
@@ -166,7 +197,6 @@ fun AmbientModeScreen(navController: NavController) {
     BackHandler { navController.popBackStack() }
 
     var swipeThresholdX by remember { mutableFloatStateOf(0f) }
-    var swipeThresholdY by remember { mutableFloatStateOf(0f) }
     val audioManager = remember {
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
@@ -299,10 +329,9 @@ fun AmbientModeScreen(navController: NavController) {
             Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    detectDragGestures(
+                    detectHorizontalDragGestures(
                         onDragEnd = {
-                            // Horizontal swipe logic (Skip Next/Prev)
-                            if (abs(swipeThresholdX) > 150f && abs(swipeThresholdX) > abs(swipeThresholdY)) {
+                            if (abs(swipeThresholdX) > 100.dp.toPx()) {
                                 if (swipeThresholdX > 0) {
                                     playerConnection.player.seekToPreviousMediaItem()
                                 } else {
@@ -310,32 +339,13 @@ fun AmbientModeScreen(navController: NavController) {
                                 }
                             }
                             swipeThresholdX = 0f
-                            swipeThresholdY = 0f
                         },
-                        onDrag = { change, dragAmount ->
+                        onDragCancel = {
+                            swipeThresholdX = 0f
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
                             change.consume()
-                            swipeThresholdX += dragAmount.x
-                            swipeThresholdY += dragAmount.y
-
-                            // Vertical swipe logic (Volume Control)
-                            if (abs(dragAmount.y) > 10f && abs(dragAmount.y) > abs(dragAmount.x)) {
-                                val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                if (dragAmount.y < 0 && currentVolume < maxVolume) {
-                                    audioManager.adjustStreamVolume(
-                                        AudioManager.STREAM_MUSIC,
-                                        AudioManager.ADJUST_RAISE,
-                                        AudioManager.FLAG_SHOW_UI,
-                                    )
-                                } else if (dragAmount.y > 0 && currentVolume > 0) {
-                                    audioManager.adjustStreamVolume(
-                                        AudioManager.STREAM_MUSIC,
-                                        AudioManager.ADJUST_LOWER,
-                                        AudioManager.FLAG_SHOW_UI,
-                                    )
-                                }
-                                swipeThresholdY = 0f
-                            }
+                            swipeThresholdX += dragAmount
                         },
                     )
                 },
@@ -368,10 +378,74 @@ fun AmbientModeScreen(navController: NavController) {
                                 .fillMaxHeight(artScale.coerceIn(0.4f, 0.95f))
                                 .aspectRatio(1f)
                                 .clip(RoundedCornerShape(22.dp))
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onDoubleTap = { playerConnection.player.togglePlayPause() },
-                                    )
+                                .pointerInput(ambientVolumeGestureEnabled) {
+                                    var lastTapTime = 0L
+                                    val doubleTapTimeout = 320L
+                                    val stepPx = 28.dp.toPx()
+
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown(requireUnconsumed = false)
+                                        var accumulatedDeltaY = 0f
+                                        var isDragging = false
+                                        val pointerId = down.id
+
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+
+                                            if (change.changedToUpIgnoreConsumed()) {
+                                                if (!isDragging) {
+                                                    val now = System.currentTimeMillis()
+                                                    if (now - lastTapTime < doubleTapTimeout) {
+                                                        playerConnection.player.togglePlayPause()
+                                                        lastTapTime = 0L
+                                                    } else {
+                                                        lastTapTime = now
+                                                    }
+                                                }
+                                                break
+                                            }
+
+                                            if (change.isConsumed) {
+                                                break
+                                            }
+
+                                            val dragY = change.position.y - change.previousPosition.y
+                                            if (ambientVolumeGestureEnabled) {
+                                                if (!isDragging && abs(change.position.y - down.position.y) > 10.dp.toPx()) {
+                                                    isDragging = true
+                                                }
+
+                                                if (isDragging) {
+                                                    change.consume()
+                                                    accumulatedDeltaY += dragY
+                                                    while (accumulatedDeltaY <= -stepPx) {
+                                                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                                        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                                                        if (currentVolume < maxVolume) {
+                                                            audioManager.adjustStreamVolume(
+                                                                AudioManager.STREAM_MUSIC,
+                                                                AudioManager.ADJUST_RAISE,
+                                                                AudioManager.FLAG_SHOW_UI,
+                                                            )
+                                                        }
+                                                        accumulatedDeltaY += stepPx
+                                                    }
+                                                    while (accumulatedDeltaY >= stepPx) {
+                                                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                                        if (currentVolume > 0) {
+                                                            audioManager.adjustStreamVolume(
+                                                                AudioManager.STREAM_MUSIC,
+                                                                AudioManager.ADJUST_LOWER,
+                                                                AudioManager.FLAG_SHOW_UI,
+                                                            )
+                                                        }
+                                                        accumulatedDeltaY -= stepPx
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 },
                         contentAlignment = Alignment.Center,
                     ) {

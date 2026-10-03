@@ -38,6 +38,7 @@ import moe.rgsekai.sekaitune.constants.AmbientShowArtistKey
 import moe.rgsekai.sekaitune.constants.AmbientShowLyricsKey
 import moe.rgsekai.sekaitune.constants.AmbientShowProgressBarKey
 import moe.rgsekai.sekaitune.constants.AmbientShowTitleKey
+import moe.rgsekai.sekaitune.constants.AmbientVolumeGestureEnabledKey
 import moe.rgsekai.sekaitune.ui.component.IconButton
 import moe.rgsekai.sekaitune.ui.component.PreferenceEntry
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
@@ -51,6 +52,7 @@ import kotlin.math.roundToInt
 fun AmbientModeSettingsScreen(navController: NavController) {
     val (artScale, onArtScaleChange) = rememberPreference(AmbientArtScaleKey, defaultValue = 0.85f)
     val (canvasEnabled, onCanvasEnabledChange) = rememberPreference(AmbientCanvasEnabledKey, defaultValue = true)
+    val (volumeGestureEnabled, onVolumeGestureEnabledChange) = rememberPreference(AmbientVolumeGestureEnabledKey, defaultValue = true)
     val (showProgressBar, onShowProgressBarChange) = rememberPreference(AmbientShowProgressBarKey, defaultValue = true)
     val (showTitle, onShowTitleChange) = rememberPreference(AmbientShowTitleKey, defaultValue = true)
     val (showArtist, onShowArtistChange) = rememberPreference(AmbientShowArtistKey, defaultValue = true)
@@ -112,6 +114,16 @@ fun AmbientModeSettingsScreen(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.sparkles), null) },
                         checked = canvasEnabled,
                         onCheckedChange = onCanvasEnabledChange,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.ambient_volume_gesture)) },
+                        description = stringResource(R.string.ambient_volume_gesture_desc),
+                        icon = { Icon(painterResource(R.drawable.volume_up), null) },
+                        checked = volumeGestureEnabled,
+                        onCheckedChange = onVolumeGestureEnabledChange,
                     )
                 }
 
