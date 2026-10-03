@@ -729,6 +729,8 @@
     <string name="saving_matched_version">Saving best matched version from YouTube Music</string>
     <string name="no_catalog_match_found">No matching version found in YouTube Music catalog</string>
     <string name="export_failed_no_catalog_match">Export failed: Track not found in public catalog</string>
+    <string name="show_one_line_lyrics">One-line lyrics</string>
+    <string name="show_one_line_lyrics_desc">Show the current lyric line on the player.</string>
 </resources>
 
 

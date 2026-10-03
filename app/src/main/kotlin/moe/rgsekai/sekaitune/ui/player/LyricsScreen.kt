@@ -185,29 +185,13 @@ fun LyricsScreen(
 
     LaunchedEffect(mediaMetadata.id, currentLyrics?.lyrics) {
         if (currentLyrics != null) return@LaunchedEffect
-        try {
-            val existingLyrics =
-                withContext(Dispatchers.IO) {
-                    database.lyrics(mediaMetadata.id).first()
-                }
-            if (existingLyrics != null) return@LaunchedEffect
-
-            val lyrics =
-                withContext(Dispatchers.IO) {
-                    lyricsHelper.getLyrics(mediaMetadata)
-                }
-            withContext(Dispatchers.IO) {
-                database.query {
-                    insertLyricsIfAbsent(
-                        id = mediaMetadata.id,
-                        lyrics = lyrics,
-                    )
-                }
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-        }
+        moe.rgsekai.sekaitune.lyrics.LyricsFetchManager.fetchLyricsForSong(
+            context = context,
+            database = database,
+            lyricsHelper = lyricsHelper,
+            mediaMetadata = mediaMetadata,
+            force = true,
+        )
     }
 
     val positionState = remember(mediaMetadata.id) { mutableLongStateOf(0L) }

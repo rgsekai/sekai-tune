@@ -103,6 +103,7 @@ import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
 import moe.rgsekai.sekaitune.constants.RandomThemeOnStartupKey
 import moe.rgsekai.sekaitune.constants.ShowHomeCategoryChipsKey
+import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
 import moe.rgsekai.sekaitune.constants.ShowTagsInLibraryKey
 import moe.rgsekai.sekaitune.constants.SliderStyle
@@ -155,6 +156,11 @@ fun AppearanceSettings(navController: NavController) {
     val (showPlayerVolumeBar, onShowPlayerVolumeBarChange) =
         rememberPreference(
             ShowPlayerVolumeBarKey,
+            defaultValue = true,
+        )
+    val (showOneLineLyrics, onShowOneLineLyricsChange) =
+        rememberPreference(
+            ShowOneLineLyricsKey,
             defaultValue = true,
         )
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) =
@@ -637,6 +643,16 @@ fun AppearanceSettings(navController: NavController) {
                         checked = showPlayerVolumeBar,
                         onCheckedChange = onShowPlayerVolumeBarChange,
                         isEnabled = isVolumeBarSupported,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.show_one_line_lyrics)) },
+                        description = stringResource(R.string.show_one_line_lyrics_desc),
+                        icon = { Icon(painterResource(R.drawable.lyrics), null) },
+                        checked = showOneLineLyrics,
+                        onCheckedChange = onShowOneLineLyricsChange,
                     )
                 }
 

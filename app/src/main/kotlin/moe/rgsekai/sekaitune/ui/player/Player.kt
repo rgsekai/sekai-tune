@@ -188,10 +188,14 @@ import moe.rgsekai.sekaitune.constants.PlayerCustomImageUriKey
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
 import moe.rgsekai.sekaitune.constants.QueuePeekHeight
+import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
 import moe.rgsekai.sekaitune.constants.SliderStyle
 import moe.rgsekai.sekaitune.constants.SliderStyleKey
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadiusKey
+import moe.rgsekai.sekaitune.di.LyricsHelperEntryPoint
+import moe.rgsekai.sekaitune.lyrics.LyricsFetchManager
+import dagger.hilt.android.EntryPointAccessors
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.models.MediaMetadata
@@ -430,6 +434,27 @@ fun BottomSheetPlayer(
             key = MaxCanvasCacheSizeKey,
             defaultValue = 256,
         )
+
+    val (showOneLineLyrics) = rememberPreference(ShowOneLineLyricsKey, defaultValue = true)
+    val lyricsHelper =
+        remember(context) {
+            EntryPointAccessors
+                .fromApplication(
+                    context.applicationContext,
+                    LyricsHelperEntryPoint::class.java,
+                ).lyricsHelper()
+        }
+
+    LaunchedEffect(mediaMetadata?.id, showOneLineLyrics, state.isExpandedOrExpanding) {
+        val currentMeta = mediaMetadata ?: return@LaunchedEffect
+        if (!showOneLineLyrics || !state.isExpandedOrExpanding) return@LaunchedEffect
+        LyricsFetchManager.fetchLyricsForSong(
+            context = context,
+            database = playerConnection.database,
+            lyricsHelper = lyricsHelper,
+            mediaMetadata = currentMeta,
+        )
+    }
 
     val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.Standard)
 
@@ -1107,6 +1132,9 @@ fun BottomSheetPlayer(
                 onSliderValueChange = onSliderValueChange,
                 onSliderValueChangeFinished = onSliderValueChangeFinished,
                 currentFormat = if (playerDesignStyle == PlayerDesignStyle.V7) currentFormat else null,
+                lyricsSyncOffset = lyricsSyncOffset,
+                showOneLineLyrics = showOneLineLyrics,
+                onShowLyrics = { isLyricsScreenVisible = true },
             )
         }
 
@@ -1203,6 +1231,9 @@ fun BottomSheetPlayer(
                                     onSliderValueChangeFinished = onSliderValueChangeFinished,
                                     onVolumeChange = onPlayerVolumeChange,
                                     landscape = true,
+                                    lyricsSyncOffset = lyricsSyncOffset,
+                                    showOneLineLyrics = showOneLineLyrics,
+                                    onShowLyrics = { isLyricsScreenVisible = true },
                                 )
                             }
 
@@ -1304,6 +1335,9 @@ fun BottomSheetPlayer(
                                     onSliderValueChange = onSliderValueChange,
                                     onSliderValueChangeFinished = onSliderValueChangeFinished,
                                     onVolumeChange = onPlayerVolumeChange,
+                                    lyricsSyncOffset = lyricsSyncOffset,
+                                    showOneLineLyrics = showOneLineLyrics,
+                                    onShowLyrics = { isLyricsScreenVisible = true },
                                 )
                             }
 

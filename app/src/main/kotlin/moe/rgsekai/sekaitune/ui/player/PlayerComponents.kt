@@ -146,6 +146,7 @@ import moe.rgsekai.sekaitune.playback.PlayerConnection
 import moe.rgsekai.sekaitune.ui.component.BottomSheetPageState
 import moe.rgsekai.sekaitune.ui.component.BottomSheetState
 import moe.rgsekai.sekaitune.ui.component.MenuState
+import moe.rgsekai.sekaitune.ui.component.OneLineLyrics
 import moe.rgsekai.sekaitune.ui.component.PlayerSliderTrack
 import moe.rgsekai.sekaitune.ui.component.rememberDelayedBufferingState
 import moe.rgsekai.sekaitune.ui.component.ResizableIconButton
@@ -732,6 +733,9 @@ fun PlayerControlsContent(
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
     currentFormat: FormatEntity? = null,
+    lyricsSyncOffset: Int = 0,
+    showOneLineLyrics: Boolean = true,
+    onShowLyrics: () -> Unit = {},
 ) {
     val currentSong by playerConnection.currentSong.collectAsState(initial = null)
     val currentSongLiked = currentSong?.song?.liked == true
@@ -740,6 +744,21 @@ fun PlayerControlsContent(
         targetValue = if (isPlaying) 24.dp else 36.dp,
         animationSpec = tween(durationMillis = 90, easing = LinearEasing),
         label = "playPauseRoundness",
+    )
+
+    OneLineLyrics(
+        mediaMetadata = mediaMetadata,
+        position = position,
+        sliderPosition = sliderPosition,
+        lyricsSyncOffset = lyricsSyncOffset,
+        showOneLineLyrics = showOneLineLyrics,
+        onShowLyrics = onShowLyrics,
+        textColor = textBackgroundColor,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = PlayerHorizontalPadding)
+                .padding(bottom = 6.dp),
     )
 
     Row(
@@ -889,6 +908,9 @@ fun V8PlayerControlsContent(
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
     onVolumeChange: (Float) -> Unit,
+    lyricsSyncOffset: Int = 0,
+    showOneLineLyrics: Boolean = true,
+    onShowLyrics: () -> Unit = {},
     modifier: Modifier = Modifier,
     landscape: Boolean = false,
 ) {
@@ -973,6 +995,20 @@ fun V8PlayerControlsContent(
 
                 Spacer(Modifier.height(14.dp))
             }
+
+            OneLineLyrics(
+                mediaMetadata = mediaMetadata,
+                position = position,
+                sliderPosition = sliderPosition,
+                lyricsSyncOffset = lyricsSyncOffset,
+                showOneLineLyrics = showOneLineLyrics,
+                onShowLyrics = onShowLyrics,
+                textColor = foreground,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+            )
 
             V8MetadataActions(
                 title = mediaMetadata.title,
