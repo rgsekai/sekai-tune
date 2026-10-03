@@ -880,6 +880,18 @@ fun AppearanceSettings(navController: NavController) {
                 }
             }
 
+            PreferenceGroup(title = stringResource(R.string.ambient_mode)) {
+                item {
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.ambient_mode_settings)) },
+                        description = stringResource(R.string.ambient_mode_settings_desc),
+                        icon = { Icon(painterResource(R.drawable.fullscreen), null) },
+                        onClick = { navController.navigate("settings/appearance/ambient_mode") },
+                    )
+                }
+            }
+
+
             PreferenceGroup(title = stringResource(R.string.misc)) {
                 item {
                     EnumListPreference(

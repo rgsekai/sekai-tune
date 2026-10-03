@@ -47,6 +47,14 @@ val CanvasAudioReactiveKey = booleanPreferencesKey("canvas_audio_reactive")
 val ThumbnailCornerRadiusKey = floatPreferencesKey("thumbnailCornerRadius")
 val CropThumbnailToSquareKey = booleanPreferencesKey("cropThumbnailToSquare")
 
+val AmbientArtScaleKey = floatPreferencesKey("ambientArtScale")
+val AmbientCanvasEnabledKey = booleanPreferencesKey("ambientCanvasEnabled")
+val AmbientShowProgressBarKey = booleanPreferencesKey("ambientShowProgressBar")
+val AmbientShowTitleKey = booleanPreferencesKey("ambientShowTitle")
+val AmbientShowArtistKey = booleanPreferencesKey("ambientShowArtist")
+val AmbientShowLyricsKey = booleanPreferencesKey("ambientShowLyrics")
+
+
 val AodThumbnailShapeKey = stringPreferencesKey("aodThumbnailShape")
 val AodThumbnailSizeKey = floatPreferencesKey("aodThumbnailSize")
 val AodThumbnailShapeRotationKey = intPreferencesKey("aodThumbnailShapeRotation")

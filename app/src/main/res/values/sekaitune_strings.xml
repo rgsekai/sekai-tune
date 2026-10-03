@@ -731,6 +731,21 @@
     <string name="export_failed_no_catalog_match">Export failed: Track not found in public catalog</string>
     <string name="show_one_line_lyrics">One-line lyrics</string>
     <string name="show_one_line_lyrics_desc">Show the current lyric line on the player.</string>
+    <string name="ambient_mode">Ambient mode</string>
+    <string name="ambient_mode_desc">Fullscreen landscape display with fluid ambient glow and synchronized lyrics</string>
+    <string name="ambient_mode_settings">Ambient mode</string>
+    <string name="ambient_mode_settings_desc">Artwork size, live artwork, progress bar, lyrics and display options</string>
+    <string name="ambient_art_size">Music art size</string>
+    <string name="ambient_live_artwork">Live album art</string>
+    <string name="ambient_live_artwork_desc">Display animated canvas or procedural live visualizer for album art</string>
+    <string name="ambient_show_progress_bar">Show progress bar</string>
+    <string name="ambient_show_progress_bar_desc">Display seekable playback progress bar below album art</string>
+    <string name="ambient_show_song_name">Show song name</string>
+    <string name="ambient_show_song_name_desc">Display current song title</string>
+    <string name="ambient_show_artist_name">Show artist name</string>
+    <string name="ambient_show_artist_name_desc">Display current artist name</string>
+    <string name="ambient_show_lyrics">Show lyrics</string>
+    <string name="ambient_show_lyrics_desc">Display synchronized lyrics alongside artwork</string>
 </resources>
 
 

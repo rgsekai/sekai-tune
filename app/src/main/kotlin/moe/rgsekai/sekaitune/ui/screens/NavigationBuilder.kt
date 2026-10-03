@@ -47,7 +47,9 @@ import moe.rgsekai.sekaitune.ui.screens.search.SearchScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AboutScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AccountSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.AdvancedSettings
+import moe.rgsekai.sekaitune.ui.screens.ambient.AmbientModeScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AiIntegrationSettings
+import moe.rgsekai.sekaitune.ui.screens.settings.AmbientModeSettingsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AodCustomizedScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AppearanceSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.BackupAndRestore
@@ -352,6 +354,12 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/liquid_glass") {
         GlassEffectSettings(navController)
+    }
+    composable("settings/appearance/ambient_mode") {
+        AmbientModeSettingsScreen(navController)
+    }
+    composable("ambient_mode") {
+        AmbientModeScreen(navController)
     }
     composable("settings/appearance/icon") {
         IconScreen(navController)

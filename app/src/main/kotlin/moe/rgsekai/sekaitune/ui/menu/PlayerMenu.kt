@@ -644,6 +644,24 @@ fun PlayerMenu(
                                     NewAction(
                                         icon = {
                                             Icon(
+                                                painter = painterResource(R.drawable.fullscreen),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(28.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        },
+                                        text = stringResource(R.string.ambient_mode),
+                                        onClick = {
+                                            onDismiss()
+                                            playerBottomSheetState.dismiss()
+                                            navController.navigate("ambient_mode")
+                                        },
+                                    ),
+                                )
+                                add(
+                                    NewAction(
+                                        icon = {
+                                            Icon(
                                                 painter = painterResource(R.drawable.bedtime),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(28.dp),
@@ -995,6 +1013,30 @@ fun PlayerMenu(
                                 Modifier.clickable {
                                     onRemoveFromQueue()
                                     onDismiss()
+                                },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 56.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                    }
+
+                    if (isQueueTrigger != true) {
+                        ListItem(
+                            headlineContent = { Text(text = stringResource(R.string.ambient_mode)) },
+                            leadingContent = {
+                                Icon(
+                                    painter = painterResource(R.drawable.fullscreen),
+                                    contentDescription = null,
+                                )
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    onDismiss()
+                                    playerBottomSheetState.dismiss()
+                                    navController.navigate("ambient_mode")
                                 },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         )

@@ -862,6 +862,7 @@ class MainActivity : ComponentActivity() {
                             OnlineSearchSort.DEFAULT
                         }
                     val isYearInMusicScreen = currentRoute?.startsWith("year_in_music") == true
+                    val isAmbientModeScreen = currentRoute == "ambient_mode"
 
                     val navigationItems =
                         remember(isTvDevice) {
@@ -1125,16 +1126,18 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(false)
                     }
 
-                    LaunchedEffect(miniPlayerAnchor, isYearInMusicScreen, miniPlayerAnchorPersistenceEnabled) {
-                        if (!isYearInMusicScreen && miniPlayerAnchorPersistenceEnabled) {
+                    LaunchedEffect(miniPlayerAnchor, isYearInMusicScreen, isAmbientModeScreen, miniPlayerAnchorPersistenceEnabled) {
+                        if (!isYearInMusicScreen && !isAmbientModeScreen && miniPlayerAnchorPersistenceEnabled) {
                             setSavedMiniPlayerAnchor(miniPlayerAnchor)
                         }
                     }
 
                     var yearInMusicSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
+                    var ambientModeSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
 
                     val shouldHideStatusBars =
                         isYearInMusicScreen ||
+                            isAmbientModeScreen ||
                             (playerBottomSheetState.isExpanded && playerDesignStyle == PlayerDesignStyle.V7)
 
                     LaunchedEffect(shouldHideStatusBars, aodModeEnabled) {
@@ -1142,7 +1145,7 @@ class MainActivity : ComponentActivity() {
                         setStatusBarsHidden(shouldHideStatusBars)
                     }
 
-                    LaunchedEffect(isYearInMusicScreen, playerConnection) {
+                    LaunchedEffect(isYearInMusicScreen, isAmbientModeScreen, playerConnection) {
                         val connection = playerConnection ?: return@LaunchedEffect
                         val player = connection.player
 
@@ -1163,6 +1166,36 @@ class MainActivity : ComponentActivity() {
                         } else if (yearInMusicSavedPlayerAnchor != -1) {
                             val anchorToRestore = yearInMusicSavedPlayerAnchor
                             yearInMusicSavedPlayerAnchor = -1
+
+                            if (!awaitRestorablePlayback(connection)) {
+                                playerBottomSheetState.dismiss()
+                            } else {
+                                when (anchorToRestore) {
+                                    EXPANDED_ANCHOR -> playerBottomSheetState.expandSoft()
+                                    COLLAPSED_ANCHOR -> playerBottomSheetState.collapseSoft()
+                                    DISMISSED_ANCHOR -> playerBottomSheetState.collapseSoft()
+                                    else -> playerBottomSheetState.collapseSoft()
+                                }
+                            }
+                        }
+
+                        if (isAmbientModeScreen) {
+                            if (ambientModeSavedPlayerAnchor == -1) {
+                                ambientModeSavedPlayerAnchor =
+                                    when {
+                                        playerBottomSheetState.isExpanded -> EXPANDED_ANCHOR
+                                        playerBottomSheetState.isCollapsed -> COLLAPSED_ANCHOR
+                                        playerBottomSheetState.isDismissed -> DISMISSED_ANCHOR
+                                        else -> COLLAPSED_ANCHOR
+                                    }
+                            }
+
+                            if (!playerBottomSheetState.isDismissed) {
+                                playerBottomSheetState.dismiss()
+                            }
+                        } else if (ambientModeSavedPlayerAnchor != -1) {
+                            val anchorToRestore = ambientModeSavedPlayerAnchor
+                            ambientModeSavedPlayerAnchor = -1
 
                             if (!awaitRestorablePlayback(connection)) {
                                 playerBottomSheetState.dismiss()
@@ -1362,6 +1395,7 @@ class MainActivity : ComponentActivity() {
 
                     val currentPlayerBottomSheetState = rememberUpdatedState(playerBottomSheetState)
                     val currentIsYearInMusicScreen = rememberUpdatedState(isYearInMusicScreen)
+                    val currentIsAmbientModeScreen = rememberUpdatedState(isAmbientModeScreen)
 
                     DisposableEffect(playerConnection) {
                         val player =
@@ -1376,7 +1410,8 @@ class MainActivity : ComponentActivity() {
                                         player.playbackState != Player.STATE_IDLE &&
                                         player.playbackState != Player.STATE_ENDED &&
                                         currentPlayerBottomSheetState.value.isDismissed &&
-                                        !currentIsYearInMusicScreen.value
+                                        !currentIsYearInMusicScreen.value &&
+                                        !currentIsAmbientModeScreen.value
                                     ) {
                                         currentPlayerBottomSheetState.value.collapseSoft()
                                     }
@@ -2092,24 +2127,26 @@ class MainActivity : ComponentActivity() {
                                         val playerHideFraction = playerBottomSheetState.progress.coerceIn(0f, 1f)
                                         val totalHideFraction = (animatedScrollFraction + navHideFraction + playerHideFraction).coerceIn(0f, 1f)
 
-                                        BottomSheetPlayer(
-                                            state = playerBottomSheetState,
-                                            navController = navController,
-                                            modifier =
-                                                Modifier.offset {
-                                                    val miniPlayerShiftDistance =
-                                                        if (shouldShowNavigationBar && !useRail) {
-                                                            (FloatingToolbarHeight + floatingBarsBottomPadding) *
-                                                                (1f - playerBottomSheetState.progress.coerceIn(0f, 1f))
-                                                        } else {
-                                                            0.dp
-                                                        }
-                                                    val shiftY = (miniPlayerShiftDistance * animatedScrollFraction).roundToPx()
-                                                    IntOffset(x = 0, y = shiftY)
-                                                },
-                                            pureBlack = pureBlack,
-                                            playerBackdrop = playerBackdrop,
-                                        )
+                                        if (!isAmbientModeScreen) {
+                                            BottomSheetPlayer(
+                                                state = playerBottomSheetState,
+                                                navController = navController,
+                                                modifier =
+                                                    Modifier.offset {
+                                                        val miniPlayerShiftDistance =
+                                                            if (shouldShowNavigationBar && !useRail) {
+                                                                (FloatingToolbarHeight + floatingBarsBottomPadding) *
+                                                                    (1f - playerBottomSheetState.progress.coerceIn(0f, 1f))
+                                                            } else {
+                                                                0.dp
+                                                            }
+                                                        val shiftY = (miniPlayerShiftDistance * animatedScrollFraction).roundToPx()
+                                                        IntOffset(x = 0, y = shiftY)
+                                                    },
+                                                pureBlack = pureBlack,
+                                                playerBackdrop = playerBackdrop,
+                                            )
+                                        }
 
                                         if (useRail) return@Box
 
