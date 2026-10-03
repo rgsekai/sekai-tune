@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import java.io.InputStream
+import moe.rgsekai.sekaitune.innertube.utils.UploadProgressInputStream
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -473,7 +475,75 @@ object YouTube {
         withSongs: Boolean = true,
     ): Result<AlbumPage> =
         runCatching {
-            val response = innerTube.browse(WEB_REMIX, browseId).body<BrowseResponse>()
+            val response = innerTube.browse(WEB_REMIX, browseId, setLogin = true).body<BrowseResponse>()
+            if (browseId.contains("FEmusic_library_privately_owned_release_detail")) {
+                val playlistId =
+                    response.header
+                        ?.musicDetailHeaderRenderer
+                        ?.menu
+                        ?.menuRenderer
+                        ?.topLevelButtons
+                        ?.firstOrNull()
+                        ?.buttonRenderer
+                        ?.navigationEndpoint
+                        ?.anyWatchEndpoint
+                        ?.playlistId ?: browseId
+                val albumItem =
+                    AlbumItem(
+                        browseId = browseId,
+                        playlistId = playlistId,
+                        title =
+                            response.header?.musicDetailHeaderRenderer?.title?.runs
+                                ?.firstOrNull()
+                                ?.text
+                                ?: AlbumPage.getTitle(response)
+                                ?: "",
+                        artists =
+                            response.header?.musicDetailHeaderRenderer?.subtitle?.runs?.filter { it.navigationEndpoint != null }?.map {
+                                Artist(
+                                    name = it.text,
+                                    id = it.navigationEndpoint?.browseEndpoint?.browseId,
+                                )
+                            }?.ifEmpty { AlbumPage.getArtists(response) },
+                        year =
+                            response.header?.musicDetailHeaderRenderer?.subtitle?.runs
+                                ?.lastOrNull()
+                                ?.text
+                                ?.toIntOrNull()
+                                ?: AlbumPage.getYear(response),
+                        thumbnail =
+                            response.header?.musicDetailHeaderRenderer?.thumbnail?.croppedSquareThumbnailRenderer
+                                ?.getThumbnailUrl()
+                                ?: response.header?.musicDetailHeaderRenderer?.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
+                                ?: AlbumPage.getThumbnail(response)
+                                ?: "",
+                        explicit = false,
+                    )
+                val shelfContents =
+                    response.contents
+                        ?.singleColumnBrowseResultsRenderer
+                        ?.tabs
+                        ?.firstOrNull()
+                        ?.tabRenderer
+                        ?.content
+                        ?.sectionListRenderer
+                        ?.contents
+                        ?.firstOrNull()
+                        ?.musicShelfRenderer
+                        ?.contents
+                        ?.getItems()
+                        .orEmpty()
+                return@runCatching AlbumPage(
+                    album = albumItem,
+                    songs =
+                        shelfContents
+                            .mapNotNull {
+                                AlbumPage.getSong(it, albumItem)
+                            }.toMutableList(),
+                    otherVersions = emptyList(),
+                )
+            }
+
             val playlistId =
                 AlbumPage.getPlaylistId(response)
                     ?: throw IllegalStateException("Missing album playlist id for $browseId")
@@ -517,6 +587,7 @@ object YouTube {
                 } else {
                     emptyList()
                 }
+
 
             AlbumPage(
                 album = albumItem,
@@ -1374,18 +1445,43 @@ object YouTube {
                     setLogin = true,
                 ).body<BrowseResponse>()
 
-        val tabs = response.contents?.singleColumnBrowseResultsRenderer?.tabs
+        val singleColumnTabs = response.contents?.singleColumnBrowseResultsRenderer?.tabs
+        val twoColumnTabs = response.contents?.twoColumnBrowseResultsRenderer?.tabs?.filterNotNull()
+        val tabs = singleColumnTabs ?: twoColumnTabs
 
         val contents =
-            if (tabs != null && tabIndex >= 0 && tabIndex < tabs.size) {
-                tabs[tabIndex]
+            if (tabs != null && tabs.isNotEmpty()) {
+                val selectedTab =
+                    if (browseId.startsWith("FEmusic_library_privately_owned")) {
+                        tabs.firstOrNull { it.tabRenderer.selected == true }
+                            ?: tabs.firstOrNull { tab ->
+                                val title = tab.tabRenderer.title ?: ""
+                                val endpoint = tab.tabRenderer.endpoint?.browseEndpoint?.browseId ?: ""
+                                title.contains("Upload", ignoreCase = true) ||
+                                    endpoint.contains("privately_owned", ignoreCase = true)
+                            }
+                            ?: tabs.maxByOrNull { tab ->
+                                tab.tabRenderer.content?.sectionListRenderer?.contents.orEmpty().size
+                            }?.takeIf { tab ->
+                                tab.tabRenderer.content?.sectionListRenderer?.contents.orEmpty().isNotEmpty()
+                            }
+                            ?: (if (tabIndex in tabs.indices) tabs[tabIndex] else tabs.first())
+                    } else if (tabIndex in tabs.indices) {
+                        tabs[tabIndex]
+                    } else {
+                        tabs.first()
+                    }
+                selectedTab
                     .tabRenderer.content
                     ?.sectionListRenderer
                     ?.contents
                     .orEmpty()
             } else {
-                emptyList()
+                response.contents?.sectionListRenderer?.contents
+                    ?: response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer?.contents
+                    ?: emptyList()
             }
+
         LibraryPage(
             items = contents.flatMap { it.libraryItems() },
             continuation = contents.firstNotNullOfOrNull { it.libraryContinuation() },
@@ -1988,12 +2084,13 @@ object YouTube {
         runCatching {
             onStageReached?.invoke("Network: player Start")
             val resolvedPoToken = resolvePlayerPoToken(client, poToken, authState)
+            val effectivePlaylistId = if (playlistId == "MLPT" || playlistId?.contains("MLPT") == true) null else playlistId
             val response =
                 innerTube
                     .player(
                         client = client,
                         videoId = videoId,
-                        playlistId = playlistId,
+                        playlistId = effectivePlaylistId,
                         signatureTimestamp = signatureTimestamp,
                         poToken = resolvedPoToken,
                         setLogin = setLogin,
@@ -2508,6 +2605,79 @@ object YouTube {
 
     const val MAX_GET_QUEUE_SIZE = 1000
     private const val DEFAULT_PLAYLIST_EDIT_BATCH_SIZE = 50
+
+    val SUPPORTED_UPLOAD_EXTENSIONS = setOf("mp3", "m4a", "wma", "flac", "ogg", "aac", "wav", "opus")
+    const val MAX_UPLOAD_SIZE = 314572800L // 300MB
+
+    suspend fun uploadSong(
+        filename: String,
+        contentLength: Long,
+        content: () -> InputStream,
+        existingUploadUrl: String? = null,
+        initialOffset: Long = 0L,
+        onSessionCreated: ((String) -> Unit)? = null,
+        onProgress: ((Float, Long) -> Unit)? = null,
+    ): Result<Boolean> =
+        runCatching {
+            require(contentLength in 1 until MAX_UPLOAD_SIZE) { "Invalid file size: $contentLength bytes" }
+
+            var uploadUrl = existingUploadUrl
+            var offset = initialOffset
+
+            if (uploadUrl == null) {
+                onProgress?.invoke(0f, 0L)
+                onProgress?.invoke(0.02f, (contentLength * 0.02f).toLong())
+
+                val session = innerTube.initSongUpload(filename, contentLength)
+                uploadUrl = session.uploadUrl
+                onSessionCreated?.invoke(uploadUrl)
+                offset = 0L
+            } else {
+                // If resuming existing session, query server for verified bytes received
+                val serverOffset = runCatching { innerTube.queryUploadOffset(uploadUrl) }.getOrDefault(initialOffset)
+                offset = serverOffset
+                System.err.println("UPLOAD_LOG: Resuming upload for $filename at offset $offset / $contentLength")
+            }
+
+            val currentOffset = offset
+            val currentUploadUrl = uploadUrl
+
+            val response =
+                innerTube.uploadSongData(
+                    uploadUrl = currentUploadUrl,
+                    contentLength = contentLength,
+                    offset = currentOffset,
+                    content = {
+                        val stream = content()
+                        if (currentOffset > 0L) {
+                            var skipped = 0L
+                            while (skipped < currentOffset) {
+                                val n = stream.skip(currentOffset - skipped)
+                                if (n <= 0) break
+                                skipped += n
+                            }
+                        }
+                        UploadProgressInputStream(stream, totalLength = contentLength, initialBytesRead = currentOffset) { progress, bytes ->
+                            onProgress?.invoke(0.02f + progress * 0.98f, bytes)
+                        }
+                    },
+                )
+
+            val status = response.headers["X-Goog-Upload-Status"] ?: response.headers["x-goog-upload-status"]
+            val uploaded = status == "final"
+            if (uploaded) {
+                onProgress?.invoke(1f, contentLength)
+            } else {
+                error("Upload failed with status: $status")
+            }
+            uploaded
+        }
+
+    suspend fun deleteUploadedSong(entityId: String): Result<Boolean> =
+        runCatching {
+            innerTube.deletePrivatelyOwnedEntity(WEB_REMIX, entityId)
+            true
+        }
 
     private val VISITOR_DATA_REGEX = Regex("^Cg[t|s]")
 }

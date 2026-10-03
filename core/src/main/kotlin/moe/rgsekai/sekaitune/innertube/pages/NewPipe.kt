@@ -114,11 +114,12 @@ object NewPipeUtils {
             if (directUrl != null) {
                 val resolvedDirectUrl =
                     if (directUrl.toHttpUrlOrNull()?.queryParameter("n")?.isNotBlank() == true) {
-                        MoriCipherRuntime
-                            .transformNParameter(videoId, directUrl)
-                            .getOrElse {
-                                getUrlWithThrottlingParameterDeobfuscated(videoId, directUrl)
-                            }
+                        val moriResult = MoriCipherRuntime.transformNParameter(videoId, directUrl).getOrNull()
+                        if (moriResult != null && moriResult != directUrl) {
+                            moriResult
+                        } else {
+                            runCatching { getUrlWithThrottlingParameterDeobfuscated(videoId, directUrl) }.getOrElse { directUrl }
+                        }
                     } else {
                         directUrl
                     }
@@ -180,7 +181,16 @@ object NewPipeUtils {
         url: String,
     ): String =
         withJavaScriptPlayerCacheRecovery {
-            YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, url)
+            val fallbackVideoId = "dQw4w9WgXcQ"
+            try {
+                YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, url)
+            } catch (e: Exception) {
+                if (videoId != fallbackVideoId) {
+                    YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(fallbackVideoId, url)
+                } else {
+                    throw e
+                }
+            }
         }
 
     private inline fun <T> withJavaScriptPlayerCacheRecovery(block: () -> T): T =

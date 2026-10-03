@@ -46,10 +46,10 @@ internal class PlayerScriptClient(
                         ?.groupValues
                         ?.getOrNull(1)
                         ?.let { "/s/player/$it/player_ias.vflset/en_US/base.js" }
-                        ?: videoId
-                            ?.takeIf(VIDEO_ID_PATTERN::matches)
-                            ?.let { id ->
-                                val embedBody = client.fetchText("$YOUTUBE_ORIGIN/embed/$id", MAX_DISCOVERY_BYTES)
+                        ?: listOfNotNull(videoId?.takeIf(VIDEO_ID_PATTERN::matches), "dQw4w9WgXcQ")
+                            .distinct()
+                            .firstNotNullOfOrNull { id ->
+                                val embedBody = runCatching { client.fetchText("$YOUTUBE_ORIGIN/embed/$id", MAX_DISCOVERY_BYTES) }.getOrNull() ?: return@firstNotNullOfOrNull null
                                 playerPathPatterns.firstNotNullOfOrNull { pattern ->
                                     pattern.find(embedBody)?.groupValues?.getOrNull(1)
                                 } ?: playerIdPattern

@@ -349,6 +349,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var buddyRepository: moe.rgsekai.sekaitune.buddy.BuddyRepository
 
+    @Inject
+    lateinit var resolveUploadedCatalogMatchUseCase: moe.rgsekai.sekaitune.playback.ResolveUploadedCatalogMatchUseCase
+
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
     private var pendingDeepLinkQueue: Queue? = null
@@ -1532,6 +1535,7 @@ class MainActivity : ComponentActivity() {
                         LocalPlayerConnection provides playerConnection,
                         LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
                         LocalDownloadUtil provides downloadUtil,
+                        LocalResolveUploadedCatalogMatchUseCase provides resolveUploadedCatalogMatchUseCase,
                         LocalShimmerTheme provides ShimmerTheme,
                         LocalSyncUtils provides syncUtils,
                         LocalGlassEffectConfig provides glassEffectConfig,
@@ -2841,6 +2845,7 @@ val LocalPlayerConnection =
 val LocalPlayerAwareWindowInsets =
     compositionLocalOf<WindowInsets> { error("No WindowInsets provided") }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
+val LocalResolveUploadedCatalogMatchUseCase = staticCompositionLocalOf<moe.rgsekai.sekaitune.playback.ResolveUploadedCatalogMatchUseCase> { error("No ResolveUploadedCatalogMatchUseCase provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
 
 private const val TopAppBarIconButtonContainerAlpha = 0.48f

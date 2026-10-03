@@ -77,6 +77,8 @@ import moe.rgsekai.sekaitune.playback.ExoDownloadService
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
 import moe.rgsekai.sekaitune.ui.component.AssignTagsDialog
+import moe.rgsekai.sekaitune.LocalResolveUploadedCatalogMatchUseCase
+import moe.rgsekai.sekaitune.playback.CatalogMatchResult
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import moe.rgsekai.sekaitune.ui.component.EditPlaylistDialog
 import moe.rgsekai.sekaitune.ui.component.MenuSurfaceSection
@@ -123,6 +125,7 @@ fun PlaylistMenu(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val downloadUtil = LocalDownloadUtil.current
+    val resolveUploadedCatalogMatchUseCase = LocalResolveUploadedCatalogMatchUseCase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val syncUtils = LocalSyncUtils.current
     val dbPlaylist by database.playlist(playlist.id).collectAsState(initial = playlist)
@@ -283,12 +286,13 @@ fun PlaylistMenu(
         if (songs.isEmpty()) return@LaunchedEffect
         downloadUtil.downloads.collect { downloads ->
             downloadState =
-                if (songs.all { downloads[it.id]?.state == Download.STATE_COMPLETED }) {
+                if (songs.all { downloads[it.song.matchedCatalogId ?: it.id]?.state == Download.STATE_COMPLETED }) {
                     Download.STATE_COMPLETED
                 } else if (songs.all {
-                        downloads[it.id]?.state == Download.STATE_QUEUED ||
-                                downloads[it.id]?.state == Download.STATE_DOWNLOADING ||
-                                downloads[it.id]?.state == Download.STATE_COMPLETED
+                        val s = downloads[it.song.matchedCatalogId ?: it.id]?.state
+                        s == Download.STATE_QUEUED ||
+                                s == Download.STATE_DOWNLOADING ||
+                                s == Download.STATE_COMPLETED
                     }
                 ) {
                     Download.STATE_DOWNLOADING
@@ -841,17 +845,54 @@ fun PlaylistMenu(
                                 },
                                 modifier =
                                     Modifier.clickable {
-                                        sendAddMissingDownloads(
-                                            context = context,
-                                            songs =
-                                                songs.map { song ->
-                                                    HeaderDownloadItem(
-                                                        id = song.id,
-                                                        title = song.song.title,
+                                        onDismiss()
+                                        downloadUtil.applicationScope.launch {
+                                            var hasMediumConfidence = false
+                                            var skippedCount = 0
+                                            val downloadItems = mutableListOf<HeaderDownloadItem>()
+                                            for (song in songs) {
+                                                if (song.song.isUploaded) {
+                                                    when (val result = resolveUploadedCatalogMatchUseCase(song.song, song.artists)) {
+                                                        is CatalogMatchResult.Success -> {
+                                                            if (!result.isHighConfidence) hasMediumConfidence = true
+                                                            downloadItems.add(
+                                                                HeaderDownloadItem(
+                                                                    id = result.catalogId,
+                                                                    title = song.song.title,
+                                                                ),
+                                                            )
+                                                        }
+                                                        is CatalogMatchResult.NoMatch -> {
+                                                            skippedCount++
+                                                        }
+                                                    }
+                                                } else {
+                                                    downloadItems.add(
+                                                        HeaderDownloadItem(
+                                                            id = song.song.id,
+                                                            title = song.song.title,
+                                                        ),
                                                     )
-                                                },
-                                            downloads = downloadUtil.downloads.value,
-                                        )
+                                                }
+                                            }
+
+                                            withContext(Dispatchers.Main) {
+                                                if (hasMediumConfidence) {
+                                                    Toast.makeText(context.applicationContext, context.applicationContext.getString(R.string.downloading_matched_version), Toast.LENGTH_SHORT).show()
+                                                }
+                                                if (skippedCount > 0 && downloadItems.isEmpty()) {
+                                                    Toast.makeText(context.applicationContext, context.applicationContext.getString(R.string.no_catalog_match_found), Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+
+                                            if (downloadItems.isNotEmpty()) {
+                                                sendAddMissingDownloads(
+                                                    context = context.applicationContext,
+                                                    songs = downloadItems,
+                                                    downloads = downloadUtil.downloads.value,
+                                                )
+                                            }
+                                        }
                                     },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
@@ -876,36 +917,76 @@ fun PlaylistMenu(
                             onDismiss()
 
                             if (songs.isNotEmpty()) {
-                                val workManager = androidx.work.WorkManager.getInstance(context)
+                                downloadUtil.applicationScope.launch {
+                                    val workManager = androidx.work.WorkManager.getInstance(context.applicationContext)
+                                    val updateRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.UpdateWorker>().build()
 
-                                // 1. Setup the Engine Update as the absolute start of the chain
-                                val updateRequest = androidx.work.OneTimeWorkRequestBuilder<moe.rgsekai.sekaitune.download.UpdateWorker>().build()
-
-                                // Start a unique sequence that appends to any existing downloads safely,
-                                // beginning with the update request!
-                                var continuation = workManager.beginUniqueWork(
-                                    "Playlist_Sequential_Download",
-                                    androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
-                                    updateRequest
-                                )
-
-                                // 2. Loop through ALL songs (starting from index 0) and link them like train cars
-                                for (i in 0 until songs.size) {
-                                    val downloadRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
-                                        songId = songs[i].id,
-                                        title = songs[i].title,
-                                        artist = "Unknown Artist",
-                                        currentSongNumber = i + 1,
-                                        totalSongs = songs.size,
+                                    var continuation = workManager.beginUniqueWork(
+                                        "Playlist_Sequential_Download",
+                                        androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
+                                        updateRequest
                                     )
-                                    continuation = continuation.then(downloadRequest)
+
+                                    var skippedCount = 0
+                                    var enqueuedCount = 0
+                                    var hasMediumConfidence = false
+
+                                    for (i in 0 until songs.size) {
+                                        val song = songs[i]
+                                        val artistName = song.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
+                                        var targetSongId = song.id
+                                        if (song.song.isUploaded) {
+                                            when (val result = resolveUploadedCatalogMatchUseCase(song.song, song.artists)) {
+                                                is CatalogMatchResult.Success -> {
+                                                    if (!result.isHighConfidence) hasMediumConfidence = true
+                                                    targetSongId = result.catalogId
+                                                }
+                                                is CatalogMatchResult.NoMatch -> {
+                                                    skippedCount++
+                                                    continue
+                                                }
+                                            }
+                                        }
+                                        enqueuedCount++
+                                        val downloadRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                            songId = targetSongId,
+                                            title = song.song.title,
+                                            artist = artistName,
+                                            currentSongNumber = enqueuedCount,
+                                            totalSongs = songs.size - skippedCount,
+                                        )
+                                        continuation = continuation.then(downloadRequest)
+                                    }
+
+                                    if (hasMediumConfidence) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context.applicationContext, context.applicationContext.getString(R.string.saving_matched_version), Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+
+                                    if (enqueuedCount > 0) {
+                                        continuation.enqueue()
+                                        withContext(Dispatchers.Main) {
+                                            if (skippedCount > 0) {
+                                                Toast.makeText(
+                                                    context.applicationContext,
+                                                    "Saved $enqueuedCount of ${songs.size} songs — $skippedCount uploaded track(s) had no matching public version",
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
+                                            } else {
+                                                Toast.makeText(context.applicationContext, "Exporting to Music folder...", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    } else if (skippedCount > 0) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context.applicationContext,
+                                                "No matching public version found for uploaded tracks",
+                                                Toast.LENGTH_LONG,
+                                            ).show()
+                                        }
+                                    }
                                 }
-
-                                // 3. Submit the entire train to WorkManager in ONE fast operation
-                                continuation.enqueue()
-
-                                // 4. Your original Toast message stays right here!
-                                Toast.makeText(context, "Queued ${songs.size} songs sequentially!", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),

@@ -32,6 +32,15 @@ import moe.rgsekai.sekaitune.innertube.proxy.RotatingProxySelector
 import moe.rgsekai.sekaitune.innertube.utils.sha1
 import moe.rgsekai.sekaitune.innertube.utils.youtubeLoginCookieValue
 import okhttp3.Dns
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.content.OutgoingContent
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.innertube.models.UploadSessionResponse
+import java.io.InputStream
+import java.net.URLEncoder
 import java.io.IOException
 import java.net.Proxy
 import java.util.*
@@ -883,6 +892,121 @@ class InnerTube {
                 dislike = returnYouTubeDislikeResponse.dislikes,
             )
         }
+
+    suspend fun initSongUpload(
+        filename: String,
+        contentLength: Long,
+        authState: PlaybackAuthState = currentAuthState(),
+    ): UploadSessionResponse = withRetry {
+        val cookie = authState.cookie ?: error("User is not logged in")
+        val loginCookieValue = youtubeLoginCookieValue(cookie) ?: error("Missing login cookie token")
+        val currentTime = System.currentTimeMillis() / 1000
+        val sapisidHash = sha1("$currentTime $loginCookieValue https://music.youtube.com")
+
+        System.err.println("UPLOAD_LOG: initSongUpload -> filename=$filename, contentLength=$contentLength")
+
+        val response: HttpResponse = httpClient.post("https://upload.youtube.com/upload/usermusic/http?authuser=0") {
+            header("X-Goog-Upload-Command", "start")
+            header("X-Goog-Upload-Protocol", "resumable")
+            header("X-Goog-Upload-Header-Content-Length", contentLength.toString())
+            header("X-Goog-AuthUser", "0")
+            header("Origin", "https://music.youtube.com")
+            header("Referer", "https://music.youtube.com/")
+            header("cookie", cookie)
+            header("Authorization", "SAPISIDHASH ${currentTime}_$sapisidHash")
+            contentType(ContentType.Application.FormUrlEncoded.withCharset(Charsets.UTF_8))
+            val encodedFilename = URLEncoder.encode(filename, "UTF-8")
+            setBody("filename=$encodedFilename")
+        }
+
+        System.err.println("UPLOAD_LOG: initSongUpload response status=${response.status}")
+
+        val uploadUrl = response.headers["X-Goog-Upload-URL"]
+            ?: response.headers["x-goog-upload-url"]
+            ?: error("Upload initialization failed: missing X-Goog-Upload-URL (status=${response.status})")
+
+        System.err.println("UPLOAD_LOG: initSongUpload received uploadUrl=$uploadUrl")
+
+        UploadSessionResponse(uploadUrl = uploadUrl)
+    }
+
+    suspend fun queryUploadOffset(
+        uploadUrl: String,
+        authState: PlaybackAuthState = currentAuthState(),
+    ): Long = withContext(Dispatchers.IO) {
+        val cookie = authState.cookie ?: error("User is not logged in")
+        val loginCookieValue = youtubeLoginCookieValue(cookie) ?: error("Missing login cookie token")
+        val currentTime = System.currentTimeMillis() / 1000
+        val sapisidHash = sha1("$currentTime $loginCookieValue https://music.youtube.com")
+
+        val response = httpClient.post(uploadUrl) {
+            header("X-Goog-Upload-Command", "query")
+            header("X-Goog-AuthUser", "0")
+            header("Origin", "https://music.youtube.com")
+            header("Referer", "https://music.youtube.com/")
+            header("cookie", cookie)
+            header("Authorization", "SAPISIDHASH ${currentTime}_$sapisidHash")
+        }
+        val sizeReceived = response.headers["X-Goog-Upload-Size-Received"]
+            ?: response.headers["x-goog-upload-size-received"]
+        sizeReceived?.toLongOrNull() ?: 0L
+    }
+
+    suspend fun uploadSongData(
+        uploadUrl: String,
+        contentLength: Long,
+        offset: Long = 0L,
+        content: () -> InputStream,
+        authState: PlaybackAuthState = currentAuthState(),
+    ): HttpResponse = withContext(Dispatchers.IO) {
+        val cookie = authState.cookie ?: error("User is not logged in")
+        val loginCookieValue = youtubeLoginCookieValue(cookie) ?: error("Missing login cookie token")
+        val currentTime = System.currentTimeMillis() / 1000
+        val sapisidHash = sha1("$currentTime $loginCookieValue https://music.youtube.com")
+
+        val remainingLength = (contentLength - offset).coerceAtLeast(0L)
+        System.err.println("UPLOAD_LOG: uploadSongData starting POST to $uploadUrl (offset=$offset, remaining=$remainingLength, total=$contentLength)")
+
+        val response = httpClient.post(uploadUrl) {
+            timeout {
+                requestTimeoutMillis = 600_000L
+                socketTimeoutMillis = 600_000L
+            }
+            header("X-Goog-Upload-Command", "upload, finalize")
+            header("X-Goog-Upload-Offset", offset.toString())
+            header("X-Goog-AuthUser", "0")
+            header("Origin", "https://music.youtube.com")
+            header("Referer", "https://music.youtube.com/")
+            header("cookie", cookie)
+            header("Authorization", "SAPISIDHASH ${currentTime}_$sapisidHash")
+            setBody(
+                object : OutgoingContent.ReadChannelContent() {
+                    override val contentLength: Long = remainingLength
+                    override val contentType: ContentType = ContentType.Application.FormUrlEncoded
+                    override fun readFrom(): ByteReadChannel = content().toByteReadChannel(Dispatchers.IO)
+                }
+            )
+        }
+
+        val status = response.headers["X-Goog-Upload-Status"] ?: response.headers["x-goog-upload-status"]
+        System.err.println("UPLOAD_LOG: uploadSongData response status=${response.status}, X-Goog-Upload-Status=$status")
+        response
+    }
+
+    suspend fun deletePrivatelyOwnedEntity(
+        client: YouTubeClient = YouTubeClient.WEB_REMIX,
+        entityId: String,
+    ) = withRetry {
+        httpClient.post("music/delete_privately_owned_entity") {
+            ytClient(client, setLogin = true)
+            setBody(
+                DeletePrivatelyOwnedEntityBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    entityId = entityId,
+                ),
+            )
+        }
+    }
 }
 
 

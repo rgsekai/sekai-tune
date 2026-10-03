@@ -395,13 +395,21 @@ class MusicService :
                 if (!isYouTubeMediaHost) return@addInterceptor chain.proceed(request)
 
                 val requestProfile = StreamClientUtils.resolveRequestProfile(request.url)
-                chain.proceed(
-                    StreamClientUtils
-                        .applyRequestProfile(
-                            request.newBuilder(),
-                            requestProfile,
-                        ).build(),
-                )
+                val newRequestBuilder = request.newBuilder()
+                StreamClientUtils.applyRequestProfile(newRequestBuilder, requestProfile)
+                val builtRequest = newRequestBuilder.build()
+                val response = chain.proceed(builtRequest)
+                if (!response.isSuccessful) {
+                    Timber.tag("MediaOkHttp").e(
+                        "Media request FAILED code=%d msg=%s url=%s reqHeaders=%s respHeaders=%s",
+                        response.code,
+                        response.message,
+                        builtRequest.url.toString(),
+                        builtRequest.headers.toString(),
+                        response.headers.toString(),
+                    )
+                }
+                response
             }.build()
     }
     private var currentQueue: Queue = EmptyQueue
@@ -6602,52 +6610,19 @@ class MusicService :
             runBlocking(Dispatchers.IO) {
                 ColdStartTimer.addStage("PlaybackData Resolution Start")
                 val result: Result<moe.rgsekai.sekaitune.playback.stream.ResolvedAudioStream> =
-                    if (::resolveAudioStreamUseCase.isInitialized) {
-                        retryWithoutPlaybackLoginContext {
-                            runCatching {
-                                resolveAudioStreamUseCase(streamRequest)
-                            }
-                        }.recoverCatching { youtubeFailure ->
-                            if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
-
-                            Timber.tag("MusicService").w(
-                                youtubeFailure,
-                                "YouTube stream clients hit bot detection for %s; trying external audio fallback",
-                                mediaId,
-                            )
-                            throw youtubeFailure
+                    retryWithoutPlaybackLoginContext {
+                        runCatching {
+                            resolveAudioStreamUseCase(streamRequest)
                         }
-                    } else {
-                        retryWithoutPlaybackLoginContext {
-                            runCatching {
-                                val pb =
-                                    YTPlayerUtils.playerResponseForPlayback(
-                                        mediaId,
-                                        audioQuality = if (lowDataModeActive) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality,
-                                        connectivityManager = connectivityManager,
-                                        preferredStreamClient = preferredStreamClient,
-                                        networkMetered = lowDataModeActive,
-                                    ).getOrThrow()
-                                moe.rgsekai.sekaitune.playback.stream.ResolvedAudioStream(
-                                    url = pb.streamUrl,
-                                    format = pb.format,
-                                    audioConfig = pb.audioConfig,
-                                    videoDetails = pb.videoDetails,
-                                    playbackTracking = pb.playbackTracking,
-                                    expiresAtMs = System.currentTimeMillis() + (pb.streamExpiresInSeconds * 1000L),
-                                    authFingerprint = pb.authFingerprint,
-                                )
-                            }
-                        }.recoverCatching { youtubeFailure ->
-                            if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
+                    }.recoverCatching { youtubeFailure ->
+                        if (youtubeFailure !is YTPlayerUtils.BotDetectionPlaybackException) throw youtubeFailure
 
-                            Timber.tag("MusicService").w(
-                                youtubeFailure,
-                                "YouTube stream clients hit bot detection for %s; trying external audio fallback",
-                                mediaId,
-                            )
-                            throw youtubeFailure
-                        }
+                        Timber.tag("MusicService").w(
+                            youtubeFailure,
+                            "YouTube stream clients hit bot detection for %s; trying external audio fallback",
+                            mediaId,
+                        )
+                        throw youtubeFailure
                     }
                 ColdStartTimer.addStage("PlaybackData Resolution End")
                 result
@@ -8084,6 +8059,7 @@ class MusicService :
         ColdStartTimer.addStage("MusicService onStartCommand Exit")
         return START_NOT_STICKY
     }
+
 
     private fun buildPlaybackAudioStreamRequest(mediaId: String): moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest {
         val lowDataModeActive = isLowDataModeActive()

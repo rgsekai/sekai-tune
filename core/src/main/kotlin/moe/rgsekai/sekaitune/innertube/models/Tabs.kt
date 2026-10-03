@@ -20,6 +20,7 @@ data class Tabs(
         @Serializable
         data class TabRenderer(
             val title: String?,
+            val selected: Boolean? = null,
             val content: Content?,
             val endpoint: NavigationEndpoint?,
         ) {

@@ -47,6 +47,14 @@ data class SongEntity(
     val dateDownload: LocalDateTime? = LocalDateTime.now(),
     @ColumnInfo(name = "isLocal", defaultValue = "0")
     val isLocal: Boolean = false,
+    @ColumnInfo(name = "isUploaded", defaultValue = "0")
+    val isUploaded: Boolean = false,
+    @ColumnInfo(name = "uploadEntityId", defaultValue = "NULL")
+    val uploadEntityId: String? = null,
+    @ColumnInfo(name = "matchedCatalogId", defaultValue = "NULL")
+    val matchedCatalogId: String? = null,
+    @ColumnInfo(name = "matchAttemptedAt", defaultValue = "NULL")
+    val matchAttemptedAt: LocalDateTime? = null,
 ) {
     fun localToggleLike() =
         copy(
@@ -76,7 +84,16 @@ data class SongEntity(
             inLibrary = if (inLibrary == null) LocalDateTime.now() else null,
             likedDate = if (inLibrary == null) likedDate else null,
         )
+
+    fun toggleUploaded() =
+        copy(
+            isUploaded = !isUploaded,
+        )
 }
+
+fun SongEntity.downloadLookupKey(): String = matchedCatalogId ?: id
+fun Song.downloadLookupKey(): String = song.matchedCatalogId ?: song.id
+
 
 
 

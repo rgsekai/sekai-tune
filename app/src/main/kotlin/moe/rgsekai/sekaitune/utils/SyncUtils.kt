@@ -102,6 +102,7 @@ class SyncUtils
                     supervisorScope {
                         syncLikedSongs(authoritative = authoritative)
                         syncLibrarySongs(authoritative = authoritative)
+                        syncUploadedSongs(authoritative = authoritative)
 
                         listOf(
                             async { syncLikedAlbums(authoritative = authoritative) },
@@ -389,6 +390,152 @@ class SyncUtils
                         Timber.e(e, "syncLibrarySongs: Failed to sync library songs")
                     }
             }
+
+        suspend fun syncUploadedSongs(authoritative: Boolean = false) =
+            coroutineScope {
+                if (!isLoggedIn()) {
+                    Timber.w("Skipping syncUploadedSongs - user not logged in")
+                    return@coroutineScope
+                }
+                if (!isYtmSyncEnabled()) {
+                    Timber.w("Skipping syncUploadedSongs - sync disabled")
+                    return@coroutineScope
+                }
+                val gen = syncGeneration.get()
+
+                launch {
+                    syncUploadedAlbums(authoritative = authoritative)
+                }
+
+                YouTube
+                    .library("FEmusic_library_privately_owned_tracks", tabIndex = 1)
+                    .completed()
+                    .onSuccess { page ->
+                        if (!isSyncStillEnabled(gen)) return@onSuccess
+                        val remoteSongs = page.items.filterIsInstance<SongItem>().reversed()
+                        if (remoteSongs.isEmpty() && !authoritative) {
+                            Timber.w("syncUploadedSongs: Remote uploaded library is empty")
+                            return@onSuccess
+                        }
+                        val remoteIds = remoteSongs.map { it.id }.toSet()
+                        val localSongs = database.uploadedSongEntitiesByNameAsc()
+
+                        if (!isSyncStillEnabled(gen)) return@onSuccess
+                        val staleUploadedSongs =
+                            localSongs
+                                .asSequence()
+                                .filter { !authoritative || !it.isLocal }
+                                .filterNot { it.id in remoteIds }
+                                .map { it.copy(isUploaded = false) }
+                                .toList()
+                        if (staleUploadedSongs.isNotEmpty() && remoteIds.isNotEmpty()) {
+                            database.withTransaction {
+                                staleUploadedSongs.forEach { update(it) }
+                            }
+                        }
+
+                        remoteSongs.forEach { song ->
+                            launch {
+                                if (!isSyncStillEnabled(gen)) return@launch
+                                dbWriteSemaphore.withPermit {
+                                    if (!isSyncStillEnabled(gen)) return@withPermit
+                                    val dbSong = database.song(song.id).firstOrNull()
+                                    database.withTransaction {
+                                        if (!isSyncStillEnabled(gen)) return@withTransaction
+                                        if (dbSong == null) {
+                                            insert(song.toMediaMetadata()) {
+                                                it.copy(
+                                                    isUploaded = true,
+                                                    uploadEntityId = song.uploadEntityId,
+                                                )
+                                            }
+                                        } else {
+                                            if (!dbSong.song.isUploaded ||
+                                                (song.uploadEntityId != null && dbSong.song.uploadEntityId != song.uploadEntityId)
+                                            ) {
+                                                update(
+                                                    dbSong.song.copy(
+                                                        isUploaded = true,
+                                                        uploadEntityId = song.uploadEntityId ?: dbSong.song.uploadEntityId,
+                                                    ),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Timber.d("Synced ${remoteSongs.size} uploaded songs")
+                    }.onFailure { e ->
+                        Timber.e(e, "syncUploadedSongs: Failed to sync uploaded songs")
+                    }
+            }
+
+        suspend fun syncUploadedAlbums(authoritative: Boolean = false) =
+            coroutineScope {
+                if (!isLoggedIn()) {
+                    Timber.w("Skipping syncUploadedAlbums - user not logged in")
+                    return@coroutineScope
+                }
+                if (!isYtmSyncEnabled()) {
+                    Timber.w("Skipping syncUploadedAlbums - sync disabled")
+                    return@coroutineScope
+                }
+                val gen = syncGeneration.get()
+                YouTube
+                    .library("FEmusic_library_privately_owned_releases")
+                    .completed()
+                    .onSuccess { page ->
+                        if (!isSyncStillEnabled(gen)) return@onSuccess
+                        val remoteAlbums = page.items.filterIsInstance<AlbumItem>().reversed()
+                        if (remoteAlbums.isEmpty()) {
+                            Timber.d("syncUploadedAlbums: Remote uploaded albums list is empty")
+                            return@onSuccess
+                        }
+
+                        remoteAlbums.forEach { album ->
+                            launch {
+                                if (!isSyncStillEnabled(gen)) return@launch
+                                dbWriteSemaphore.withPermit {
+                                    if (!isSyncStillEnabled(gen)) return@withPermit
+                                    YouTube
+                                        .album(album.browseId)
+                                        .onSuccess { albumPage ->
+                                            if (!isSyncStillEnabled(gen)) return@onSuccess
+                                            database.withTransaction {
+                                                albumPage.songs.forEach { song ->
+                                                    val dbSong = database.song(song.id).firstOrNull()
+                                                    if (dbSong == null) {
+                                                        insert(song.toMediaMetadata()) {
+                                                            it.copy(
+                                                                isUploaded = true,
+                                                                uploadEntityId = song.uploadEntityId,
+                                                            )
+                                                        }
+                                                    } else if (!dbSong.song.isUploaded ||
+                                                        (song.uploadEntityId != null && dbSong.song.uploadEntityId != song.uploadEntityId)
+                                                    ) {
+                                                        update(
+                                                            dbSong.song.copy(
+                                                                isUploaded = true,
+                                                                uploadEntityId = song.uploadEntityId ?: dbSong.song.uploadEntityId,
+                                                            ),
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }.onFailure { e ->
+                                            Timber.w("syncUploadedAlbums: Failed to fetch album ${album.browseId}", e)
+                                        }
+                                }
+                            }
+                        }
+                        Timber.d("Synced ${remoteAlbums.size} uploaded albums")
+                    }.onFailure { e ->
+                        Timber.e(e, "syncUploadedAlbums: Failed to sync uploaded albums")
+                    }
+            }
+
 
         suspend fun syncLikedAlbums(authoritative: Boolean = false) =
             coroutineScope {

@@ -35,7 +35,20 @@ data class MusicResponsiveListItemRenderer(
     val navigationEndpoint: NavigationEndpoint?,
 ) {
     val isSong: Boolean
-        get() = navigationEndpoint == null || navigationEndpoint.watchEndpoint != null || navigationEndpoint.watchPlaylistEndpoint != null
+        get() =
+            navigationEndpoint == null ||
+                navigationEndpoint.watchEndpoint != null ||
+                navigationEndpoint.watchPlaylistEndpoint != null ||
+                overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint != null ||
+                flexColumns.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.navigationEndpoint?.watchEndpoint != null
+
+    val videoId: String?
+        get() =
+            playlistItemData?.videoId
+                ?: flexColumns.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.navigationEndpoint?.watchEndpoint?.videoId
+                ?: overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+                ?: navigationEndpoint?.watchEndpoint?.videoId
+
     val isPlaylist: Boolean
         get() =
             navigationEndpoint
@@ -57,7 +70,8 @@ data class MusicResponsiveListItemRenderer(
                     ?.browseEndpointContextSupportedConfigs
                     ?.browseEndpointContextMusicConfig
                     ?.pageType ==
-                MUSIC_PAGE_TYPE_AUDIOBOOK
+                MUSIC_PAGE_TYPE_AUDIOBOOK ||
+                navigationEndpoint?.browseEndpoint?.browseId?.startsWith("FEmusic_library_privately_owned_release") == true
     val isArtist: Boolean
         get() =
             navigationEndpoint
@@ -71,7 +85,9 @@ data class MusicResponsiveListItemRenderer(
                     ?.browseEndpointContextSupportedConfigs
                     ?.browseEndpointContextMusicConfig
                     ?.pageType ==
-                MUSIC_PAGE_TYPE_LIBRARY_ARTIST
+                MUSIC_PAGE_TYPE_LIBRARY_ARTIST ||
+                navigationEndpoint?.browseEndpoint?.browseId?.startsWith("FEmusic_library_privately_owned_artist") == true
+
 
     @Serializable
     data class FlexColumn(

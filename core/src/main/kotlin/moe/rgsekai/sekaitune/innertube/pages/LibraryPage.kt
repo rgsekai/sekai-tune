@@ -41,7 +41,8 @@ data class LibraryPage(
                                 ?.navigationEndpoint
                                 ?.watchPlaylistEndpoint
                                 ?.playlistId
-                            ?: browseId.removePrefix("MPREb_").let { "OLAK5uy_$it" }
+                            ?: if (browseId.startsWith("FEmusic_library_privately_owned")) browseId else browseId.removePrefix("MPREb_").let { "OLAK5uy_$it" }
+
 
                     AlbumItem(
                         browseId = browseId,

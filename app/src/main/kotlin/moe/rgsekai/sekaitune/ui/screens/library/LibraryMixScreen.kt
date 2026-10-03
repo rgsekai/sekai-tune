@@ -116,6 +116,7 @@ fun LibraryMixScreen(
     val database = LocalDatabase.current
 
     val likedSongsCount by database.likedSongsCount().collectAsState(initial = 0)
+    val uploadedSongsCount by database.uploadedSongsCount().collectAsState(initial = 0)
     val recentSongs by database.recentSongs(15).collectAsState(initial = emptyList())
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
@@ -243,15 +244,15 @@ fun LibraryMixScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        // Cached
+                        // Uploaded
                         ShortcutCard(
-                            title = stringResource(R.string.cached),
-                            countText = stringResource(R.string.instant_playback),
-                            iconRes = R.drawable.cached,
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
-                            iconColor = MaterialTheme.colorScheme.tertiary,
+                            title = stringResource(R.string.uploaded),
+                            countText = "$uploadedSongsCount ${stringResource(R.string.tracks_label)}",
+                            iconRes = R.drawable.backup,
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            iconColor = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f),
-                            onClick = { navController.navigate("cache_playlist/cached") },
+                            onClick = { navController.navigate("auto_playlist/uploaded") },
                         )
 
                         // Local Files
@@ -264,6 +265,24 @@ fun LibraryMixScreen(
                             modifier = Modifier.weight(1f),
                             onClick = { navController.navigate("local_songs") },
                         )
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        // Cached
+                        ShortcutCard(
+                            title = stringResource(R.string.cached),
+                            countText = stringResource(R.string.instant_playback),
+                            iconRes = R.drawable.cached,
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                            iconColor = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.weight(0.5f),
+                            onClick = { navController.navigate("cache_playlist/cached") },
+                        )
+
+                        Spacer(modifier = Modifier.weight(0.5f))
                     }
                 }
             }

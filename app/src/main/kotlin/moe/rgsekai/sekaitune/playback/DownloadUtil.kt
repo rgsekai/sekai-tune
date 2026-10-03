@@ -10,6 +10,7 @@ package moe.rgsekai.sekaitune.playback
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
+import moe.rgsekai.sekaitune.db.entities.Song
 import androidx.media3.common.C
 import androidx.media3.database.DatabaseProvider
 import androidx.media3.datasource.DataSource
@@ -48,6 +49,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.constants.AudioQuality
 import moe.rgsekai.sekaitune.constants.AudioQualityKey
+import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.db.MusicDatabase
 import moe.rgsekai.sekaitune.db.entities.FormatEntity
 import moe.rgsekai.sekaitune.db.entities.SongEntity
@@ -87,6 +89,7 @@ class DownloadUtil
         private val downloadedArtworkRepository: DownloadedArtworkRepository,
         private val resolveAudioStream: ResolveAudioStreamUseCase,
     ) {
+        val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
         private val downloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private val downloadExecutor = Executors.newFixedThreadPool(MAX_PARALLEL_DOWNLOADS)
@@ -132,15 +135,7 @@ class DownloadUtil
 
                     val requestProfile = StreamClientUtils.resolveRequestProfile(request.url)
                     val requestBuilder = request.newBuilder()
-                    if (request.header("User-Agent") == null) {
-                        requestBuilder.header("User-Agent", requestProfile.userAgent)
-                    }
-                    if (request.header("Origin") == null && requestProfile.origin != null) {
-                        requestBuilder.header("Origin", requestProfile.origin)
-                    }
-                    if (request.header("Referer") == null && requestProfile.referer != null) {
-                        requestBuilder.header("Referer", requestProfile.referer)
-                    }
+                    StreamClientUtils.applyRequestProfile(requestBuilder, requestProfile)
                     chain.proceed(requestBuilder.build())
                 }.build()
         }
@@ -370,7 +365,21 @@ class DownloadUtil
             )
         }
 
-        fun getDownload(songId: String): Flow<Download?> = downloads.map { it[songId] }
+        fun getDownload(songId: String, matchedCatalogId: String? = null): Flow<Download?> =
+            downloads.map { map ->
+                if (!matchedCatalogId.isNullOrBlank()) {
+                    map[matchedCatalogId] ?: map[songId]
+                } else {
+                    map[songId]
+                }
+            }
+
+        fun getDownload(song: Song): Flow<Download?> = getDownload(song.song.id, song.song.matchedCatalogId)
+
+        fun getDownload(song: SongEntity): Flow<Download?> = getDownload(song.id, song.matchedCatalogId)
+
+        fun getDownload(mediaMetadata: moe.rgsekai.sekaitune.models.MediaMetadata): Flow<Download?> =
+            getDownload(mediaMetadata.id, mediaMetadata.matchedCatalogId)
 
         private fun resolveDownloadAudioQuality(lowDataModeActive: Boolean): AudioQuality =
             if (lowDataModeActive) AudioQuality.LOW else audioQuality
@@ -382,6 +391,7 @@ class DownloadUtil
                 quality = resolveDownloadAudioQuality(lowDataModeActive),
                 networkMetered = lowDataModeActive,
                 purpose = StreamPurpose.DOWNLOAD,
+                preferredStreamClient = PlayerStreamClient.ANDROID_VR,
                 authState = YouTube.currentPlaybackAuthState(),
             )
         }
@@ -483,7 +493,7 @@ class DownloadUtil
                             )
 
                             val now = LocalDateTime.now()
-                            val existing = database.getSongByIdBlocking(mediaId)?.song
+                            val existing = database.getSongByIdOrMatchedCatalogIdBlocking(mediaId)?.song
                             val resolvedThumbnailUrl =
                                 resolved.videoDetails?.thumbnail?.thumbnails?.lastOrNull()?.url?.takeIf { it.isNotBlank() }
 

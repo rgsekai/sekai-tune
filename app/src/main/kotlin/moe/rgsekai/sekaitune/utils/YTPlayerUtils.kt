@@ -1137,10 +1137,33 @@ object YTPlayerUtils {
         expectedDurationMs: Long?,
         preloadedPlayerResponse: PlayerResponse? = null,
     ): StreamResolutionResult? {
-        val requestUsesCookieAuthentication = canUseLoggedInPlayback && client.supportsCookieAuthentication
+        val requestUsesCookieAuthentication =
+            canUseLoggedInPlayback && client.supportsCookieAuthentication
         if (client != MAIN_CLIENT && client.loginRequired && !requestUsesCookieAuthentication) {
             Timber.tag(logTag).d("Skipping client ${describeClient(client)} - requires cookie auth")
             return null
+        }
+
+        var clientAuthState = authState
+        var poToken: String? = null
+        if (client.useWebPoTokens) {
+            val sessionId = authState.visitorData ?: YouTube.visitorData
+            if (!sessionId.isNullOrBlank()) {
+                try {
+                    val tokenResult = BotGuardTokenGenerator.mintToken(videoId, sessionId)
+                    poToken = tokenResult?.playerToken
+                    tokenResult?.let {
+                        clientAuthState =
+                            clientAuthState.copy(
+                                poTokenGvs = it.sessionToken,
+                                poTokenPlayer = it.playerToken,
+                                webClientPoTokenEnabled = true,
+                            )
+                    }
+                } catch (e: Exception) {
+                    Timber.tag(logTag).w(e, "PoToken minting failed for ${client.clientName}")
+                }
+            }
         }
 
         val resp = preloadedPlayerResponse ?: runCatching {
@@ -1149,9 +1172,10 @@ object YTPlayerUtils {
                 playlistId = playlistId,
                 client = client,
                 signatureTimestamp = signatureTimestamp,
+                poToken = poToken,
                 setLogin = requestUsesCookieAuthentication,
-                authState = authState,
-            ).getPlaybackPlayerResponseOrNull(videoId, authState)
+                authState = clientAuthState,
+            ).getPlaybackPlayerResponseOrNull(videoId, clientAuthState)
         }.getOrNull()
 
         if (resp == null) return null
@@ -1172,13 +1196,13 @@ object YTPlayerUtils {
 
         for (candidate in candidates) {
             if (canUseLoggedInPlayback && expectedDurationMs != null && isLikelyPreview(candidate, expectedDurationMs)) continue
-            val cacheKey = buildStreamCacheKey(videoId, candidate.itag, client, authState.fingerprint)
+            val cacheKey = buildStreamCacheKey(videoId, candidate.itag, client, clientAuthState.fingerprint)
             val cached = streamUrlCache[cacheKey]
             val candidateResult =
                 if (cached != null && cached.expiresAtMs > System.currentTimeMillis() + STREAM_URL_EXPIRY_SAFETY_MS) {
                     Result.success(cached.url)
                 } else {
-                    findUrl(candidate, videoId, client, authState)
+                    findUrl(candidate, videoId, client, clientAuthState)
                 }
             val candidateUrl = candidateResult.getOrNull()
             if (candidateUrl == null) {

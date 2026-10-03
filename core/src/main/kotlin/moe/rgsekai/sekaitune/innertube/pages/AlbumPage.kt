@@ -254,10 +254,10 @@ data class AlbumPage(
                     ?.text
                     ?: PageHelper.extractRuns(renderer.flexColumns, "MUSIC_VIDEO").firstOrNull()?.text
                     ?: return null
-
-            val duration = findDuration(renderer)
+            val duration = findDuration(renderer)
             val videoId =
-                renderer.playlistItemData?.videoId
+                renderer.videoId
+                    ?: renderer.playlistItemData?.videoId
                     ?: renderer.overlay
                         ?.musicItemThumbnailOverlayRenderer
                         ?.content
@@ -267,14 +267,22 @@ data class AlbumPage(
                         ?.videoId
                     ?: renderer.navigationEndpoint?.watchEndpoint?.videoId
                     ?: return null
+            val uploadEntityId =
+                renderer.menu?.menuRenderer?.items?.firstNotNullOfOrNull { item ->
+                    item.menuNavigationItemRenderer?.navigationEndpoint?.confirmDialogEndpoint
+                        ?.content?.confirmDialogRenderer?.confirmButton?.buttonRenderer
+                        ?.command?.musicDeletePrivatelyOwnedEntityCommand?.entityId
+                        ?: item.menuNavigationItemRenderer?.navigationEndpoint?.deletePrivatelyOwnedEntityCommand?.entityId
+                }
             val thumbnail =
-                renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
+                renderer.thumbnail?.getThumbnailUrl()
+                    ?: renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
                     ?: renderer.thumbnail
                         ?.musicAnimatedThumbnailRenderer
                         ?.backupRenderer
                         ?.getThumbnailUrl()
                     ?: album?.thumbnail
-                    ?: return null
+                    ?: ""
             val songAlbum =
                 album?.let {
                     Album(it.title, it.browseId)
@@ -299,8 +307,13 @@ data class AlbumPage(
                                 id = it.navigationEndpoint?.browseEndpoint?.browseId,
                             )
                         }.ifEmpty {
-                            // Fallback to album artists if no artists found in song data
-                            album?.artists ?: emptyList()
+                            renderer.flexColumns.getOrNull(1)
+                                ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
+                                ?.splitBySeparator()?.firstOrNull()?.oddElements()
+                                ?.map { Artist(name = it.text, id = it.navigationEndpoint?.browseEndpoint?.browseId) }
+                                ?.filter { it.name.isNotBlank() }
+                                ?.takeIf { it.isNotEmpty() }
+                                ?: album?.artists ?: emptyList()
                         },
                 album = songAlbum,
                 duration = duration,
@@ -309,6 +322,7 @@ data class AlbumPage(
                     renderer.badges?.find {
                         it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                     } != null,
+                uploadEntityId = uploadEntityId,
                 endpoint =
                     renderer.overlay
                         ?.musicItemThumbnailOverlayRenderer
@@ -319,6 +333,7 @@ data class AlbumPage(
                         ?: renderer.navigationEndpoint?.watchEndpoint,
             )
         }
+
 
         private fun getSectionContents(response: BrowseResponse): List<SectionListRenderer.Content> {
             val contents = mutableListOf<SectionListRenderer.Content>()

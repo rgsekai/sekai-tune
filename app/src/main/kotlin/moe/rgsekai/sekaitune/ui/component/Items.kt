@@ -364,7 +364,7 @@ fun SongListItem(
         }
         if (showDownloadIcon) {
             val download by LocalDownloadUtil.current
-                .getDownload(song.id)
+                .getDownload(song)
                 .collectAsState(initial = null)
             Icon.Download(download?.state, percent = download?.percentDownloaded ?: -1f)
         }
@@ -435,9 +435,10 @@ fun SongGridItem(
             Icon.Library()
         }
         if (showDownloadIcon) {
-            val download by LocalDownloadUtil.current.getDownload(song.id).collectAsState(initial = null)
+            val download by LocalDownloadUtil.current.getDownload(song).collectAsState(initial = null)
             Icon.Download(download?.state, percent = download?.percentDownloaded ?: -1f)
         }
+
     },
     isActive: Boolean = false,
     isPlaying: Boolean = false,

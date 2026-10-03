@@ -111,6 +111,14 @@ object StreamClientUtils {
         } else {
             requestBuilder.removeHeader("Referer")
         }
+        requestBuilder.removeHeader("Cookie")
+        requestBuilder.removeHeader("Authorization")
+        requestBuilder.removeHeader("X-Goog-AuthUser")
+        requestBuilder.removeHeader("X-YouTube-Client-Name")
+        requestBuilder.removeHeader("X-YouTube-Client-Version")
+        requestBuilder.removeHeader("X-Goog-Visitor-Id")
+        requestBuilder.removeHeader("X-Origin")
+        requestBuilder.removeHeader("X-Goog-Api-Format-Version")
         return requestBuilder
     }
 

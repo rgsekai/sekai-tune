@@ -24,6 +24,8 @@ import moe.rgsekai.sekaitune.ui.utils.resize
 import moe.rgsekai.sekaitune.utils.isLocalMediaId
 
 const val ExtraIsMusicVideo = "moe.rgsekai.sekaitune.extra.IS_MUSIC_VIDEO"
+const val ExtraIsUploaded = "moe.rgsekai.sekaitune.extra.IS_UPLOADED"
+const val ExtraUploadEntityId = "moe.rgsekai.sekaitune.extra.UPLOAD_ENTITY_ID"
 private const val NotificationArtworkSizePx = 1080
 
 val MediaItem.metadata: MediaMetadata?
@@ -47,12 +49,13 @@ private fun MediaItem.Builder.setCacheKeyIfRemote(mediaId: String): MediaItem.Bu
     return this
 }
 
-fun Song.toMediaItem() =
-    MediaItem
+fun Song.toMediaItem(streamMediaId: String? = null): MediaItem {
+    val actualMediaId = streamMediaId ?: song.matchedCatalogId ?: song.id
+    return MediaItem
         .Builder()
-        .setMediaId(song.id)
-        .setUri(song.id)
-        .setCacheKeyIfRemote(song.id)
+        .setMediaId(actualMediaId)
+        .setUri(actualMediaId)
+        .setCacheKeyIfRemote(actualMediaId)
         .setTag(toMediaMetadata())
         .setMediaMetadata(
             androidx.media3.common.MediaMetadata
@@ -67,9 +70,15 @@ fun Song.toMediaItem() =
                 .setAlbumTitle(song.albumName)
                 .setIsPlayable(true)
                 .setMediaType(MEDIA_TYPE_MUSIC)
-                .setExtras(Bundle().apply { putBoolean(ExtraIsMusicVideo, false) })
-                .build(),
+                .setExtras(
+                    Bundle().apply {
+                        putBoolean(ExtraIsMusicVideo, false)
+                        putBoolean(ExtraIsUploaded, song.isUploaded || song.thumbnailUrl?.contains("vi_locker") == true)
+                        putString(ExtraUploadEntityId, song.uploadEntityId)
+                    },
+                ).build(),
         ).build()
+}
 
 fun SongItem.toMediaItem() =
     MediaItem
@@ -94,8 +103,13 @@ fun SongItem.toMediaItem() =
                 ).setAlbumTitle(album?.name)
                 .setIsPlayable(true)
                 .setMediaType(MEDIA_TYPE_MUSIC)
-                .setExtras(Bundle().apply { putBoolean(ExtraIsMusicVideo, isMusicVideo()) })
-                .build(),
+                .setExtras(
+                    Bundle().apply {
+                        putBoolean(ExtraIsMusicVideo, isMusicVideo())
+                        putBoolean(ExtraIsUploaded, uploadEntityId != null || thumbnail?.contains("vi_locker") == true)
+                        putString(ExtraUploadEntityId, uploadEntityId)
+                    },
+                ).build(),
         ).build()
 
 fun MediaMetadata.toMediaItem() =
@@ -121,8 +135,13 @@ fun MediaMetadata.toMediaItem() =
                 ).setAlbumTitle(album?.title)
                 .setIsPlayable(true)
                 .setMediaType(MEDIA_TYPE_MUSIC)
-                .setExtras(Bundle().apply { putBoolean(ExtraIsMusicVideo, isMusicVideo) })
-                .build(),
+                .setExtras(
+                    Bundle().apply {
+                        putBoolean(ExtraIsMusicVideo, isMusicVideo)
+                        putBoolean(ExtraIsUploaded, isUploaded || thumbnailUrl?.contains("vi_locker") == true)
+                        putString(ExtraUploadEntityId, uploadEntityId)
+                    },
+                ).build(),
         ).build()
 
 private fun SongItem.isMusicVideo(): Boolean {

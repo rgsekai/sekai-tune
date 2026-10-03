@@ -88,7 +88,14 @@ class ManageDownloadsUseCase
         private fun mapSnapshot(snapshot: DownloadRepositorySnapshot): DownloadLibraryUiModel {
             val now = SystemClock.elapsedRealtime()
             val speeds = calculateSpeeds(snapshot.downloads, now)
-            val songsById = snapshot.songs.associateBy { it.song.id }
+            val songsById = buildMap {
+                snapshot.songs.forEach { s ->
+                    put(s.song.id, s)
+                    s.song.matchedCatalogId?.let { matchedId ->
+                        put(matchedId, s)
+                    }
+                }
+            }
             val completedIds =
                 snapshot.downloads.values
                     .filter { it.state == Download.STATE_COMPLETED }
@@ -102,11 +109,14 @@ class ManageDownloadsUseCase
                 snapshot.songs
                     .mapNotNull { song ->
                         val albumId = song.album?.id ?: song.song.albumId
-                        albumId?.let { it to song.song.id }
+                        albumId?.let { it to (song.song.matchedCatalogId ?: song.song.id) }
                     }.groupBy({ it.first }, { it.second })
             val playlistSongIds =
                 snapshot.playlistSongMaps
-                    .groupBy({ it.playlistId }, { it.songId })
+                    .groupBy({ it.playlistId }, {
+                        val matched = songsById[it.songId]?.song?.matchedCatalogId
+                        matched ?: it.songId
+                    })
 
             val downloadedSections =
                 buildList {

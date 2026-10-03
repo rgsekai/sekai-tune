@@ -172,6 +172,20 @@
     <string name="continuous">Continuous</string>
     <string name="liked">Liked</string>
     <string name="offline">Downloaded</string>
+    <string name="uploaded">Uploaded</string>
+    <string name="uploaded_desc">Privately uploaded songs</string>
+    <string name="uploaded_empty_not_logged_in">Sign in to YouTube Music to sync your uploaded songs</string>
+    <string name="uploaded_empty_sync_disabled">Enable YTM sync in settings to see your uploaded songs</string>
+    <string name="uploaded_empty_no_songs">You haven\'t uploaded any songs yet. Use the upload button to add music.</string>
+    <string name="upload">Upload</string>
+    <string name="uploading">Uploading</string>
+    <string name="progress">Progress</string>
+    <string name="paused">Paused</string>
+    <string name="queued">Queued</string>
+    <string name="no_uploads">No uploads</string>
+    <string name="no_uploads_in_progress">No uploads in progress</string>
+    <string name="upload_failed_state">Upload failed</string>
+    <string name="files_you_upload_appear_here">Files you upload will appear here</string>
     <string name="my_top">My top</string>
     <string name="cached_playlist">Cached</string>
     <string name="sync_playlist">Sync playlist</string>
@@ -693,6 +707,11 @@
     <string name="liquid_glass_queue">Glass Queue</string>
     <string name="liquid_glass_queue_desc">Manage Glass Queue settings</string>
     <string name="color_picker_hex">Hex</string>
+    <string name="playing_matched_version">Playing best matched version from YouTube Music</string>
+    <string name="downloading_matched_version">Downloading best matched version from YouTube Music</string>
+    <string name="saving_matched_version">Saving best matched version from YouTube Music</string>
+    <string name="no_catalog_match_found">No matching version found in YouTube Music catalog</string>
+    <string name="export_failed_no_catalog_match">Export failed: Track not found in public catalog</string>
 </resources>
 
 

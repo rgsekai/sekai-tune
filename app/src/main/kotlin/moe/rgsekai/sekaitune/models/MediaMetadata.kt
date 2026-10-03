@@ -35,6 +35,9 @@ data class MediaMetadata(
     val likedDate: LocalDateTime? = null,
     val inLibrary: LocalDateTime? = null,
     val isMusicVideo: Boolean = false,
+    val isUploaded: Boolean = false,
+    val uploadEntityId: String? = null,
+    val matchedCatalogId: String? = null,
 ) : Serializable {
     companion object {
         private const val serialVersionUID = 1L
@@ -71,8 +74,13 @@ data class MediaMetadata(
             liked = liked,
             likedDate = likedDate,
             inLibrary = inLibrary,
+            isUploaded = isUploaded,
+            uploadEntityId = uploadEntityId,
+            matchedCatalogId = matchedCatalogId,
         )
 }
+
+fun MediaMetadata.downloadLookupKey(): String = matchedCatalogId ?: id
 
 fun Song.toMediaMetadata() =
     MediaMetadata(
@@ -101,7 +109,11 @@ fun Song.toMediaMetadata() =
                 )
             },
         explicit = song.explicit,
+        isUploaded = song.isUploaded || song.thumbnailUrl?.contains("vi_locker") == true,
+        uploadEntityId = song.uploadEntityId,
+        matchedCatalogId = song.matchedCatalogId,
     )
+
 
 fun SongItem.toMediaMetadata() =
     MediaMetadata(
@@ -129,6 +141,8 @@ fun SongItem.toMediaMetadata() =
         isMusicVideo =
             endpoint?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig?.musicVideoType in
                 listOf(MUSIC_VIDEO_TYPE_OMV, MUSIC_VIDEO_TYPE_UGC),
+        isUploaded = uploadEntityId != null || thumbnail?.contains("vi_locker") == true,
+        uploadEntityId = uploadEntityId,
     )
 
 

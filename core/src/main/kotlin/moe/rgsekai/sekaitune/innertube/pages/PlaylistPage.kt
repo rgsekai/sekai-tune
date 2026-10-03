@@ -49,8 +49,15 @@ private fun MusicResponsiveListItemRenderer.belongsToPlaylist(playlistId: String
 
 internal fun MusicResponsiveListItemRenderer.toSongItem(albumColumnIndex: Int? = 2): SongItem? {
     val endpoint = watchEndpoint()
-    val videoId = playlistItemData?.videoId ?: endpoint?.videoId ?: return null
+    val videoId = videoId ?: endpoint?.videoId ?: return null
     val metadataGroups = metadataGroups()
+    val uploadEntityId =
+        menu?.menuRenderer?.items?.firstNotNullOfOrNull { item ->
+            item.menuNavigationItemRenderer?.navigationEndpoint?.confirmDialogEndpoint
+                ?.content?.confirmDialogRenderer?.confirmButton?.buttonRenderer
+                ?.command?.musicDeletePrivatelyOwnedEntityCommand?.entityId
+                ?: item.menuNavigationItemRenderer?.navigationEndpoint?.deletePrivatelyOwnedEntityCommand?.entityId
+        }
     return SongItem(
         id = videoId,
         title = titleText ?: return null,
@@ -59,10 +66,11 @@ internal fun MusicResponsiveListItemRenderer.toSongItem(albumColumnIndex: Int? =
             albumColumnIndex?.let(::albumFromColumn)
                 ?: metadataGroups.drop(1).firstNotNullOfOrNull { it.toAlbum() },
         duration = fixedDuration ?: metadataGroups.duration(),
-        thumbnail = thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+        thumbnail = thumbnail?.getThumbnailUrl() ?: thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
         explicit = isExplicit,
         endpoint = endpoint,
         setVideoId = playlistItemData?.playlistSetVideoId ?: endpoint?.playlistSetVideoId,
+        uploadEntityId = uploadEntityId,
     )
 }
 
@@ -95,6 +103,7 @@ private val MusicResponsiveListItemRenderer.fixedDuration: Int?
 
 private fun MusicResponsiveListItemRenderer.watchEndpoint(): WatchEndpoint? =
     navigationEndpoint?.anyWatchEndpoint
+        ?: flexColumns.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.navigationEndpoint?.anyWatchEndpoint
         ?: overlay
             ?.musicItemThumbnailOverlayRenderer
             ?.content
@@ -147,13 +156,13 @@ private fun List<Run>?.toArtists(): List<Artist> =
 
 private fun List<Run>.toAlbum(): Album? =
     firstNotNullOfOrNull { run ->
-        val browseId = run.navigationEndpoint?.browseEndpoint?.browseId ?: return@firstNotNullOfOrNull null
+        val browseId = run.navigationEndpoint?.browseEndpoint?.browseId
         run.text
             .takeIf { it.isNotBlank() && it.parseTime() == null }
             ?.let { name ->
                 Album(
                     name = name,
-                    id = browseId,
+                    id = browseId ?: "",
                 )
             }
     }

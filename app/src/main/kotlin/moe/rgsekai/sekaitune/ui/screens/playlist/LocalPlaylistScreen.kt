@@ -166,6 +166,10 @@ import moe.rgsekai.sekaitune.ui.utils.sendAddMissingDownloads
 import moe.rgsekai.sekaitune.ui.utils.sendPauseDownloads
 import moe.rgsekai.sekaitune.ui.utils.sendRemoveDownloads
 import moe.rgsekai.sekaitune.ui.utils.sendResumeDownloads
+import android.widget.Toast
+import moe.rgsekai.sekaitune.LocalDownloadUtil
+import moe.rgsekai.sekaitune.LocalResolveUploadedCatalogMatchUseCase
+import moe.rgsekai.sekaitune.playback.CatalogMatchResult
 import moe.rgsekai.sekaitune.utils.makeTimeString
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.viewmodels.LocalPlaylistViewModel
@@ -182,6 +186,8 @@ fun LocalPlaylistScreen(
     viewModel: LocalPlaylistViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val downloadUtil = LocalDownloadUtil.current
+    val resolveUploadedCatalogMatchUseCase = LocalResolveUploadedCatalogMatchUseCase.current
     val menuState = LocalMenuState.current
     val database = LocalDatabase.current
     val haptic = LocalHapticFeedback.current
@@ -278,7 +284,6 @@ fun LocalPlaylistScreen(
         }
     }
 
-    val downloadUtil = LocalDownloadUtil.current
     var downloads by remember { mutableStateOf<Map<String, Download>>(emptyMap()) }
     var downloadState by remember { mutableStateOf<HeaderDownloadState>(HeaderDownloadState.None) }
     var downloadProgressToolbarDismissed by remember { mutableStateOf(true) }
@@ -1039,17 +1044,48 @@ fun LocalPlaylistScreen(
 
                                                 HeaderDownloadState.None -> {
                                                     downloadProgressToolbarDismissed = false
-                                                    sendAddMissingDownloads(
-                                                        context = context,
-                                                        songs =
-                                                            songs.map {
+                                                    val songsToDownload = songs.map { it.song }
+                                                    val appContext = context.applicationContext
+                                                    downloadUtil.applicationScope.launch {
+                                                        var skippedUnmatchedCount = 0
+                                                        val headerDownloadItems = songsToDownload.mapNotNull { song ->
+                                                            if (song.song.isUploaded) {
+                                                                when (val matchResult = resolveUploadedCatalogMatchUseCase(song.song, song.artists)) {
+                                                                    is CatalogMatchResult.Success -> {
+                                                                        HeaderDownloadItem(
+                                                                            id = matchResult.catalogId,
+                                                                            title = song.song.title,
+                                                                        )
+                                                                    }
+                                                                    is CatalogMatchResult.NoMatch -> {
+                                                                        skippedUnmatchedCount++
+                                                                        null
+                                                                    }
+                                                                }
+                                                            } else {
                                                                 HeaderDownloadItem(
-                                                                    id = it.song.id,
-                                                                    title = it.song.song.title,
+                                                                    id = song.song.id,
+                                                                    title = song.song.title,
                                                                 )
-                                                            },
-                                                        downloads = downloads,
-                                                    )
+                                                            }
+                                                        }
+                                                        if (headerDownloadItems.isNotEmpty()) {
+                                                            sendAddMissingDownloads(
+                                                                context = appContext,
+                                                                songs = headerDownloadItems,
+                                                                downloads = downloads,
+                                                            )
+                                                        }
+                                                        if (skippedUnmatchedCount > 0) {
+                                                            withContext(Dispatchers.Main) {
+                                                                Toast.makeText(
+                                                                    appContext,
+                                                                    "$skippedUnmatchedCount uploaded song(s) could not be matched for download",
+                                                                    Toast.LENGTH_SHORT
+                                                                ).show()
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         },

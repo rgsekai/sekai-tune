@@ -258,6 +258,57 @@ interface DatabaseDao {
     }
 
     @Transaction
+    @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY rowId")
+    fun uploadedSongsByRowIdAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY dateDownload, rowId")
+    fun uploadedSongsByCreateDateAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY title")
+    fun uploadedSongsByNameAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY totalPlayTime")
+    fun uploadedSongsByPlayTimeAsc(): Flow<List<Song>>
+
+    @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY title")
+    fun uploadedSongEntitiesByNameAsc(): List<SongEntity>
+
+    @Query("SELECT count(*) FROM song WHERE isUploaded = 1")
+    fun uploadedSongsCount(): Flow<Int>
+
+    @Query("SELECT * FROM song WHERE isUploaded = 1")
+    fun uploadedSongs(): Flow<List<SongEntity>>
+
+    fun uploadedSongs(
+        sortType: SongSortType,
+        descending: Boolean,
+    ) = when (sortType) {
+        SongSortType.CREATE_DATE -> uploadedSongsByCreateDateAsc()
+        SongSortType.NAME ->
+            uploadedSongsByNameAsc().map { songs ->
+                val collator = Collator.getInstance(Locale.getDefault())
+                collator.strength = Collator.PRIMARY
+                songs.sortedWith(compareBy(collator) { it.song.title })
+            }
+        SongSortType.ARTIST ->
+            uploadedSongsByRowIdAsc().map { songs ->
+                val collator = Collator.getInstance(Locale.getDefault())
+                collator.strength = Collator.PRIMARY
+                songs.sortedWith(
+                    compareBy(collator) { song ->
+                        song.artists.joinToString("") { artist -> artist.name }
+                    },
+                )
+            }
+        SongSortType.PLAY_TIME -> uploadedSongsByPlayTimeAsc()
+    }.map { songs ->
+        songs.filter { song -> song.artists.none { it.blockedAt != null } }.reversed(descending)
+    }
+
+    @Transaction
     @Query(
         """
         SELECT song.*
@@ -681,6 +732,9 @@ interface DatabaseDao {
     @Query("SELECT * FROM song WHERE id = :songId")
     fun song(songId: String?): Flow<Song?>
 
+    @Query("SELECT * FROM song WHERE id = :songId LIMIT 1")
+    fun songEntity(songId: String): SongEntity?
+
     @Transaction
     @Query("SELECT * FROM song WHERE id = :songId LIMIT 1")
     suspend fun getSongById(songId: String): Song?
@@ -688,6 +742,10 @@ interface DatabaseDao {
     @Transaction
     @Query("SELECT * FROM song WHERE id = :songId LIMIT 1")
     fun getSongByIdBlocking(songId: String): Song?
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE id = :songId OR matchedCatalogId = :songId LIMIT 1")
+    fun getSongByIdOrMatchedCatalogIdBlocking(songId: String): Song?
 
     @Transaction
     @Query("SELECT * FROM song WHERE id IN (:songIds)")

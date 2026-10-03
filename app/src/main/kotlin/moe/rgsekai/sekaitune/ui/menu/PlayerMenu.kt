@@ -107,6 +107,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.LocalDatabase
@@ -142,6 +143,9 @@ import moe.rgsekai.sekaitune.ui.component.NewAction
 import moe.rgsekai.sekaitune.ui.component.NewActionGrid
 import moe.rgsekai.sekaitune.ui.component.TextFieldDialog
 import moe.rgsekai.sekaitune.ui.player.rememberDeviceMusicVolumeController
+import moe.rgsekai.sekaitune.LocalResolveUploadedCatalogMatchUseCase
+import moe.rgsekai.sekaitune.db.entities.ArtistEntity
+import moe.rgsekai.sekaitune.playback.CatalogMatchResult
 import moe.rgsekai.sekaitune.utils.SpeedDialPin
 import moe.rgsekai.sekaitune.utils.SpeedDialPinType
 import moe.rgsekai.sekaitune.utils.isLocalMediaId
@@ -171,6 +175,7 @@ fun PlayerMenu(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
+    val resolveUploadedCatalogMatchUseCase = LocalResolveUploadedCatalogMatchUseCase.current
     val deviceMusicVolumeController = rememberDeviceMusicVolumeController()
     val onPlayerVolumeChange =
         remember(deviceMusicVolumeController) {
@@ -181,8 +186,9 @@ fun PlayerMenu(
     val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
     val coroutineScope = rememberCoroutineScope()
 
-    val download by LocalDownloadUtil.current
-        .getDownload(mediaMetadata.id)
+    val downloadUtil = LocalDownloadUtil.current
+    val download by downloadUtil
+        .getDownload(mediaMetadata.id, mediaMetadata.matchedCatalogId ?: librarySong?.song?.matchedCatalogId)
         .collectAsState(initial = null)
 
     val artists =
@@ -733,16 +739,41 @@ fun PlayerMenu(
                         modifier =
                             Modifier.clickable {
                                 onDismiss()
-                                android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
-                                val songId = mediaMetadata.id
                                 val songTitle = mediaMetadata.title
                                 val safeArtistName = mediaMetadata.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
-                                val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
-                                    songId = songId,
-                                    title = songTitle,
-                                    artist = safeArtistName,
-                                )
-                                androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+                                if (mediaMetadata.isUploaded) {
+                                    coroutineScope.launch {
+                                        val dbSong = withContext(Dispatchers.IO) { database.song(mediaMetadata.id).firstOrNull() }
+                                        val songEntity = dbSong?.song ?: mediaMetadata.toSongEntity()
+                                        val artistEntities = dbSong?.artists ?: mediaMetadata.artists.map { ArtistEntity(id = it.id ?: "", name = it.name) }
+                                        when (val result = resolveUploadedCatalogMatchUseCase(songEntity, artistEntities)) {
+                                            is CatalogMatchResult.Success -> {
+                                                if (!result.isHighConfidence) {
+                                                    android.widget.Toast.makeText(context, context.getString(R.string.saving_matched_version), android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                                android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+                                                val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                                    songId = result.catalogId,
+                                                    title = songTitle,
+                                                    artist = safeArtistName,
+                                                )
+                                                androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+                                            }
+                                            is CatalogMatchResult.NoMatch -> {
+                                                android.widget.Toast.makeText(context, context.getString(R.string.export_failed_no_catalog_match), android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+                                    val songId = mediaMetadata.id
+                                    val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                        songId = songId,
+                                        title = songTitle,
+                                        artist = safeArtistName,
+                                    )
+                                    androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+                                }
                             },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
@@ -773,12 +804,21 @@ fun PlayerMenu(
                                 },
                                 modifier =
                                     Modifier.clickable {
+                                        val targetRemoveId = mediaMetadata.matchedCatalogId ?: librarySong?.song?.matchedCatalogId ?: mediaMetadata.id
                                         DownloadService.sendRemoveDownload(
                                             context,
                                             ExoDownloadService::class.java,
-                                            mediaMetadata.id,
+                                            targetRemoveId,
                                             false,
                                         )
+                                        if (targetRemoveId != mediaMetadata.id) {
+                                            DownloadService.sendRemoveDownload(
+                                                context,
+                                                ExoDownloadService::class.java,
+                                                mediaMetadata.id,
+                                                false,
+                                            )
+                                        }
                                     },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
@@ -794,16 +834,26 @@ fun PlayerMenu(
                                 },
                                 modifier =
                                     Modifier.clickable {
+                                        val targetRemoveId = mediaMetadata.matchedCatalogId ?: librarySong?.song?.matchedCatalogId ?: mediaMetadata.id
                                         DownloadService.sendRemoveDownload(
                                             context,
                                             ExoDownloadService::class.java,
-                                            mediaMetadata.id,
+                                            targetRemoveId,
                                             false,
                                         )
+                                        if (targetRemoveId != mediaMetadata.id) {
+                                            DownloadService.sendRemoveDownload(
+                                                context,
+                                                ExoDownloadService::class.java,
+                                                mediaMetadata.id,
+                                                false,
+                                            )
+                                        }
                                     },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
                         }
+
 
                         else -> {
                             ListItem(
@@ -816,21 +866,59 @@ fun PlayerMenu(
                                 },
                                 modifier =
                                     Modifier.clickable {
-                                        database.transaction {
-                                            insert(mediaMetadata)
+                                        onDismiss()
+                                        if (mediaMetadata.isUploaded) {
+                                            downloadUtil.applicationScope.launch {
+                                                val dbSong = withContext(Dispatchers.IO) { database.song(mediaMetadata.id).firstOrNull() }
+                                                val songEntity = dbSong?.song ?: mediaMetadata.toSongEntity()
+                                                val artistEntities = dbSong?.artists ?: mediaMetadata.artists.map { ArtistEntity(id = it.id ?: "", name = it.name) }
+                                                when (val result = resolveUploadedCatalogMatchUseCase(songEntity, artistEntities)) {
+                                                    is CatalogMatchResult.Success -> {
+                                                        withContext(Dispatchers.Main) {
+                                                            if (!result.isHighConfidence) {
+                                                                android.widget.Toast.makeText(context.applicationContext, context.applicationContext.getString(R.string.downloading_matched_version), android.widget.Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                        database.transaction {
+                                                            insert(mediaMetadata)
+                                                        }
+                                                        val downloadRequest =
+                                                            DownloadRequest
+                                                                .Builder(result.catalogId, result.catalogId.toUri())
+                                                                .setCustomCacheKey(result.catalogId)
+                                                                .setData(mediaMetadata.title.toByteArray())
+                                                                .build()
+                                                        DownloadService.sendAddDownload(
+                                                            context.applicationContext,
+                                                            ExoDownloadService::class.java,
+                                                            downloadRequest,
+                                                            false,
+                                                        )
+                                                    }
+                                                    is CatalogMatchResult.NoMatch -> {
+                                                        withContext(Dispatchers.Main) {
+                                                            android.widget.Toast.makeText(context.applicationContext, context.applicationContext.getString(R.string.no_catalog_match_found), android.widget.Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            database.transaction {
+                                                insert(mediaMetadata)
+                                            }
+                                            val downloadRequest =
+                                                DownloadRequest
+                                                    .Builder(mediaMetadata.id, mediaMetadata.id.toUri())
+                                                    .setCustomCacheKey(mediaMetadata.id)
+                                                    .setData(mediaMetadata.title.toByteArray())
+                                                    .build()
+                                            DownloadService.sendAddDownload(
+                                                context.applicationContext,
+                                                ExoDownloadService::class.java,
+                                                downloadRequest,
+                                                false,
+                                            )
                                         }
-                                        val downloadRequest =
-                                            DownloadRequest
-                                                .Builder(mediaMetadata.id, mediaMetadata.id.toUri())
-                                                .setCustomCacheKey(mediaMetadata.id)
-                                                .setData(mediaMetadata.title.toByteArray())
-                                                .build()
-                                        DownloadService.sendAddDownload(
-                                            context,
-                                            ExoDownloadService::class.java,
-                                            downloadRequest,
-                                            false,
-                                        )
                                     },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )

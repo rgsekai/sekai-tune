@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import moe.rgsekai.sekaitune.innertube.models.BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.Companion.MUSIC_PAGE_TYPE_ALBUM
 import moe.rgsekai.sekaitune.innertube.models.BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.Companion.MUSIC_PAGE_TYPE_ARTIST
 import moe.rgsekai.sekaitune.innertube.models.BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.Companion.MUSIC_PAGE_TYPE_AUDIOBOOK
+import moe.rgsekai.sekaitune.innertube.models.BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.Companion.MUSIC_PAGE_TYPE_LIBRARY_ARTIST
 import moe.rgsekai.sekaitune.innertube.models.BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.Companion.MUSIC_PAGE_TYPE_PLAYLIST
 
 /**
@@ -48,14 +49,22 @@ data class MusicTwoRowItemRenderer(
                     ?.browseEndpointContextSupportedConfigs
                     ?.browseEndpointContextMusicConfig
                     ?.pageType ==
-                MUSIC_PAGE_TYPE_AUDIOBOOK
+                MUSIC_PAGE_TYPE_AUDIOBOOK ||
+                navigationEndpoint.browseEndpoint?.browseId?.startsWith("FEmusic_library_privately_owned_release") == true
     val isArtist: Boolean
         get() =
             navigationEndpoint.browseEndpoint
                 ?.browseEndpointContextSupportedConfigs
                 ?.browseEndpointContextMusicConfig
                 ?.pageType ==
-                MUSIC_PAGE_TYPE_ARTIST
+                MUSIC_PAGE_TYPE_ARTIST ||
+                navigationEndpoint.browseEndpoint
+                    ?.browseEndpointContextSupportedConfigs
+                    ?.browseEndpointContextMusicConfig
+                    ?.pageType ==
+                MUSIC_PAGE_TYPE_LIBRARY_ARTIST ||
+                navigationEndpoint.browseEndpoint?.browseId?.startsWith("FEmusic_library_privately_owned_artist") == true
+
 }
 
 

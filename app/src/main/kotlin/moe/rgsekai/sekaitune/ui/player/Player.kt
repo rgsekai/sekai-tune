@@ -609,7 +609,7 @@ fun BottomSheetPlayer(
         }
 
     val download by LocalDownloadUtil.current
-        .getDownload(mediaMetadata?.id ?: "")
+        .getDownload(mediaMetadata?.id ?: "", mediaMetadata?.matchedCatalogId)
         .collectAsState(initial = null)
 
     val sleepTimerEnabled =

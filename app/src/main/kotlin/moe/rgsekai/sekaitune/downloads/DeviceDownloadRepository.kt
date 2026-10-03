@@ -24,7 +24,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import moe.rgsekai.sekaitune.download.PausedDeviceDownloadStore
 import moe.rgsekai.sekaitune.download.TAG_SAVE_TO_DEVICE
 import moe.rgsekai.sekaitune.download.startDownload
@@ -43,6 +45,7 @@ class DeviceDownloadRepository
         private val pausedStore: PausedDeviceDownloadStore,
     ) {
         private val workManager = WorkManager.getInstance(context)
+        private val dismissedWorkIds = MutableStateFlow<Set<String>>(emptySet())
 
         fun observeDownloaded(): Flow<List<DownloadEntryUiModel>> =
             callbackFlow {
@@ -71,13 +74,17 @@ class DeviceDownloadRepository
             combine(
                 workManager.getWorkInfosByTagFlow(TAG_SAVE_TO_DEVICE),
                 pausedStore.observePaused(),
-            ) { workInfos, pausedList ->
+                dismissedWorkIds,
+            ) { workInfos, pausedList, dismissed ->
                 val activeEntries = workInfos
                     .filter { info ->
-                        info.state == WorkInfo.State.RUNNING ||
+                        val sId = info.tags.firstOrNull { it.startsWith("song_id:") }?.removePrefix("song_id:")
+                        (info.state == WorkInfo.State.RUNNING ||
                             info.state == WorkInfo.State.ENQUEUED ||
                             info.state == WorkInfo.State.BLOCKED ||
-                            info.state == WorkInfo.State.FAILED
+                            info.state == WorkInfo.State.FAILED) &&
+                            info.id.toString() !in dismissed &&
+                            (sId == null || sId !in dismissed)
                     }
                     .map { info ->
                         val workId = info.id.toString()
@@ -126,7 +133,7 @@ class DeviceDownloadRepository
                 val activeSongIds = activeEntries.flatMap { it.songIds }.toSet()
 
                 val pausedEntries = pausedList
-                    .filter { paused -> !activeSongIds.contains(paused.songId) }
+                    .filter { paused -> !activeSongIds.contains(paused.songId) && paused.songId !in dismissed && "paused_${paused.songId}" !in dismissed }
                     .map { paused ->
                         DownloadEntryUiModel(
                             id = "paused_${paused.songId}",
@@ -173,6 +180,7 @@ class DeviceDownloadRepository
 
         fun resume(entry: DownloadEntryUiModel) {
             val songId = entry.songIds.firstOrNull() ?: entry.id.removePrefix("paused_")
+            dismissedWorkIds.update { it - songId - entry.id - "paused_$songId" }
             val paused = pausedStore.get(songId)
             val title = paused?.title ?: entry.title
             val artist = paused?.artist
@@ -193,16 +201,20 @@ class DeviceDownloadRepository
         }
 
         fun cancel(workId: String) {
+            dismissedWorkIds.update { it + workId }
             runCatching {
                 workManager.cancelWorkById(UUID.fromString(workId))
+                workManager.pruneWork()
             }
         }
 
         fun delete(entry: DownloadEntryUiModel) {
             val songId = entry.songIds.firstOrNull() ?: entry.id.removePrefix("paused_")
+            dismissedWorkIds.update { it + entry.id + songId + "paused_$songId" }
             workManager.cancelAllWorkByTag("song_id:$songId")
             runCatching {
                 workManager.cancelWorkById(UUID.fromString(entry.id))
+                workManager.pruneWork()
             }
             pausedStore.remove(songId)
             val partFile = PausedDeviceDownloadStore.getPartFile(context, songId)

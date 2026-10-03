@@ -36,11 +36,17 @@ class AudioDownloadWorker(
     private val httpClient = OkHttpClient()
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val songId = inputData.getString("SONG_ID") ?: return@withContext Result.failure()
-        val songTitle = inputData.getString("SONG_TITLE") ?: "Unknown Title"
-        val songArtist = inputData.getString("SONG_ARTIST") ?: "Unknown Artist"
+        val taggedSongId = tags.firstOrNull { it.startsWith("song_id:") }?.removePrefix("song_id:")
+        val taggedTitle = tags.firstOrNull { it.startsWith("title:") }?.removePrefix("title:")
+        val taggedArtist = tags.firstOrNull { it.startsWith("artist:") }?.removePrefix("artist:")
+
+        val songId = taggedSongId ?: inputData.getString("SONG_ID") ?: return@withContext Result.failure()
+        val songTitle = taggedTitle ?: inputData.getString("SONG_TITLE") ?: "Unknown Title"
+        val songArtist = taggedArtist ?: inputData.getString("SONG_ARTIST") ?: "Unknown Artist"
         val currentSongNumber = inputData.getInt("CURRENT_SONG_NUMBER", 1)
         val totalSongs = inputData.getInt("TOTAL_SONGS", 1)
+
+        android.util.Log.e("MULTIDOWNLOAD_TRACKER", "AudioDownloadWorker STARTED for workId=$id, songId=$songId, title='$songTitle', artist='$songArtist' ($currentSongNumber/$totalSongs)")
 
         val tempDir = File(applicationContext.cacheDir, "downloads").apply {
             if (!exists()) mkdirs()
@@ -259,15 +265,7 @@ class AudioDownloadWorker(
             notificationBuilder.setOngoing(false)
             try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
-            Result.success(
-                androidx.work.workDataOf(
-                    "PROGRESS" to 100,
-                    "STAGE" to "completed",
-                    "SONG_ID" to songId,
-                    "SONG_TITLE" to songTitle,
-                    "SONG_ARTIST" to songArtist,
-                )
-            )
+            Result.success()
         } catch (e: Exception) {
             if (isStopped) {
                 Timber.d("AudioDownloadWorker cancelled/stopped for songId=$songId")

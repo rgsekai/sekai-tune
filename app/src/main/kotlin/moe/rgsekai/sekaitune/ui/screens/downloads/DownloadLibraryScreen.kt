@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -1010,3 +1011,50 @@ private fun DownloadRemovalConfirmation.confirmationMessageRes(): Int =
 private const val CONTENT_TYPE_SECTION_HEADER = "download_section_header"
 private const val CONTENT_TYPE_DOWNLOAD_ENTRY = "download_entry"
 private const val CONTENT_TYPE_SECTION_SPACER = "download_section_spacer"
+
+@Composable
+fun UploadProgressView(
+    viewModel: moe.rgsekai.sekaitune.viewmodels.AutoPlaylistViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val uploadProgress by viewModel.uploadProgress.collectAsStateWithLifecycle()
+
+    if (uploadProgress.isEmpty()) {
+        EmptyPlaceholder(
+            icon = R.drawable.cloud_upload,
+            text = stringResource(R.string.no_uploads),
+            modifier = modifier,
+        )
+    } else {
+        LazyColumn(
+            modifier = modifier.fillMaxSize(),
+        ) {
+            items(
+                items = uploadProgress,
+                key = { it.uri.toString() },
+            ) { item ->
+                ListItem(
+                    headlineContent = { Text(item.filename) },
+                    supportingContent = {
+                        Text(
+                            when (item.state) {
+                                moe.rgsekai.sekaitune.viewmodels.UploadState.Queued -> "Queued"
+                                moe.rgsekai.sekaitune.viewmodels.UploadState.Uploading -> "Uploading ${(item.progress * 100).toInt()}%"
+                                moe.rgsekai.sekaitune.viewmodels.UploadState.Paused -> "Paused"
+                                moe.rgsekai.sekaitune.viewmodels.UploadState.Success -> "Uploaded"
+                                moe.rgsekai.sekaitune.viewmodels.UploadState.Failed -> item.errorMessage ?: "Failed"
+                            },
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.cloud_upload),
+                            contentDescription = null,
+                        )
+                    },
+                )
+            }
+        }
+    }
+}
+
