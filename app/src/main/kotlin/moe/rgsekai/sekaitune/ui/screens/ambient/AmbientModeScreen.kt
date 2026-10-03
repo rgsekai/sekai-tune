@@ -331,7 +331,7 @@ fun AmbientModeScreen(navController: NavController) {
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
-                            if (abs(swipeThresholdX) > 100.dp.toPx()) {
+                            if (abs(swipeThresholdX) > 40.dp.toPx()) {
                                 if (swipeThresholdX > 0) {
                                     playerConnection.player.seekToPreviousMediaItem()
                                 } else {
@@ -381,12 +381,14 @@ fun AmbientModeScreen(navController: NavController) {
                                 .pointerInput(ambientVolumeGestureEnabled) {
                                     var lastTapTime = 0L
                                     val doubleTapTimeout = 320L
-                                    val stepPx = 28.dp.toPx()
+                                    val volumeStepPx = 24.dp.toPx()
+                                    val swipeHorizontalThresholdPx = 40.dp.toPx()
 
                                     awaitEachGesture {
                                         val down = awaitFirstDown(requireUnconsumed = false)
                                         var accumulatedDeltaY = 0f
-                                        var isDragging = false
+                                        var accumulatedDeltaX = 0f
+                                        var dragDirection = 0 // 0 = none/tap, 1 = vertical volume, 2 = horizontal track change
                                         val pointerId = down.id
 
                                         while (true) {
@@ -394,13 +396,21 @@ fun AmbientModeScreen(navController: NavController) {
                                             val change = event.changes.firstOrNull { it.id == pointerId } ?: break
 
                                             if (change.changedToUpIgnoreConsumed()) {
-                                                if (!isDragging) {
+                                                if (dragDirection == 0) {
                                                     val now = System.currentTimeMillis()
                                                     if (now - lastTapTime < doubleTapTimeout) {
                                                         playerConnection.player.togglePlayPause()
                                                         lastTapTime = 0L
                                                     } else {
                                                         lastTapTime = now
+                                                    }
+                                                } else if (dragDirection == 2) {
+                                                    if (abs(accumulatedDeltaX) >= swipeHorizontalThresholdPx) {
+                                                        if (accumulatedDeltaX > 0) {
+                                                            playerConnection.player.seekToPreviousMediaItem()
+                                                        } else {
+                                                            playerConnection.player.seekToNext()
+                                                        }
                                                     }
                                                 }
                                                 break
@@ -410,39 +420,52 @@ fun AmbientModeScreen(navController: NavController) {
                                                 break
                                             }
 
+                                            val dragX = change.position.x - change.previousPosition.x
                                             val dragY = change.position.y - change.previousPosition.y
-                                            if (ambientVolumeGestureEnabled) {
-                                                if (!isDragging && abs(change.position.y - down.position.y) > 10.dp.toPx()) {
-                                                    isDragging = true
-                                                }
+                                            accumulatedDeltaX += dragX
+                                            accumulatedDeltaY += dragY
 
-                                                if (isDragging) {
-                                                    change.consume()
-                                                    accumulatedDeltaY += dragY
-                                                    while (accumulatedDeltaY <= -stepPx) {
-                                                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                                        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                                        if (currentVolume < maxVolume) {
-                                                            audioManager.adjustStreamVolume(
-                                                                AudioManager.STREAM_MUSIC,
-                                                                AudioManager.ADJUST_RAISE,
-                                                                AudioManager.FLAG_SHOW_UI,
-                                                            )
-                                                        }
-                                                        accumulatedDeltaY += stepPx
+                                            val totalDisplacementX = abs(change.position.x - down.position.x)
+                                            val totalDisplacementY = abs(change.position.y - down.position.y)
+
+                                            if (dragDirection == 0) {
+                                                if (totalDisplacementY > 10.dp.toPx() && totalDisplacementY > totalDisplacementX) {
+                                                    if (ambientVolumeGestureEnabled) {
+                                                        dragDirection = 1
+                                                        accumulatedDeltaY = 0f
                                                     }
-                                                    while (accumulatedDeltaY >= stepPx) {
-                                                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                                        if (currentVolume > 0) {
-                                                            audioManager.adjustStreamVolume(
-                                                                AudioManager.STREAM_MUSIC,
-                                                                AudioManager.ADJUST_LOWER,
-                                                                AudioManager.FLAG_SHOW_UI,
-                                                            )
-                                                        }
-                                                        accumulatedDeltaY -= stepPx
-                                                    }
+                                                } else if (totalDisplacementX > 10.dp.toPx() && totalDisplacementX > totalDisplacementY) {
+                                                    dragDirection = 2
                                                 }
+                                            }
+
+                                            if (dragDirection == 1 && ambientVolumeGestureEnabled) {
+                                                change.consume()
+                                                while (accumulatedDeltaY <= -volumeStepPx) {
+                                                    val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                                    val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                                                    if (currentVolume < maxVolume) {
+                                                        audioManager.adjustStreamVolume(
+                                                            AudioManager.STREAM_MUSIC,
+                                                            AudioManager.ADJUST_RAISE,
+                                                            AudioManager.FLAG_SHOW_UI,
+                                                        )
+                                                    }
+                                                    accumulatedDeltaY += volumeStepPx
+                                                }
+                                                while (accumulatedDeltaY >= volumeStepPx) {
+                                                    val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                                    if (currentVolume > 0) {
+                                                        audioManager.adjustStreamVolume(
+                                                            AudioManager.STREAM_MUSIC,
+                                                            AudioManager.ADJUST_LOWER,
+                                                            AudioManager.FLAG_SHOW_UI,
+                                                        )
+                                                    }
+                                                    accumulatedDeltaY -= volumeStepPx
+                                                }
+                                            } else if (dragDirection == 2) {
+                                                change.consume()
                                             }
                                         }
                                     }
