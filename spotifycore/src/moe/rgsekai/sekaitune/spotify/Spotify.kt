@@ -1662,6 +1662,21 @@ object Spotify {
             )
         }
 
+    suspend fun queryArtistOverviewRaw(artistId: String): Result<JsonObject> =
+        runCatching {
+            val vars =
+                buildJsonObject {
+                    put("uri", "spotify:artist:$artistId")
+                    put("locale", "")
+                }
+
+            graphqlPost(
+                operationName = "queryArtistOverview",
+                variables = vars,
+            )
+        }
+
+
     suspend fun artistTopTracks(
         artistId: String,
         market: String = "US",
