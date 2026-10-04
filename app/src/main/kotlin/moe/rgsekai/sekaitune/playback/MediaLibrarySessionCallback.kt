@@ -87,7 +87,6 @@ class MediaLibrarySessionCallback
         var toggleStartRadio: () -> Unit = {}
         var toggleLibrary: () -> Unit = {}
         var getCustomLayout: () -> List<CommandButton> = { emptyList() }
-        var getMediaButtonPreferences: () -> List<CommandButton> = { emptyList() }
 
         private data class AutoPlaylistSortOption(
             val sortType: PlaylistSongSortType,
@@ -135,30 +134,15 @@ class MediaLibrarySessionCallback
                     .add(MediaSessionConstants.CommandToggleShuffle)
                     .add(MediaSessionConstants.CommandToggleRepeatMode)
                     .build()
+
             val layout = getCustomLayout()
-            val buttonPreferences = getMediaButtonPreferences().ifEmpty { layout }
 
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(sessionCommands)
                 .setAvailablePlayerCommands(connectionResult.availablePlayerCommands)
                 .setCustomLayout(layout)
-                .setMediaButtonPreferences(buttonPreferences)
+                .setMediaButtonPreferences(layout)
                 .build()
-        }
-
-        override fun onPostConnect(
-            session: MediaSession,
-            controller: MediaSession.ControllerInfo,
-        ) {
-            super.onPostConnect(session, controller)
-            val layout = getCustomLayout()
-            val buttonPreferences = getMediaButtonPreferences().ifEmpty { layout }
-            if (layout.isNotEmpty()) {
-                session.setCustomLayout(controller, layout)
-            }
-            if (buttonPreferences.isNotEmpty()) {
-                session.setMediaButtonPreferences(controller, buttonPreferences)
-            }
         }
         override fun onPlaybackResumption(
             mediaSession: MediaSession,

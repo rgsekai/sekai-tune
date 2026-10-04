@@ -1099,7 +1099,6 @@ class MusicService :
             toggleStartRadio = ::toggleStartRadio
             toggleLibrary = ::toggleLibrary
             getCustomLayout = ::buildCustomLayout
-            getMediaButtonPreferences = ::buildMediaButtonPreferences
         }
         ColdStartTimer.addStage("MusicService: Building MediaLibrarySession")
         val initialLayout = buildCustomLayout()
@@ -1117,6 +1116,7 @@ class MusicService :
             .setCustomLayout(initialLayout)
             .setMediaButtonPreferences(initialLayout)
             .build()
+        addSession(mediaSession)
         ColdStartTimer.addStage("MusicService: MediaLibrarySession Built")
 
         updateNotification()
@@ -2839,6 +2839,7 @@ class MusicService :
                 )
                 .setIconResId(if (isLiked) R.drawable.favorite else R.drawable.favorite_border)
                 .setSessionCommand(CommandToggleLike)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .setEnabled(true)
                 .build(),
             CommandButton
@@ -2860,6 +2861,7 @@ class MusicService :
                         else -> R.drawable.repeat
                     },
                 ).setSessionCommand(CommandToggleRepeatMode)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .setEnabled(true)
                 .build(),
             CommandButton
@@ -2868,6 +2870,7 @@ class MusicService :
                     getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on),
                 ).setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
                 .setSessionCommand(CommandToggleShuffle)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .setEnabled(true)
                 .build(),
             CommandButton
@@ -2875,12 +2878,11 @@ class MusicService :
                 .setDisplayName(getString(R.string.start_radio))
                 .setIconResId(R.drawable.radio)
                 .setSessionCommand(CommandToggleStartRadio)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .setEnabled(true)
                 .build(),
         )
     }
-
-    fun buildMediaButtonPreferences(): List<CommandButton> = buildCustomLayout()
 
     private fun updateNotification() {
         try {
