@@ -1090,6 +1090,9 @@ class MusicService :
         audioDeviceCallbackRegistered = true
         lastAudioOutputDeviceSignature = currentAudioOutputDeviceSignature()
         audioOutputResolver.refresh()
+        setMediaNotificationProvider(
+            SekaiTuneMediaNotificationProvider(this, R.drawable.small_icon),
+        )
 
         mediaLibrarySessionCallback.apply {
             toggleLike = ::toggleLike

@@ -7,11 +7,13 @@
 
 package moe.rgsekai.sekaitune.playback
 
+import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.annotation.DrawableRes
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -40,13 +42,29 @@ class SekaiTuneMediaNotificationProvider(
         mediaButtonPreferences: ImmutableList<CommandButton>,
         actionFactory: MediaNotification.ActionFactory,
         onNotificationChangedCallback: MediaNotification.Provider.Callback,
-    ): MediaNotification =
-        delegate.createNotification(
-            mediaSession,
-            mediaButtonPreferences,
-            actionFactory,
-            onNotificationChangedCallback,
-        )
+    ): MediaNotification {
+        val mediaNotification =
+            delegate.createNotification(
+                mediaSession,
+                mediaButtonPreferences,
+                actionFactory,
+                onNotificationChangedCallback,
+            )
+        val player = mediaSession.player
+        val shouldBeOngoing =
+            player.playWhenReady &&
+                player.playbackState != Player.STATE_IDLE &&
+                player.playbackState != Player.STATE_ENDED
+
+        val notification = mediaNotification.notification
+        if (shouldBeOngoing) {
+            notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
+        } else {
+            notification.flags = notification.flags and Notification.FLAG_ONGOING_EVENT.inv()
+        }
+
+        return MediaNotification(mediaNotification.notificationId, notification)
+    }
 
     override fun handleCustomCommand(
         session: MediaSession,

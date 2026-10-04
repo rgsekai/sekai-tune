@@ -126,7 +126,7 @@ class MediaLibrarySessionCallback
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
             val connectionResult = super.onConnect(session, controller)
-            return MediaSession.ConnectionResult.accept(
+            val sessionCommands =
                 connectionResult.availableSessionCommands
                     .buildUpon()
                     .add(MediaSessionConstants.CommandToggleLike)
@@ -134,9 +134,16 @@ class MediaLibrarySessionCallback
                     .add(MediaSessionConstants.CommandToggleLibrary)
                     .add(MediaSessionConstants.CommandToggleShuffle)
                     .add(MediaSessionConstants.CommandToggleRepeatMode)
-                    .build(),
-                connectionResult.availablePlayerCommands,
-            )
+                    .build()
+            val layout = getCustomLayout()
+            val buttonPreferences = getMediaButtonPreferences().ifEmpty { layout }
+
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(sessionCommands)
+                .setAvailablePlayerCommands(connectionResult.availablePlayerCommands)
+                .setCustomLayout(layout)
+                .setMediaButtonPreferences(buttonPreferences)
+                .build()
         }
 
         override fun onPostConnect(
