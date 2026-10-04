@@ -1095,9 +1095,11 @@ class MusicService :
             toggleLike = ::toggleLike
             toggleStartRadio = ::toggleStartRadio
             toggleLibrary = ::toggleLibrary
+            getCustomLayout = ::buildCustomLayout
+            getMediaButtonPreferences = ::buildMediaButtonPreferences
         }
-        // 1. Build the visual representation of the Like button
         ColdStartTimer.addStage("MusicService: Building MediaLibrarySession")
+        val initialLayout = buildCustomLayout()
         mediaSession = MediaLibrarySession
             .Builder(this, player, mediaLibrarySessionCallback)
             .setSessionActivity(
@@ -1109,6 +1111,8 @@ class MusicService :
                 )
             )
             .setBitmapLoader(CoilBitmapLoader(this, scope))
+            .setCustomLayout(initialLayout)
+            .setMediaButtonPreferences(initialLayout)
             .build()
         ColdStartTimer.addStage("MusicService: MediaLibrarySession Built")
 
@@ -2816,60 +2820,68 @@ class MusicService :
         return true
     }
 
+    fun buildCustomLayout(): List<CommandButton> {
+        val isLiked = currentSong.value?.song?.liked == true
+        return listOf(
+            CommandButton
+                .Builder()
+                .setDisplayName(
+                    getString(
+                        if (isLiked) {
+                            R.string.action_remove_like
+                        } else {
+                            R.string.action_like
+                        },
+                    ),
+                )
+                .setIconResId(if (isLiked) R.drawable.favorite else R.drawable.favorite_border)
+                .setSessionCommand(CommandToggleLike)
+                .setEnabled(currentSong.value != null)
+                .build(),
+            CommandButton
+                .Builder()
+                .setDisplayName(
+                    getString(
+                        when (player.repeatMode) {
+                            REPEAT_MODE_OFF -> R.string.repeat_mode_off
+                            REPEAT_MODE_ONE -> R.string.repeat_mode_one
+                            REPEAT_MODE_ALL -> R.string.repeat_mode_all
+                            else -> R.string.repeat_mode_off
+                        },
+                    ),
+                ).setIconResId(
+                    when (player.repeatMode) {
+                        REPEAT_MODE_OFF -> R.drawable.repeat
+                        REPEAT_MODE_ONE -> R.drawable.repeat_one_on
+                        REPEAT_MODE_ALL -> R.drawable.repeat_on
+                        else -> R.drawable.repeat
+                    },
+                ).setSessionCommand(CommandToggleRepeatMode)
+                .build(),
+            CommandButton
+                .Builder()
+                .setDisplayName(
+                    getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on),
+                ).setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
+                .setSessionCommand(CommandToggleShuffle)
+                .build(),
+            CommandButton
+                .Builder()
+                .setDisplayName(getString(R.string.start_radio))
+                .setIconResId(R.drawable.radio)
+                .setSessionCommand(CommandToggleStartRadio)
+                .setEnabled(currentSong.value != null)
+                .build(),
+        )
+    }
+
+    fun buildMediaButtonPreferences(): List<CommandButton> = buildCustomLayout()
+
     private fun updateNotification() {
         try {
-            val customLayout =
-                listOf(
-                    CommandButton
-                        .Builder()
-                        .setDisplayName(
-                            getString(
-                                if (currentSong.value?.song?.liked == true) {
-                                    R.string.action_remove_like
-                                } else {
-                                    R.string.action_like
-                                },
-                            ),
-                        ).setIconResId(if (currentSong.value?.song?.liked == true) R.drawable.favorite else R.drawable.favorite_border)
-                        .setSessionCommand(CommandToggleLike)
-                        .setEnabled(currentSong.value != null)
-                        .build(),
-                    CommandButton
-                        .Builder()
-                        .setDisplayName(
-                            getString(
-                                when (player.repeatMode) {
-                                    REPEAT_MODE_OFF -> R.string.repeat_mode_off
-                                    REPEAT_MODE_ONE -> R.string.repeat_mode_one
-                                    REPEAT_MODE_ALL -> R.string.repeat_mode_all
-                                    else -> R.string.repeat_mode_off
-                                },
-                            ),
-                        ).setIconResId(
-                            when (player.repeatMode) {
-                                REPEAT_MODE_OFF -> R.drawable.repeat
-                                REPEAT_MODE_ONE -> R.drawable.repeat_one_on
-                                REPEAT_MODE_ALL -> R.drawable.repeat_on
-                                else -> R.drawable.repeat
-                            },
-                        ).setSessionCommand(CommandToggleRepeatMode)
-                        .build(),
-                    CommandButton
-                        .Builder()
-                        .setDisplayName(
-                            getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on),
-                        ).setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
-                        .setSessionCommand(CommandToggleShuffle)
-                        .build(),
-                    CommandButton
-                        .Builder()
-                        .setDisplayName(getString(R.string.start_radio))
-                        .setIconResId(R.drawable.radio)
-                        .setSessionCommand(CommandToggleStartRadio)
-                        .setEnabled(currentSong.value != null)
-                        .build(),
-                )
+            val customLayout = buildCustomLayout()
             mediaSession.setCustomLayout(customLayout)
+            mediaSession.setMediaButtonPreferences(customLayout)
         } catch (e: Exception) {
             reportException(e)
         }
@@ -4967,6 +4979,11 @@ class MusicService :
                             currentSongEntity.song.toggleLike().also(::update)
                         }
                     } ?: return@launch
+
+                withContext(Dispatchers.Main) {
+                    updateNotification()
+                    widgetUpdater.update()
+                }
 
                 syncUtils.likeSong(song)
 

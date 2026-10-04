@@ -86,6 +86,8 @@ class MediaLibrarySessionCallback
         var toggleLike: () -> Unit = {}
         var toggleStartRadio: () -> Unit = {}
         var toggleLibrary: () -> Unit = {}
+        var getCustomLayout: () -> List<CommandButton> = { emptyList() }
+        var getMediaButtonPreferences: () -> List<CommandButton> = { emptyList() }
 
         private data class AutoPlaylistSortOption(
             val sortType: PlaylistSongSortType,
@@ -137,19 +139,20 @@ class MediaLibrarySessionCallback
             )
         }
 
-    override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
-        super.onPostConnect(session, controller)
-
-        val likeButton = CommandButton.Builder()
-            .setDisplayName("Like")
-            .setSessionCommand(MediaSessionConstants.CommandToggleLike)
-            .setIconResId(R.drawable.baseline_favorite_24)
-            .build()
-
-        // Pass ONLY the like button right now to isolate it.
-        // If it shows up alone, we know the other custom buttons were pushing it out of bounds!
-        session.setMediaButtonPreferences(listOf(likeButton))
-    }
+        override fun onPostConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ) {
+            super.onPostConnect(session, controller)
+            val layout = getCustomLayout()
+            val buttonPreferences = getMediaButtonPreferences().ifEmpty { layout }
+            if (layout.isNotEmpty()) {
+                session.setCustomLayout(controller, layout)
+            }
+            if (buttonPreferences.isNotEmpty()) {
+                session.setMediaButtonPreferences(controller, buttonPreferences)
+            }
+        }
         override fun onPlaybackResumption(
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
