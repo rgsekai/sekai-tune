@@ -1166,7 +1166,7 @@ class MusicService :
             }
         }
 
-        currentSong.debounce(300).collect(scope) { song ->
+        currentSong.collect(scope) { song ->
             updateNotification()
             widgetUpdater.update()
         }
@@ -2839,7 +2839,7 @@ class MusicService :
                 )
                 .setIconResId(if (isLiked) R.drawable.favorite else R.drawable.favorite_border)
                 .setSessionCommand(CommandToggleLike)
-                .setEnabled(currentSong.value != null)
+                .setEnabled(true)
                 .build(),
             CommandButton
                 .Builder()
@@ -2860,6 +2860,7 @@ class MusicService :
                         else -> R.drawable.repeat
                     },
                 ).setSessionCommand(CommandToggleRepeatMode)
+                .setEnabled(true)
                 .build(),
             CommandButton
                 .Builder()
@@ -2867,13 +2868,14 @@ class MusicService :
                     getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on),
                 ).setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
                 .setSessionCommand(CommandToggleShuffle)
+                .setEnabled(true)
                 .build(),
             CommandButton
                 .Builder()
                 .setDisplayName(getString(R.string.start_radio))
                 .setIconResId(R.drawable.radio)
                 .setSessionCommand(CommandToggleStartRadio)
-                .setEnabled(currentSong.value != null)
+                .setEnabled(true)
                 .build(),
         )
     }
@@ -5675,6 +5677,7 @@ class MusicService :
         lastTransitionMediaId = mediaItem?.mediaId
         Timber.tag("PlaybackTiming").i("[PlaybackTiming] onMediaItemTransition for %s (reason=%d) at elapsedRealtime=%d", lastTransitionMediaId, reason, lastTransitionTimeMs)
         super.onMediaItemTransition(mediaItem, reason)
+        updateNotification()
 
         beginHistorySession(mediaItem?.mediaId, forceNew = true)
 
