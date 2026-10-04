@@ -1375,8 +1375,6 @@ fun BottomSheetPlayer(
                             )
                         }
 
-                        Spacer(Modifier.height(10.dp))
-
                         enrichedMetadata?.let {
                             controlsContent(it)
                         }

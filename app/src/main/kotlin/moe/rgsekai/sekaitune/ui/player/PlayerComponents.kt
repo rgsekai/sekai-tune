@@ -758,7 +758,7 @@ fun PlayerControlsContent(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = PlayerHorizontalPadding)
-                .padding(bottom = 12.dp),
+                .padding(bottom = 22.dp),
     )
 
     Row(
@@ -1007,7 +1007,7 @@ fun V8PlayerControlsContent(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
+                        .padding(bottom = 22.dp),
             )
 
             V8MetadataActions(
