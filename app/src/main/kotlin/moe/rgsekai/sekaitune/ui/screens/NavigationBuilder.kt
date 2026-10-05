@@ -62,6 +62,7 @@ import moe.rgsekai.sekaitune.ui.screens.settings.DebugSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.GlassEffectSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.HiddenPlaylistsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IconScreen
+import moe.rgsekai.sekaitune.ui.screens.settings.IntegrationsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.InternetSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.LogcatScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsAnimationSettings
@@ -405,6 +406,9 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/ai_integration") {
         AiIntegrationSettings(navController)
+    }
+    composable("settings/integrations") {
+        IntegrationsScreen(navController)
     }
     composable("settings/music_together") {
         MusicTogetherScreen(navController)

@@ -321,6 +321,28 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_integrations",
+                title = context.getString(R.string.integrations),
+                subtitle = context.getString(R.string.integrations_desc),
+                category = accountCategory,
+                iconRes = R.drawable.integration,
+                route = "settings/integrations",
+                keywords = listOf("integrations", "spotify", "spotify sync", "external services", "connect spotify", "spotify login"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
+                id = "sub_spotify_sync",
+                title = context.getString(R.string.spotify_connect),
+                subtitle = "Connect Spotify account, sync playlists, and follow artists",
+                category = accountCategory,
+                iconRes = R.drawable.spotify_icon,
+                route = "settings/integrations",
+                keywords = listOf("spotify", "spotify sync", "spotify login", "spotify playlists", "follow on spotify"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_more_content",
                 title = context.getString(R.string.more_content),
                 subtitle = context.getString(R.string.use_login_for_browse_desc),
@@ -939,9 +961,9 @@ object SettingsSearchRepository {
                 id = "sub_spotify_sync",
                 title = "Spotify sync & import",
                 subtitle = "Connect your Spotify account to import and synchronize playlists",
-                category = backupCategory,
+                category = accountCategory,
                 iconRes = R.drawable.playlist_play,
-                route = "settings/backup_restore",
+                route = "settings/account",
                 keywords = listOf("spotify sync", "spotify import", "import spotify playlists", "transfer playlists from spotify"),
             ),
         )
