@@ -145,6 +145,7 @@ android {
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
             } else {
+                logger.warn("WARNING: release APK is signed with the DEBUG key. Do not distribute. CI re-signs it with the real key.")
                 storeFile = file("persistent-debug.keystore")
                 storePassword = "android"
                 keyAlias = "androiddebugkey"
