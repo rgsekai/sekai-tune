@@ -103,6 +103,7 @@ fun LibraryScreen(navController: NavController) {
                     LibraryFilter.SONGS,
                     LibraryFilter.ARTISTS,
                     LibraryFilter.ALBUMS,
+                    LibraryFilter.AI_MIXES,
                 )
             } else {
                 listOf(
@@ -111,6 +112,7 @@ fun LibraryScreen(navController: NavController) {
                     LibraryFilter.SONGS,
                     LibraryFilter.ARTISTS,
                     LibraryFilter.ALBUMS,
+                    LibraryFilter.AI_MIXES,
                 )
             }
         }
@@ -189,7 +191,7 @@ fun LibraryScreen(navController: NavController) {
                         LibraryFilter.SONGS -> 102.dp
                         LibraryFilter.ARTISTS -> 116.dp
                         LibraryFilter.ALBUMS -> 110.dp
-                        else -> 116.dp
+                        LibraryFilter.AI_MIXES -> 126.dp
                     }
                 val screenWidth = configuration.screenWidthDp.dp
                 val targetOffsetDp = (screenWidth - tabWidth) / 2
@@ -223,6 +225,7 @@ fun LibraryScreen(navController: NavController) {
                             LibraryFilter.SONGS -> stringResource(R.string.songs)
                             LibraryFilter.ARTISTS -> stringResource(R.string.artists)
                             LibraryFilter.ALBUMS -> stringResource(R.string.albums)
+                            LibraryFilter.AI_MIXES -> stringResource(R.string.top_mixes)
                         }
                     val iconRes =
                         when (filter) {
@@ -232,6 +235,7 @@ fun LibraryScreen(navController: NavController) {
                             LibraryFilter.SONGS -> R.drawable.music_note
                             LibraryFilter.ARTISTS -> R.drawable.person
                             LibraryFilter.ALBUMS -> R.drawable.album
+                            LibraryFilter.AI_MIXES -> R.drawable.auto_awesome
                         }
                     ExpressiveTabChip(
                         label = label,
@@ -259,26 +263,6 @@ fun LibraryScreen(navController: NavController) {
                     LibraryFilter.LIBRARY -> {
                         LibraryMixScreen(
                             navController = navController,
-                            filterContent =
-                                if (showTagsInLibrary) {
-                                    {
-                                        PlaylistTagFilterRow(
-                                            tags = allTags,
-                                            selectedTagIds = selectedTagIds,
-                                            onSelectedTagIdsChange = onSelectedTagIdsChange,
-                                            onManageTagsClick = { showTagsManagementDialog = true },
-                                        )
-                                    }
-                                } else {
-                                    null
-                                },
-                            selectedTagIds = activeSelectedTagIds,
-                            onTabSelected = { targetFilter ->
-                                coroutineScope.launch {
-                                    val targetPage = libraryFilters.indexOf(targetFilter)
-                                    pagerState.animateScrollToPage(targetPage.takeIf { it >= 0 } ?: 0)
-                                }
-                            },
                         )
                     }
 
@@ -337,6 +321,10 @@ fun LibraryScreen(navController: NavController) {
                                 }
                             },
                         )
+                    }
+
+                    LibraryFilter.AI_MIXES -> {
+                        LibraryAiMixesScreen(navController = navController)
                     }
                 }
             }

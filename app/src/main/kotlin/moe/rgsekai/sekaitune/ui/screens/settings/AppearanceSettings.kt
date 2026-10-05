@@ -937,6 +937,7 @@ fun AppearanceSettings(navController: NavController) {
                                 LibraryFilter.SONGS,
                                 LibraryFilter.ALBUMS,
                                 LibraryFilter.ARTISTS,
+                                LibraryFilter.AI_MIXES,
                             ),
                         valueText = {
                             when (it) {
@@ -946,6 +947,7 @@ fun AppearanceSettings(navController: NavController) {
                                 LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
                                 LibraryFilter.SPOTIFY -> stringResource(R.string.spotify_playlists)
                                 LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
+                                LibraryFilter.AI_MIXES -> stringResource(R.string.top_mixes)
                             }
                         },
                         onValueSelected = onDefaultChipChange,
