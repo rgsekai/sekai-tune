@@ -250,7 +250,7 @@ fun AppearanceSettings(navController: NavController) {
     val (showTagsInLibrary, onShowTagsInLibraryChange) =
         rememberPreference(
             ShowTagsInLibraryKey,
-            defaultValue = true,
+            defaultValue = false,
         )
     val (showHomeCategoryChips, onShowHomeCategoryChipsChange) =
         rememberPreference(

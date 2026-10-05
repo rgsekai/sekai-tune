@@ -86,7 +86,7 @@ fun LibraryScreen(navController: NavController) {
     val database = LocalDatabase.current
     val (selectedTagIds, onSelectedTagIdsChange) = rememberPlaylistTagFilterState(database)
     val allTags by database.allTags().collectAsState(initial = emptyList())
-    val (showTagsInLibrary) = rememberPreference(ShowTagsInLibraryKey, defaultValue = true)
+    val (showTagsInLibrary) = rememberPreference(ShowTagsInLibraryKey, defaultValue = false)
     val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
     val (showSpotifyFollowArtist) = rememberPreference(ShowSpotifyFollowArtistKey, defaultValue = true)
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
@@ -169,11 +169,15 @@ fun LibraryScreen(navController: NavController) {
             val tabListState = rememberLazyListState()
             val coroutineScope = rememberCoroutineScope()
 
-            LaunchedEffect(defaultFilter, libraryFilters) {
-                val selectedFilter = defaultFilter.takeIf { it in libraryFilters } ?: LibraryFilter.LIBRARY
-                val selectedPage = libraryFilters.indexOf(selectedFilter).takeIf { it >= 0 } ?: 0
-                if (pagerState.currentPage != selectedPage) {
-                    pagerState.scrollToPage(selectedPage)
+            var lastDefaultFilter by rememberSaveable { mutableStateOf(defaultFilter) }
+            LaunchedEffect(defaultFilter) {
+                if (defaultFilter != lastDefaultFilter) {
+                    lastDefaultFilter = defaultFilter
+                    val selectedFilter = defaultFilter.takeIf { it in libraryFilters } ?: LibraryFilter.LIBRARY
+                    val selectedPage = libraryFilters.indexOf(selectedFilter).takeIf { it >= 0 } ?: 0
+                    if (pagerState.currentPage != selectedPage) {
+                        pagerState.scrollToPage(selectedPage)
+                    }
                 }
             }
 
