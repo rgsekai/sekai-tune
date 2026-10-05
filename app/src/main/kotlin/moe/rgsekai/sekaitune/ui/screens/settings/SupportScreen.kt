@@ -16,6 +16,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -45,8 +46,8 @@ import moe.rgsekai.sekaitune.ui.utils.backToMain
 
 private const val BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/rgsekai"
 private const val UPI_ID = "rgsekai@upi"
-private const val UPI_NAME = "Sekai Tune"
-private const val UPI_NOTE = "Support Sekai Tune"
+private const val UPI_NAME = "SekaiTune"
+private const val UPI_NOTE = "SekaiTune"
 private const val UPI_CURRENCY = "INR"
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,15 +109,9 @@ fun SupportScreen(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.payments), null) },
                         onClick = {
                             try {
-                                val uri =
-                                    Uri.Builder()
-                                        .scheme("upi")
-                                        .authority("pay")
-                                        .appendQueryParameter("pa", UPI_ID)
-                                        .appendQueryParameter("pn", UPI_NAME)
-                                        .appendQueryParameter("tn", UPI_NOTE)
-                                        .appendQueryParameter("cu", UPI_CURRENCY)
-                                        .build()
+                                val uriString = "upi://pay?pa=$UPI_ID&pn=$UPI_NAME&tn=$UPI_NOTE&cu=$UPI_CURRENCY"
+                                Log.d("UpiLink", "UPI URI: $uriString")
+                                val uri = Uri.parse(uriString)
                                 val intent = Intent(Intent.ACTION_VIEW, uri)
                                 val chooser = Intent.createChooser(intent, "Pay with")
                                 context.startActivity(chooser)
