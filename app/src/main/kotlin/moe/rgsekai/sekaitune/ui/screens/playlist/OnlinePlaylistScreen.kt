@@ -125,6 +125,7 @@ import moe.rgsekai.sekaitune.extensions.toMediaItem
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint
+import moe.rgsekai.sekaitune.innertube.utils.parseSongCount
 import moe.rgsekai.sekaitune.models.toMediaMetadata
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
 import moe.rgsekai.sekaitune.ui.component.DraggableScrollbar
@@ -749,8 +750,7 @@ fun OnlinePlaylistScreen(
                                                     database.transaction {
                                                         val existingPlaylist = playlistEntityByBrowseId(playlist.id)
                                                         val targetPlaylistId =
-                                                            if (existingPlaylist == null) {
-                                                                val playlistEntity =
+                                                            if (existingPlaylist == null) {                                                                 val playlistEntity =
                                                                     PlaylistEntity(
                                                                         name = playlist.title,
                                                                         browseId = playlist.id,
@@ -758,6 +758,7 @@ fun OnlinePlaylistScreen(
                                                                             playlist.thumbnail,
                                                                         isEditable =
                                                                             playlist.isEditable,
+                                                                        remoteSongCount = parseSongCount(playlist.songCountText),
                                                                         playEndpointParams =
                                                                             playlist.playEndpoint
                                                                                 ?.params,
@@ -777,6 +778,7 @@ fun OnlinePlaylistScreen(
                                                                         browseId = playlist.id,
                                                                         thumbnailUrl = playlist.thumbnail,
                                                                         isEditable = playlist.isEditable,
+                                                                        remoteSongCount = parseSongCount(playlist.songCountText),
                                                                         playEndpointParams =
                                                                             playlist.playEndpoint
                                                                                 ?.params,

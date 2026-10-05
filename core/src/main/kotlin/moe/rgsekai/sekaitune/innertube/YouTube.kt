@@ -1028,8 +1028,12 @@ object YouTube {
                         songCountText =
                             header.secondSubtitle
                                 ?.runs
-                                ?.firstOrNull()
-                                ?.text,
+                                ?.joinToString(" ") { it.text }
+                                ?.takeUnless { it.isBlank() }
+                                ?: header.subtitle
+                                    ?.runs
+                                    ?.joinToString(" ") { it.text }
+                                    ?.takeUnless { it.isBlank() },
                         thumbnail = thumbnail,
                         description = description,
                         playEndpoint =

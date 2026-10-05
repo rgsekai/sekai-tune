@@ -186,6 +186,43 @@ fun isPrivateId(browseId: String): Boolean = browseId.contains("privately")
 
 private fun String?.normalizedContinuation(): String? = this?.takeUnless(String::isBlank)
 
+fun parseSongCount(text: String?): Int? {
+    if (text.isNullOrBlank()) return null
+    val clean = text.trim()
+
+    // 1. Compact notation like "1.2K", "5K+", "2.5M"
+    val kMatch = Regex("""([\d.,]+)\s*[kK]""").find(clean)
+    if (kMatch != null) {
+        val numStr = kMatch.groupValues[1].replace(",", ".")
+        return (numStr.toDoubleOrNull()?.times(1000))?.toInt()
+    }
+    val mMatch = Regex("""([\d.,]+)\s*[mM]""").find(clean)
+    if (mMatch != null) {
+        val numStr = mMatch.groupValues[1].replace(",", ".")
+        return (numStr.toDoubleOrNull()?.times(1_000_000))?.toInt()
+    }
+
+    // 2. Specific song/track/video indicator: e.g. "1,200 songs", "5,000+ tracks", "100 videos", "50+ items"
+    val songWordPattern = Regex("""(\d{1,3}(?:[,\s.]\d{3})+|\d+)\s*\+?\s*(?:songs?|tracks?|titles?|videos?|items?|views?|song|track)""", RegexOption.IGNORE_CASE)
+    val songWordMatch = songWordPattern.find(clean)
+    if (songWordMatch != null) {
+        val digitsOnly = songWordMatch.groupValues[1].filter { it.isDigit() }
+        return digitsOnly.toIntOrNull()
+    }
+
+    // 3. Fallback: match digits but ignore release years (1950..2035)
+    val numberPattern = Regex("""(\d{1,3}(?:[,\s.]\d{3})+|\d+)""")
+    val numberMatch = numberPattern.find(clean)?.value ?: return null
+    val digitsOnly = numberMatch.filter { it.isDigit() }
+    val number = digitsOnly.toIntOrNull() ?: return null
+
+    if (number in 1950..2035 && !clean.contains(Regex("""(?i)\b(songs?|tracks?|titles?|videos?|items?)\b"""))) {
+        return null
+    }
+
+    return number
+}
+
 
 
 

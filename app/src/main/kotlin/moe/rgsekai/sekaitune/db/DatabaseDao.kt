@@ -58,6 +58,7 @@ import moe.rgsekai.sekaitune.db.entities.SongEntity
 import moe.rgsekai.sekaitune.db.entities.SongWithStats
 import moe.rgsekai.sekaitune.db.entities.TagEntity
 import moe.rgsekai.sekaitune.extensions.reversed
+import moe.rgsekai.sekaitune.innertube.utils.parseSongCount
 import moe.rgsekai.sekaitune.extensions.toSQLiteQuery
 import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
 import moe.rgsekai.sekaitune.innertube.models.SongItem
@@ -1354,11 +1355,11 @@ interface DatabaseDao {
 
     @Transaction
     @Query(
-        "SELECT *, (SELECT COUNT(*) FROM playlist_song_map WHERE playlistId = playlist.id) AS songCount FROM playlist WHERE browseId = :browseId",
+        "SELECT *, (SELECT COUNT(*) FROM playlist_song_map WHERE playlistId = playlist.id) AS songCount FROM playlist WHERE browseId = :browseId OR browseId = 'VL' || :browseId OR 'VL' || browseId = :browseId LIMIT 1",
     )
     fun playlistByBrowseId(browseId: String): Flow<Playlist?>
 
-    @Query("SELECT * FROM playlist WHERE browseId = :browseId LIMIT 1")
+    @Query("SELECT * FROM playlist WHERE browseId = :browseId OR browseId = 'VL' || :browseId OR 'VL' || browseId = :browseId LIMIT 1")
     fun playlistEntityByBrowseId(browseId: String): PlaylistEntity?
 
     @Transaction
@@ -1926,7 +1927,7 @@ interface DatabaseDao {
                 browseId = playlistItem.id,
                 thumbnailUrl = playlistItem.thumbnail,
                 isEditable = playlistItem.isEditable,
-                remoteSongCount = playlistItem.songCountText?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() },
+                remoteSongCount = parseSongCount(playlistItem.songCountText),
                 playEndpointParams = playlistItem.playEndpoint?.params,
                 shuffleEndpointParams = playlistItem.shuffleEndpoint?.params,
                 radioEndpointParams = playlistItem.radioEndpoint?.params,

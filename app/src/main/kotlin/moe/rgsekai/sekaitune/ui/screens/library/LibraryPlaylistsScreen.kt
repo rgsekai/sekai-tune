@@ -560,7 +560,7 @@ private fun openPlaylist(
     navController: NavController,
     playlist: Playlist,
 ) {
-    if (!playlist.playlist.isEditable && playlist.songCount == 0 && playlist.playlist.remoteSongCount != 0) {
+    if (!playlist.playlist.isEditable && playlist.songCount == 0 && playlist.playlist.browseId != null) {
         navController.navigate("online_playlist/${playlist.playlist.browseId}")
     } else {
         navController.navigate("local_playlist/${playlist.id}")
@@ -763,43 +763,24 @@ fun PlaylistListCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            val displaySongCount =
+                if (playlist.playlist.remoteSongCount != null && playlist.playlist.remoteSongCount > playlist.songCount) {
+                    playlist.playlist.remoteSongCount
+                } else {
+                    playlist.songCount
+                }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "${playlist.songCount} ${stringResource(R.string.tracks_label)}",
+                    text = "$displaySongCount ${stringResource(R.string.tracks_label)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    maxLines = 1,
                 )
 
-                // Tag pill
-                val tagText =
-                    if (playlist.playlist.isEditable) {
-                        stringResource(
-                            R.string.personal_label,
-                        )
-                    } else {
-                        stringResource(R.string.youtube_synced)
-                    }
-                val tagColor = if (playlist.playlist.isEditable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                Box(
-                    modifier =
-                        Modifier
-                            .clip(CircleShape)
-                            .background(tagColor.copy(alpha = 0.12f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                ) {
-                    Text(
-                        text = tagText,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = tagColor,
-                    )
-                }
-
                 if (playlist.playlist.isHidden) {
-                    Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         painter = painterResource(id = R.drawable.visibility_off),
                         contentDescription = stringResource(R.string.hide_playlist),
@@ -952,8 +933,14 @@ fun PlaylistGridCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        val displaySongCount =
+            if (playlist.playlist.remoteSongCount != null && playlist.playlist.remoteSongCount > playlist.songCount) {
+                playlist.playlist.remoteSongCount
+            } else {
+                playlist.songCount
+            }
         Text(
-            text = "${playlist.songCount} ${stringResource(R.string.tracks_label)}",
+            text = "$displaySongCount ${stringResource(R.string.tracks_label)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
         )

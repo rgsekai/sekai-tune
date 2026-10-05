@@ -84,6 +84,7 @@ import moe.rgsekai.sekaitune.db.entities.PlaylistSongMap
 import moe.rgsekai.sekaitune.extensions.toMediaItem
 import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
+import moe.rgsekai.sekaitune.innertube.utils.parseSongCount
 import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.utils.completed
 import moe.rgsekai.sekaitune.models.MediaMetadata
@@ -218,16 +219,12 @@ fun YouTubePlaylistMenu(
                                         val existingPlaylist = playlistEntityByBrowseId(playlist.id)
                                         val targetPlaylistId =
                                             if (existingPlaylist == null) {
-                                                val playlistEntity =
-                                                    PlaylistEntity(
+                                                val playlistEntity =                                                    PlaylistEntity(
                                                         name = playlist.title,
                                                         browseId = playlist.id,
                                                         thumbnailUrl = playlist.thumbnail,
                                                         isEditable = false,
-                                                        remoteSongCount =
-                                                            playlist.songCountText?.let {
-                                                                Regex("""\d+""").find(it)?.value?.toIntOrNull()
-                                                            },
+                                                        remoteSongCount = parseSongCount(playlist.songCountText),
                                                         playEndpointParams = playlist.playEndpoint?.params,
                                                         shuffleEndpointParams = playlist.shuffleEndpoint?.params,
                                                         radioEndpointParams = playlist.radioEndpoint?.params,
@@ -241,10 +238,7 @@ fun YouTubePlaylistMenu(
                                                         browseId = playlist.id,
                                                         thumbnailUrl = playlist.thumbnail,
                                                         isEditable = playlist.isEditable,
-                                                        remoteSongCount =
-                                                            playlist.songCountText?.let {
-                                                                Regex("""\d+""").find(it)?.value?.toIntOrNull()
-                                                            },
+                                                        remoteSongCount = parseSongCount(playlist.songCountText),
                                                         playEndpointParams = playlist.playEndpoint?.params,
                                                         shuffleEndpointParams = playlist.shuffleEndpoint?.params,
                                                         radioEndpointParams = playlist.radioEndpoint?.params,
@@ -703,10 +697,7 @@ fun YouTubePlaylistMenu(
                                                                     browseId = playlist.id,
                                                                     thumbnailUrl = playlist.thumbnail,
                                                                     isEditable = false,
-                                                                    remoteSongCount =
-                                                                        playlist.songCountText?.let {
-                                                                            Regex("""\d+""").find(it)?.value?.toIntOrNull()
-                                                                        },
+                                                                    remoteSongCount = parseSongCount(playlist.songCountText),
                                                                     playEndpointParams = playlist.playEndpoint?.params,
                                                                     shuffleEndpointParams = playlist.shuffleEndpoint?.params,
                                                                     radioEndpointParams = playlist.radioEndpoint?.params,
@@ -799,10 +790,7 @@ fun YouTubePlaylistMenu(
                                                             thumbnailUrl = playlist.thumbnail,
                                                             isEditable = false,
                                                             isAutoSync = newValue,
-                                                            remoteSongCount =
-                                                                playlist.songCountText?.let {
-                                                                    Regex("""\d+""").find(it)?.value?.toIntOrNull()
-                                                                },
+                                                            remoteSongCount = parseSongCount(playlist.songCountText),
                                                             playEndpointParams = playlist.playEndpoint?.params,
                                                             shuffleEndpointParams = playlist.shuffleEndpoint?.params,
                                                             radioEndpointParams = playlist.radioEndpoint?.params,

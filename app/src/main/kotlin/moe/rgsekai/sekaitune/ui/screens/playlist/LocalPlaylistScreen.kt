@@ -884,7 +884,7 @@ fun LocalPlaylistScreen(
                                 ) {
                                     // Song Count
                                     val songCount =
-                                        if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null) {
+                                        if (playlist.playlist.remoteSongCount != null && playlist.playlist.remoteSongCount > playlist.songCount) {
                                             playlist.playlist.remoteSongCount
                                         } else {
                                             playlist.songCount

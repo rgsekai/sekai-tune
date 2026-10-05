@@ -30,6 +30,7 @@ import moe.rgsekai.sekaitune.extensions.filterBlockedArtists
 import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
 import moe.rgsekai.sekaitune.innertube.models.SongItem
+import moe.rgsekai.sekaitune.innertube.utils.parseSongCount
 import moe.rgsekai.sekaitune.utils.reportException
 import javax.inject.Inject
 
@@ -132,6 +133,15 @@ class OnlinePlaylistViewModel
                         _playlistSongs.value = visibleSongs
                         continuation = playlistPage.songsContinuation ?: playlistPage.continuation
                         prefetchViewCounts(visibleSongs.map { song -> song.id })
+
+                        val parsedCount = parseSongCount(playlistPage.playlist.songCountText) ?: visibleSongs.size.takeIf { it > 0 }
+                        if (parsedCount != null) {
+                            database.playlistEntityByBrowseId(playlistId)?.let { entity ->
+                                if (entity.remoteSongCount != parsedCount) {
+                                    database.update(entity.copy(remoteSongCount = parsedCount))
+                                }
+                            }
+                        }
                     }.onFailure { throwable ->
                         _error.value = throwable.message ?: "Failed to load playlist"
                         reportException(throwable)

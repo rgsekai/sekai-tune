@@ -82,8 +82,8 @@ data class LibraryPage(
                         songCountText =
                             renderer.subtitle
                                 ?.runs
-                                ?.lastOrNull()
-                                ?.text,
+                                ?.joinToString(" ") { it.text }
+                                ?.takeUnless { it.isBlank() },
                         thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
                         playEndpoint =
                             renderer.thumbnailOverlay
