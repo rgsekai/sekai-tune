@@ -9,6 +9,14 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
@@ -23,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,11 +44,24 @@ import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 
 private const val BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/rgsekai"
+private const val UPI_ID = "rgsekai@upi"
+private const val UPI_NAME = "Sekai Tune"
+private const val UPI_NOTE = "Support Sekai Tune"
+private const val UPI_CURRENCY = "INR"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupportScreen(navController: NavController) {
+    val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+
+    fun copyUpiId() {
+        val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        clipboardManager?.setPrimaryClip(ClipData.newPlainText("UPI ID", UPI_ID))
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            Toast.makeText(context, "UPI ID copied", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -79,7 +101,36 @@ fun SupportScreen(navController: NavController) {
                         onClick = { uriHandler.openUri(BUY_ME_A_COFFEE_URL) },
                     )
                 }
+                item {
+                    PreferenceEntry(
+                        title = { Text("UPI") },
+                        description = "$UPI_ID - tap to pay, hold to copy",
+                        icon = { Icon(painterResource(R.drawable.payments), null) },
+                        onClick = {
+                            try {
+                                val uri =
+                                    Uri.Builder()
+                                        .scheme("upi")
+                                        .authority("pay")
+                                        .appendQueryParameter("pa", UPI_ID)
+                                        .appendQueryParameter("pn", UPI_NAME)
+                                        .appendQueryParameter("tn", UPI_NOTE)
+                                        .appendQueryParameter("cu", UPI_CURRENCY)
+                                        .build()
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+                                val chooser = Intent.createChooser(intent, "Pay with")
+                                context.startActivity(chooser)
+                            } catch (e: ActivityNotFoundException) {
+                                copyUpiId()
+                            }
+                        },
+                        onLongClick = {
+                            copyUpiId()
+                        },
+                    )
+                }
             }
         }
     }
 }
+

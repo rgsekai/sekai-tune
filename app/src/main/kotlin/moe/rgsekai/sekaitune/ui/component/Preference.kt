@@ -21,6 +21,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -164,6 +165,7 @@ private fun preferenceItemShapeForPosition(position: PreferenceGroupPosition?): 
         PreferenceGroupPosition.Last -> segmentedPreferenceItemShape(index = 1, count = 2)
     }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun PreferenceEntry(
     modifier: Modifier = Modifier,
@@ -173,6 +175,7 @@ fun PreferenceEntry(
     icon: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     isEnabled: Boolean = true,
     shape: Shape? = null,
 ) {
@@ -199,12 +202,24 @@ fun PreferenceEntry(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = PreferenceEntryMinHeight)
-                    .then(if (isEnabled && onClick != null) Modifier.focusable() else Modifier)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = LocalIndication.current,
-                        enabled = isEnabled && onClick != null,
-                        onClick = onClick ?: {},
+                    .then(if (isEnabled && (onClick != null || onLongClick != null)) Modifier.focusable() else Modifier)
+                    .then(
+                        if (onLongClick != null) {
+                            Modifier.combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = LocalIndication.current,
+                                enabled = isEnabled && (onClick != null || onLongClick != null),
+                                onClick = onClick ?: {},
+                                onLongClick = onLongClick,
+                            )
+                        } else {
+                            Modifier.clickable(
+                                interactionSource = interactionSource,
+                                indication = LocalIndication.current,
+                                enabled = isEnabled && onClick != null,
+                                onClick = onClick ?: {},
+                            )
+                        }
                     ).alpha(if (isEnabled) 1f else 0.5f)
                     .padding(
                         horizontal = PreferenceEntryHorizontalPadding,
