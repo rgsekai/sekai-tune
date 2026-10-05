@@ -485,6 +485,9 @@ abstract class GenerateIconPackTask : DefaultTask() {
                 <category android:name="android.intent.category.APP_MUSIC" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
                 """.trimEnd()
             }
@@ -507,6 +510,9 @@ abstract class GenerateIconPackTask : DefaultTask() {
                 <category android:name="android.intent.category.APP_MUSIC" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity-alias>
 ${aliases.prependIndent("        ")}
     </application>

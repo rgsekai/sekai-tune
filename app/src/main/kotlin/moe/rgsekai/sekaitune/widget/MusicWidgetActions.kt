@@ -119,7 +119,8 @@ class PlayShortcutSongAction : ActionCallback {
     }
 }
 
-private const val ACTION_PLAY_PAUSE = "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE"
+const val ACTION_PLAY = "moe.rgsekai.sekaitune.WIDGET_PLAY"
+const val ACTION_PLAY_PAUSE = "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE"
 private const val ACTION_SKIP_NEXT = "moe.rgsekai.sekaitune.WIDGET_SKIP_NEXT"
 private const val ACTION_SKIP_PREV = "moe.rgsekai.sekaitune.WIDGET_SKIP_PREV"
 const val ACTION_TOGGLE_LIKE = "moe.rgsekai.sekaitune.WIDGET_TOGGLE_LIKE"

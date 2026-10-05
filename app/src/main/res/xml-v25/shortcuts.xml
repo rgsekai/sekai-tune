@@ -2,13 +2,30 @@
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
         android:enabled="true"
+        android:icon="@drawable/ic_shortcut_play"
+        android:shortcutId="play"
+        android:shortcutShortLabel="@string/tile_play_label">
+        <intent
+            android:action="moe.rgsekai.sekaitune.action.PLAY"
+            android:targetClass="moe.rgsekai.sekaitune.PlayShortcutActivity" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
         android:icon="@drawable/shortcut_search"
         android:shortcutId="search"
         android:shortcutShortLabel="@string/search">
         <intent
             android:action="moe.rgsekai.sekaitune.action.SEARCH"
-            android:targetClass="moe.rgsekai.sekaitune.MainActivity"
-            android:targetPackage="moe.rgsekai.sekaitune" />
+            android:targetClass="moe.rgsekai.sekaitune.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/new_release"
+        android:shortcutId="new_releases"
+        android:shortcutShortLabel="@string/new_releases">
+        <intent
+            android:action="moe.rgsekai.sekaitune.action.NEW_RELEASES"
+            android:targetClass="moe.rgsekai.sekaitune.MainActivity" />
     </shortcut>
     <shortcut
         android:enabled="true"
@@ -17,8 +34,7 @@
         android:shortcutShortLabel="@string/filter_library">
         <intent
             android:action="moe.rgsekai.sekaitune.action.LIBRARY"
-            android:targetClass="moe.rgsekai.sekaitune.MainActivity"
-            android:targetPackage="moe.rgsekai.sekaitune" />
+            android:targetClass="moe.rgsekai.sekaitune.MainActivity" />
     </shortcut>
     <shortcut
         android:enabled="true"
@@ -27,8 +43,6 @@
         android:shortcutShortLabel="@string/music_recognition">
         <intent
             android:action="moe.rgsekai.sekaitune.action.MUSIC_RECOGNITION"
-            android:targetClass="moe.rgsekai.sekaitune.MainActivity"
-            android:targetPackage="moe.rgsekai.sekaitune" />
+            android:targetClass="moe.rgsekai.sekaitune.MainActivity" />
     </shortcut>
 </shortcuts>
-

@@ -888,6 +888,7 @@ class MainActivity : ComponentActivity() {
                             when (intent?.action) {
                                 ACTION_LIBRARY -> NavigationTab.LIBRARY
                                 ACTION_SEARCH -> NavigationTab.SEARCH
+                                ACTION_NEW_RELEASES -> NavigationTab.HOME
                                 else -> null
                             }
                         }
@@ -2483,6 +2484,34 @@ class MainActivity : ComponentActivity() {
             navController.openMusicRecognition()
             return
         }
+        if (intent.action == ACTION_SEARCH) {
+            navController.navigate(Screens.Home.route) {
+                popUpTo(Screens.Home.route) { inclusive = false }
+                launchSingleTop = true
+            }
+            navController.currentBackStackEntry?.savedStateHandle?.set("openSearch", true)
+            return
+        }
+        if (intent.action == ACTION_LIBRARY) {
+            navController.navigate(Screens.Library.route) {
+                popUpTo(Screens.Home.route) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+            return
+        }
+        if (intent.action == ACTION_NEW_RELEASES) {
+            navController.navigate(Screens.NewRelease.route) {
+                popUpTo(Screens.Home.route) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+            return
+        }
         if (intent.action == ACTION_AOD_MODE) {
             requestAodMode()
             return
@@ -2873,6 +2902,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_SEARCH = "moe.rgsekai.sekaitune.action.SEARCH"
         const val ACTION_LIBRARY = "moe.rgsekai.sekaitune.action.LIBRARY"
+        const val ACTION_NEW_RELEASES = "moe.rgsekai.sekaitune.action.NEW_RELEASES"
     }
 }
 

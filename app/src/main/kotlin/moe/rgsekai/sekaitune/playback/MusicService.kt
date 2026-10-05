@@ -354,6 +354,7 @@ class MusicService :
     private val binder = MusicBinder()
     private var hasBoundClients = false
     private var idleStopJob: Job? = null
+    private var lastPlayCommandReceivedAtElapsedRealtime = 0L
 
     private lateinit var connectivityManager: ConnectivityManager
     lateinit var connectivityObserver: NetworkConnectivityObserver
@@ -7895,7 +7896,13 @@ class MusicService :
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        super.onTaskRemoved(rootIntent)
+        val isPlayShortcutTask = rootIntent?.component?.className?.contains("PlayShortcutActivity") == true ||
+            rootIntent?.action == "moe.rgsekai.sekaitune.action.PLAY"
+        val isRecentPlayCommand = (android.os.SystemClock.elapsedRealtime() - lastPlayCommandReceivedAtElapsedRealtime) < 10_000L
+
+        if (!isPlayShortcutTask && !isRecentPlayCommand) {
+            super.onTaskRemoved(rootIntent)
+        }
 
         val stopMusicOnTaskClearEnabled = dataStore.get(StopMusicOnTaskClearKey, false)
 
@@ -7944,6 +7951,9 @@ class MusicService :
         ensureStartedAsForeground()
 
         val action = intent?.action
+        if (action?.startsWith("moe.rgsekai.sekaitune.WIDGET_") == true || action?.startsWith("moe.rgsekai.sekaitune.action.") == true) {
+            lastPlayCommandReceivedAtElapsedRealtime = android.os.SystemClock.elapsedRealtime()
+        }
         if (action?.startsWith("moe.rgsekai.sekaitune.WIDGET_") == true) {
             ColdStartTimer.addStage("MusicService onStartCommand: Widget Action identified")
             widgetUpdater.setBuffering(true)
@@ -8041,6 +8051,14 @@ class MusicService :
                         queueRestoreCompleted.first { it }
                         ColdStartTimer.addStage("MusicService: Queue Restore Done, Executing Action: $action")
                         when (action) {
+                            moe.rgsekai.sekaitune.widget.ACTION_PLAY,
+                            "moe.rgsekai.sekaitune.WIDGET_PLAY" -> {
+                                if (player.playbackState == Player.STATE_IDLE) {
+                                    player.prepare()
+                                }
+                                player.play()
+                            }
+
                             "moe.rgsekai.sekaitune.WIDGET_PLAY_PAUSE" -> {
                                 ColdStartTimer.addStage("Widget Action: Play/Pause")
                                 if (player.isPlaying) {

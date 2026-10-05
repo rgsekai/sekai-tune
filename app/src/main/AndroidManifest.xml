@@ -177,9 +177,32 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="moe.rgsekai.sekaitune.action.SEARCH" />
+                <action android:name="moe.rgsekai.sekaitune.action.LIBRARY" />
+                <action android:name="moe.rgsekai.sekaitune.action.MUSIC_RECOGNITION" />
+                <action android:name="moe.rgsekai.sekaitune.action.NEW_RELEASES" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
+        </activity>
+
+        <activity
+            android:name=".PlayShortcutActivity"
+            android:theme="@style/Theme.Sekai.PlayShortcut"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="moe.rgsekai.sekaitune.action.PLAY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <activity
@@ -243,6 +266,17 @@
             android:name="androidx.media3.exoplayer.scheduler.PlatformScheduler$PlatformSchedulerService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <service
+            android:name=".PlayTileService"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_play"
+            android:label="@string/tile_play_label">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".musicrecognition.MusicRecognitionTileService"
