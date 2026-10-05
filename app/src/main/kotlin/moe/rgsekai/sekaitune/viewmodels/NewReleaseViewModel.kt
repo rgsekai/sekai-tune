@@ -120,12 +120,17 @@ class NewReleaseViewModel
             }
         }
 
-        private fun List<AlbumItem>.toNewReleaseContent(): NewReleaseContent =
-            NewReleaseContent(
-                albums = filter { it.releaseType == AlbumReleaseType.ALBUM },
-                singles = filter { it.releaseType == AlbumReleaseType.SINGLE },
-                eps = filter { it.releaseType == AlbumReleaseType.EP },
+        private fun List<AlbumItem>.toNewReleaseContent(): NewReleaseContent {
+            val albumsList = filter { it.releaseType == AlbumReleaseType.ALBUM }
+            val singlesList = filter { it.releaseType == AlbumReleaseType.SINGLE }
+            val epsList = filter { it.releaseType == AlbumReleaseType.EP }
+
+            return NewReleaseContent(
+                albums = if (albumsList.isEmpty() && singlesList.isEmpty() && epsList.isEmpty()) this else albumsList,
+                singles = singlesList,
+                eps = epsList,
             )
+        }
     }
 
 

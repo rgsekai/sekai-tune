@@ -1165,16 +1165,29 @@ object YouTube {
                         ?.content
                         ?.sectionListRenderer
                         ?.contents
-                        ?.find {
-                            it.musicCarouselShelfRenderer
-                                ?.header
-                                ?.musicCarouselShelfBasicHeaderRenderer
-                                ?.moreContentButton
-                                ?.buttonRenderer
-                                ?.navigationEndpoint
-                                ?.browseEndpoint
-                                ?.browseId ==
-                                BROWSE_ID_NEW_RELEASE_ALBUMS
+                        ?.find { content ->
+                            val browseId =
+                                content.musicCarouselShelfRenderer
+                                    ?.header
+                                    ?.musicCarouselShelfBasicHeaderRenderer
+                                    ?.moreContentButton
+                                    ?.buttonRenderer
+                                    ?.navigationEndpoint
+                                    ?.browseEndpoint
+                                    ?.browseId
+                            val title =
+                                content.musicCarouselShelfRenderer
+                                    ?.header
+                                    ?.musicCarouselShelfBasicHeaderRenderer
+                                    ?.title
+                                    ?.runs
+                                    ?.firstOrNull()
+                                    ?.text
+                                    ?.lowercase(java.util.Locale.ROOT)
+                            browseId == BROWSE_ID_NEW_RELEASE_ALBUMS ||
+                                browseId == "FEmusic_new_releases" ||
+                                title?.contains("release") == true ||
+                                title?.contains("album") == true
                         }?.musicCarouselShelfRenderer
                         ?.contents
                         ?.mapNotNull { it.musicTwoRowItemRenderer }
@@ -1189,16 +1202,28 @@ object YouTube {
                         ?.content
                         ?.sectionListRenderer
                         ?.contents
-                        ?.find {
-                            it.musicCarouselShelfRenderer
-                                ?.header
-                                ?.musicCarouselShelfBasicHeaderRenderer
-                                ?.moreContentButton
-                                ?.buttonRenderer
-                                ?.navigationEndpoint
-                                ?.browseEndpoint
-                                ?.browseId ==
-                                BROWSE_ID_MOODS_AND_GENRES
+                        ?.find { content ->
+                            val browseId =
+                                content.musicCarouselShelfRenderer
+                                    ?.header
+                                    ?.musicCarouselShelfBasicHeaderRenderer
+                                    ?.moreContentButton
+                                    ?.buttonRenderer
+                                    ?.navigationEndpoint
+                                    ?.browseEndpoint
+                                    ?.browseId
+                            val title =
+                                content.musicCarouselShelfRenderer
+                                    ?.header
+                                    ?.musicCarouselShelfBasicHeaderRenderer
+                                    ?.title
+                                    ?.runs
+                                    ?.firstOrNull()
+                                    ?.text
+                                    ?.lowercase(java.util.Locale.ROOT)
+                            browseId == BROWSE_ID_MOODS_AND_GENRES ||
+                                title?.contains("mood") == true ||
+                                title?.contains("genre") == true
                         }?.musicCarouselShelfRenderer
                         ?.contents
                         ?.mapNotNull { it.musicNavigationButtonRenderer }
@@ -1212,8 +1237,7 @@ object YouTube {
             try {
                 val directAlbums = newReleaseAlbumsFromBrowsePage()
                 if (directAlbums.isNotEmpty()) return@runCatching directAlbums
-            } catch (throwable: Throwable) {
-                if (!throwable.isBrowsePageUnavailable()) throw throwable
+            } catch (ignored: Throwable) {
             }
             explore().getOrThrow().newReleaseAlbums
         }
