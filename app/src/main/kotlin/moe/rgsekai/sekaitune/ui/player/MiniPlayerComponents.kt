@@ -48,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -367,6 +368,7 @@ private fun MiniPlayerTransportButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isPrimary: Boolean = false,
+    iconTintOverride: Color? = null,
     colors: MiniPlayerContentColors,
 ) {
     val view = LocalView.current
@@ -381,7 +383,7 @@ private fun MiniPlayerTransportButton(
     val borderColor =
         if (enabled) colors.buttonBorder else colors.buttonBorder.copy(alpha = 0.12f)
     val iconTint =
-        if (enabled) colors.buttonIcon else colors.disabledButtonIcon
+        iconTintOverride ?: if (enabled) colors.buttonIcon else colors.disabledButtonIcon
 
     Box(
         contentAlignment = Alignment.Center,
@@ -415,8 +417,7 @@ private fun MiniPlayerTransportButton(
 private fun MiniPlayerTransportControls(
     isPlaying: Boolean,
     playbackState: Int,
-    canSkipPrevious: Boolean,
-    canSkipNext: Boolean,
+    isLiked: Boolean,
     playerConnection: PlayerConnection,
     colors: MiniPlayerContentColors,
 ) {
@@ -427,13 +428,13 @@ private fun MiniPlayerTransportControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MiniPlayerTransportButton(
-            iconResId = R.drawable.skip_previous,
-            contentDescription = null,
+            iconResId = if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
+            contentDescription = stringResource(R.string.action_like),
             onClick = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                playerConnection.seekToPrevious()
+                playerConnection.toggleLike()
             },
-            enabled = canSkipPrevious,
+            iconTintOverride = if (isLiked) MaterialTheme.colorScheme.primary else null,
             colors = colors,
         )
 
@@ -460,17 +461,6 @@ private fun MiniPlayerTransportControls(
             isPrimary = true,
             colors = colors,
         )
-
-        MiniPlayerTransportButton(
-            iconResId = R.drawable.skip_next,
-            contentDescription = null,
-            onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                playerConnection.seekToNext()
-            },
-            enabled = canSkipNext,
-            colors = colors,
-        )
     }
 }
 
@@ -484,9 +474,9 @@ fun NewMiniPlayerContent(
     val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
     val playbackState by playerConnection.playbackState.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val currentSong by playerConnection.currentSong.collectAsState(initial = null)
     val togetherSessionState by playerConnection.service.togetherSessionState.collectAsStateWithLifecycle()
-    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
-    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
+    val isLiked = currentSong?.song?.liked == true
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -536,8 +526,7 @@ fun NewMiniPlayerContent(
         MiniPlayerTransportControls(
             isPlaying = isPlaying,
             playbackState = playbackState,
-            canSkipPrevious = canSkipPrevious,
-            canSkipNext = canSkipNext,
+            isLiked = isLiked,
             playerConnection = playerConnection,
             colors = colors,
         )
