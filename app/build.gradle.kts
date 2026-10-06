@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
+// Sekai Tune Build
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.hilt)
