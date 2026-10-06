@@ -15,8 +15,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -81,22 +79,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
@@ -109,13 +103,10 @@ import moe.rgsekai.sekaitune.ui.component.MarkdownText
 import moe.rgsekai.sekaitune.ui.utils.appBarScrollBehavior
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.AppUpdateInstaller
-import moe.rgsekai.sekaitune.utils.GitCommit
 import moe.rgsekai.sekaitune.utils.UpdateNotificationManager
 import moe.rgsekai.sekaitune.utils.Updater
 import moe.rgsekai.sekaitune.utils.rememberPreference
-import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.TimeZone
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,10 +125,7 @@ fun UpdateScreen(
             defaultValue = false,
         )
 
-    var commits by remember { mutableStateOf<List<GitCommit>>(emptyList()) }
-    var isLoadingCommits by remember { mutableStateOf(true) }
     var latestVersion by remember { mutableStateOf<String?>(null) }
-    var isExpanded by rememberSaveable { mutableStateOf(true) }
     var hasNotificationPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -315,7 +303,6 @@ fun UpdateScreen(
 
     LaunchedEffect(Unit) {
         if (!BuildConfig.UPDATER_AVAILABLE) {
-            isLoadingCommits = false
             return@LaunchedEffect
         }
 
@@ -325,21 +312,7 @@ fun UpdateScreen(
                 onUpToDate()
             }
         }
-
-        Updater
-            .getCommitHistory(30)
-            .onSuccess {
-                commits = it
-            }.onFailure {
-                commits = emptyList()
-            }
-        isLoadingCommits = false
     }
-
-    val rotationAngle by animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f,
-        label = "rotation",
-    )
 
     Scaffold(
         modifier =
@@ -432,17 +405,6 @@ fun UpdateScreen(
                             UpdateNotificationManager.cancelPeriodicUpdateCheck(context)
                         }
                     },
-                )
-            }
-
-            item {
-                CommitHistorySection(
-                    commits = commits,
-                    isLoading = isLoadingCommits,
-                    isExpanded = isExpanded,
-                    rotationAngle = rotationAngle,
-                    onToggleExpanded = { isExpanded = !isExpanded },
-                    onCommitClick = { commit -> uriHandler.openUri(commit.url) },
                 )
             }
 
@@ -815,150 +777,6 @@ private fun UpdateControlsPanel(
 }
 
 @Composable
-private fun CommitHistorySection(
-    commits: List<GitCommit>,
-    isLoading: Boolean,
-    isExpanded: Boolean,
-    rotationAngle: Float,
-    onToggleExpanded: () -> Unit,
-    onCommitClick: (GitCommit) -> Unit,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .widthIn(max = 840.dp)
-                .animateContentSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-            onClick = onToggleExpanded,
-        ) {
-            ListItem(
-                headlineContent = {
-                    Text(
-                        text = stringResource(R.string.recent_commits),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        text =
-                            when {
-                                isLoading -> {
-                                    stringResource(R.string.updates_loading_commits)
-                                }
-
-                                commits.isEmpty() -> {
-                                    stringResource(R.string.updates_no_commits)
-                                }
-
-                                else -> {
-                                    stringResource(
-                                        R.string.updates_recent_commits_count,
-                                        commits.size,
-                                    )
-                                }
-                            },
-                    )
-                },
-                leadingContent = {
-                    FeatureIcon(
-                        iconRes = R.drawable.history,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                },
-                trailingContent = {
-                    Icon(
-                        painter = painterResource(R.drawable.expand_more),
-                        contentDescription = null,
-                        modifier = Modifier.rotate(rotationAngle),
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
-        }
-
-        AnimatedVisibility(visible = isExpanded) {
-            when {
-                isLoading -> {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            ),
-                    ) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 24.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                LoadingIndicator(modifier = Modifier.size(32.dp))
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = stringResource(R.string.updates_loading_commits),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                commits.isEmpty() -> {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            ),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.updates_no_commits),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
-
-                else -> {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        commits.forEachIndexed { index, commit ->
-                            key(commit.sha) {
-                                CommitItem(
-                                    commit = commit,
-                                    index = index,
-                                    count = commits.size,
-                                    onClick = { onCommitClick(commit) },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun FeatureIcon(
     @DrawableRes iconRes: Int,
     containerColor: Color,
@@ -979,101 +797,3 @@ private fun FeatureIcon(
         )
     }
 }
-
-@Composable
-private fun CommitItem(
-    commit: GitCommit,
-    index: Int,
-    count: Int,
-    onClick: () -> Unit,
-) {
-    SegmentedListItem(
-        onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 64.dp),
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        leadingContent = {
-            CommitAvatar(avatarUrl = commit.authorAvatarUrl)
-        },
-        trailingContent = {
-            Icon(
-                painter = painterResource(R.drawable.arrow_forward),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        supportingContent = {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    text = commit.sha,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text =
-                        if (commit.date.isNotEmpty()) {
-                            commit.author + " - " + formatCommitDate(commit.date)
-                        } else {
-                            commit.author
-                        },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        },
-        content = {
-            Text(
-                text = commit.message,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-    )
-}
-
-@Composable
-private fun CommitAvatar(avatarUrl: String?) {
-    Box(
-        modifier =
-            Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (!avatarUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = avatarUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            Icon(
-                painter = painterResource(R.drawable.github),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    }
-}
-
-private fun formatCommitDate(isoDate: String): String =
-    try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-        inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-        val date = inputFormat.parse(isoDate)
-        val outputFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-        outputFormat.format(date!!)
-    } catch (e: Exception) {
-        isoDate.take(10)
-    }
