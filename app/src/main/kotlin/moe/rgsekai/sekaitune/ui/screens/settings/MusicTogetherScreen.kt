@@ -108,11 +108,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Sync
 import androidx.navigation.NavController
 import androidx.window.core.layout.WindowSizeClass
+import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.auth.AuthViewModel
+import moe.rgsekai.sekaitune.auth.GoogleAuthHelper
 import moe.rgsekai.sekaitune.ui.component.TextFieldDialog
 import moe.rgsekai.sekaitune.ui.utils.appBarScrollBehavior
 import moe.rgsekai.sekaitune.ui.utils.backToMain
@@ -137,6 +143,7 @@ import moe.rgsekai.sekaitune.ui.component.IconButton as AtIconButton
 fun MusicTogetherScreen(
     navController: NavController,
     viewModel: MusicTogetherViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current
@@ -275,14 +282,28 @@ fun MusicTogetherScreen(
                 }
 
                 is MusicTogetherScreenState.Success -> {
+                    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+                    val onSignInWithGoogle: () -> Unit = {
+                        coroutineScope.launch {
+                            GoogleAuthHelper.signInWithGoogle(
+                                context = context,
+                                onSuccess = {
+                                    viewModel.clearError()
+                                },
+                                onError = { e ->
+                                    if (e !is androidx.credentials.exceptions.GetCredentialCancellationException) {
+                                        Toast.makeText(context, e.localizedMessage ?: "Sign-in failed", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                            )
+                        }
+                    }
                     MusicTogetherContent(
                         model = state.model,
                         useSupportingPane = useSupportingPane,
                         viewModel = viewModel,
-                        onNavigateToSignIn = {
-                            viewModel.clearError()
-                            navController.navigate("settings/ai_integration")
-                        },
+                        authViewModel = authViewModel,
+                        onSignInWithGoogle = onSignInWithGoogle,
                     )
                 }
             }
@@ -295,7 +316,8 @@ private fun MusicTogetherContent(
     model: MusicTogetherUiModel,
     useSupportingPane: Boolean,
     viewModel: MusicTogetherViewModel,
-    onNavigateToSignIn: () -> Unit,
+    authViewModel: AuthViewModel,
+    onSignInWithGoogle: () -> Unit,
 ) {
     val listState = rememberLazyListState()
     var showActivityLogSheet by rememberSaveable { mutableStateOf(false) }
@@ -324,8 +346,11 @@ private fun MusicTogetherContent(
                 contentPadding = PaddingValues(bottom = MusicTogetherSpacing.lg + LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()),
                 verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
             ) {
-                item(contentType = "mode_note") {
-                    ModeTipCard()
+                item(contentType = "account_and_note") {
+                    AccountAndNoteCard(
+                        authViewModel = authViewModel,
+                        onSignInWithGoogle = onSignInWithGoogle,
+                    )
                 }
                 item(contentType = "status") {
                     StatusCard(
@@ -334,7 +359,7 @@ private fun MusicTogetherContent(
                         onCopy = viewModel::copySessionValue,
                         onShare = viewModel::shareSessionValue,
                         onLeave = viewModel::leaveSession,
-                        onNavigateToSignIn = onNavigateToSignIn,
+                        onSignInWithGoogle = onSignInWithGoogle,
                     )
                 }
                 item(contentType = "playback") {
@@ -342,7 +367,11 @@ private fun MusicTogetherContent(
                 }
                 if (model.host.visible) {
                     item(contentType = "host") {
-                        HostControlsCard(host = model.host, viewModel = viewModel)
+                        HostControlsCard(
+                            host = model.host,
+                            viewModel = viewModel,
+                            onSignInWithGoogle = onSignInWithGoogle,
+                        )
                     }
                 }
                 if (!model.status.active) {
@@ -352,11 +381,16 @@ private fun MusicTogetherContent(
                                 sessions = model.invitedSessions,
                                 onJoinSession = viewModel::joinInvitedSession,
                                 onDismissSession = viewModel::dismissInvitedSession,
+                                onSignInWithGoogle = onSignInWithGoogle,
                             )
                         }
                     }
                     item(contentType = "join") {
-                        JoinControlsCard(join = model.join, viewModel = viewModel)
+                        JoinControlsCard(
+                            join = model.join,
+                            viewModel = viewModel,
+                            onSignInWithGoogle = onSignInWithGoogle,
+                        )
                     }
                 }
             }
@@ -406,8 +440,11 @@ private fun MusicTogetherContent(
                 ),
             verticalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
         ) {
-            item(contentType = "mode_note") {
-                ModeTipCard()
+            item(contentType = "account_and_note") {
+                AccountAndNoteCard(
+                    authViewModel = authViewModel,
+                    onSignInWithGoogle = onSignInWithGoogle,
+                )
             }
             item(contentType = "status") {
                 StatusCard(
@@ -416,7 +453,7 @@ private fun MusicTogetherContent(
                     onCopy = viewModel::copySessionValue,
                     onShare = viewModel::shareSessionValue,
                     onLeave = viewModel::leaveSession,
-                    onNavigateToSignIn = onNavigateToSignIn,
+                    onSignInWithGoogle = onSignInWithGoogle,
                 )
             }
             item(contentType = "playback") {
@@ -424,7 +461,11 @@ private fun MusicTogetherContent(
             }
             if (model.host.visible) {
                 item(contentType = "host") {
-                    HostControlsCard(host = model.host, viewModel = viewModel)
+                    HostControlsCard(
+                        host = model.host,
+                        viewModel = viewModel,
+                        onSignInWithGoogle = onSignInWithGoogle,
+                    )
                 }
             }
             if (!model.status.active) {
@@ -434,11 +475,16 @@ private fun MusicTogetherContent(
                             sessions = model.invitedSessions,
                             onJoinSession = viewModel::joinInvitedSession,
                             onDismissSession = viewModel::dismissInvitedSession,
+                            onSignInWithGoogle = onSignInWithGoogle,
                         )
                     }
                 }
                 item(contentType = "join") {
-                    JoinControlsCard(join = model.join, viewModel = viewModel)
+                    JoinControlsCard(
+                        join = model.join,
+                        viewModel = viewModel,
+                        onSignInWithGoogle = onSignInWithGoogle,
+                    )
                 }
             }
             item(contentType = "participants") {
@@ -591,29 +637,215 @@ private fun MusicTogetherDialogs(
 }
 
 @Composable
-private fun ModeTipCard(
+private fun AccountAndNoteCard(
+    authViewModel: AuthViewModel,
+    onSignInWithGoogle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val firebaseUser = authViewModel.currentUser
+    var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
+
     Card(
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier.fillMaxWidth(),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = MusicTogetherSpacing.sm, vertical = MusicTogetherSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
-        ) {
-            AccentIcon(
-                iconResId = R.drawable.info,
-                accent = MaterialTheme.colorScheme.primary,
-                size = 36.dp,
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (firebaseUser != null && !firebaseUser.isAnonymous) {
+                val syncState by authViewModel.syncStatus.collectAsStateWithLifecycle()
+                val syncDesc =
+                    when (val s = syncState) {
+                        is moe.rgsekai.sekaitune.sync.SyncStatus.Syncing -> "Syncing settings with cloud..."
+                        is moe.rgsekai.sekaitune.sync.SyncStatus.Success -> "Settings synced"
+                        is moe.rgsekai.sekaitune.sync.SyncStatus.Error -> "Sync failed: ${s.message}"
+                        moe.rgsekai.sekaitune.sync.SyncStatus.Idle -> "Cloud sync active"
+                    }
+
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { authViewModel.syncNow() }
+                            .padding(horizontal = MusicTogetherSpacing.sm, vertical = MusicTogetherSpacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (firebaseUser.photoUrl != null) {
+                        AsyncImage(
+                            model = firebaseUser.photoUrl,
+                            placeholder = painterResource(R.drawable.person),
+                            error = painterResource(R.drawable.person),
+                            fallback = painterResource(R.drawable.person),
+                            contentDescription = "Profile Picture",
+                            contentScale = ContentScale.Crop,
+                            modifier =
+                                Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape),
+                        )
+                    } else {
+                        AccentIcon(
+                            iconResId = R.drawable.person,
+                            accent = MaterialTheme.colorScheme.primary,
+                            size = 42.dp,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(MusicTogetherSpacing.sm))
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = firebaseUser.displayName ?: "Google User",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (!firebaseUser.email.isNullOrBlank()) {
+                            Text(
+                                text = firebaseUser.email!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Text(
+                            text = syncDesc,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        IconButton(
+                            onClick = { authViewModel.syncNow() },
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Sync,
+                                contentDescription = "Sync now",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = { showLogoutDialog = true },
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Logout,
+                                contentDescription = "Sign Out",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onSignInWithGoogle)
+                            .padding(horizontal = MusicTogetherSpacing.sm, vertical = MusicTogetherSpacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AccentIcon(
+                        iconResId = R.drawable.auto_awesome,
+                        accent = MaterialTheme.colorScheme.primary,
+                        size = 38.dp,
+                    )
+
+                    Spacer(modifier = Modifier.width(MusicTogetherSpacing.sm))
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = "Sign in with Google",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "Link your account to sync settings",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = MusicTogetherSpacing.sm),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
             )
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MusicTogetherSpacing.sm, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
+            ) {
+                AccentIcon(
+                    iconResId = R.drawable.info,
+                    accent = MaterialTheme.colorScheme.primary,
+                    size = 28.dp,
+                )
+                Text(
+                    text = stringResource(R.string.together_mode_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    if (showLogoutDialog) {
+        moe.rgsekai.sekaitune.ui.component.DefaultDialog(
+            onDismiss = { showLogoutDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Logout,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            },
+            title = { Text("Sign Out") },
+            buttons = {
+                TextButton(
+                    onClick = { showLogoutDialog = false },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        authViewModel.signOut()
+                        showLogoutDialog = false
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                }
+            },
+        ) {
             Text(
-                text = stringResource(R.string.together_mode_note),
+                text = "Are you sure you want to sign out of your Google account? Your app settings will stop syncing and Online sessions will require sign-in.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -626,11 +858,12 @@ private fun StatusCard(
     onCopy: (Int, String) -> Unit,
     onShare: (String) -> Unit,
     onLeave: () -> Unit,
-    onNavigateToSignIn: (() -> Unit)? = null,
+    onSignInWithGoogle: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val accent =
         when {
+            status.showSignInAction -> MaterialTheme.colorScheme.primary
             status.error -> MaterialTheme.colorScheme.error
             status.active -> MaterialTheme.colorScheme.primary
             else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -652,7 +885,10 @@ private fun StatusCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
             ) {
-                AccentIcon(iconResId = status.iconResId, accent = accent)
+                AccentIcon(
+                    iconResId = if (status.showSignInAction) R.drawable.auto_awesome else status.iconResId,
+                    accent = accent,
+                )
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center,
@@ -705,7 +941,54 @@ private fun StatusCard(
                 }
             }
 
-            if (status.errorMessage != null) {
+            if (status.showSignInAction) {
+                Surface(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.large)
+                            .clickable(enabled = onSignInWithGoogle != null) {
+                                onSignInWithGoogle?.invoke()
+                            },
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(MusicTogetherSpacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.sm),
+                    ) {
+                        AccentIcon(
+                            iconResId = R.drawable.auto_awesome,
+                            accent = MaterialTheme.colorScheme.primary,
+                            size = 36.dp,
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = "Sign in with Google",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = "Link your account to use Online sessions",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (onSignInWithGoogle != null) {
+                            FilledTonalButton(
+                                onClick = onSignInWithGoogle,
+                                shapes = ButtonDefaults.shapes(),
+                            ) {
+                                Text(text = "Sign in")
+                            }
+                        }
+                    }
+                }
+            } else if (status.errorMessage != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -720,20 +1003,6 @@ private fun StatusCard(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )
-                        if (status.showSignInAction && onNavigateToSignIn != null) {
-                            FilledTonalButton(
-                                onClick = onNavigateToSignIn,
-                                shapes = ButtonDefaults.shapes(),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.person),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(Modifier.width(MusicTogetherSpacing.xs))
-                                Text(text = stringResource(R.string.go_to_signin))
-                            }
-                        }
                     }
                 }
             }
@@ -874,6 +1143,7 @@ private fun PlaybackCard(playback: MusicTogetherPlaybackUiModel) {
 private fun HostControlsCard(
     host: MusicTogetherHostUiModel,
     viewModel: MusicTogetherViewModel,
+    onSignInWithGoogle: () -> Unit,
 ) {
     SectionCard(
         iconResId = R.drawable.fire,
@@ -932,7 +1202,15 @@ private fun HostControlsCard(
         )
         Button(
             enabled = host.startEnabled,
-            onClick = viewModel::startSession,
+            onClick = {
+                val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                val isSignedIn = user != null && !user.isAnonymous
+                if (host.onlineMode && !isSignedIn) {
+                    onSignInWithGoogle()
+                } else {
+                    viewModel.startSession()
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             shapes = ButtonDefaults.shapes(),
         ) {
@@ -961,6 +1239,7 @@ private fun InvitedSessionsCard(
     sessions: List<moe.rgsekai.sekaitune.buddy.TogetherSessionSummary>,
     onJoinSession: (moe.rgsekai.sekaitune.buddy.TogetherSessionSummary) -> Unit,
     onDismissSession: (moe.rgsekai.sekaitune.buddy.TogetherSessionSummary) -> Unit,
+    onSignInWithGoogle: () -> Unit,
 ) {
     SectionCard(
         iconResId = R.drawable.multi_user,
@@ -1010,7 +1289,15 @@ private fun InvitedSessionsCard(
                             horizontalArrangement = Arrangement.spacedBy(MusicTogetherSpacing.xs),
                         ) {
                             FilledTonalButton(
-                                onClick = { onJoinSession(session) },
+                                onClick = {
+                                    val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                                    val isSignedIn = user != null && !user.isAnonymous
+                                    if (!isSignedIn) {
+                                        onSignInWithGoogle()
+                                    } else {
+                                        onJoinSession(session)
+                                    }
+                                },
                                 shapes = ButtonDefaults.shapes(),
                             ) {
                                 Text(stringResource(R.string.together_join_section))
@@ -1036,6 +1323,7 @@ private fun InvitedSessionsCard(
 private fun JoinControlsCard(
     join: MusicTogetherJoinUiModel,
     viewModel: MusicTogetherViewModel,
+    onSignInWithGoogle: () -> Unit,
 ) {
     SectionCard(
         iconResId = R.drawable.multi_user,
@@ -1070,7 +1358,15 @@ private fun JoinControlsCard(
         )
         FilledTonalButton(
             enabled = join.canJoin,
-            onClick = viewModel::joinSession,
+            onClick = {
+                val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                val isSignedIn = user != null && !user.isAnonymous
+                if (join.onlineMode && !isSignedIn) {
+                    onSignInWithGoogle()
+                } else {
+                    viewModel.joinSession()
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             shapes = ButtonDefaults.shapes(),
         ) {

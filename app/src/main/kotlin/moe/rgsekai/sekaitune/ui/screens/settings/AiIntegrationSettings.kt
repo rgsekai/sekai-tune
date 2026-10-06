@@ -90,22 +90,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.ai.AiModelOption
-import moe.rgsekai.sekaitune.auth.AuthViewModel
 import moe.rgsekai.sekaitune.constants.AiApiKeyKey
 import moe.rgsekai.sekaitune.constants.AiApiValidationStatus
 import moe.rgsekai.sekaitune.constants.AiApiValidationStatusKey
@@ -124,14 +114,6 @@ import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.viewmodels.AiIntegrationSettingsViewModel
-import java.security.SecureRandom
-import java.util.Base64
-
-fun generateNonce(): String {
-    val bytes = ByteArray(16)
-    SecureRandom().nextBytes(bytes)
-    return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
-}
 
 private enum class TestApiVisualState { Idle, Testing, Success, Failed }
 
@@ -139,13 +121,9 @@ private enum class TestApiVisualState { Idle, Testing, Success, Failed }
 fun AiIntegrationSettings(
     navController: NavController,
     viewModel: AiIntegrationSettingsViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val firebaseUser = authViewModel.currentUser
     val coroutineScope = rememberCoroutineScope()
-    val credentialManager = remember { CredentialManager.create(context) }
-    val webClientId = "1008894048566-hcoqeifkn31kllrq6i3lf9f83c9283jm.apps.googleusercontent.com"
 
     val actionState by viewModel.actionState.collectAsStateWithLifecycle()
     val availableModels by viewModel.availableModels.collectAsStateWithLifecycle()
@@ -156,7 +134,6 @@ fun AiIntegrationSettings(
     val (selectedModel, setSelectedModel) = rememberPreference(AiSelectedModelKey, "")
     val (customModel, setCustomModel) = rememberPreference(AiCustomModelKey, "")
     var showApiKeyDialog by rememberSaveable { mutableStateOf(false) }
-    var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { message ->
@@ -199,119 +176,7 @@ fun AiIntegrationSettings(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = SettingsDimensions.ScreenBottomPadding)
         ) {
-            PreferenceGroup(title = "Account Integration") {
-            item {
-                if (firebaseUser != null) {
-                    val syncState by authViewModel.syncStatus.collectAsStateWithLifecycle()
-                    val syncDesc = when (val s = syncState) {
-                        is moe.rgsekai.sekaitune.sync.SyncStatus.Syncing -> "Syncing settings with cloud..."
-                        is moe.rgsekai.sekaitune.sync.SyncStatus.Success -> "Settings synced"
-                        is moe.rgsekai.sekaitune.sync.SyncStatus.Error -> "Sync failed: ${s.message}"
-                        moe.rgsekai.sekaitune.sync.SyncStatus.Idle -> "Cloud sync active"
-                    }
-                    // --- STATE 1: LOGGED IN ---
-                    PreferenceEntry(
-                        title = { Text(firebaseUser.displayName ?: "Google User") },
-                        description = "${firebaseUser.email.orEmpty()}\n$syncDesc",
-                        icon = {
-                            if (firebaseUser.photoUrl != null) {
-                                AsyncImage(
-                                    model = firebaseUser.photoUrl,
-                                    placeholder = painterResource(R.drawable.person),
-                                    error = painterResource(R.drawable.person),
-                                    fallback = painterResource(R.drawable.person),
-                                    contentDescription = "Profile Picture",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(32.dp).clip(CircleShape)
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.AccountCircle,
-                                    contentDescription = "Profile",
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        },
-                        trailingContent = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { authViewModel.syncNow() },
-                                    onLongClick = {}
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Sync,
-                                        contentDescription = "Sync now",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { showLogoutDialog = true },
-                                    onLongClick = {}
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Logout,
-                                        contentDescription = "Sign Out",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        },
-                        onClick = { authViewModel.syncNow() }
-                    )
-                } else {
-                    // --- STATE 2: LOGGED OUT ---
-                    PreferenceEntry(
-                        title = { Text("Sign in with Google") },
-                        description = "Link your account to sync settings",
-                        icon = { Icon(painterResource(id = R.drawable.auto_awesome), contentDescription = null) },
-                        onClick = {
-                            val googleIdOption = GetGoogleIdOption.Builder()
-                                .setFilterByAuthorizedAccounts(false)
-                                .setServerClientId(webClientId)
-                                .setAutoSelectEnabled(false)
-                                .setNonce(generateNonce())
-                                .build()
-
-                            val request = GetCredentialRequest.Builder()
-                                .addCredentialOption(googleIdOption)
-                                .build()
-
-                            coroutineScope.launch {
-                                try {
-                                    val result = credentialManager.getCredential(
-                                        request = request,
-                                        context = context,
-                                    )
-                                    val credential = result.credential
-
-                                    if (credential is CustomCredential &&
-                                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                                    ) {
-                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                                        val idToken = googleIdTokenCredential.idToken
-
-                                        val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-
-                                        FirebaseAuth.getInstance().signInWithCredential(firebaseCredential)
-                                            .addOnSuccessListener { authResult ->
-                                                println("Firebase sign-in success! Welcome: ${authResult.user?.displayName}")
-                                            }
-                                            .addOnFailureListener { e ->
-                                                println("Firebase sign-in failed: ${e.message}")
-                                            }
-                                    }
-                                } catch (e: Exception) {
-                                    println("Google sign-in error: ${e.message}")
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-        }
-
-        PreferenceGroup(title = stringResource(R.string.ai_provider_settings)) {
+            PreferenceGroup(title = stringResource(R.string.ai_provider_settings)) {
             item {
                 ListPreference(
                     title = { Text(stringResource(R.string.ai_provider)) },
@@ -492,43 +357,6 @@ fun AiIntegrationSettings(
             onDismiss = { showApiKeyDialog = false },
             onSave = { setApiKey(it) },
         )
-    }
-
-    if (showLogoutDialog) {
-        DefaultDialog(
-            onDismiss = { showLogoutDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Logout,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
-            // ... rest of the dialog stays the same ...
-            title = { Text("Sign Out") },
-            buttons = {
-                TextButton(
-                    onClick = { showLogoutDialog = false },
-                    shapes = ButtonDefaults.shapes()
-                ) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-                TextButton(
-                    onClick = {
-                        authViewModel.signOut()
-                        showLogoutDialog = false
-                    },
-                    shapes = ButtonDefaults.shapes()
-                ) {
-                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
-                }
-            }
-        ) {
-            Text(
-                text = "Are you sure you want to sign out of your Google account? Your app settings will stop syncing.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
     }
 }
 

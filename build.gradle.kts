@@ -44,9 +44,13 @@ subprojects {
     configurations.configureEach {
         resolutionStrategy {
             cacheChangingModulesFor(0, "seconds")
-            force("com.github.TeamNewPipe:nanojson:c7a6c1c08d16b6d5ecded34758e6415e07be2166")
+            force(
+                "com.github.TeamNewPipe:nanojson:c7a6c1c08d16b6d5ecded34758e6415e07be2166",
+                "com.google.protobuf:protobuf-javalite:3.25.5",
+            )
         }
         exclude(group = "com.google.protobuf", module = "protobuf-java")
-        exclude(group = "com.google.firebase", module = "protolite-well-known-types")
     }
 }
+
+
