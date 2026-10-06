@@ -496,18 +496,6 @@ object SettingsSearchRepository {
                 category = appearanceCategory,
                 iconRes = R.drawable.slow_motion_video,
                 route = "settings/canvas",
-                keywords = listOf("canvas", "spotify canvas", "video loop", "animated artwork", "moving cover art"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
-                id = "sub_force_high_refresh_rate",
-                title = "Force high refresh rate",
-                subtitle = "Run the application smoothly at 90Hz / 120Hz display refresh rate",
-                category = appearanceCategory,
-                iconRes = R.drawable.bolt,
-                route = "settings/appearance",
-                keywords = listOf("force high refresh rate", "120hz", "90hz", "smooth display", "refresh rate", "fps"),
             ),
         )
         add(

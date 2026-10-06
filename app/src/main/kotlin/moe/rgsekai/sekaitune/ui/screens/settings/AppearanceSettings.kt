@@ -79,11 +79,9 @@ import moe.rgsekai.sekaitune.constants.CustomFontNameKey
 import moe.rgsekai.sekaitune.constants.CustomFontUriKey
 import moe.rgsekai.sekaitune.constants.DarkModeKey
 import moe.rgsekai.sekaitune.constants.DefaultOpenTabKey
-import moe.rgsekai.sekaitune.constants.DisableAnimationsKey
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.constants.DynamicThemeKey
 import moe.rgsekai.sekaitune.constants.FontPreferenceKey
-import moe.rgsekai.sekaitune.constants.ForceHighRefreshRateKey
 import moe.rgsekai.sekaitune.constants.GridItemSize
 import moe.rgsekai.sekaitune.constants.GridItemsSizeKey
 import moe.rgsekai.sekaitune.constants.HidePlayerThumbnailKey
@@ -122,7 +120,6 @@ import moe.rgsekai.sekaitune.ui.component.ThumbnailCornerRadiusSelectorButton
 import moe.rgsekai.sekaitune.ui.player.StyledPlaybackSlider
 import moe.rgsekai.sekaitune.ui.theme.CustomFontLoader
 import moe.rgsekai.sekaitune.ui.utils.backToMain
-import moe.rgsekai.sekaitune.utils.isLowRamDevice
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import kotlin.math.roundToInt
@@ -131,7 +128,6 @@ import kotlin.math.roundToInt
 @Composable
 fun AppearanceSettings(navController: NavController) {
     val context = LocalContext.current
-    val defaultDisableAnimations = remember(context) { context.isLowRamDevice() }
     val (dynamicTheme, onDynamicThemeChange) =
         rememberPreference(
             DynamicThemeKey,
@@ -184,16 +180,6 @@ fun AppearanceSettings(navController: NavController) {
         )
     val (pureBlack, onPureBlackChange) = rememberPreference(PureBlackKey, defaultValue = false)
     val (disableBlur, onDisableBlurChange) = rememberPreference(DisableBlurKey, defaultValue = false)
-    val (disableAnimations, onDisableAnimationsChange) =
-        rememberPreference(
-            DisableAnimationsKey,
-            defaultValue = defaultDisableAnimations,
-        )
-    val (forceHighRefreshRate, onForceHighRefreshRateChange) =
-        rememberPreference(
-            ForceHighRefreshRateKey,
-            defaultValue = false,
-        )
     val (blurRadius, onBlurRadiusChange) = rememberPreference(BlurRadiusKey, defaultValue = 48f)
     val (backdropEnabled, onBackdropEnabledChange) = rememberPreference(BackdropEnabledKey, defaultValue = true)
     val (backdropBlurAmount, onBackdropBlurAmountChange) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
@@ -317,14 +303,6 @@ fun AppearanceSettings(navController: NavController) {
             key = ChipSortTypeKey,
             defaultValue = LibraryFilter.LIBRARY,
         )
-    val supportedHighestFps = rememberSupportedHighestFps()
-    val isHighRefreshRateSupported = supportedHighestFps > HIGH_REFRESH_RATE_THRESHOLD_FPS
-
-    ApplyRefreshRate(
-        isEnabled = forceHighRefreshRate && isHighRefreshRateSupported,
-        targetFps = supportedHighestFps,
-    )
-
     var showSliderOptionDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -429,8 +407,6 @@ fun AppearanceSettings(navController: NavController) {
                     )
                 }
 
-
-
                 item(visible = !dynamicTheme || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.color_palette)) },
@@ -442,16 +418,10 @@ fun AppearanceSettings(navController: NavController) {
 
                 item {
                     PreferenceEntry(
-                        title = { Text(stringResource(R.string.app_icon)) },
-                        description = stringResource(R.string.app_icon_description),
-                        icon = {
-                            Image(
-                                painter = painterResource(id = R.drawable.sekai_tune),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp).clip(CircleShape)
-                            )
-                        },
-                        onClick = { navController.navigate(route = "settings/appearance/icon") }
+                        title = { Text(stringResource(R.string.liquid_glass)) },
+                        description = stringResource(R.string.liquid_glass_performance_warning),
+                        icon = { Icon(painterResource(R.drawable.tune), null) },
+                        onClick = { navController.navigate("settings/appearance/liquid_glass") },
                     )
                 }
 
@@ -479,6 +449,57 @@ fun AppearanceSettings(navController: NavController) {
                         onCheckedChange = onPureBlackChange,
                     )
                 }
+
+                item {
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.app_icon)) },
+                        description = stringResource(R.string.app_icon_description),
+                        icon = {
+                            Image(
+                                painter = painterResource(id = R.drawable.sekai_tune),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp).clip(CircleShape),
+                            )
+                        },
+                        onClick = { navController.navigate(route = "settings/appearance/icon") },
+                    )
+                }
+            }
+
+            PreferenceGroup(title = stringResource(R.string.appearance_section_typography)) {
+                item {
+                    EnumListPreference(
+                        title = { Text(stringResource(R.string.font_preference)) },
+                        description = stringResource(R.string.font_preference_desc),
+                        icon = { Icon(painterResource(R.drawable.text_fields), null) },
+                        selectedValue = fontPreference,
+                        onValueSelected = onFontPreferenceSelected,
+                        valueText = {
+                            when (it) {
+                                AppFontPreference.DEFAULT -> stringResource(R.string.font_preference_default)
+                                AppFontPreference.SYSTEM -> stringResource(R.string.font_preference_system)
+                                AppFontPreference.CUSTOM -> stringResource(R.string.font_preference_custom)
+                            }
+                        },
+                    )
+                }
+
+                item(visible = fontPreference == AppFontPreference.CUSTOM) {
+                    val customFontDescription =
+                        if (customFontName.isNotBlank()) {
+                            customFontName
+                        } else if (customFontUri.isBlank()) {
+                            stringResource(R.string.custom_font_desc)
+                        } else {
+                            customFontUri
+                        }
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.custom_font)) },
+                        description = customFontDescription,
+                        icon = { Icon(painterResource(R.drawable.text_fields), null) },
+                        onClick = pickCustomFont,
+                    )
+                }
             }
 
             PreferenceGroup(title = stringResource(R.string.display)) {
@@ -489,31 +510,6 @@ fun AppearanceSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.blur_off), null) },
                         checked = disableBlur,
                         onCheckedChange = onDisableBlurChange,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.disable_animations)) },
-                        description = stringResource(R.string.disable_animations_desc),
-                        icon = { Icon(painterResource(R.drawable.animation), null) },
-                        checked = disableAnimations,
-                        onCheckedChange = onDisableAnimationsChange,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.force_high_refresh_rate)) },
-                        description =
-                            stringResource(
-                                R.string.max_supported_refresh_rate,
-                                supportedHighestFps.roundToInt(),
-                            ),
-                        icon = { Icon(painterResource(R.drawable.speed), null) },
-                        checked = forceHighRefreshRate,
-                        onCheckedChange = onForceHighRefreshRateChange,
-                        isEnabled = isHighRefreshRateSupported,
                     )
                 }
 
@@ -567,39 +563,6 @@ fun AppearanceSettings(navController: NavController) {
                     )
                 }
 
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.font_preference)) },
-                        description = stringResource(R.string.font_preference_desc),
-                        icon = { Icon(painterResource(R.drawable.text_fields), null) },
-                        selectedValue = fontPreference,
-                        onValueSelected = onFontPreferenceSelected,
-                        valueText = {
-                            when (it) {
-                                AppFontPreference.DEFAULT -> stringResource(R.string.font_preference_default)
-                                AppFontPreference.SYSTEM -> stringResource(R.string.font_preference_system)
-                                AppFontPreference.CUSTOM -> stringResource(R.string.font_preference_custom)
-                            }
-                        },
-                    )
-                }
-
-                item(visible = fontPreference == AppFontPreference.CUSTOM) {
-                    val customFontDescription =
-                        if (customFontName.isNotBlank()) {
-                            customFontName
-                        } else if (customFontUri.isBlank()) {
-                            stringResource(R.string.custom_font_desc)
-                        } else {
-                            customFontUri
-                        }
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.custom_font)) },
-                        description = customFontDescription,
-                        icon = { Icon(painterResource(R.drawable.text_fields), null) },
-                        onClick = pickCustomFont,
-                    )
-                }
             }
 
             PreferenceGroup(title = stringResource(R.string.player)) {
@@ -615,32 +578,6 @@ fun AppearanceSettings(navController: NavController) {
                                 PlayerDesignStyle.V7 -> stringResource(R.string.player_design_v7)
                             }
                         },
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.show_player_volume_bar)) },
-                        description =
-                            if (isVolumeBarSupported) {
-                                null
-                            } else {
-                                stringResource(R.string.player_volume_bar_v7_v8_only)
-                            },
-                        icon = { Icon(painterResource(R.drawable.volume_up), null) },
-                        checked = showPlayerVolumeBar,
-                        onCheckedChange = onShowPlayerVolumeBarChange,
-                        isEnabled = isVolumeBarSupported,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.show_one_line_lyrics)) },
-                        description = stringResource(R.string.show_one_line_lyrics_desc),
-                        icon = { Icon(painterResource(R.drawable.lyrics), null) },
-                        checked = showOneLineLyrics,
-                        onCheckedChange = onShowOneLineLyricsChange,
                     )
                 }
 
@@ -685,59 +622,6 @@ fun AppearanceSettings(navController: NavController) {
 
                 item {
                     EnumListPreference(
-                        title = { Text(stringResource(R.string.mini_player_background_style)) },
-                        icon = { Icon(painterResource(R.drawable.gradient), null) },
-                        selectedValue = miniPlayerBackground,
-                        onValueSelected = onMiniPlayerBackgroundChange,
-                        valueText = {
-                            when (it) {
-                                MiniPlayerBackgroundStyle.THEME -> stringResource(R.string.follow_theme)
-                                MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
-                                MiniPlayerBackgroundStyle.GLOW -> stringResource(R.string.glow)
-                                MiniPlayerBackgroundStyle.LIVE_MESH -> stringResource(R.string.live_mesh)
-                                MiniPlayerBackgroundStyle.LIQUID_GLASS -> stringResource(R.string.player_background_liquid_glass)
-                            }
-                        },
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.hide_player_thumbnail)) },
-                        description = stringResource(R.string.hide_player_thumbnail_desc),
-                        icon = { Icon(painterResource(R.drawable.hide_image), null) },
-                        checked = hidePlayerThumbnail,
-                        onCheckedChange = onHidePlayerThumbnailChange,
-                    )
-                }
-
-                item {
-                    ThumbnailCornerRadiusSelectorButton(
-                        onRadiusSelected = {},
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.crop_thumbnail_to_square)) },
-                        description = stringResource(R.string.crop_thumbnail_to_square_desc),
-                        icon = { Icon(painterResource(R.drawable.image), null) },
-                        checked = cropThumbnailToSquare,
-                        onCheckedChange = onCropThumbnailToSquareChange,
-                    )
-                }
-
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.aod_customize_title)) },
-                        description = stringResource(R.string.aod_customize_entry_desc),
-                        icon = { Icon(painterResource(R.drawable.bedtime), null) },
-                        onClick = { navController.navigate("settings/appearance/aod_customized") },
-                    )
-                }
-
-                item {
-                    EnumListPreference(
                         title = { Text(stringResource(R.string.player_buttons_style)) },
                         description =
                             if (isPlayerStyleCustomizationEnabled) {
@@ -767,6 +651,60 @@ fun AppearanceSettings(navController: NavController) {
                             showSliderOptionDialog = true
                         },
                         isEnabled = isPlayerStyleCustomizationEnabled,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.show_player_volume_bar)) },
+                        description =
+                            if (isVolumeBarSupported) {
+                                null
+                            } else {
+                                stringResource(R.string.player_volume_bar_v7_v8_only)
+                            },
+                        icon = { Icon(painterResource(R.drawable.volume_up), null) },
+                        checked = showPlayerVolumeBar,
+                        onCheckedChange = onShowPlayerVolumeBarChange,
+                        isEnabled = isVolumeBarSupported,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.show_one_line_lyrics)) },
+                        description = stringResource(R.string.show_one_line_lyrics_desc),
+                        icon = { Icon(painterResource(R.drawable.lyrics), null) },
+                        checked = showOneLineLyrics,
+                        onCheckedChange = onShowOneLineLyricsChange,
+                    )
+                }
+            }
+
+            PreferenceGroup(title = stringResource(R.string.appearance_section_player_artwork)) {
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.hide_player_thumbnail)) },
+                        description = stringResource(R.string.hide_player_thumbnail_desc),
+                        icon = { Icon(painterResource(R.drawable.hide_image), null) },
+                        checked = hidePlayerThumbnail,
+                        onCheckedChange = onHidePlayerThumbnailChange,
+                    )
+                }
+
+                item {
+                    ThumbnailCornerRadiusSelectorButton(
+                        onRadiusSelected = {},
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.crop_thumbnail_to_square)) },
+                        description = stringResource(R.string.crop_thumbnail_to_square_desc),
+                        icon = { Icon(painterResource(R.drawable.image), null) },
+                        checked = cropThumbnailToSquare,
+                        onCheckedChange = onCropThumbnailToSquareChange,
                     )
                 }
 
@@ -857,18 +795,36 @@ fun AppearanceSettings(navController: NavController) {
                 }
             }
 
-            PreferenceGroup(title = stringResource(R.string.liquid_glass)) {
+            PreferenceGroup(title = stringResource(R.string.appearance_section_mini_player)) {
                 item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.liquid_glass_beta)) },
-                        description = stringResource(R.string.liquid_glass_performance_warning),
-                        icon = { Icon(painterResource(R.drawable.tune), null) },
-                        onClick = { navController.navigate("settings/appearance/liquid_glass") },
+                    EnumListPreference(
+                        title = { Text(stringResource(R.string.mini_player_background_style)) },
+                        icon = { Icon(painterResource(R.drawable.gradient), null) },
+                        selectedValue = miniPlayerBackground,
+                        onValueSelected = onMiniPlayerBackgroundChange,
+                        valueText = {
+                            when (it) {
+                                MiniPlayerBackgroundStyle.THEME -> stringResource(R.string.follow_theme)
+                                MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
+                                MiniPlayerBackgroundStyle.GLOW -> stringResource(R.string.glow)
+                                MiniPlayerBackgroundStyle.LIVE_MESH -> stringResource(R.string.live_mesh)
+                                MiniPlayerBackgroundStyle.LIQUID_GLASS -> stringResource(R.string.player_background_liquid_glass)
+                            }
+                        },
                     )
                 }
             }
 
-            PreferenceGroup(title = stringResource(R.string.ambient_mode)) {
+            PreferenceGroup(title = stringResource(R.string.appearance_section_ambient)) {
+                item {
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.aod_customize_title)) },
+                        description = stringResource(R.string.aod_customize_entry_desc),
+                        icon = { Icon(painterResource(R.drawable.bedtime), null) },
+                        onClick = { navController.navigate("settings/appearance/aod_customized") },
+                    )
+                }
+
                 item {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.ambient_mode_settings)) },
@@ -879,23 +835,7 @@ fun AppearanceSettings(navController: NavController) {
                 }
             }
 
-
-            PreferenceGroup(title = stringResource(R.string.misc)) {
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.quick_picks_display_mode)) },
-                        icon = { Icon(painterResource(R.drawable.grid_view), null) },
-                        selectedValue = quickPicksDisplayMode,
-                        onValueSelected = onQuickPicksDisplayModeChange,
-                        valueText = {
-                            when (it) {
-                                QuickPicksDisplayMode.CARD -> stringResource(R.string.quick_picks_display_mode_card)
-                                QuickPicksDisplayMode.LIST -> stringResource(R.string.quick_picks_display_mode_list)
-                            }
-                        },
-                    )
-                }
-
+            PreferenceGroup(title = stringResource(R.string.appearance_section_navigation_layout)) {
                 item {
                     EnumListPreference(
                         title = { Text(stringResource(R.string.default_open_tab)) },
@@ -963,6 +903,21 @@ fun AppearanceSettings(navController: NavController) {
                 }
 
                 item {
+                    EnumListPreference(
+                        title = { Text(stringResource(R.string.quick_picks_display_mode)) },
+                        icon = { Icon(painterResource(R.drawable.grid_view), null) },
+                        selectedValue = quickPicksDisplayMode,
+                        onValueSelected = onQuickPicksDisplayModeChange,
+                        valueText = {
+                            when (it) {
+                                QuickPicksDisplayMode.CARD -> stringResource(R.string.quick_picks_display_mode_card)
+                                QuickPicksDisplayMode.LIST -> stringResource(R.string.quick_picks_display_mode_list)
+                            }
+                        },
+                    )
+                }
+
+                item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.swipe_song_to_add)) },
                         icon = { Icon(painterResource(R.drawable.swipe), null) },
@@ -980,76 +935,6 @@ fun AppearanceSettings(navController: NavController) {
         }
     }
 }
-
-@Composable
-fun ApplyRefreshRate(
-    isEnabled: Boolean,
-    targetFps: Float,
-) {
-    val context = LocalContext.current
-    val view = LocalView.current
-    val activity = remember(context) { context.findActivity() }
-    val requestedFps = if (isEnabled) targetFps else DEFAULT_REFRESH_RATE_REQUEST
-
-    DisposableEffect(view, activity, requestedFps) {
-        applyRefreshRate(
-            view = view,
-            activity = activity,
-            requestedFps = requestedFps,
-        )
-
-        onDispose {
-            applyRefreshRate(
-                view = view,
-                activity = activity,
-                requestedFps = DEFAULT_REFRESH_RATE_REQUEST,
-            )
-        }
-    }
-}
-
-@Composable
-private fun rememberSupportedHighestFps(): Float {
-    val view = LocalView.current
-
-    return remember(view) {
-        val display = view.display
-        display?.supportedModes
-            ?.maxOfOrNull { mode -> mode.refreshRate }
-            ?: display?.refreshRate
-            ?: DEFAULT_STANDARD_REFRESH_RATE_FPS
-    }
-}
-
-private fun applyRefreshRate(
-    view: View,
-    activity: Activity?,
-    requestedFps: Float,
-) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-        view.setRequestedFrameRate(requestedFps)
-        return
-    }
-
-    activity?.window?.let { window ->
-        val attributes = window.attributes
-        if (attributes.preferredRefreshRate != requestedFps) {
-            attributes.preferredRefreshRate = requestedFps
-            window.attributes = attributes
-        }
-    }
-}
-
-private tailrec fun Context.findActivity(): Activity? =
-    when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
-    }
-
-private const val HIGH_REFRESH_RATE_THRESHOLD_FPS = 60.5f
-private const val DEFAULT_STANDARD_REFRESH_RATE_FPS = 60f
-private const val DEFAULT_REFRESH_RATE_REQUEST = 0f
 
 @Composable
 private fun SliderStyleOptionCard(

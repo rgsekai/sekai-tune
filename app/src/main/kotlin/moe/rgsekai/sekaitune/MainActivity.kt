@@ -202,7 +202,6 @@ import moe.rgsekai.sekaitune.constants.CustomFontUriKey
 import moe.rgsekai.sekaitune.constants.CustomThemeColorKey
 import moe.rgsekai.sekaitune.constants.DarkModeKey
 import moe.rgsekai.sekaitune.constants.DefaultOpenTabKey
-import moe.rgsekai.sekaitune.constants.DisableAnimationsKey
 import moe.rgsekai.sekaitune.constants.DisableScreenshotKey
 import moe.rgsekai.sekaitune.constants.DynamicThemeKey
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
@@ -317,7 +316,6 @@ import moe.rgsekai.sekaitune.utils.SyncUtils
 import moe.rgsekai.sekaitune.utils.Updater
 import moe.rgsekai.sekaitune.utils.dataStore
 import moe.rgsekai.sekaitune.utils.get
-import moe.rgsekai.sekaitune.utils.isLowRamDevice
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.reportException
@@ -529,8 +527,50 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun applyMaxRefreshRate() {
+        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            this.display
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay
+        } ?: return
+
+        val modes = display.supportedModes
+        val highestMode = modes?.maxByOrNull { it.refreshRate }
+        val maxRefreshRate = highestMode?.refreshRate ?: display.refreshRate
+
+        if (maxRefreshRate > 0f) {
+            val attributes = window.attributes
+            var changed = false
+            if (highestMode != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (attributes.preferredDisplayModeId != highestMode.modeId) {
+                    attributes.preferredDisplayModeId = highestMode.modeId
+                    changed = true
+                }
+            }
+            if (attributes.preferredRefreshRate != maxRefreshRate) {
+                attributes.preferredRefreshRate = maxRefreshRate
+                changed = true
+            }
+            if (changed) {
+                window.attributes = attributes
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                window.decorView.setRequestedFrameRate(maxRefreshRate)
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyMaxRefreshRate()
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            applyMaxRefreshRate()
+        }
         if (hasFocus && immersiveStatusBarsHidden) {
             setStatusBarsHidden(true)
         }
@@ -550,6 +590,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyMaxRefreshRate()
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -680,11 +721,7 @@ class MainActivity : ComponentActivity() {
             val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = false)
             val customThemeColorValue by rememberPreference(CustomThemeColorKey, defaultValue = "default")
             val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-            val defaultDisableAnimations = remember(this@MainActivity) { applicationContext.isLowRamDevice() }
-            val disableAnimations by rememberPreference(
-                DisableAnimationsKey,
-                defaultValue = defaultDisableAnimations,
-            )
+            val disableAnimations = false
             val fontPreference by rememberEnumPreference(FontPreferenceKey, defaultValue = AppFontPreference.DEFAULT)
             val customFontUri by rememberPreference(CustomFontUriKey, defaultValue = "")
             val legacyUseSystemFont by rememberPreference(UseSystemFontKey, defaultValue = false)

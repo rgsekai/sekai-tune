@@ -517,6 +517,11 @@
     <string name="theme_editor_hex">Hex</string>
     <string name="theme_editor_hex_input">Hex value (#RRGGBB or #AARRGGBB)</string>
     <string name="theme_presets_title">Presets</string>
+    <string name="appearance_section_typography">Typography</string>
+    <string name="appearance_section_player_artwork">Artwork &amp; Gestures</string>
+    <string name="appearance_section_mini_player">Mini Player</string>
+    <string name="appearance_section_ambient">Ambient &amp; Lockscreen</string>
+    <string name="appearance_section_navigation_layout">Navigation &amp; Layout</string>
     <string name="copy">Copy</string>
     <string name="backup_in_progress">Backup in progress</string>
     <string name="restore_in_progress">Restore in progress</string>
@@ -687,10 +692,10 @@
 
     <!-- Liquid Glass -->
     <string name="liquid_glass">Liquid Glass</string>
-    <string name="liquid_glass_beta">Liquid Glass (Beta)</string>
-    <string name="liquid_glass_settings">Liquid Glass (Beta)</string>
+    <string name="liquid_glass_beta">Liquid Glass</string>
+    <string name="liquid_glass_settings">Liquid Glass</string>
     <string name="liquid_glass_global_enabled">Enable Liquid Glass</string>
-    <string name="liquid_glass_performance_warning">Rendering Liquid Glass is resource-intensive and may reduce smoothness and battery life on some devices</string>
+    <string name="liquid_glass_performance_warning">It consumes more resources and battery</string>
     <string name="liquid_glass_effects">Effects</string>
     <string name="liquid_glass_appearance">Appearance</string>
     <string name="liquid_glass_per_component">Per Component</string>
