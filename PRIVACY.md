@@ -1,141 +1,176 @@
-# SekaiTune Privacy Notice
+# Sekai Tune Privacy Notice
 
-Last updated: 2026-04-20
+_Last updated: October 6, 2026_
 
-## Scope
+This notice covers the Sekai Tune Android app in this repository. It explains what the app stores on your device, what it can send to external services when you use specific features, and what Android permissions it requests.
 
-This notice covers the Android SekaiTune app in this repository. It explains what the app stores on your device, what it can send to external services when you use specific features, and what Android permissions it requests.
-
-This notice is based on the current source code and build configuration. It does not replace the privacy terms of YouTube or YouTube Music, Discord, GitHub, lyrics providers, the SekaiTune canvas service, or any Together server you choose to use.
+It is based on the current source code and build configuration. It does not replace the privacy terms of Google (including Firebase, Google Sign-In and YouTube Music), Spotify, TIDAL, Apple, lyrics providers, GitHub, Render, or any other third-party service you use through the app.
 
 ## Privacy Summary
 
-- Most core app data is stored locally on your device.
-- SekaiTune does not secretly harvest, sell, or broker your personal data.
-- SekaiTune does not silently send your data to unrelated third-party services.
-- Optional network features send only the data needed to provide those features.
-- If data leaves your device, it is because you used a specific online feature or integration that requires that transfer.
-- Android backup and device-transfer features may copy part of the app's local data unless excluded by the app's backup rules.
-- The app also includes a user-triggered backup export feature.
-- The current Android build configuration does not show mobile advertising SDKs, third-party analytics SDKs, or automatic crash-reporting SDKs.
+- Most core app data (library, history, settings, caches) is stored locally on your device.
+- Sekai Tune does not sell your data, does not show ads, and does not use advertising SDKs.
+- Sekai Tune does not include third-party analytics, install counters, or automatic crash-reporting services. Crash reports are shown on your device and leave it only if you choose to share them.
+- Some features need an online account or service: YouTube Music, Google Sign-In, Together Online, Buddy List, settings sync, and Spotify. If you do not use a feature, its data is not sent.
+- When data leaves your device, it is because you used a feature that requires it, or because of a small number of background requests listed below (playback pre-loading, update checks, player configuration).
+- Together Online, Buddy List, settings sync and push notifications use **Google Firebase** (Authentication, Cloud Firestore and Cloud Messaging). Data stored there is held by Google on behalf of this project.
+- Android backup and device-transfer may copy part of the app's local data unless excluded by the app's backup rules.
 - The current Android manifest does not request location, contacts, camera, calendar, SMS, or call log permissions.
 
 ## Data the App May Store on Your Device
 
-The app stores data locally to provide playback, library, search, lyrics, sync, and customization features.
-
-| Category | Examples visible in the codebase | Why it is stored |
-| --- | --- | --- |
-| Library and playback data | Song, artist, album, playlist, like state, download state, total play time, audio format metadata | Library management, playback, downloads, and statistics |
-| Search and lyrics data | Search queries and cached lyrics | Search history and lyrics features |
-| Listening history data | Playback event records with song ID, timestamp, and play time | Listening stats and history-related features |
-| App settings | Language, country, UI settings, audio settings, proxy settings, cache settings, history pause toggles, Together settings | Personalization and feature configuration |
-| Optional account and session data | YouTube account name, email, channel handle, visitor data, data sync ID, cookie, PO token values | Signed-in YouTube and YouTube Music functionality |
-| Optional third-party integration data | Discord OAuth access and refresh tokens plus related profile fields, Together display name, Together client ID, last join link | External integrations you choose to enable |
-| Cached files | Streaming cache, download cache, and other app-managed files | Faster playback, offline use, and feature performance |
+| Category | Examples | Why it is stored |
+| :-- | :-- | :-- |
+| Library and playback data | Songs, artists, albums, playlists, like state, download state, play time, audio format metadata | Library management, playback, downloads, statistics |
+| Search and lyrics data | Search queries, cached lyrics, romanization results | Search history and lyrics features |
+| Listening history | Playback events with song ID, timestamp, and play time | Listening stats and history features |
+| App settings | Language, country, UI and audio settings, proxy settings, cache settings, history pause toggles, Together settings | Personalization and feature configuration |
+| YouTube / YouTube Music session (optional) | Account name, email, channel handle, visitor data, data sync ID, cookie, PO token values | Signed-in YouTube Music features |
+| Google account session (optional) | Firebase sign-in state, your Google account name, email and profile picture URL as provided by Google | Together Online, Buddy List and settings sync |
+| Spotify session (optional) | Spotify session cookie and related tokens, cached Spotify playlist and followed-artist metadata | Spotify library features |
+| Buddy and Together data (optional) | Display name, Together client ID, last join link, cached buddy names, push-notification token | Together Online and Buddy List |
+| Matching caches | Cached stream-resolution results, remembered playback client, catalog-match results for uploaded songs | Faster playback, downloads and uploaded-song playback |
+| Downloaded and cached files | Streaming cache, in-app downloads, partial download files, app-managed files | Offline use and performance |
+| Saved-to-device audio | Audio files you export with Save to Device, saved to `Music/Sekai Tune/` through Android MediaStore | Your own offline music files |
+| Update data | Cached release information, the version you dismissed, a downloaded update APK (temporary) | In-app update prompt |
+| Crash reports | Device model, Android version, stack trace, shown in the in-app crash screen | Debugging, only shared if you share it |
 
 ## Data the App May Send Off Your Device
 
-SekaiTune does not silently forward your data to unrelated services. It only contacts external services when you use online features, and the exact payload depends on the feature you use and how you configure it.
+Sekai Tune contacts external services only for the features below. The exact payload depends on the feature and your settings.
 
 | Service or feature | Data that may be sent | When it happens |
-| --- | --- | --- |
-| YouTube or YouTube Music | Search terms, media playback requests, library or playlist requests, and signed-in session values such as visitor data, sync identifiers, cookies, or token values | When you browse, stream, sync, or sign in |
-| Lyrics providers | Song title, artist name, album identifiers, or similar lookup data needed to fetch lyrics | When lyrics features are enabled or lyrics are requested |
-| SekaiTune canvas service | Song and artist names, album ID, or album URL, plus a bearer token if configured in the app build | When canvas or artwork lookup features are used |
-| Discord Rich Presence | Current track, artist, album, images, configured URLs or labels for presence cards, and Discord OAuth tokens required by the official Social SDK | When Discord Rich Presence is enabled |
-| GitHub releases | Update-check requests and cached release metadata used to show new versions | When the app checks for updates |
-| Together | Display name, client ID, session code or keys, playback state, queue metadata, and room actions | When you host or join a Together session |
+| :-- | :-- | :-- |
+| YouTube / YouTube Music (Google) | Search terms, playback and stream requests, library and playlist requests, and, if signed in, session values such as visitor data, sync ID, cookie or token values. Your IP address is visible to Google. | When you browse, stream, download, sync or sign in. Playback pre-loading for upcoming tracks and a short warm-up at app start also contact YouTube. |
+| Stream-resolution fallback services | Video IDs and player-script details needed to decode a stream, sent to third-party extractor services (for example `api.pipepipe.dev`) | Only as a last-resort fallback when the standard playback path fails |
+| Player configuration (GitHub) | A request to download player-script configuration files. No personal data beyond your IP address. | Periodically, to keep playback working |
+| Google Sign-In and Firebase Authentication | Your Google account identity (name, email, profile picture URL) through Google's sign-in flow. Anonymous sign-in (no account details) is used for guests in Together Online. | When you sign in, or host or join an online Together session |
+| Cloud Firestore (Google Firebase) | See "Firebase features" below | When you use Together Online, Buddy List, or settings sync |
+| Firebase Cloud Messaging (Google) | A push token identifying your app install, used to deliver notifications | When you are signed in and Buddy List notifications are enabled |
+| Notification relay (self-hosted on Render) | The information needed to deliver a Buddy List push notification: the recipient, the notification type (buddy request or session invite) and the sender's display name. The relay holds the credentials needed to send via Firebase. Render may keep standard server logs such as IP address and request time. | When you send a buddy request or a session invite |
+| Spotify | Session cookie and tokens, playlist and artist requests, actions you take (add to playlist, follow artist), Canvas lookups | When Spotify is connected and you use Spotify features |
+| Canvas and artwork providers (BetterLyrics, Apple Music, TIDAL, Spotify Canvas) | Song title, artist name, album identifiers or URLs used to look up animated artwork | When animated artwork (Canvas) is enabled and a track is playing |
+| Lyrics providers (LrcLib, KuGou, SimpMusic, Paxsenix and others) | Song title, artist, album and duration needed to find lyrics | When lyrics are requested |
+| Uploaded songs (YouTube Music) | The audio files you choose to upload go to YouTube Music. For playback and downloads, the song title, artist and duration are used to search the public YouTube Music catalog for a matching version. | When you upload, play, download or save an uploaded song |
+| Music recognition | An audio signature created from the microphone input, sent to the recognition service. | Only when you start music recognition |
+| GitHub releases | Update-check requests, and the update APK download if you accept an update. Your IP address is visible to GitHub. | Periodically in the background (about every six hours) and when you open update prompts |
+| Together LAN mode | Playback state and queue data sent directly to other devices on your local network. No cloud server is involved. | When you host or join a LAN session |
+| Donation links | Nothing from the app. Tapping a donation option opens Buy Me a Coffee or your UPI app, which have their own privacy terms. The app does not process payments. | When you tap a donation option |
+
+## Firebase Features (Together Online, Buddy List, Settings Sync)
+
+These features store data in Google Firebase, in a project owned by the Sekai Tune maintainer.
+
+**Together Online**
+- Each session stores: the session code, playback state, queue metadata, and a participant list with each person's ID, display name, profile picture URL (if available), and host or connection status.
+- Guests can join anonymously. Anonymous participants have no account details and no profile picture.
+- If you host a session, the IDs of buddies you invite are stored on the session.
+- Other participants in the same session can see your display name and profile picture.
+
+**Buddy List**
+- Buddy requests are stored until accepted, rejected or cancelled. Accepted buddies are stored as an ID and a cached display name on both users' lists.
+- Buddies are added only through people you meet in the same session. Buddies cannot see your email address.
+- Removing a buddy deletes the entry on both sides.
+- Each signed-in device stores a push token (under your account) so notifications can reach it. Tokens are not automatically cleaned up when you stop using a device.
+
+**Your profile**
+- When you sign in with Google, a profile record is created with your display name and related profile details. You can choose a custom display name; it is not overwritten by your Google name on later sign-ins.
+- Your Google email address is held by Firebase Authentication and is not copied to buddy lists or Together sessions.
+
+**Settings sync**
+- If you turn on settings sync, your app settings and any API keys you entered are stored under your account. They are encrypted on your device with AES-256-GCM (using a key managed through the Android Keystore) before upload, and only your account can read them.
+
+**Retention**
+- Data in Firebase stays until it is removed by app actions (leaving or ending a session, removing a buddy, cancelling a request) or until you ask for it to be deleted. To request deletion of your Firebase-stored data, open an issue in the project repository.
 
 ## Android Permissions
 
-The app declares the following Android permissions in the current manifest.
-
 | Permission | Why the app requests it |
-| --- | --- |
-| `INTERNET` | Connect to YouTube, lyrics services, update endpoints, canvas services, Together, and other network-backed features |
-| `POST_NOTIFICATIONS` | Show playback and download notifications |
+| :-- | :-- |
+| `INTERNET` | Connect to YouTube, Firebase, lyrics, Canvas, Spotify, update and other online features |
 | `ACCESS_NETWORK_STATE` | Detect connectivity and adapt network behavior |
-| `READ_MEDIA_AUDIO` | Read local audio files on supported Android versions |
-| `READ_EXTERNAL_STORAGE` on Android 12 and below | Support local audio access on older Android versions |
-| `RECORD_AUDIO` | Support music-recognition features |
-| `BLUETOOTH_CONNECT` | Integrate with Bluetooth audio devices and playback controls |
-| `RECEIVE_BOOT_COMPLETED` | Restore playback-related behavior after a device restart when supported by the app |
-| `WAKE_LOCK` | Keep playback-related work running when needed |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `FOREGROUND_SERVICE_DATA_SYNC` | Support background playback, downloads, and related foreground work |
+| `POST_NOTIFICATIONS` | Playback, download, update and Buddy List notifications |
+| `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` (Android 12 and below) | Read local audio files |
+| `RECORD_AUDIO` | Music recognition |
+| `BLUETOOTH_CONNECT` | Bluetooth audio devices and playback controls |
+| `RECEIVE_BOOT_COMPLETED` | Restore playback-related behavior after restart |
+| `WAKE_LOCK` | Keep playback and download work running |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `FOREGROUND_SERVICE_DATA_SYNC` | Background playback, downloads and related work |
+| `REQUEST_INSTALL_PACKAGES` | Install an update you accept in the in-app update prompt. Android also asks for your approval before the app can install anything. |
 
-If you deny a permission, the related feature may stop working or provide reduced functionality.
+Home-screen widgets, launcher shortcuts and the Quick Settings tile do not need extra permissions. They can start playback without opening the app. If you deny a permission, the related feature may stop working.
 
 ## Backups, Device Transfer, and Local Retention
 
-SekaiTune currently enables Android backup support. The backup and data-transfer rules exclude some cache and download paths, including the ExoPlayer cache, the download directory, and `exoplayer_internal.db`. Other app data, including local database content and app preferences, may still be included in Android cloud backup or device transfer depending on your Android settings and device behavior.
+Sekai Tune enables Android backup support. The backup and data-transfer rules exclude some cache and download paths, including the ExoPlayer cache, the download directory, and `exoplayer_internal.db`. Other app data, including the local database and preferences, may still be included in Android cloud backup or device transfer depending on your Android settings.
 
-The app also provides a manual backup feature that creates a ZIP archive containing app settings and database files. This is a user-triggered export action.
+The app also offers a manual backup feature that creates a ZIP archive of app settings and database files. This is a user-triggered export. Keep the file private, because the archive may include session values and tokens stored in settings.
 
-Unless you remove it, app data can remain on your device until one of the following happens:
-
-- you clear app data,
-- you uninstall the app,
-- you remove or overwrite it through app actions, or
-- Android backup or device-transfer systems copy it to another device or restore it.
-
-For Together and other third-party services, remote retention depends on the service you use. This notice focuses on the Android app behavior in this repository.
+Local data remains on your device until you clear app data, uninstall the app, remove it through an app action, or Android backup restores it elsewhere. Files saved to `Music/Sekai Tune/` are normal files in your own storage and are not removed when you uninstall the app.
 
 ## User Controls and Choices
 
-You can control a significant amount of privacy-related behavior from the app and from Android itself.
-
-- You can use many core features without enabling optional third-party integrations.
-- You can choose whether to sign in to YouTube or YouTube Music.
-- You can enable or disable Discord Rich Presence, lyrics providers, and Together features.
-- You can grant or deny Android runtime permissions such as media access, notifications, and microphone access.
-- You can configure or disable proxy-related settings.
-- The codebase includes settings to pause search history and listening history.
-- You can create a local backup export.
-- You can clear app data or uninstall the app to remove local app storage from your device.
-- If you connected external services, you may also need to revoke access or rotate tokens with those external providers.
+- Use many core features without signing in to anything.
+- Choose whether to sign in to YouTube Music, Google (for Together Online, Buddy List and settings sync) or Spotify.
+- Turn off Canvas, lyrics providers, the Spotify playlist and artist features, and settings sync from within the app.
+- Join Together Online sessions anonymously.
+- Grant or deny Android runtime permissions (notifications, media access, microphone).
+- Configure or disable proxy-related settings.
+- Pause search history and listening history.
+- Create a local backup export.
+- Sign out of Google, YouTube Music or Spotify, remove a buddy, or leave a session at any time.
+- Clear app data or uninstall the app to remove local data.
+- For connected external services, you may also need to revoke access or rotate tokens with those providers.
 
 ## Security Notes and Limitations
 
-- The current Android manifest allows cleartext traffic. That means some connections may use HTTP instead of HTTPS if a feature or configured endpoint uses it.
-- The current Android manifest also enables Android audio playback capture. Under Android platform rules, compatible system features or authorized apps may be able to capture app audio playback.
-- This repository does not clearly document encryption at rest for the app database, preferences, or cache files, so this notice does not promise local encryption.
-- This notice is limited to what can be supported from the current repository contents. Third-party services and self-hosted or official Together servers may have their own logging, retention, and security practices.
-- If future code changes add new integrations, SDKs, or data flows, this notice should be updated with them.
+- The current Android manifest allows cleartext traffic, so some connections may use HTTP if a feature or configured endpoint uses it.
+- The manifest enables Android audio playback capture. Under Android platform rules, compatible system features or authorized apps may be able to capture app audio.
+- Local app data (database, preferences, caches) is not encrypted by the app. Only synced settings are encrypted before upload, as described above.
+- Buddy List accept, reject and remove actions are performed by your device writing to Firebase, protected by security rules that tie each action to your account ID.
+- The notification relay runs on a free hosting tier and may take time to start after being idle.
+- Third-party services (Google, Spotify, Render, lyrics and Canvas providers) have their own logging, retention and security practices.
+- If future code changes add new integrations or data flows, this notice should be updated.
 
 ## Changes to This Notice
 
-This file should be reviewed whenever SekaiTune changes its permissions, storage model, external integrations, backup behavior, or network architecture.
+This file is reviewed whenever Sekai Tune changes its permissions, storage model, external integrations, backup behavior, or network architecture. The date at the top shows the last update.
 
 ## Project Contact
 
-For questions or corrections, use the project repository and issue tracker.
+For questions, corrections or data-deletion requests, use the project repository.
 
-- Repository: [https://github.com/rgsekai/sekai-tune](https://github.com/rgsekai/sekai-tune)
-- Issues: [https://github.com/rgsekai/sekai-tune/issues](https://github.com/rgsekai/sekai-tune/issues)
+- Repository: https://github.com/rgsekai/sekai-tune
+- Issues: https://github.com/rgsekai/sekai-tune/issues
 
 ## Technical Appendix
 
-This appendix maps the main statements above to concrete implementation surfaces in the codebase.
+This appendix maps the main statements above to implementation surfaces in the codebase.
 
 | Topic | What the code shows | Main files |
-| --- | --- | --- |
-| Permissions and backup behavior | The manifest declares network, media, microphone, Bluetooth, notification, boot, wake-lock, and foreground-service permissions. It also enables backup, cleartext traffic, and audio playback capture. Separate XML files exclude selected caches and internal playback database files from Android backup and device transfer. | `app/src/main/AndroidManifest.xml`, `app/src/main/res/xml/data_extraction_rules.xml`, `app/src/main/res/xml/backup_rules.xml` |
-| Local database contents | The Room schema includes songs, artists, albums, playlists, search history, lyrics, audio format metadata, and playback event records. | `app/schemas/moe.rgsekai.sekaitune.db.InternalDatabase/9.json` |
-| Settings and tokens stored locally | DataStore preference keys include UI settings, proxy settings, history toggles, Together values, YouTube session values, account name or email fields, Discord values, and update-cache keys. | `app/src/main/kotlin/moe/rgsekai/sekaitune/constants/PreferenceKeys.kt` |
-| YouTube signed-in state | The Innertube layer exposes visitor data, data sync ID, cookie, PO token values, proxy state, and login-for-browse behavior as part of the current playback auth state. | `core/src/main/kotlin/moe/rgsekai/sekaitune/innertube/YouTube.kt` |
-| Manual backup export | The backup view model writes app settings plus database files into a ZIP archive chosen by the user. | `app/src/main/kotlin/moe/rgsekai/sekaitune/viewmodels/BackupRestoreViewModel.kt` |
-| External network integrations | Build configuration defines keys for Together and canvas services. The updater fetches release information and caches related metadata in app preferences. | `app/build.gradle.kts`, `app/src/main/kotlin/moe/rgsekai/sekaitune/utils/Updater.kt` |
-| Canvas service requests | The canvas module sends song and artist names, album IDs, or album URLs to `https://artwork.boidu.dev/` and can attach a bearer token. | `canvas/src/main/kotlin/moe/rgsekai/sekaitune/canvas/SekaiTuneCanvas.kt` |
-| Public feature claims | The repository README and store metadata describe privacy, YouTube integration, lyrics, music recognition, Discord Rich Presence, and other network-backed features that must stay aligned with this notice. | `README.md`, `fastlane/metadata/android/en-US/full_description.txt` |
-| Current dependency posture | The current Android dependency declarations show Compose, Room, Hilt, Ktor, Media3, Coil, Timber, and related libraries. They do not currently show Firebase, Crashlytics, Sentry, mobile ad SDKs, or mobile analytics SDKs in the Android app dependency definitions reviewed for this notice. | `app/build.gradle.kts`, `gradle/libs.versions.toml` |
+| :-- | :-- | :-- |
+| Permissions and backup | Manifest declares network, media, microphone, Bluetooth, notification, boot, wake-lock, foreground-service and install-package permissions; enables backup, cleartext traffic and audio playback capture. XML rules exclude selected caches from backup and device transfer. | `AndroidManifest.xml`, `res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml` |
+| Local database | Room schema holds songs, artists, albums, playlists, search history, lyrics, audio format metadata, playback events, and a matched-catalog ID for uploaded songs. | `app/schemas/.../InternalDatabase/` |
+| Settings and tokens stored locally | DataStore keys for UI, proxy, history toggles, Together values, YouTube session values, account fields, and update-dismissal state. | `PreferenceKeys.kt` |
+| YouTube signed-in state | Innertube layer exposes visitor data, sync ID, cookie, PO token values and proxy state. | `YouTube.kt` |
+| Stream resolution | Direct YouTube clients are tried first; third-party extractor fallback and remote player configuration are used only if needed. | `ResolveAudioStreamUseCase.kt`, `YTPlayerUtils.kt`, `RemotePlayerConfigStore.kt` |
+| Together Online | Firestore-backed host and guest classes read and write session documents, participants and invited IDs. LAN mode uses a local Ktor server. | `FirestoreTogetherHost.kt`, `FirestoreTogetherGuest.kt`, `MusicTogetherScreen.kt` |
+| Buddy List and push | Repository handles buddy requests, buddy lists, invites and push-token registration; messaging service receives notifications. | `BuddyRepository.kt`, `BuddyFcmTokenManager.kt`, `BuddyMessagingService.kt` |
+| Settings sync | Encrypted settings stored under the signed-in account ID. | `user_settings/{uid}` in Firestore |
+| Spotify | Spotify session, playlist and artist features; playback always comes from YouTube Music. | `spotifycore` module (`Spotify.kt`, `SpotifyAuth.kt`) |
+| Canvas providers | Lookups to BetterLyrics, Apple Music, TIDAL and Spotify using song and artist details. | `canvas` module, `TidalCanvasProvider.kt`, `SekaiTuneCanvas.kt` |
+| Uploaded songs | Resumable upload to YouTube Music and catalog matching by title, artist and duration. | `ResolveUploadedCatalogMatchUseCase.kt` |
+| Downloads | In-app downloads and Save to Device, with paused-download state kept on the device. | `AudioDownloadWorker.kt`, `PausedDeviceDownloadStore.kt` |
+| Updates | Release check against the project's GitHub releases, a periodic worker, and an in-app installer. | `Updater.kt`, `UpdateCheckWorker.kt`, `AppUpdateInstaller.kt` |
+| Manual backup export | User-chosen ZIP of settings and database files. | `BackupRestoreViewModel.kt` |
+| Dependency posture | Compose, Room, Hilt, Ktor, Media3, Coil, Timber, Firebase (Authentication, Firestore, Messaging) and related libraries. No advertising, analytics or crash-reporting SDKs are declared. | `app/build.gradle.kts`, `gradle/libs.versions.toml` |
 
 ## Open Documentation Boundaries
 
-The following areas should be documented carefully in the future if the project wants stronger privacy claims.
+The following areas should be documented carefully if the project wants stronger privacy claims.
 
-- Whether any self-hosted or official Together deployment logs IP addresses, user agents, or participant history outside the Android app itself.
-- Whether all network endpoints used by optional features are always HTTPS in real deployments, since the Android manifest allows cleartext traffic.
-- Whether local app storage is encrypted at rest on all supported devices and configurations.
-- Whether canvas, lyrics, or future service providers apply their own independent retention or profiling practices.
-
+- What the notification relay logs on Render, and how long.
+- Whether every endpoint used by optional features is always HTTPS in real use, since the manifest allows cleartext traffic.
+- Whether local app storage is encrypted at rest on all supported devices.
+- Retention practices of Google Firebase, Spotify, canvas, lyrics and extractor providers.
+- Whether stale push tokens and abandoned Together sessions should be cleaned up automatically.
