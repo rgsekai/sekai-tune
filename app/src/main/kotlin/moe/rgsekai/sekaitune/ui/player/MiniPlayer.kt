@@ -58,7 +58,6 @@ import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyleKey
-import moe.rgsekai.sekaitune.constants.SwipeSensitivityKey
 import moe.rgsekai.sekaitune.ui.component.GlassComponent
 import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.isGlassSupported
@@ -96,7 +95,7 @@ private fun NewMiniPlayer(
     val context = LocalContext.current
     val layoutDirection = LocalLayoutDirection.current
     val coroutineScope = rememberCoroutineScope()
-    val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
+    val swipeSensitivity = 0.73f
     val swipeThumbnail by rememberPreference(moe.rgsekai.sekaitune.constants.SwipeThumbnailKey, true)
     val miniPlayerBackgroundStyle by rememberEnumPreference(
         key = MiniPlayerBackgroundStyleKey,
