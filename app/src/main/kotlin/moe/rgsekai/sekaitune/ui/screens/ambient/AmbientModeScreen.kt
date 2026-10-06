@@ -165,7 +165,7 @@ fun AmbientModeScreen(navController: NavController) {
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
-    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
+    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, false)
     val canvasProceduralStyle by rememberEnumPreference(CanvasProceduralStyleKey, ProceduralCanvasStyle.KAWARP)
     val canvasAudioReactive by rememberPreference(CanvasAudioReactiveKey, false)
 

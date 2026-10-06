@@ -423,7 +423,7 @@ fun BottomSheetPlayer(
 
     val aodModeEnabled by playerConnection.aodModeEnabled.collectAsStateWithLifecycle()
     val (thumbnailCornerRadius) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = 8f)
-    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
+    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, true)
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
@@ -1627,8 +1627,8 @@ private fun V7PlayerBackdrop(
     val canvasStatic = canvasStaticUrl?.takeIf { it.isNotBlank() }
     val coverArtworkUrl = thumbnailUrl?.takeIf { it.isNotBlank() }
     val hasCanvas = !canvasPrimary.isNullOrBlank() || !canvasFallback.isNullOrBlank()
-    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
-    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, true)
+    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, true)
+    val canvasProceduralFallback by rememberPreference(CanvasProceduralFallbackKey, false)
     val canvasProceduralStyle by rememberEnumPreference(CanvasProceduralStyleKey, ProceduralCanvasStyle.KAWARP)
     val canvasAudioReactive by rememberPreference(CanvasAudioReactiveKey, false)
     val playerConnection = LocalPlayerConnection.current

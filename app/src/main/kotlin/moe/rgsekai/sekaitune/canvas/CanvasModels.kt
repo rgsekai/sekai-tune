@@ -23,10 +23,10 @@ enum class ProceduralCanvasStyle {
 
 @Immutable
 data class CanvasConfiguration(
-    val enabled: Boolean = false,
+    val enabled: Boolean = true,
     val source: CanvasSource = CanvasSource.ALL,
     val wifiOnly: Boolean = false,
-    val proceduralFallback: Boolean = true,
+    val proceduralFallback: Boolean = false,
     val proceduralStyle: ProceduralCanvasStyle = ProceduralCanvasStyle.KAWARP,
     val audioReactive: Boolean = false,
     val cacheLimitMb: Int = 256,

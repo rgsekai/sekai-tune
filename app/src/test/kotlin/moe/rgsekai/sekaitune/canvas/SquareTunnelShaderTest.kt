@@ -8,6 +8,7 @@
 package moe.rgsekai.sekaitune.canvas
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
@@ -86,6 +87,7 @@ class SquareTunnelShaderTest {
     fun testCanvasConfigurationStyleDefaults() {
         val config = CanvasConfiguration()
         assertEquals(ProceduralCanvasStyle.KAWARP, config.proceduralStyle)
-        assertTrue(config.proceduralFallback)
+        assertTrue(config.enabled)
+        assertFalse(config.proceduralFallback)
     }
 }

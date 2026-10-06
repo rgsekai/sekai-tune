@@ -49,10 +49,10 @@ class CanvasSettingsRepository @Inject constructor(
 
     val configuration: Flow<CanvasConfiguration> = context.dataStore.data.map { preferences ->
         CanvasConfiguration(
-            enabled = preferences[SekaiTuneCanvasKey] ?: false,
+            enabled = preferences[SekaiTuneCanvasKey] ?: true,
             source = CanvasSource.fromPreference(preferences[CanvasSourceKey]),
             wifiOnly = preferences[CanvasWifiOnlyKey] ?: false,
-            proceduralFallback = preferences[CanvasProceduralFallbackKey] ?: true,
+            proceduralFallback = preferences[CanvasProceduralFallbackKey] ?: false,
             proceduralStyle = ProceduralCanvasStyle.fromPreference(preferences[CanvasProceduralStyleKey]),
             audioReactive = preferences[CanvasAudioReactiveKey] ?: false,
             cacheLimitMb = (preferences[MaxCanvasCacheSizeKey] ?: 256).coerceAtLeast(-1),

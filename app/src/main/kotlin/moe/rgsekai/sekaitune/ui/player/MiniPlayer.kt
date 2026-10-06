@@ -99,7 +99,7 @@ private fun NewMiniPlayer(
     val swipeThumbnail by rememberPreference(moe.rgsekai.sekaitune.constants.SwipeThumbnailKey, true)
     val miniPlayerBackgroundStyle by rememberEnumPreference(
         key = MiniPlayerBackgroundStyleKey,
-        defaultValue = MiniPlayerBackgroundStyle.THEME,
+        defaultValue = MiniPlayerBackgroundStyle.GLOW,
     )
     val glassConfig = LocalGlassEffectConfig.current
     val useGlass = (miniPlayerBackgroundStyle == MiniPlayerBackgroundStyle.LIQUID_GLASS || glassConfig.isEnabledFor(GlassComponent.MINI_PLAYER)) && isGlassSupported()
