@@ -135,7 +135,7 @@ fun AppearanceSettings(navController: NavController) {
     val (dynamicTheme, onDynamicThemeChange) =
         rememberPreference(
             DynamicThemeKey,
-            defaultValue = true,
+            defaultValue = false,
         )
     val (darkMode, onDarkModeChange) =
         rememberEnumPreference(

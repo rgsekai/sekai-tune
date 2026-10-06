@@ -48,7 +48,7 @@ import moe.rgsekai.sekaitune.constants.AppFontPreference
 import kotlin.math.abs
 import kotlin.math.min
 
-val DefaultThemeColor = Color(0xFFED5564)
+val DefaultThemeColor = Color(0xFF000000)
 val LocalSekaiTuneFontPreference = staticCompositionLocalOf { AppFontPreference.DEFAULT }
 val LocalSekaiTuneFontFamily = staticCompositionLocalOf { AppFontFamily }
 
@@ -567,10 +567,12 @@ object ThemeSeedPaletteCodec {
         if (trimmed.isEmpty()) return null
         return runCatching {
             val element: JsonElement = json.parseToJsonElement(trimmed)
-            element.jsonObject["name"]
-                ?.jsonPrimitive
-                ?.content
-                ?.takeIf { it.isNotBlank() }
+            val nameElement = element.jsonObject["name"]
+            if (nameElement == null || nameElement is kotlinx.serialization.json.JsonNull) {
+                null
+            } else {
+                nameElement.jsonPrimitive.content.takeIf { it.isNotBlank() && it != "null" }
+            }
         }.getOrNull()
     }
 
