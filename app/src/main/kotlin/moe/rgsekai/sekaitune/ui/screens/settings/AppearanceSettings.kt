@@ -101,7 +101,6 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
-import moe.rgsekai.sekaitune.constants.RandomThemeOnStartupKey
 import moe.rgsekai.sekaitune.constants.ShowHomeCategoryChipsKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
@@ -137,11 +136,6 @@ fun AppearanceSettings(navController: NavController) {
         rememberPreference(
             DynamicThemeKey,
             defaultValue = true,
-        )
-    val (randomThemeOnStartup, onRandomThemeOnStartupChange) =
-        rememberPreference(
-            RandomThemeOnStartupKey,
-            defaultValue = false,
         )
     val (darkMode, onDarkModeChange) =
         rememberEnumPreference(
@@ -435,15 +429,7 @@ fun AppearanceSettings(navController: NavController) {
                     )
                 }
 
-                item(visible = !dynamicTheme || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.random_theme_on_startup)) },
-                        description = stringResource(R.string.random_theme_on_startup_desc),
-                        icon = { Icon(painterResource(R.drawable.shuffle), null) },
-                        checked = randomThemeOnStartup,
-                        onCheckedChange = onRandomThemeOnStartupChange,
-                    )
-                }
+
 
                 item(visible = !dynamicTheme || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                     PreferenceEntry(
@@ -456,8 +442,8 @@ fun AppearanceSettings(navController: NavController) {
 
                 item {
                     PreferenceEntry(
-                        title = { Text("App icon") },
-                        description = "Choose the launcher icon",
+                        title = { Text(stringResource(R.string.app_icon)) },
+                        description = stringResource(R.string.app_icon_description),
                         icon = {
                             Image(
                                 painter = painterResource(id = R.drawable.sekai_tune),
@@ -493,7 +479,9 @@ fun AppearanceSettings(navController: NavController) {
                         onCheckedChange = onPureBlackChange,
                     )
                 }
+            }
 
+            PreferenceGroup(title = stringResource(R.string.display)) {
                 item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.disable_blur)) },
