@@ -151,49 +151,59 @@ class DownloadLibraryViewModel
 
         val events = eventChannel.receiveAsFlow()
 
-        private val activeLibraryFlow =
-            selectedStorage.flatMapLatest { storage ->
-                when (storage) {
-                    DownloadStorageType.IN_APP ->
-                        manageDownloads
-                            .observe()
-                            .map<DownloadLibraryUiModel, DownloadLibraryResult> { DownloadLibraryResult.Data(it) }
-                            .catch { emit(DownloadLibraryResult.Failure) }
+        private val inAppLibraryState =
+            manageDownloads
+                .observe()
+                .map<DownloadLibraryUiModel, DownloadLibraryResult> { DownloadLibraryResult.Data(it) }
+                .catch { emit(DownloadLibraryResult.Failure) }
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000L),
+                    initialValue = DownloadLibraryResult.Data(DownloadLibraryUiModel(emptyList(), emptyList())),
+                )
 
-                    DownloadStorageType.DEVICE ->
-                        combine(
-                            deviceDownloadRepository.observeDownloaded(),
-                            deviceDownloadRepository.observeInProgress(),
-                        ) { downloaded, inProgress ->
-                            val downloadedSections =
-                                if (downloaded.isNotEmpty()) {
-                                    listOf(DownloadSectionUiModel(DownloadMediaType.SONG, downloaded))
-                                } else {
-                                    emptyList()
-                                }
-                            val inProgressSections =
-                                if (inProgress.isNotEmpty()) {
-                                    listOf(DownloadSectionUiModel(DownloadMediaType.SONG, inProgress))
-                                } else {
-                                    emptyList()
-                                }
-                            DownloadLibraryUiModel(
-                                downloadedSections = downloadedSections,
-                                progressSections = inProgressSections,
-                            )
-                        }.map<DownloadLibraryUiModel, DownloadLibraryResult> { DownloadLibraryResult.Data(it) }
-                            .catch { emit(DownloadLibraryResult.Failure) }
-                }
-            }
+        private val deviceLibraryState =
+            combine(
+                deviceDownloadRepository.observeDownloaded(),
+                deviceDownloadRepository.observeInProgress(),
+            ) { downloaded, inProgress ->
+                val downloadedSections =
+                    if (downloaded.isNotEmpty()) {
+                        listOf(DownloadSectionUiModel(DownloadMediaType.SONG, downloaded))
+                    } else {
+                        emptyList()
+                    }
+                val inProgressSections =
+                    if (inProgress.isNotEmpty()) {
+                        listOf(DownloadSectionUiModel(DownloadMediaType.SONG, inProgress))
+                    } else {
+                        emptyList()
+                    }
+                DownloadLibraryUiModel(
+                    downloadedSections = downloadedSections,
+                    progressSections = inProgressSections,
+                )
+            }.map<DownloadLibraryUiModel, DownloadLibraryResult> { DownloadLibraryResult.Data(it) }
+                .catch { emit(DownloadLibraryResult.Failure) }
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000L),
+                    initialValue = DownloadLibraryResult.Data(DownloadLibraryUiModel(emptyList(), emptyList())),
+                )
 
         val screenState: StateFlow<DownloadLibraryScreenState> =
             combine(
-                activeLibraryFlow,
                 selectedStorage,
                 selectedTab,
                 query,
                 combine(isSearchActive, pendingRemoval) { active, removal -> active to removal },
-            ) { result, storage, tab, currentQuery, (searchActive, removalConfirmation) ->
+                combine(inAppLibraryState, deviceLibraryState) { inApp, device -> inApp to device },
+            ) { storage, tab, currentQuery, (searchActive, removalConfirmation), (inAppResult, deviceResult) ->
+                val result =
+                    when (storage) {
+                        DownloadStorageType.IN_APP -> inAppResult
+                        DownloadStorageType.DEVICE -> deviceResult
+                    }
                 when (result) {
                     is DownloadLibraryResult.Data -> {
                         if (result.library.isEmpty) {

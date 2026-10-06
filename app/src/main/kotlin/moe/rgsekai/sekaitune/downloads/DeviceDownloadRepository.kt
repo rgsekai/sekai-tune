@@ -34,6 +34,8 @@ import moe.rgsekai.sekaitune.models.MediaMetadata
 import moe.rgsekai.sekaitune.ui.utils.formatFileSize
 import timber.log.Timber
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -47,12 +49,17 @@ class DeviceDownloadRepository
         private val workManager = WorkManager.getInstance(context)
         private val dismissedWorkIds = MutableStateFlow<Set<String>>(emptySet())
 
+        private val artworkUriCache = ConcurrentHashMap<String, String>()
+        private val noArtworkCache = ConcurrentHashMap.newKeySet<String>()
+
         fun observeDownloaded(): Flow<List<DownloadEntryUiModel>> =
             callbackFlow {
                 val observer =
-                    object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    object : ContentObserver(null) {
                         override fun onChange(selfChange: Boolean, uri: Uri?) {
-                            trySend(queryDeviceDownloads())
+                            launch(Dispatchers.IO) {
+                                trySend(queryDeviceDownloads())
+                            }
                         }
                     }
 
@@ -63,7 +70,9 @@ class DeviceDownloadRepository
                 )
 
                 // Initial emit
-                trySend(queryDeviceDownloads())
+                launch(Dispatchers.IO) {
+                    trySend(queryDeviceDownloads())
+                }
 
                 awaitClose {
                     context.contentResolver.unregisterContentObserver(observer)
@@ -347,19 +356,49 @@ class DeviceDownloadRepository
     }
 
     private fun extractArtworkUri(contentUri: Uri, dateModified: Long, size: Long): String? {
+        val segment = contentUri.lastPathSegment ?: return null
+        val cacheKey = "${segment}_${dateModified}_$size"
+
+        val cachedUri = artworkUriCache[cacheKey]
+        if (cachedUri != null) return cachedUri
+        if (noArtworkCache.contains(cacheKey)) return null
+
+        val dir = java.io.File(context.cacheDir, "device_artwork")
+        val jpgFile = java.io.File(dir, "device_art_$cacheKey.jpg")
+        if (jpgFile.exists() && jpgFile.length() > 0) {
+            val uriStr = Uri.fromFile(jpgFile).toString()
+            artworkUriCache[cacheKey] = uriStr
+            return uriStr
+        }
+        val pngFile = java.io.File(dir, "device_art_$cacheKey.png")
+        if (pngFile.exists() && pngFile.length() > 0) {
+            val uriStr = Uri.fromFile(pngFile).toString()
+            artworkUriCache[cacheKey] = uriStr
+            return uriStr
+        }
+        val noneFile = java.io.File(dir, "device_art_$cacheKey.none")
+        if (noneFile.exists()) {
+            noArtworkCache.add(cacheKey)
+            return null
+        }
+
         val retriever = android.media.MediaMetadataRetriever()
         return try {
             retriever.setDataSource(context, contentUri)
-            val artworkBytes = retriever.embeddedPicture ?: return null
-            val extension = if (artworkBytes.size > 3 && artworkBytes[0] == 0x89.toByte() && artworkBytes[1] == 0x50.toByte()) "png" else "jpg"
-            val fileName = "device_art_${contentUri.lastPathSegment}_${dateModified}_$size.$extension"
-            val dir = java.io.File(context.cacheDir, "device_artwork")
-            val file = java.io.File(dir, fileName)
-            if (!file.exists() || file.length() != artworkBytes.size.toLong()) {
-                dir.mkdirs()
+            val artworkBytes = retriever.embeddedPicture
+            dir.mkdirs()
+            if (artworkBytes == null || artworkBytes.isEmpty()) {
+                noneFile.createNewFile()
+                noArtworkCache.add(cacheKey)
+                null
+            } else {
+                val extension = if (artworkBytes.size > 3 && artworkBytes[0] == 0x89.toByte() && artworkBytes[1] == 0x50.toByte()) "png" else "jpg"
+                val file = java.io.File(dir, "device_art_$cacheKey.$extension")
                 file.writeBytes(artworkBytes)
+                val uriStr = Uri.fromFile(file).toString()
+                artworkUriCache[cacheKey] = uriStr
+                uriStr
             }
-            Uri.fromFile(file).toString()
         } catch (e: Exception) {
             null
         } finally {

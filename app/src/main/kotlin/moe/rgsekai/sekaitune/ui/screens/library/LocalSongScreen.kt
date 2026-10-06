@@ -904,6 +904,136 @@ private fun LocalSongScanSheet(
                 }
             }
 
+            Button(
+                onClick = onPrimaryAction,
+                enabled = !scanState.isScanning,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor =
+                            if (hasStoragePermission) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.tertiary
+                            },
+                        contentColor =
+                            if (hasStoragePermission) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onTertiary
+                            },
+                        disabledContainerColor = if (isGlass) (if (isLight) Color.White.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f)) else MaterialTheme.colorScheme.surfaceContainerHighest,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    ),
+                shape = RoundedCornerShape(28.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = RoundedCornerShape(28.dp),
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
+            ) {
+                AnimatedContent(
+                    targetState = scanState.isScanning,
+                    transitionSpec = {
+                        (
+                            fadeIn(spring(stiffness = Spring.StiffnessLow)) togetherWith
+                                fadeOut(spring(stiffness = Spring.StiffnessMedium))
+                        )
+                    },
+                    label = "buttonContent",
+                ) { isScanning ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (isScanning) {
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                            )
+                        } else {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (hasStoragePermission) R.drawable.sync else R.drawable.security,
+                                    ),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text =
+                                if (isScanning) {
+                                    stringResource(R.string.scanning_device)
+                                } else {
+                                    primaryButtonText
+                                },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = hasError,
+                enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
+                exit = shrinkVertically(spring(stiffness = Spring.StiffnessLow)) + fadeOut(),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isGlass) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.errorContainer,
+                    border = if (isGlass) BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)) else null,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
+                            .then(
+                                if (isGlass) {
+                                    Modifier.liquidGlass(
+                                        config = glassConfig,
+                                        shape = RoundedCornerShape(20.dp),
+                                        applyEdgeEffects = true,
+                                    )
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.error),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = scanState.errorMessage.orEmpty(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             MenuSurfaceSection(
                 shape = RoundedCornerShape(28.dp),
                 modifier =
@@ -1130,136 +1260,6 @@ private fun LocalSongScanSheet(
                                 }
                             }
                         }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = onPrimaryAction,
-                enabled = !scanState.isScanning,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor =
-                            if (hasStoragePermission) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.tertiary
-                            },
-                        contentColor =
-                            if (hasStoragePermission) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onTertiary
-                            },
-                        disabledContainerColor = if (isGlass) (if (isLight) Color.White.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f)) else MaterialTheme.colorScheme.surfaceContainerHighest,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    ),
-                shape = RoundedCornerShape(28.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (isGlass) {
-                                Modifier.liquidGlass(
-                                    config = glassConfig,
-                                    shape = RoundedCornerShape(28.dp),
-                                    applyEdgeEffects = true,
-                                )
-                            } else {
-                                Modifier
-                            },
-                        ),
-            ) {
-                AnimatedContent(
-                    targetState = scanState.isScanning,
-                    transitionSpec = {
-                        (
-                            fadeIn(spring(stiffness = Spring.StiffnessLow)) togetherWith
-                                fadeOut(spring(stiffness = Spring.StiffnessMedium))
-                        )
-                    },
-                    label = "buttonContent",
-                ) { isScanning ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (isScanning) {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                            )
-                        } else {
-                            Icon(
-                                painter =
-                                    painterResource(
-                                        if (hasStoragePermission) R.drawable.sync else R.drawable.security,
-                                    ),
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text =
-                                if (isScanning) {
-                                    stringResource(R.string.scanning_device)
-                                } else {
-                                    primaryButtonText
-                                },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
-            }
-
-            AnimatedVisibility(
-                visible = hasError,
-                enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
-                exit = shrinkVertically(spring(stiffness = Spring.StiffnessLow)) + fadeOut(),
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isGlass) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.errorContainer,
-                    border = if (isGlass) BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)) else null,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp)
-                            .then(
-                                if (isGlass) {
-                                    Modifier.liquidGlass(
-                                        config = glassConfig,
-                                        shape = RoundedCornerShape(20.dp),
-                                        applyEdgeEffects = true,
-                                    )
-                                } else {
-                                    Modifier
-                                },
-                            ),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.error),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            text = scanState.errorMessage.orEmpty(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.weight(1f),
-                        )
                     }
                 }
             }
