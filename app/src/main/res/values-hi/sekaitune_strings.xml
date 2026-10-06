@@ -8,4 +8,5 @@
     <string name="music_recognition_no_match">कोई मेल नहीं मिला</string>
     <string name="music_recognition_signature_failed">हस्ताक्षर उत्पन्न नहीं किया जा सका</string>
     <string name="music_recognition_recognition_failed">पहचान विफल रही</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune ओपन-सोर्स ArchiveTune प्रोजेक्ट (GPL-3.0) का एक फोर्क है</string>
 </resources>

@@ -284,5 +284,6 @@
     <string name="suggestions">Suggerimenti</string>
     <string name="stats_unique_songs">Canzoni che potrebbero piacerti</string>
     <string name="stats_unique_artists">Artisti che potrebbero piacerti</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune è un fork del progetto open source ArchiveTune (GPL-3.0)</string>
 </resources>
 

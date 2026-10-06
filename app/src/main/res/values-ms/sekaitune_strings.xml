@@ -58,4 +58,5 @@
     <string name="hide_player_thumbnail">Sorok Muka Pemain</string>
     <string name="hide_player_thumbnail_desc">Tukar muka album dengan logo aplikasi pada pemain</string>
     <string name="show_tags_in_library">Tunjuk tanda dalam pustaka</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune adalah fork daripada projek sumber terbuka ArchiveTune (GPL-3.0)</string>
 </resources>

@@ -220,5 +220,6 @@
     <string name="music_recognition_permission_desc">السماح بالوصول إلى الميكروفون للتعرف على الموسيقى القريبة.</string>
     <string name="music_recognition_permission_action">سماح</string>
     <string name="music_recognition_error">حدث شيء خاطئ</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune هو تفريع (Fork) لمشروع ArchiveTune مفتوح المصدر (GPL-3.0)</string>
 </resources>
 

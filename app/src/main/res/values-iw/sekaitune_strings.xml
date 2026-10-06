@@ -361,6 +361,7 @@
     <string name="android_auto_sort_playlist">מיון פלייליסט</string>
     <string name="android_auto_sort_option_format">%1$s - %2$s</string>
     <string name="empty_album">אלבום ריק</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune הוא פיצול (Fork) של פרויקט הקוד הפתוח ArchiveTune‏ (GPL-3.0)</string>
 </resources>
 
 

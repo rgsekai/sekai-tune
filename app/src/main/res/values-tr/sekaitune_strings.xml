@@ -211,4 +211,5 @@
     <string name="local_songs_empty_title">Yerel şarkı bulunamadı</string>
     <string name="local_songs_empty_desc">Üst çubuktan ayarları açın ve bu cihazda çevrimdışı ses bulmak için bir cihaz taraması yapın.</string>
     <string name="local_songs_scan_failed">Bu cihazın taraması tamamlanamadı.</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune, açık kaynaklı ArchiveTune projesinin bir çatalıdır (GPL-3.0)</string>
 </resources>

@@ -1,3 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="about_based_on_SekaiTune">Sekai Tune เป็นฟอร์กของโปรเจกต์โอเพนซอร์ส ArchiveTune (GPL-3.0)</string>
 </resources>

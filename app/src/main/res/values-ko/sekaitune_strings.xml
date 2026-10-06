@@ -526,7 +526,8 @@
     <string name="restore_select_backup">복원할 백업 파일 선택</string>
     <string name="about_contributor_translation">번역 기여자</string>
     <string name="about_license">오픈소스 라이선스</string>
-    <string name="about_license_unknown">알 수 없는 라이선스</string></resources>
+    <string name="about_license_unknown">알 수 없는 라이선스</string>    <string name="about_based_on_SekaiTune">Sekai Tune은 오픈 소스 ArchiveTune 프로젝트의 포크입니다 (GPL-3.0)</string>
+</resources>
 
 
 

@@ -55,7 +55,8 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
 
-          archive_marker = "SekaiTune ("
+          header_marker = "Sekai Tune ("
+          header_marker_compact = "SekaiTune ("
           license_marker = "GPL-3.0 License | Contributors: see git history"
           total_removed = 0
 
@@ -72,7 +73,7 @@ jobs:
                       break
 
                   header = text[:end + 2]
-                  if archive_marker not in header or license_marker not in header:
+                  if (header_marker not in header and header_marker_compact not in header) or license_marker not in header:
                       break
 
                   text = text[end + 2:].lstrip("\r\n")

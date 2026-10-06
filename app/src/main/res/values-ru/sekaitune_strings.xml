@@ -296,6 +296,7 @@
     <string name="aod_customize_title">Настройка AOD</string>
     <string name="aod_customize_subtitle">Форма, компоновка, элементы управления и стилизация интерфейса</string>
     <string name="aod_customize_entry_desc">Настройка always-on экрана проигрывателя</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune — это форк проекта с открытым исходным кодом ArchiveTune (GPL-3.0)</string>
 </resources>
 
 

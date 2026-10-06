@@ -463,6 +463,7 @@
     <string name="ai_model_no_results">Tidak ada model yang cocok dengan pencarian Anda</string>
     <string name="ai_api_connected">API terhubung</string>
     <string name="ai_api_test_failed">Uji API gagal</string>
-    <string name="ai_translation_menu">Terjemahan AI</string></resources>
+    <string name="ai_translation_menu">Terjemahan AI</string>    <string name="about_based_on_SekaiTune">Sekai Tune adalah fork dari proyek sumber terbuka ArchiveTune (GPL-3.0)</string>
+</resources>
 
 

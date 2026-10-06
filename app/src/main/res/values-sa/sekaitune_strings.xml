@@ -1,3 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    </resources>
+        <string name="about_based_on_SekaiTune">Sekai Tune मुक्तस्रोतः ArchiveTune परियोजनायाः फोर्क अस्ति (GPL-3.0)</string>
+</resources>

@@ -517,6 +517,7 @@
     <string name="about_lead_developer">Desarrollador principal</string>    <string name="about_respecter">Cumplir</string>
     <string name="about_contributors">Colaboradores</string>    <string name="about_content_desc_github">GitHub</string>    <string name="aod_customize_sample_title">Midnight Archive</string>
     <string name="unblock_artist">Desbloquear artista</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune es una bifurcación del proyecto de código abierto ArchiveTune (GPL-3.0)</string>
 </resources>
 
 

@@ -448,5 +448,6 @@
     <string name="ai_api_connected">API verbunden</string>
     <string name="ai_api_test_failed">API-Test fehlgeschlagen</string>
     <string name="ai_translation_menu">KI-Übersetzung</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune ist ein Fork des quelloffenen ArchiveTune-Projekts (GPL-3.0)</string>
 </resources>
 

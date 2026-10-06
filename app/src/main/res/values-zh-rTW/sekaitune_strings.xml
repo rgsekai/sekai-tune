@@ -160,4 +160,5 @@
     <string name="share_lyrics">分享歌詞</string>
     <string name="share_as_text">以文字形式分享</string>
     <string name="share_as_image">以圖像形式分享</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune 是開源 ArchiveTune 專案的分支 (GPL-3.0)</string>
 </resources>

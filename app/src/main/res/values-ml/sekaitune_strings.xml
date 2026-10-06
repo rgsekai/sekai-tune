@@ -1,3 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    </resources>
+        <string name="about_based_on_SekaiTune">Sekai Tune എന്നത് ഓപ്പൺ സോഴ്സ് ArchiveTune പ്രൊജക്റ്റിന്റെ ഒരു ഫോർക്ക് ആണ് (GPL-3.0)</string>
+</resources>

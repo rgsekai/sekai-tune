@@ -14,4 +14,5 @@
     <string name="music_recognition_permission_desc">اسمح بالوصول للمايك عشان نعرف الاغاني اللي شغالة حواليك</string>
     <string name="music_recognition_permission_action">اسمح</string>
     <string name="music_recognition_error">في حاجة حصلت غلط</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune هو تفريع (Fork) لمشروع ArchiveTune مفتوح المصدر (GPL-3.0)</string>
 </resources>

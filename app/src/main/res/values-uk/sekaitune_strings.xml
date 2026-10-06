@@ -283,4 +283,5 @@
     <string name="local_songs_no_matches_desc">Спробуйте ввести іншу назву пісні, виконавця або альбому.</string>
     <string name="sort_by_album">Альбом</string>
     <string name="lyrics_line_blur">Розмиті рядки тексту пісні</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune — це форк проєкту з відкритим вихідним кодом ArchiveTune (GPL-3.0)</string>
 </resources>

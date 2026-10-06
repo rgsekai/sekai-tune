@@ -537,7 +537,8 @@
     <string name="about_contributors">貢献者</string>
     <string name="about_contributor_translation">翻訳貢献者</string>
     <string name="about_license">ライセンス</string>
-    <string name="about_license_unknown">不明なライセンス</string>    <string name="about_content_desc_github">GitHub</string></resources>
+    <string name="about_license_unknown">不明なライセンス</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_SekaiTune">Sekai Tune はオープンソースの ArchiveTune プロジェクトのフォークです (GPL-3.0)</string>
+</resources>
 
 
 

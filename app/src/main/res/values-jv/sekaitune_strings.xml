@@ -463,5 +463,6 @@
     <string name="ai_model_no_results">Ora ana model yang cocok dengan pencarian Kowe</string>
     <string name="ai_api_connected">API terhubung</string>
     <string name="ai_api_test_failed">Uji API gagal</string>
-    <string name="ai_translation_menu">Terjemahan AI</string></resources>
+    <string name="ai_translation_menu">Terjemahan AI</string>    <string name="about_based_on_SekaiTune">Sekai Tune yaiku fork saka proyek sumber terbuka ArchiveTune (GPL-3.0)</string>
+</resources>
 

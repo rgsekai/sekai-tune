@@ -538,6 +538,7 @@
     <string name="about_contributors">Contribuidores</string>
     <string name="about_contributor_translation">Contribuidores da Tradução</string>
     <string name="about_license">LICENÇA</string>
-    <string name="about_license_unknown">Licença desconhecida</string>    <string name="about_content_desc_github">GitHub</string></resources>
+    <string name="about_license_unknown">Licença desconhecida</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_SekaiTune">Sekai Tune é uma bifurcação do projeto de código aberto ArchiveTune (GPL-3.0)</string>
+</resources>
 
 

@@ -227,4 +227,5 @@
     <string name="local_songs_scan_title">扫描本地歌曲</string>
     <string name="local_songs_permission_body">允许访问存储空间以扫描本地音频文件</string>
     <string name="local_songs_no_matches_title">未发现符合条件的本地歌曲</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune 是开源 ArchiveTune 项目的分支 (GPL-3.0)</string>
 </resources>

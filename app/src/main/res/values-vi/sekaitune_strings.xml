@@ -526,7 +526,8 @@
     <string name="theme_export_success">Đã xuất giao diện</string>
     <string name="theme_export_failed">Xuất thất bại</string>
     <string name="theme_import_failed_title">Không thể nhập giao diện</string>
-    <string name="top_albums">Album hàng đầu</string></resources>
+    <string name="top_albums">Album hàng đầu</string>    <string name="about_based_on_SekaiTune">Sekai Tune là một bản phân nhánh (fork) của dự án mã nguồn mở ArchiveTune (GPL-3.0)</string>
+</resources>
 
 
 

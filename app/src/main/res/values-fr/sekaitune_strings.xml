@@ -535,6 +535,7 @@
     <string name="theme_creator_title">Créateur de thèmes</string>
     <string name="block_artist">Bloquer l\'artiste</string>
     <string name="unblock_artist">Débloquer l\'artiste</string>
+    <string name="about_based_on_SekaiTune">Sekai Tune est un fork du projet open source ArchiveTune (GPL-3.0)</string>
 </resources>
 
 
