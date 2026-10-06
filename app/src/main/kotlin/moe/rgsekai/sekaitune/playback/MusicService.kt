@@ -1129,7 +1129,7 @@ class MusicService :
             val repeatMode = prefs[RepeatModeKey] ?: REPEAT_MODE_OFF
             val volume = (prefs[PlayerVolumeKey] ?: 1f).coerceIn(0f, 1f)
             val offload = prefs[AudioOffload] ?: false
-            val crossfadePrefEnabled = prefs[CrossfadeEnabledKey] ?: false
+            val crossfadePrefEnabled = prefs[CrossfadeEnabledKey] ?: true
             withContext(Dispatchers.Main) {
                 player.repeatMode = repeatMode
                 playerVolume.value = volume
@@ -1234,7 +1234,7 @@ class MusicService :
 
         combine(
             dataStore.data.map { it[AudioOffload] ?: false },
-            dataStore.data.map { it[CrossfadeEnabledKey] ?: false },
+            dataStore.data.map { it[CrossfadeEnabledKey] ?: true },
         ) { offloadEnabled, crossfadeEnabled ->
             offloadEnabled to crossfadeEnabled
         }.distinctUntilChanged()
@@ -1251,9 +1251,9 @@ class MusicService :
             }
 
         combine(dataStore.data, togetherSessionState) { prefs, togetherState ->
-            val enabled = prefs[CrossfadeEnabledKey] ?: false
-            val durationSeconds = prefs[CrossfadeDurationKey] ?: 5f
-            val gapless = prefs[CrossfadeGaplessKey] ?: true
+            val enabled = prefs[CrossfadeEnabledKey] ?: true
+            val durationSeconds = prefs[CrossfadeDurationKey] ?: 3f
+            val gapless = prefs[CrossfadeGaplessKey] ?: false
             CrossfadeConfig(
                 enabled = enabled && togetherState is moe.rgsekai.sekaitune.together.TogetherSessionState.Idle,
                 durationSeconds = durationSeconds,

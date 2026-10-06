@@ -351,9 +351,6 @@ fun BottomSheetPlayer(
     val (backdropEnabled) = rememberPreference(BackdropEnabledKey, defaultValue = true)
     val (backdropBlurAmount) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
     val (showCodecOnPlayer) = rememberPreference(booleanPreferencesKey("show_codec_on_player"), false)
-    val (incrementalSeekSkipEnabled) = rememberPreference(moe.rgsekai.sekaitune.constants.SeekExtraSeconds, defaultValue = false)
-    var keyboardSkipMultiplier by remember { mutableStateOf(1) }
-    var lastKeyboardTapTime by remember { mutableLongStateOf(0L) }
 
     val playerButtonsStyle by rememberEnumPreference(
         key = PlayerButtonsStyleKey,
@@ -856,29 +853,13 @@ fun BottomSheetPlayer(
 
                     when (keyEvent.key) {
                         Key.DirectionLeft -> {
-                            val now = SystemClock.uptimeMillis()
-                            if (incrementalSeekSkipEnabled && now - lastKeyboardTapTime < 1000) {
-                                keyboardSkipMultiplier++
-                            } else {
-                                keyboardSkipMultiplier = 1
-                            }
-                            lastKeyboardTapTime = now
-                            val skipAmount = 5000L * keyboardSkipMultiplier
-                            playerConnection.player.seekTo((playerConnection.player.currentPosition - skipAmount).coerceAtLeast(0))
+                            playerConnection.player.seekTo((playerConnection.player.currentPosition - 5000L).coerceAtLeast(0))
                             true
                         }
 
                         Key.DirectionRight -> {
-                            val now = SystemClock.uptimeMillis()
-                            if (incrementalSeekSkipEnabled && now - lastKeyboardTapTime < 1000) {
-                                keyboardSkipMultiplier++
-                            } else {
-                                keyboardSkipMultiplier = 1
-                            }
-                            lastKeyboardTapTime = now
-                            val skipAmount = 5000L * keyboardSkipMultiplier
                             playerConnection.player.seekTo(
-                                (playerConnection.player.currentPosition + skipAmount).coerceAtMost(playerConnection.player.duration),
+                                (playerConnection.player.currentPosition + 5000L).coerceAtMost(playerConnection.player.duration),
                             )
                             true
                         }

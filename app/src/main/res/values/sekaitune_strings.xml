@@ -418,6 +418,13 @@
     <string name="reset_playback_client_cache_title">Reset playback client cache</string>
     <string name="reset_playback_client_cache_desc">Clear automatically detected winning clients and force fresh stream discovery</string>
     <string name="reset_playback_client_cache_done">Playback client cache cleared</string>
+    <string name="player_section_audio_streaming">Audio &amp; Streaming</string>
+    <string name="player_section_sound_effects">Sound &amp; Effects</string>
+    <string name="player_section_playback_controls">Playback Controls</string>
+    <string name="player_section_queue">Queue &amp; Playlists</string>
+    <string name="player_section_downloads">Save to device</string>
+    <string name="download_format">Download format</string>
+    <string name="player_section_system">System &amp; Background</string>
     <string name="settings_section_player_content">Player &amp; Content</string>
     <string name="settings_appearance_subtitle">Themes, layout, and visual styles</string>
     <string name="settings_playback_title">Playback</string>

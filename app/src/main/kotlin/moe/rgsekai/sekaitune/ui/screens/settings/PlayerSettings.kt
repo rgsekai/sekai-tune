@@ -54,7 +54,6 @@ import moe.rgsekai.sekaitune.constants.AutoSkipNextOnErrorKey
 import moe.rgsekai.sekaitune.constants.AutoStartOnBluetoothKey
 import moe.rgsekai.sekaitune.constants.CrossfadeDurationKey
 import moe.rgsekai.sekaitune.constants.CrossfadeEnabledKey
-import moe.rgsekai.sekaitune.constants.CrossfadeGaplessKey
 import moe.rgsekai.sekaitune.constants.DeviceMutePlaybackRecoveryVolumeKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderEnabledKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
@@ -66,7 +65,6 @@ import moe.rgsekai.sekaitune.constants.PermanentShuffleKey
 import moe.rgsekai.sekaitune.constants.PersistentQueueKey
 import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
-import moe.rgsekai.sekaitune.constants.SeekExtraSeconds
 import moe.rgsekai.sekaitune.constants.SkipSilenceKey
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
 import moe.rgsekai.sekaitune.constants.WakelockKey
@@ -125,12 +123,6 @@ fun PlayerSettings(navController: NavController) {
             defaultValue = false,
         )
 
-    val (seekExtraSeconds, onSeekExtraSeconds) =
-        rememberPreference(
-            SeekExtraSeconds,
-            defaultValue = false,
-        )
-
     val (autoDownloadOnLike, onAutoDownloadOnLikeChange) =
         rememberPreference(
             AutoDownloadOnLikeKey,
@@ -173,17 +165,12 @@ fun PlayerSettings(navController: NavController) {
     val (crossfadeEnabled, onCrossfadeEnabledChange) =
         rememberPreference(
             CrossfadeEnabledKey,
-            defaultValue = false,
+            defaultValue = true,
         )
     val (crossfadeDurationSeconds, onCrossfadeDurationSecondsChange) =
         rememberPreference(
             CrossfadeDurationKey,
-            defaultValue = 5f,
-        )
-    val (crossfadeGapless, onCrossfadeGaplessChange) =
-        rememberPreference(
-            CrossfadeGaplessKey,
-            defaultValue = true,
+            defaultValue = 3f,
         )
 
     val (artistSeparators, onArtistSeparatorsChange) =
@@ -269,7 +256,7 @@ fun PlayerSettings(navController: NavController) {
                 .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal))
                 .verticalScroll(rememberScrollState()),
         ) {
-            PreferenceGroup(title = stringResource(R.string.player)) {
+            PreferenceGroup(title = stringResource(R.string.player_section_audio_streaming)) {
                 item {
                     EnumListPreference(
                         title = { Text(stringResource(R.string.audio_quality)) },
@@ -288,16 +275,12 @@ fun PlayerSettings(navController: NavController) {
                 }
 
                 item {
-                    val context = LocalContext.current
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.reset_playback_client_cache_title)) },
-                        description = stringResource(R.string.reset_playback_client_cache_desc),
-                        icon = { Icon(painterResource(R.drawable.cached), null) },
-                        onClick = {
-                            PersistentVideoClientCache.clearAll()
-                            YTPlayerUtils.clearPlaybackAuthCaches()
-                            Toast.makeText(context, R.string.reset_playback_client_cache_done, Toast.LENGTH_SHORT).show()
-                        },
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.low_data_mode_title)) },
+                        description = stringResource(R.string.low_data_mode_description),
+                        icon = { Icon(painterResource(R.drawable.android_cell), null) },
+                        checked = lowDataMode,
+                        onCheckedChange = onLowDataModeChange,
                     )
                 }
 
@@ -311,24 +294,21 @@ fun PlayerSettings(navController: NavController) {
                 }
 
                 item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.low_data_mode_title)) },
-                        description = stringResource(R.string.low_data_mode_description),
-                        icon = { Icon(painterResource(R.drawable.android_cell), null) },
-                        checked = lowDataMode,
-                        onCheckedChange = onLowDataModeChange,
+                    val context = LocalContext.current
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.reset_playback_client_cache_title)) },
+                        description = stringResource(R.string.reset_playback_client_cache_desc),
+                        icon = { Icon(painterResource(R.drawable.cached), null) },
+                        onClick = {
+                            PersistentVideoClientCache.clearAll()
+                            YTPlayerUtils.clearPlaybackAuthCaches()
+                            Toast.makeText(context, R.string.reset_playback_client_cache_done, Toast.LENGTH_SHORT).show()
+                        },
                     )
                 }
+            }
 
-                item {
-                    SliderPreference(
-                        title = { Text(stringResource(R.string.history_duration)) },
-                        icon = { Icon(painterResource(R.drawable.history), null) },
-                        value = historyDuration,
-                        onValueChange = onHistoryDurationChange,
-                    )
-                }
-
+            PreferenceGroup(title = stringResource(R.string.player_section_sound_effects)) {
                 item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.audio_crossfade_title)) },
@@ -348,17 +328,6 @@ fun PlayerSettings(navController: NavController) {
                     CrossfadeSliderPreference(
                         valueSeconds = crossfadeDurationSeconds,
                         onValueChange = onCrossfadeDurationSecondsChange,
-                        isEnabled = crossfadeEnabled,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.crossfade_gapless_title)) },
-                        description = stringResource(R.string.crossfade_gapless_description),
-                        icon = { Icon(painterResource(R.drawable.fast_forward), null) },
-                        checked = crossfadeGapless,
-                        onCheckedChange = onCrossfadeGaplessChange,
                         isEnabled = crossfadeEnabled,
                     )
                 }
@@ -397,17 +366,9 @@ fun PlayerSettings(navController: NavController) {
                         },
                     )
                 }
+            }
 
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.seek_seconds_addup)) },
-                        description = stringResource(R.string.seek_seconds_addup_description),
-                        icon = { Icon(painterResource(R.drawable.arrow_forward), null) },
-                        checked = seekExtraSeconds,
-                        onCheckedChange = onSeekExtraSeconds,
-                    )
-                }
-
+            PreferenceGroup(title = stringResource(R.string.player_section_playback_controls)) {
                 item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.pause_on_device_mute)) },
@@ -452,9 +413,28 @@ fun PlayerSettings(navController: NavController) {
                         onCheckedChange = onAutoStartOnBluetoothChange,
                     )
                 }
+
+                item {
+                    SliderPreference(
+                        title = { Text(stringResource(R.string.history_duration)) },
+                        icon = { Icon(painterResource(R.drawable.history), null) },
+                        value = historyDuration,
+                        onValueChange = onHistoryDurationChange,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.auto_skip_next_on_error)) },
+                        description = stringResource(R.string.auto_skip_next_on_error_desc),
+                        icon = { Icon(painterResource(R.drawable.skip_next), null) },
+                        checked = autoSkipNextOnError,
+                        onCheckedChange = onAutoSkipNextOnErrorChange,
+                    )
+                }
             }
 
-            PreferenceGroup(title = stringResource(R.string.queue)) {
+            PreferenceGroup(title = stringResource(R.string.player_section_queue)) {
                 item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.persistent_queue)) },
@@ -476,89 +456,6 @@ fun PlayerSettings(navController: NavController) {
                 }
 
                 item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.auto_download_on_like)) },
-                        description = stringResource(R.string.auto_download_on_like_desc),
-                        icon = { Icon(painterResource(R.drawable.download), null) },
-                        checked = autoDownloadOnLike,
-                        onCheckedChange = onAutoDownloadOnLikeChange,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.auto_skip_next_on_error)) },
-                        description = stringResource(R.string.auto_skip_next_on_error_desc),
-                        icon = { Icon(painterResource(R.drawable.skip_next), null) },
-                        checked = autoSkipNextOnError,
-                        onCheckedChange = onAutoSkipNextOnErrorChange,
-                    )
-                }
-            }
-            PreferenceGroup(title = "Download Format") {
-                item {
-                    val context = LocalContext.current
-                    val sharedPrefs = remember {
-                        context.getSharedPreferences("sekai_tune_prefs", android.content.Context.MODE_PRIVATE)
-                    }
-                    var selectedFormat by remember {
-                        mutableStateOf(sharedPrefs.getString("audio_format", "mp3") ?: "mp3")
-                    }
-                    val formats = listOf("mp3", "m4a", "flac", "opus")
-
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        formats.forEach { format ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedFormat = format
-                                        sharedPrefs.edit().putString("audio_format", format).apply()
-                                    }
-                                    .padding(vertical = 12.dp, horizontal = 24.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = (selectedFormat == format),
-                                    onClick = {
-                                        selectedFormat = format
-                                        sharedPrefs.edit().putString("audio_format", format).apply()
-                                    },
-                                )
-                                Text(
-                                    text = format.uppercase(),
-                                    modifier = Modifier.padding(start = 16.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            PreferenceGroup(title = stringResource(R.string.misc)) {
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.stop_music_on_task_clear)) },
-                        icon = { Icon(painterResource(R.drawable.clear_all), null) },
-                        checked = stopMusicOnTaskClear,
-                        onCheckedChange = onStopMusicOnTaskClearChange,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.wakelock)) },
-                        description = stringResource(R.string.wakelock_desc),
-                        icon = { Icon(painterResource(R.drawable.bolt), null) },
-                        checked = wakelockEnabled,
-                        onCheckedChange = onWakelockChange,
-                    )
-                }
-
-                item {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.artist_separators)) },
                         description = artistSeparators.map { "\"$it\"" }.joinToString("  "),
@@ -573,6 +470,41 @@ fun PlayerSettings(navController: NavController) {
                         description = stringResource(R.string.manage_playlist_tags_desc),
                         icon = { Icon(painterResource(R.drawable.style), null) },
                         onClick = { showTagsManagementDialog = true },
+                    )
+                }
+            }
+
+            PreferenceGroup(title = stringResource(R.string.player_section_downloads)) {
+                item {
+                    val context = LocalContext.current
+                    val sharedPrefs = remember {
+                        context.getSharedPreferences("sekai_tune_prefs", android.content.Context.MODE_PRIVATE)
+                    }
+                    var selectedFormat by remember {
+                        mutableStateOf(sharedPrefs.getString("audio_format", "mp3") ?: "mp3")
+                    }
+                    val formats = remember { listOf("mp3", "m4a", "flac", "opus") }
+
+                    ListPreference(
+                        title = { Text(stringResource(R.string.download_format)) },
+                        icon = { Icon(painterResource(R.drawable.music_note), null) },
+                        selectedValue = selectedFormat,
+                        values = formats,
+                        valueText = { it.uppercase() },
+                        onValueSelected = { format ->
+                            selectedFormat = format
+                            sharedPrefs.edit().putString("audio_format", format).apply()
+                        },
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.auto_download_on_like)) },
+                        description = stringResource(R.string.auto_download_on_like_desc),
+                        icon = { Icon(painterResource(R.drawable.download), null) },
+                        checked = autoDownloadOnLike,
+                        onCheckedChange = onAutoDownloadOnLikeChange,
                     )
                 }
 
@@ -593,6 +525,27 @@ fun PlayerSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.integration), null) },
                         onClick = { showExternalDownloaderPackageDialog = true },
                         isEnabled = externalDownloaderEnabled,
+                    )
+                }
+            }
+
+            PreferenceGroup(title = stringResource(R.string.player_section_system)) {
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.stop_music_on_task_clear)) },
+                        icon = { Icon(painterResource(R.drawable.clear_all), null) },
+                        checked = stopMusicOnTaskClear,
+                        onCheckedChange = onStopMusicOnTaskClearChange,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.wakelock)) },
+                        description = stringResource(R.string.wakelock_desc),
+                        icon = { Icon(painterResource(R.drawable.bolt), null) },
+                        checked = wakelockEnabled,
+                        onCheckedChange = onWakelockChange,
                     )
                 }
             }

@@ -114,7 +114,6 @@ import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
 import moe.rgsekai.sekaitune.constants.PlayerHorizontalPadding
-import moe.rgsekai.sekaitune.constants.SeekExtraSeconds
 import moe.rgsekai.sekaitune.constants.SwipeThumbnailKey
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadiusKey
 import moe.rgsekai.sekaitune.extensions.metadata
@@ -403,9 +402,6 @@ fun Thumbnail(
                             contentType = { "thumbnailPage" },
                         ) { page ->
                             val item = page.mediaItem
-                            val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
-                            var skipMultiplier by remember { mutableStateOf(1) }
-                            var lastTapTime by remember { mutableLongStateOf(0L) }
                             val itemMetadata = remember(item) { item.metadata }
                             val storefront =
                                 remember {
@@ -494,16 +490,7 @@ fun Thumbnail(
                                                     }
                                                     val currentPosition = playerConnection.player.currentPosition
                                                     val duration = playerConnection.player.duration
-
-                                                    val now = System.currentTimeMillis()
-                                                    if (incrementalSeekSkipEnabled && now - lastTapTime < 1000) {
-                                                        skipMultiplier++
-                                                    } else {
-                                                        skipMultiplier = 1
-                                                    }
-                                                    lastTapTime = now
-
-                                                    val skipAmount = 5000 * skipMultiplier
+                                                    val skipAmount = 5000
 
                                                     if ((layoutDirection == LayoutDirection.Ltr && offset.x < size.width / 2) ||
                                                         (layoutDirection == LayoutDirection.Rtl && offset.x > size.width / 2)
@@ -512,12 +499,12 @@ fun Thumbnail(
                                                             (currentPosition - skipAmount).coerceAtLeast(0),
                                                         )
                                                         seekDirection =
-                                                            context.getString(R.string.seek_backward_dynamic, skipAmount / 1000)
+                                                            context.getString(R.string.seek_backward_dynamic, 5)
                                                     } else {
                                                         playerConnection.player.seekTo(
                                                             (currentPosition + skipAmount).coerceAtMost(duration),
                                                         )
-                                                        seekDirection = context.getString(R.string.seek_forward_dynamic, skipAmount / 1000)
+                                                        seekDirection = context.getString(R.string.seek_forward_dynamic, 5)
                                                     }
 
                                                     showSeekEffect = true
