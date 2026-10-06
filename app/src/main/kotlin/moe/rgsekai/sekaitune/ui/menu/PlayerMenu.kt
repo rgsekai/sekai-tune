@@ -1023,30 +1023,6 @@ fun PlayerMenu(
                         )
                     }
 
-                    if (isQueueTrigger != true) {
-                        ListItem(
-                            headlineContent = { Text(text = stringResource(R.string.ambient_mode)) },
-                            leadingContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.fullscreen),
-                                    contentDescription = null,
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    onDismiss()
-                                    playerBottomSheetState.dismiss()
-                                    navController.navigate("ambient_mode")
-                                },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 56.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
-                    }
-
                     ListItem(
                         headlineContent = { Text(text = stringResource(R.string.details)) },
                         leadingContent = {
