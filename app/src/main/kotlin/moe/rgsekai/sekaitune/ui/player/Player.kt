@@ -328,11 +328,11 @@ fun BottomSheetPlayer(
 
     val playerDesignStyle by rememberEnumPreference(
         key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.V2,
+        defaultValue = PlayerDesignStyle.V7,
     )
     val showPlayerVolumeBar by rememberPreference(
         key = ShowPlayerVolumeBarKey,
-        defaultValue = true,
+        defaultValue = false,
     )
 
     val playerBackground by rememberEnumPreference(

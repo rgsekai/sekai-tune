@@ -84,7 +84,6 @@ import moe.rgsekai.sekaitune.constants.DynamicThemeKey
 import moe.rgsekai.sekaitune.constants.FontPreferenceKey
 import moe.rgsekai.sekaitune.constants.GridItemSize
 import moe.rgsekai.sekaitune.constants.GridItemsSizeKey
-import moe.rgsekai.sekaitune.constants.HidePlayerThumbnailKey
 import moe.rgsekai.sekaitune.constants.LibraryFilter
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyleKey
@@ -141,22 +140,17 @@ fun AppearanceSettings(navController: NavController) {
     val (playerDesignStyle, onPlayerDesignStyleChange) =
         rememberEnumPreference(
             PlayerDesignStyleKey,
-            defaultValue = PlayerDesignStyle.V2,
+            defaultValue = PlayerDesignStyle.V7,
         )
     val (showPlayerVolumeBar, onShowPlayerVolumeBarChange) =
         rememberPreference(
             ShowPlayerVolumeBarKey,
-            defaultValue = true,
+            defaultValue = false,
         )
     val (showOneLineLyrics, onShowOneLineLyricsChange) =
         rememberPreference(
             ShowOneLineLyricsKey,
             defaultValue = true,
-        )
-    val (hidePlayerThumbnail, onHidePlayerThumbnailChange) =
-        rememberPreference(
-            HidePlayerThumbnailKey,
-            defaultValue = false,
         )
     val (thumbnailCornerRadius, onThumbnailCornerRadiusChange) =
         rememberPreference(
@@ -682,16 +676,6 @@ fun AppearanceSettings(navController: NavController) {
             }
 
             PreferenceGroup(title = stringResource(R.string.appearance_section_player_artwork)) {
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.hide_player_thumbnail)) },
-                        description = stringResource(R.string.hide_player_thumbnail_desc),
-                        icon = { Icon(painterResource(R.drawable.hide_image), null) },
-                        checked = hidePlayerThumbnail,
-                        onCheckedChange = onHidePlayerThumbnailChange,
-                    )
-                }
-
                 item {
                     ThumbnailCornerRadiusSelectorButton(
                         onRadiusSelected = {},

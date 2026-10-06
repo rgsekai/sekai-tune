@@ -108,7 +108,6 @@ import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
 import moe.rgsekai.sekaitune.constants.CropThumbnailToSquareKey
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
-import moe.rgsekai.sekaitune.constants.HidePlayerThumbnailKey
 import moe.rgsekai.sekaitune.constants.MaxCanvasCacheSizeKey
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
@@ -154,7 +153,6 @@ fun Thumbnail(
     val view = LocalView.current
     val (enableHapticFeedback) = rememberPreference(EnableHapticFeedbackKey, true)
 
-    val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, false)
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
@@ -166,7 +164,7 @@ fun Thumbnail(
     val lowDataModeActive = rememberLowDataModeActive()
     val playerDesignStyle by rememberEnumPreference(
         key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.V2,
+        defaultValue = PlayerDesignStyle.V7,
     )
     val (maxCanvasCacheSize, _) =
         rememberPreference(
@@ -534,145 +532,127 @@ fun Thumbnail(
                                             .size(thumbnailSize)
                                             .clip(RoundedCornerShape(thumbnailCornerRadius.dp)),
                                 ) {
-                                    if (hidePlayerThumbnail) {
-                                        // Show app logo when thumbnail is hidden
-                                        Box(
+                                    val primaryCanvasUrl = canvasArtwork?.animated ?: canvasArtwork?.animatedVertical ?: canvasArtwork?.videoUrl ?: canvasArtwork?.videoUrlVertical
+                                    val fallbackCanvasUrl = canvasArtwork?.videoUrl ?: canvasArtwork?.videoUrlVertical
+                                    val hasAnimatedCanvas = !primaryCanvasUrl.isNullOrBlank() || !fallbackCanvasUrl.isNullOrBlank()
+
+                                    val shouldCropArtwork =
+                                        cropThumbnailToSquare &&
+                                            playerDesignStyle != PlayerDesignStyle.V7
+
+                                    val baseArtworkUrl =
+                                        item.metadata?.thumbnailUrl?.highRes()
+                                            ?: item.mediaMetadata.artworkUri?.toString()
+                                            ?: canvasArtwork?.static
+                                            ?: canvasArtwork?.preferredVerticalAnimationUrl
+                                            ?: canvasArtwork?.preferredAnimationUrl
+
+                                    val thumbnailSwapState =
+                                        rememberThumbnailSwapState(
+                                            videoId = item.metadata?.id,
+                                            ytmUrl = baseArtworkUrl,
+                                            lowDataMode = lowDataModeActive,
+                                            isMusicVideo = item.metadata?.isMusicVideo ?: false,
+                                        )
+
+                                    val displayUrl = thumbnailSwapState.displayUrl
+
+                                    val proceduralBitmap by produceState<Bitmap?>(null, displayUrl, shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback) {
+                                        if (!shouldUseCanvas || !canvasProceduralFallback || hasAnimatedCanvas || displayUrl.isNullOrBlank()) {
+                                            value = null
+                                            return@produceState
+                                        }
+                                        withContext(Dispatchers.IO) {
+                                            try {
+                                                val request =
+                                                    ImageRequest.Builder(context)
+                                                        .data(displayUrl)
+                                                        .allowHardware(false)
+                                                        .build()
+                                                val result = context.imageLoader.execute(request)
+                                                if (result is SuccessResult) {
+                                                    value = result.image.toBitmap()
+                                                }
+                                            } catch (_: Exception) {
+                                                value = null
+                                            }
+                                        }
+                                    }
+
+                                    val audioSessionId = playerConnection.localPlayer.audioSessionId
+                                    val canvasRenderMode = remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, canvasProceduralStyle, canvasAudioReactive, audioSessionId, primaryCanvasUrl, fallbackCanvasUrl, proceduralBitmap, context) {
+                                        when {
+                                            !shouldUseCanvas -> CanvasRenderMode.None
+                                            hasAnimatedCanvas -> CanvasRenderMode.Video(
+                                                primaryUrl = primaryCanvasUrl ?: fallbackCanvasUrl!!,
+                                                fallbackUrl = fallbackCanvasUrl,
+                                            )
+                                            canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(
+                                                context = context,
+                                                bitmap = proceduralBitmap,
+                                                style = canvasProceduralStyle,
+                                                audioSessionId = audioSessionId,
+                                                audioReactive = canvasAudioReactive,
+                                            )
+                                            else -> CanvasRenderMode.None
+                                        }
+                                    }
+
+                                    val thumbnailBgRequest = rememberOfflineArtworkImageRequest(displayUrl)
+                                    val thumbnailArtworkRequest = rememberOfflineArtworkImageRequest(displayUrl)
+                                    val thumbnailBgBlurEnabled = backdropEnabled && backdropBlurAmount > 0
+
+                                    if (thumbnailBgBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        val blurRadiusPx = (backdropBlurAmount * 60 / 100f).coerceAtMost(60f)
+                                        AsyncImage(
+                                            model = thumbnailBgRequest,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.FillBounds,
                                             modifier =
                                                 Modifier
                                                     .fillMaxSize()
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.about_splash),
-                                                contentDescription = stringResource(R.string.hide_player_thumbnail),
-                                                tint = textBackgroundColor.copy(alpha = 0.7f),
-                                                modifier = Modifier.size(120.dp),
-                                            )
-                                        }
+                                                    .let { if (shouldCropArtwork) it.aspectRatio(1f) else it }
+                                                    .graphicsLayer(
+                                                         renderEffect = BlurEffect(radiusX = blurRadiusPx, radiusY = blurRadiusPx),
+                                                         alpha = 0.6f,
+                                                    ),
+                                        )
+                                    } else if (thumbnailBgBlurEnabled) {
+                                        ThumbnailBgBlurApi30(
+                                            imageUrl = displayUrl,
+                                            blurAmount = backdropBlurAmount,
+                                            shouldCropArtwork = shouldCropArtwork,
+                                        )
                                     } else {
-                                        val primaryCanvasUrl = canvasArtwork?.animated ?: canvasArtwork?.animatedVertical ?: canvasArtwork?.videoUrl ?: canvasArtwork?.videoUrlVertical
-                                        val fallbackCanvasUrl = canvasArtwork?.videoUrl ?: canvasArtwork?.videoUrlVertical
-                                        val hasAnimatedCanvas = !primaryCanvasUrl.isNullOrBlank() || !fallbackCanvasUrl.isNullOrBlank()
-
-                                        val shouldCropArtwork =
-                                            cropThumbnailToSquare &&
-                                                playerDesignStyle != PlayerDesignStyle.V7
-
-                                        val baseArtworkUrl =
-                                            item.metadata?.thumbnailUrl?.highRes()
-                                                ?: item.mediaMetadata.artworkUri?.toString()
-                                                ?: canvasArtwork?.static
-                                                ?: canvasArtwork?.preferredVerticalAnimationUrl
-                                                ?: canvasArtwork?.preferredAnimationUrl
-
-                                        val thumbnailSwapState =
-                                            rememberThumbnailSwapState(
-                                                videoId = item.metadata?.id,
-                                                ytmUrl = baseArtworkUrl,
-                                                lowDataMode = lowDataModeActive,
-                                                isMusicVideo = item.metadata?.isMusicVideo ?: false,
-                                            )
-
-                                        val displayUrl = thumbnailSwapState.displayUrl
-
-                                        val proceduralBitmap by produceState<Bitmap?>(null, displayUrl, shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback) {
-                                            if (!shouldUseCanvas || !canvasProceduralFallback || hasAnimatedCanvas || displayUrl.isNullOrBlank()) {
-                                                value = null
-                                                return@produceState
-                                            }
-                                            withContext(Dispatchers.IO) {
-                                                try {
-                                                    val request =
-                                                        ImageRequest.Builder(context)
-                                                            .data(displayUrl)
-                                                            .allowHardware(false)
-                                                            .build()
-                                                    val result = context.imageLoader.execute(request)
-                                                    if (result is SuccessResult) {
-                                                        value = result.image.toBitmap()
-                                                    }
-                                                } catch (_: Exception) {
-                                                    value = null
-                                                }
-                                            }
-                                        }
-
-                                        val audioSessionId = playerConnection.localPlayer.audioSessionId
-                                        val canvasRenderMode = remember(shouldUseCanvas, hasAnimatedCanvas, canvasProceduralFallback, canvasProceduralStyle, canvasAudioReactive, audioSessionId, primaryCanvasUrl, fallbackCanvasUrl, proceduralBitmap, context) {
-                                            when {
-                                                !shouldUseCanvas -> CanvasRenderMode.None
-                                                hasAnimatedCanvas -> CanvasRenderMode.Video(
-                                                    primaryUrl = primaryCanvasUrl ?: fallbackCanvasUrl!!,
-                                                    fallbackUrl = fallbackCanvasUrl,
-                                                )
-                                                canvasProceduralFallback && proceduralBitmap != null -> resolveProceduralRenderMode(
-                                                    context = context,
-                                                    bitmap = proceduralBitmap,
-                                                    style = canvasProceduralStyle,
-                                                    audioSessionId = audioSessionId,
-                                                    audioReactive = canvasAudioReactive,
-                                                )
-                                                else -> CanvasRenderMode.None
-                                            }
-                                        }
-
-                                        val thumbnailBgRequest = rememberOfflineArtworkImageRequest(displayUrl)
-                                        val thumbnailArtworkRequest = rememberOfflineArtworkImageRequest(displayUrl)
-                                        val thumbnailBgBlurEnabled = backdropEnabled && backdropBlurAmount > 0
-
-                                        if (thumbnailBgBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                            val blurRadiusPx = (backdropBlurAmount * 60 / 100f).coerceAtMost(60f)
-                                            AsyncImage(
-                                                model = thumbnailBgRequest,
-                                                contentDescription = null,
-                                                contentScale = ContentScale.FillBounds,
-                                                modifier =
-                                                    Modifier
-                                                        .fillMaxSize()
-                                                        .let { if (shouldCropArtwork) it.aspectRatio(1f) else it }
-                                                        .graphicsLayer(
-                                                             renderEffect = BlurEffect(radiusX = blurRadiusPx, radiusY = blurRadiusPx),
-                                                             alpha = 0.6f,
-                                                        ),
-                                            )
-                                        } else if (thumbnailBgBlurEnabled) {
-                                            ThumbnailBgBlurApi30(
-                                                imageUrl = displayUrl,
-                                                blurAmount = backdropBlurAmount,
-                                                shouldCropArtwork = shouldCropArtwork,
-                                            )
-                                        } else {
-                                            AsyncImage(
-                                                model = thumbnailBgRequest,
-                                                contentDescription = null,
-                                                contentScale = ContentScale.FillBounds,
-                                                modifier =
-                                                    Modifier
-                                                        .fillMaxSize()
-                                                        .let { if (shouldCropArtwork) it.aspectRatio(1f) else it }
-                                                        .graphicsLayer(alpha = 0.6f),
-                                            )
-                                        }
-
                                         AsyncImage(
-                                            model = thumbnailArtworkRequest,
+                                            model = thumbnailBgRequest,
                                             contentDescription = null,
-                                            contentScale = if (shouldCropArtwork) ContentScale.Crop else ContentScale.Fit,
+                                            contentScale = ContentScale.FillBounds,
                                             modifier =
                                                 Modifier
-                                                .fillMaxSize()
-                                                .let { if (shouldCropArtwork) it.aspectRatio(1f) else it },
+                                                    .fillMaxSize()
+                                                    .let { if (shouldCropArtwork) it.aspectRatio(1f) else it }
+                                                    .graphicsLayer(alpha = 0.6f),
                                         )
+                                    }
 
-                                        if (canvasRenderMode !is CanvasRenderMode.None) {
-                                            CanvasArtworkPlayer(
-                                                renderMode = canvasRenderMode,
-                                                isPlaying = isPlaying,
-                                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                        }
+                                    AsyncImage(
+                                        model = thumbnailArtworkRequest,
+                                        contentDescription = null,
+                                        contentScale = if (shouldCropArtwork) ContentScale.Crop else ContentScale.Fit,
+                                        modifier =
+                                            Modifier
+                                            .fillMaxSize()
+                                            .let { if (shouldCropArtwork) it.aspectRatio(1f) else it },
+                                    )
+
+                                    if (canvasRenderMode !is CanvasRenderMode.None) {
+                                        CanvasArtworkPlayer(
+                                            renderMode = canvasRenderMode,
+                                            isPlaying = isPlaying,
+                                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
                                     }
                                 }
                             }
