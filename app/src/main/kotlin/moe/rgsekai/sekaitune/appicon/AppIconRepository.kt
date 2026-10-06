@@ -87,30 +87,31 @@ class AppIconRepository
 
         private fun loadIcons(): List<AppIcon> {
             val generatedIcons =
-                context.assets
-                    .open(CatalogAssetPath)
-                    .bufferedReader()
-                    .use { reader -> json.decodeFromString<List<GeneratedAppIcon>>(reader.readText()) }
-                    .map { generated ->
-                        val drawableResId =
-                            context.resources.getIdentifier(
-                                generated.drawableResourceName,
-                                "drawable",
-                                context.packageName,
-                            )
-                        check(drawableResId != 0) {
-                            "Missing generated drawable ${generated.drawableResourceName} for ${generated.source}."
+                runCatching {
+                    context.assets
+                        .open(CatalogAssetPath)
+                        .bufferedReader()
+                        .use { reader -> json.decodeFromString<List<GeneratedAppIcon>>(reader.readText()) }
+                        .mapNotNull { generated ->
+                            val drawableResId =
+                                context.resources.getIdentifier(
+                                    generated.drawableResourceName,
+                                    "drawable",
+                                    context.packageName,
+                                )
+                            if (drawableResId != 0) {
+                                AppIcon(
+                                    id = generated.id,
+                                    name = generated.name,
+                                    author = generated.author,
+                                    githubAuthorUrl = generated.githubAuthorUrl.takeIf(String::isNotBlank),
+                                    previewDrawableResId = drawableResId,
+                                    aliasClassName = generated.aliasClassName,
+                                    isDefault = false,
+                                )
+                            } else null
                         }
-                        AppIcon(
-                            id = generated.id,
-                            name = generated.name,
-                            author = generated.author,
-                            githubAuthorUrl = generated.githubAuthorUrl.takeIf(String::isNotBlank),
-                            previewDrawableResId = drawableResId,
-                            aliasClassName = generated.aliasClassName,
-                            isDefault = false,
-                        )
-                    }
+                }.getOrDefault(emptyList())
 
             return buildList(generatedIcons.size + 1) {
                 add(
