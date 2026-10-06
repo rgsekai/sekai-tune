@@ -437,6 +437,24 @@ class AboutViewModel
                             labelResId = R.string.visit_website,
                             url = "https://rgsekai.github.io/sekai-tune/",
                         ),
+                        AboutLinkUiModel(
+                            id = "instagram",
+                            iconResId = R.drawable.instagram,
+                            labelResId = R.string.about_instagram,
+                            url = "https://www.instagram.com/sekaitune?stkn=MWJ6dWFhemZveWRkOA==",
+                        ),
+                        AboutLinkUiModel(
+                            id = "telegram",
+                            iconResId = R.drawable.telegram,
+                            labelResId = R.string.about_telegram,
+                            url = "https://t.me/+-mT3ps-V32g3ZWFl",
+                        ),
+                        AboutLinkUiModel(
+                            id = "discord",
+                            iconResId = R.drawable.discord,
+                            labelResId = R.string.about_discord,
+                            url = "https://discord.gg/De269BfEA",
+                        ),
                     ),
                 leadDeveloper =
                     TeamMember(
