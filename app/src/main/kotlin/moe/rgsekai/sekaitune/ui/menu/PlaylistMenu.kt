@@ -375,10 +375,6 @@ fun PlaylistMenu(
         )
     }
 
-    var showHidePlaylistDialog by remember {
-        mutableStateOf(false)
-    }
-
     var showDeletePlaylistDialog by remember {
         mutableStateOf(false)
     }
@@ -393,40 +389,6 @@ fun PlaylistMenu(
             onDismiss = {
                 showAssignTagsDialog = false
                 onDismiss()
-            },
-        )
-    }
-
-    if (showHidePlaylistDialog) {
-        DefaultDialog(
-            onDismiss = { showHidePlaylistDialog = false },
-            content = {
-                Text(
-                    text = stringResource(R.string.hide_playlist_confirm, playlist.playlist.name),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 18.dp),
-                )
-            },
-            buttons = {
-                TextButton(
-                    onClick = { showHidePlaylistDialog = false },
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(text = stringResource(android.R.string.cancel))
-                }
-
-                TextButton(
-                    onClick = {
-                        showHidePlaylistDialog = false
-                        onDismiss()
-                        database.query {
-                            update(playlist.playlist.copy(isHidden = true))
-                        }
-                    },
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(text = stringResource(android.R.string.ok))
-                }
             },
         )
     }
@@ -1025,43 +987,7 @@ fun PlaylistMenu(
                         color = MaterialTheme.colorScheme.outlineVariant,
                     )
 
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text =
-                                    stringResource(
-                                        if (playlist.playlist.isHidden) {
-                                            R.string.unhide_playlist
-                                        } else {
-                                            R.string.hide_playlist
-                                        },
-                                    ),
-                            )
-                        },
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.visibility_off),
-                                contentDescription = null,
-                            )
-                        },
-                        modifier =
-                            Modifier.clickable {
-                                if (playlist.playlist.isHidden) {
-                                    onDismiss()
-                                    database.query {
-                                        update(playlist.playlist.copy(isHidden = false))
-                                    }
-                                } else {
-                                    showHidePlaylistDialog = true
-                                }
-                            },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
 
-                    HorizontalDivider(
-                        modifier = dividerModifier,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
 
                     ListItem(
                         headlineContent = {

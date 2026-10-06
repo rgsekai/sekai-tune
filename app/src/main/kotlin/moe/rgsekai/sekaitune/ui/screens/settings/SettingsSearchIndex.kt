@@ -299,17 +299,6 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
-                id = "sub_hidden_playlists",
-                title = context.getString(R.string.hidden_playlists),
-                subtitle = context.getString(R.string.hidden_playlists_description),
-                category = accountCategory,
-                iconRes = R.drawable.visibility_off,
-                route = "settings/hidden_playlists",
-                keywords = listOf("hidden playlists", "private playlists", "hide playlist", "unhide"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
                 id = "sub_ytm_sync",
                 title = context.getString(R.string.yt_sync),
                 subtitle = "Synchronize your liked songs and playlists with YouTube Music",

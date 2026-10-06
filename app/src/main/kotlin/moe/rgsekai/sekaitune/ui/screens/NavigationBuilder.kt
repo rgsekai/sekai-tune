@@ -60,7 +60,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.ContentSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.CustomizeBackground
 import moe.rgsekai.sekaitune.ui.screens.settings.DebugSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.GlassEffectSettings
-import moe.rgsekai.sekaitune.ui.screens.settings.HiddenPlaylistsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IconScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.IntegrationsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.InternetSettings
@@ -343,9 +342,6 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/account") {
         AccountSettings(navController, latestVersionName())
-    }
-    composable("settings/hidden_playlists") {
-        HiddenPlaylistsScreen(navController)
     }
     composable("settings/appearance") {
         AppearanceSettings(navController)
