@@ -11,9 +11,9 @@ It is based on the current source code and build configuration. It does not repl
 - Most core app data (library, history, settings, caches) is stored locally on your device.
 - Sekai Tune does not sell your data, does not show ads, and does not use advertising SDKs.
 - Sekai Tune does not include third-party analytics, install counters, or automatic crash-reporting services. Crash reports are shown on your device and leave it only if you choose to share them.
-- Some features need an online account or service: YouTube Music, Google Sign-In, Together Online, Buddy List, settings sync, and Spotify. If you do not use a feature, its data is not sent.
+- Some features need an online account or service: YouTube Music, Google Sign-In, Together Online, Buddy List, and Spotify. If you do not use a feature, its data is not sent.
 - When data leaves your device, it is because you used a feature that requires it, or because of a small number of background requests listed below (playback pre-loading, update checks, player configuration).
-- Together Online, Buddy List, settings sync and push notifications use **Google Firebase** (Authentication, Cloud Firestore and Cloud Messaging). Data stored there is held by Google on behalf of this project.
+- Together Online, Buddy List and push notifications use **Google Firebase** (Authentication, Cloud Firestore and Cloud Messaging). Data stored there is held by Google on behalf of this project.
 - Android backup and device-transfer may copy part of the app's local data unless excluded by the app's backup rules.
 - The current Android manifest does not request location, contacts, camera, calendar, SMS, or call log permissions.
 
@@ -26,7 +26,7 @@ It is based on the current source code and build configuration. It does not repl
 | Listening history | Playback events with song ID, timestamp, and play time | Listening stats and history features |
 | App settings | Language, country, UI and audio settings, proxy settings, cache settings, history pause toggles, Together settings | Personalization and feature configuration |
 | YouTube / YouTube Music session (optional) | Account name, email, channel handle, visitor data, data sync ID, cookie, PO token values | Signed-in YouTube Music features |
-| Google account session (optional) | Firebase sign-in state, your Google account name, email and profile picture URL as provided by Google | Together Online, Buddy List and settings sync |
+| Google account session (optional) | Firebase sign-in state, your Google account name, email and profile picture URL as provided by Google | Together Online and Buddy List |
 | Spotify session (optional) | Spotify session cookie and related tokens, cached Spotify playlist and followed-artist metadata | Spotify library features |
 | Buddy and Together data (optional) | Display name, Together client ID, last join link, cached buddy names, push-notification token | Together Online and Buddy List |
 | Matching caches | Cached stream-resolution results, remembered playback client, catalog-match results for uploaded songs | Faster playback, downloads and uploaded-song playback |
@@ -45,7 +45,7 @@ Sekai Tune contacts external services only for the features below. The exact pay
 | Stream-resolution fallback services | Video IDs and player-script details needed to decode a stream, sent to third-party extractor services (for example `api.pipepipe.dev`) | Only as a last-resort fallback when the standard playback path fails |
 | Player configuration (GitHub) | A request to download player-script configuration files. No personal data beyond your IP address. | Periodically, to keep playback working |
 | Google Sign-In and Firebase Authentication | Your Google account identity (name, email, profile picture URL) through Google's sign-in flow. Anonymous sign-in (no account details) is used for guests in Together Online. | When you sign in, or host or join an online Together session |
-| Cloud Firestore (Google Firebase) | See "Firebase features" below | When you use Together Online, Buddy List, or settings sync |
+| Cloud Firestore (Google Firebase) | See "Firebase features" below | When you use Together Online or Buddy List |
 | Firebase Cloud Messaging (Google) | A push token identifying your app install, used to deliver notifications | When you are signed in and Buddy List notifications are enabled |
 | Notification relay (self-hosted on Render) | The information needed to deliver a Buddy List push notification: the recipient, the notification type (buddy request or session invite) and the sender's display name. The relay holds the credentials needed to send via Firebase. Render may keep standard server logs such as IP address and request time. | When you send a buddy request or a session invite |
 | Spotify | Session cookie and tokens, playlist and artist requests, actions you take (add to playlist, follow artist), Canvas lookups | When Spotify is connected and you use Spotify features |
@@ -57,7 +57,7 @@ Sekai Tune contacts external services only for the features below. The exact pay
 | Together LAN mode | Playback state and queue data sent directly to other devices on your local network. No cloud server is involved. | When you host or join a LAN session |
 | Donation links | Nothing from the app. Tapping a donation option opens Buy Me a Coffee or your UPI app, which have their own privacy terms. The app does not process payments. | When you tap a donation option |
 
-## Firebase Features (Together Online, Buddy List, Settings Sync)
+## Firebase Features (Together Online, Buddy List)
 
 These features store data in Google Firebase, in a project owned by the Sekai Tune maintainer.
 
@@ -76,9 +76,6 @@ These features store data in Google Firebase, in a project owned by the Sekai Tu
 **Your profile**
 - When you sign in with Google, a profile record is created with your display name and related profile details. You can choose a custom display name; it is not overwritten by your Google name on later sign-ins.
 - Your Google email address is held by Firebase Authentication and is not copied to buddy lists or Together sessions.
-
-**Settings sync**
-- If you turn on settings sync, your app settings and any API keys you entered are stored under your account. They are encrypted on your device with AES-256-GCM (using a key managed through the Android Keystore) before upload, and only your account can read them.
 
 **Retention**
 - Data in Firebase stays until it is removed by app actions (leaving or ending a session, removing a buddy, cancelling a request) or until you ask for it to be deleted. To request deletion of your Firebase-stored data, open an issue in the project repository.

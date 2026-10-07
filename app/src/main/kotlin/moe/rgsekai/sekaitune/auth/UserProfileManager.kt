@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.constants.CleanedUserSettingsUidsKey
 import moe.rgsekai.sekaitune.constants.TogetherDisplayNameKey
 import moe.rgsekai.sekaitune.utils.dataStore
 import timber.log.Timber
@@ -45,9 +46,35 @@ class UserProfileManager @Inject constructor(
             val user = firebaseAuth.currentUser
             if (user != null && !user.isAnonymous) {
                 scope.launch {
+                    cleanupLegacyUserSettings(user.uid)
                     syncUserProfile(user)
                 }
             }
+        }
+    }
+
+    suspend fun cleanupLegacyUserSettings(uid: String) = withContext(Dispatchers.IO) {
+        if (uid.isBlank()) return@withContext
+        try {
+            val cleanedUids = runCatching {
+                context.dataStore.data.first()[CleanedUserSettingsUidsKey]
+            }.getOrNull() ?: emptySet()
+
+            if (uid in cleanedUids) return@withContext
+
+            try {
+                firestore.collection("user_settings").document(uid).delete().await()
+                Timber.tag("UserProfileManager").d("Cleaned up legacy user_settings document for $uid")
+            } catch (t: Throwable) {
+                Timber.tag("UserProfileManager").w(t, "Failed to delete legacy user_settings for $uid (may not exist)")
+            }
+
+            context.dataStore.edit { prefs ->
+                val current = prefs[CleanedUserSettingsUidsKey] ?: emptySet()
+                prefs[CleanedUserSettingsUidsKey] = current + uid
+            }
+        } catch (t: Throwable) {
+            Timber.tag("UserProfileManager").w(t, "Error during legacy user_settings cleanup for $uid")
         }
     }
 

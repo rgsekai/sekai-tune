@@ -110,7 +110,6 @@ import coil3.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Sync
 import androidx.navigation.NavController
 import androidx.window.core.layout.WindowSizeClass
 import kotlinx.coroutines.launch
@@ -653,20 +652,10 @@ private fun AccountAndNoteCard(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             if (firebaseUser != null && !firebaseUser.isAnonymous) {
-                val syncState by authViewModel.syncStatus.collectAsStateWithLifecycle()
-                val syncDesc =
-                    when (val s = syncState) {
-                        is moe.rgsekai.sekaitune.sync.SyncStatus.Syncing -> "Syncing settings with cloud..."
-                        is moe.rgsekai.sekaitune.sync.SyncStatus.Success -> "Settings synced"
-                        is moe.rgsekai.sekaitune.sync.SyncStatus.Error -> "Sync failed: ${s.message}"
-                        moe.rgsekai.sekaitune.sync.SyncStatus.Idle -> "Cloud sync active"
-                    }
-
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .clickable { authViewModel.syncNow() }
                             .padding(horizontal = MusicTogetherSpacing.sm, vertical = MusicTogetherSpacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -713,43 +702,20 @@ private fun AccountAndNoteCard(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        Text(
-                            text = syncDesc,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
                     }
 
                     Spacer(modifier = Modifier.width(4.dp))
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    IconButton(
+                        onClick = { showLogoutDialog = true },
+                        modifier = Modifier.size(36.dp),
                     ) {
-                        IconButton(
-                            onClick = { authViewModel.syncNow() },
-                            modifier = Modifier.size(36.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Sync,
-                                contentDescription = "Sync now",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        IconButton(
-                            onClick = { showLogoutDialog = true },
-                            modifier = Modifier.size(36.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Logout,
-                                contentDescription = "Sign Out",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = "Sign Out",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
             } else {

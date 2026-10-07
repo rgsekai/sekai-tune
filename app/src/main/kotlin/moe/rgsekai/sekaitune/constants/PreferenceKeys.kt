@@ -798,7 +798,7 @@ val GitHubReleasesJsonKey = stringPreferencesKey("github_releases_json")
 val GitHubReleasesLastCheckedAtKey = longPreferencesKey("github_releases_last_checked_at")
 val GitHubReleasesFingerprintKey = stringPreferencesKey("github_releases_fingerprint")
 
-val LastCloudSyncTimestampKey = longPreferencesKey("last_cloud_sync_timestamp")
+val CleanedUserSettingsUidsKey = stringSetPreferencesKey("cleaned_user_settings_uids")
 
 // Liquid Glass
 val LiquidGlassGlobalEnabledKey = booleanPreferencesKey("liquidGlassGlobalEnabled")

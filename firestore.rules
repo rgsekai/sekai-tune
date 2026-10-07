@@ -15,10 +15,11 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------
-    // User Settings & Secrets (Feature 2)
+    // User Settings & Secrets (Legacy - Cleanup Only)
     // ----------------------------------------------------
     match /user_settings/{userId} {
-      allow read, write: if isUser(userId);
+      allow read, write, create, update: if false;
+      allow delete: if isUser(userId);
     }
 
     // ----------------------------------------------------
