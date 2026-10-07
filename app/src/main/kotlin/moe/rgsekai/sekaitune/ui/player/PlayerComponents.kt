@@ -1075,14 +1075,14 @@ private fun V8MetadataActions(
     onTitleClick: () -> Unit,
     onArtistClick: (artistId: String) -> Unit,
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             PlayerTitleText(
                 title = title,
@@ -1093,6 +1093,7 @@ private fun V8MetadataActions(
                 fontWeight = FontWeight.Bold,
                 modifier =
                     Modifier
+                        .weight(1f)
                         .basicMarquee()
                         .clickable(
                             indication = null,
@@ -1100,56 +1101,62 @@ private fun V8MetadataActions(
                             onClick = onTitleClick,
                         ),
             )
-            ClickableArtists(
-                artists = artists,
-                onArtistClick = onArtistClick,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.5.sp),
-                color = foreground.copy(alpha = 0.72f),
-                modifier = Modifier.basicMarquee(),
-            )
-        }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(foreground.copy(alpha = 0.20f))
-                        .clickable(onClick = onMenuClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.more_vert),
-                    contentDescription = stringResource(R.string.more_options),
-                    tint = foreground,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            Spacer(Modifier.width(16.dp))
 
-            Box(
-                modifier =
-                    Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(foreground.copy(alpha = 0.20f))
-                        .clickable(onClick = onToggleLike),
-                contentAlignment = Alignment.Center,
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    painter =
-                        painterResource(
-                            if (liked) R.drawable.favorite else R.drawable.favorite_border,
-                        ),
-                    contentDescription = stringResource(R.string.action_like),
-                    tint = foreground,
-                    modifier = Modifier.size(20.dp),
-                )
+                Box(
+                    modifier =
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(foreground.copy(alpha = 0.20f))
+                            .clickable(onClick = onMenuClick),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.more_vert),
+                        contentDescription = stringResource(R.string.more_options),
+                        tint = foreground,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+
+                Box(
+                    modifier =
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(foreground.copy(alpha = 0.20f))
+                            .clickable(onClick = onToggleLike),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter =
+                            painterResource(
+                                if (liked) R.drawable.favorite else R.drawable.favorite_border,
+                            ),
+                        contentDescription = stringResource(R.string.action_like),
+                        tint = foreground,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
+
+        ClickableArtists(
+            artists = artists,
+            onArtistClick = onArtistClick,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.5.sp),
+            color = foreground.copy(alpha = 0.72f),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .basicMarquee(),
+        )
     }
 }
 
