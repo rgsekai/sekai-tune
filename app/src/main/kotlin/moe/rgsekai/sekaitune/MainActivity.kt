@@ -1095,7 +1095,11 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    val appBackdrop = rememberLayerBackdrop {
+                    val screenBackdrop = rememberLayerBackdrop {
+                        drawRect(if (pureBlack) Color.Black else surfaceContainerColor)
+                        drawContent()
+                    }
+                    val rootBackdrop = rememberLayerBackdrop {
                         drawRect(if (pureBlack) Color.Black else surfaceContainerColor)
                         drawContent()
                     }
@@ -1612,15 +1616,19 @@ class MainActivity : ComponentActivity() {
                         LocalShimmerTheme provides ShimmerTheme,
                         LocalSyncUtils provides syncUtils,
                         LocalGlassEffectConfig provides glassEffectConfig,
-                        LocalAppBackdrop provides (if (playerBottomSheetState.isExpanded || playerBottomSheetState.progress > 0.05f) playerBackdrop else appBackdrop),
+                        LocalAppBackdrop provides (if (playerBottomSheetState.isExpanded || playerBottomSheetState.progress > 0.05f) playerBackdrop else rootBackdrop),
                         moe.rgsekai.sekaitune.ui.component.LocalBottomSheetPageState provides bottomSheetPageState,
                         moe.rgsekai.sekaitune.ui.component.LocalMenuState provides menuState,
                     ) {
                         Row(
                             modifier =
                                 Modifier
-                                    .fillMaxSize(),
+                                    .fillMaxSize()
+                                    .layerBackdrop(rootBackdrop),
                         ) {
+                            CompositionLocalProvider(
+                                LocalAppBackdrop provides screenBackdrop,
+                            ) {
                             AnimatedVisibility(
                                 visible = useRail && shouldShowNavigationBar,
                                 enter = fadeIn(animationSpec = tween(durationMillis = if (disableAnimations) 0 else 150)),
@@ -2276,7 +2284,7 @@ class MainActivity : ComponentActivity() {
                                     modifier =
                                         Modifier
                                             .fillMaxSize()
-                                            .layerBackdrop(appBackdrop),
+                                            .layerBackdrop(screenBackdrop),
                                 ) {
                                     NavHost(
                                         navController = navController,
@@ -2379,6 +2387,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+                    }
 
                         BackHandler(enabled = playerBottomSheetState.isExpanded) {
                             playerBottomSheetState.collapseSoft()
