@@ -42,6 +42,8 @@ import moe.rgsekai.sekaitune.together.TogetherRole
 import moe.rgsekai.sekaitune.together.TogetherRoomSettings
 import moe.rgsekai.sekaitune.together.TogetherRoomState
 import moe.rgsekai.sekaitune.together.TogetherSessionState
+import kotlinx.coroutines.flow.onEach
+import com.google.firebase.auth.FirebaseAuth
 import moe.rgsekai.sekaitune.together.UpdateMusicTogetherPreferencesUseCase
 import moe.rgsekai.sekaitune.together.isConnectedToSession
 import java.text.DateFormat
@@ -261,13 +263,40 @@ class MusicTogetherViewModel
         private var lastRoomState: TogetherRoomState? = null
         private var lastStateWasError = false
 
-        init {
-            com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
-                val user = firebaseAuth.currentUser
-                if (user != null && !user.isAnonymous) {
+        private val firebaseAuth = FirebaseAuth.getInstance()
+        private var lastAuthUid: String? = firebaseAuth.currentUser?.uid
+        private var isInitialAuthCallback = true
+        private var currentSessionState: TogetherSessionState = TogetherSessionState.Idle
+
+        private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
+            if (isInitialAuthCallback) {
+                isInitialAuthCallback = false
+                lastAuthUid = auth.currentUser?.uid
+                return@AuthStateListener
+            }
+            val currentUid = auth.currentUser?.uid
+            val uidChanged = currentUid != lastAuthUid
+            lastAuthUid = currentUid
+
+            if (uidChanged) {
+                val isSessionActive = currentSessionState is TogetherSessionState.Hosting ||
+                    currentSessionState is TogetherSessionState.HostingOnline ||
+                    currentSessionState is TogetherSessionState.Joined ||
+                    currentSessionState is TogetherSessionState.Joining ||
+                    currentSessionState is TogetherSessionState.JoiningOnline
+                if (isSessionActive) {
                     sessionActions.leaveSession()
                 }
             }
+        }
+
+        init {
+            firebaseAuth.addAuthStateListener(authStateListener)
+        }
+
+        override fun onCleared() {
+            super.onCleared()
+            firebaseAuth.removeAuthStateListener(authStateListener)
         }
 
         private data class StateInputs(
@@ -284,6 +313,9 @@ class MusicTogetherViewModel
 
         private val snapshots =
             observeMusicTogetherState()
+                .onEach { snapshot ->
+                    currentSessionState = snapshot.sessionState
+                }
                 .catch { throwable ->
                     if (throwable is CancellationException) throw throwable
                     emit(

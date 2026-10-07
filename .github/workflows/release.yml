@@ -92,6 +92,7 @@ jobs:
       - name: Verify reproducible unsigned universal APK
         shell: bash
         env:
+          RELAY_SERVICE_URL: https://sekai-tune.onrender.com
           RELAY_SERVICE_API_KEY: ${{ secrets.RELAY_SERVICE_API_KEY }}
         run: |
           set -euo pipefail
@@ -335,6 +336,7 @@ jobs:
         env:
           PULL_REQUEST: 'false'
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          RELAY_SERVICE_URL: https://sekai-tune.onrender.com
           RELAY_SERVICE_API_KEY: ${{ secrets.RELAY_SERVICE_API_KEY }}
 
       - name: Resolve release output directory

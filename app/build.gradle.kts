@@ -68,7 +68,7 @@ android {
                     ?: localProperties.getProperty("RELAY_URL")
                     ?: System.getenv("RELAY_SERVICE_URL")
                     ?: System.getenv("RELAY_URL")
-                    ?: ""
+                    ?: "https://sekai-tune.onrender.com"
                 ).trim()
         val relayServiceApiKey =
             (
