@@ -67,7 +67,7 @@ class BuildOnboardingUiStateUseCase
                     OnboardingSocialLinkUiModel(
                         id = "instagram",
                         iconResId = R.drawable.ic_instagram_color,
-                        url = "https://www.instagram.com/sekaitune?stkn=MWJ6dWFhemZveWRkOA==",
+                        url = "https://www.instagram.com/sekaiplug?stkn=MXE3azFlMGJzZDc1OQ==",
                         contentDescription = "Instagram",
                     ),
                     OnboardingSocialLinkUiModel(

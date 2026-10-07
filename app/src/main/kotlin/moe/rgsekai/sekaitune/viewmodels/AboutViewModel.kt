@@ -441,7 +441,7 @@ class AboutViewModel
                             id = "instagram",
                             iconResId = R.drawable.instagram,
                             labelResId = R.string.about_instagram,
-                            url = "https://www.instagram.com/sekaitune?stkn=MWJ6dWFhemZveWRkOA==",
+                            url = "https://www.instagram.com/sekaiplug?stkn=MXE3azFlMGJzZDc1OQ==",
                         ),
                         AboutLinkUiModel(
                             id = "telegram",
