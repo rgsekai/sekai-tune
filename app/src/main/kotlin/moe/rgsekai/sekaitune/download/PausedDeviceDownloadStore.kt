@@ -40,19 +40,27 @@ class PausedDeviceDownloadStore
         private val prefs: SharedPreferences =
             context.getSharedPreferences("paused_device_downloads_prefs", Context.MODE_PRIVATE)
 
-        fun observePaused(): Flow<List<PausedDeviceDownload>> =
-            callbackFlow {
-                val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-                    trySend(getAll())
-                }
-                prefs.registerOnSharedPreferenceChangeListener(listener)
-                trySend(getAll())
-                awaitClose {
-                    prefs.unregisterOnSharedPreferenceChangeListener(listener)
-                }
+        init {
+            ensureInitialized()
+        }
+
+        private fun ensureInitialized() {
+            if (isInitialized.compareAndSet(false, true)) {
+                _pausedFlow.value = getAllFromPrefs()
             }
+        }
+
+        fun observePaused(): Flow<List<PausedDeviceDownload>> {
+            ensureInitialized()
+            return _pausedFlow
+        }
 
         fun getAll(): List<PausedDeviceDownload> {
+            ensureInitialized()
+            return _pausedFlow.value
+        }
+
+        private fun getAllFromPrefs(): List<PausedDeviceDownload> {
             val jsonStr = prefs.getString(KEY_PAUSED_LIST, null) ?: return emptyList()
             return try {
                 val array = JSONArray(jsonStr)
@@ -92,7 +100,8 @@ class PausedDeviceDownloadStore
             progress: Int,
             format: String = "mp3",
         ) {
-            val current = getAll().toMutableList()
+            ensureInitialized()
+            val current = getAllFromPrefs().toMutableList()
             current.removeAll { it.songId == songId }
             current.add(
                 PausedDeviceDownload(
@@ -107,13 +116,16 @@ class PausedDeviceDownloadStore
                 )
             )
             persist(current)
+            _pausedFlow.value = current
         }
 
         @Synchronized
         fun remove(songId: String) {
-            val current = getAll().toMutableList()
+            ensureInitialized()
+            val current = getAllFromPrefs().toMutableList()
             if (current.removeAll { it.songId == songId }) {
                 persist(current)
+                _pausedFlow.value = current
             }
         }
 
@@ -141,6 +153,8 @@ class PausedDeviceDownloadStore
 
         companion object {
             private const val KEY_PAUSED_LIST = "paused_device_downloads_json"
+            private val _pausedFlow = kotlinx.coroutines.flow.MutableStateFlow<List<PausedDeviceDownload>>(emptyList())
+            private val isInitialized = java.util.concurrent.atomic.AtomicBoolean(false)
 
             fun getPartFile(context: Context, songId: String): File {
                 val dir = File(context.cacheDir, "downloads").apply { if (!exists()) mkdirs() }

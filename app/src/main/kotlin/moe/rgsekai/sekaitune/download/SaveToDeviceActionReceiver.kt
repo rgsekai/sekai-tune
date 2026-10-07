@@ -7,6 +7,7 @@
 
 package moe.rgsekai.sekaitune.download
 
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -25,7 +26,6 @@ class SaveToDeviceActionReceiver : BroadcastReceiver() {
         val songId = intent.getStringExtra(EXTRA_SONG_ID) ?: return
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Song"
         val artist = intent.getStringExtra(EXTRA_ARTIST) ?: "Unknown Artist"
-        val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, Math.abs(songId.hashCode()))
 
         val workManager = WorkManager.getInstance(context)
         val store = PausedDeviceDownloadStore(context)
@@ -35,37 +35,14 @@ class SaveToDeviceActionReceiver : BroadcastReceiver() {
 
         when (action) {
             ACTION_PAUSE_DOWNLOAD -> {
-                // Cancel running work (AudioDownloadWorker will persist state on isStopped)
+                // AudioDownloadWorker will persist state and post the Paused notification on isStopped
                 workManager.cancelAllWorkByTag("song_id:$songId")
-
-                // Update notification to reflect paused state with Resume and Cancel actions
-                val channelId = "sekai_tune_downloads"
-                val resumeIntent = createResumePendingIntent(context, songId, title, artist, notificationId)
-                val cancelIntent = createCancelPendingIntent(context, songId, notificationId)
-
-                val pausedData = store.get(songId)
-                val progress = pausedData?.progress ?: 0
-
-                val notification = NotificationCompat.Builder(context, channelId)
-                    .setContentTitle("Paused: $title")
-                    .setContentText("$artist • Download paused ($progress%)")
-                    .setSmallIcon(R.drawable.download)
-                    .setProgress(100, progress, false)
-                    .setOngoing(false)
-                    .setAutoCancel(true)
-                    .addAction(R.drawable.play, "Resume", resumeIntent)
-                    .addAction(R.drawable.close, "Cancel", cancelIntent)
-                    .build()
-
-                try {
-                    notificationManager.notify(notificationId, notification)
-                } catch (e: Exception) {
-                    Timber.w(e, "Failed to update paused notification")
-                }
             }
 
             ACTION_RESUME_DOWNLOAD -> {
                 store.remove(songId)
+                notificationManager.cancel(getPausedNotificationId(songId))
+                notificationManager.cancel(getForegroundNotificationId(songId))
                 startDownload(context, songId, title, artist)
             }
 
@@ -76,7 +53,8 @@ class SaveToDeviceActionReceiver : BroadcastReceiver() {
                 if (partFile.exists()) {
                     partFile.delete()
                 }
-                notificationManager.cancel(notificationId)
+                notificationManager.cancel(getPausedNotificationId(songId))
+                notificationManager.cancel(getForegroundNotificationId(songId))
             }
         }
     }
@@ -91,12 +69,52 @@ class SaveToDeviceActionReceiver : BroadcastReceiver() {
         const val EXTRA_ARTIST = "extra_artist"
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
 
+        fun getForegroundNotificationId(songId: String): Int = Math.abs(songId.hashCode())
+        fun getPausedNotificationId(songId: String): Int = Math.abs(songId.hashCode()) + 100_000
+
+        fun postPausedNotification(
+            context: Context,
+            songId: String,
+            title: String,
+            artist: String,
+            progress: Int,
+        ) {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channelId = "sekai_tune_downloads"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(channelId, "Downloads", NotificationManager.IMPORTANCE_LOW)
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            val pausedNotificationId = getPausedNotificationId(songId)
+            val resumeIntent = createResumePendingIntent(context, songId, title, artist, pausedNotificationId)
+            val cancelIntent = createCancelPendingIntent(context, songId, pausedNotificationId)
+
+            val notification = NotificationCompat.Builder(context, channelId)
+                .setContentTitle("Paused: $title")
+                .setContentText("$artist • Download paused ($progress%)")
+                .setSmallIcon(R.drawable.download)
+                .setProgress(100, progress, false)
+                .setOngoing(false)
+                .setAutoCancel(true)
+                .addAction(R.drawable.play, "Resume", resumeIntent)
+                .addAction(R.drawable.close, "Cancel", cancelIntent)
+                .build()
+
+            try {
+                notificationManager.notify(pausedNotificationId, notification)
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to post paused notification")
+            }
+        }
+
         fun createPausePendingIntent(
             context: Context,
             songId: String,
             title: String,
             artist: String,
-            notificationId: Int,
+            notificationId: Int = getForegroundNotificationId(songId),
         ): PendingIntent {
             val intent = Intent(context, SaveToDeviceActionReceiver::class.java).apply {
                 action = ACTION_PAUSE_DOWNLOAD
@@ -118,7 +136,7 @@ class SaveToDeviceActionReceiver : BroadcastReceiver() {
             songId: String,
             title: String,
             artist: String,
-            notificationId: Int,
+            notificationId: Int = getPausedNotificationId(songId),
         ): PendingIntent {
             val intent = Intent(context, SaveToDeviceActionReceiver::class.java).apply {
                 action = ACTION_RESUME_DOWNLOAD
@@ -138,7 +156,7 @@ class SaveToDeviceActionReceiver : BroadcastReceiver() {
         fun createCancelPendingIntent(
             context: Context,
             songId: String,
-            notificationId: Int,
+            notificationId: Int = getPausedNotificationId(songId),
         ): PendingIntent {
             val intent = Intent(context, SaveToDeviceActionReceiver::class.java).apply {
                 action = ACTION_CANCEL_DOWNLOAD

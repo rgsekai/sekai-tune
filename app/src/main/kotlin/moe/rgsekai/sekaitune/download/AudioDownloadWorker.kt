@@ -63,18 +63,23 @@ class AudioDownloadWorker(
             notificationManager.createNotificationChannel(channel)
         }
 
-        val notificationId = Math.abs(songId.hashCode())
+        val foregroundNotificationId = SaveToDeviceActionReceiver.getForegroundNotificationId(songId)
+        val pausedNotificationId = SaveToDeviceActionReceiver.getPausedNotificationId(songId)
+
+        // Clear any old paused notification for this song if resuming
+        notificationManager.cancel(pausedNotificationId)
+
         val pauseIntent = SaveToDeviceActionReceiver.createPausePendingIntent(
             applicationContext,
             songId,
             songTitle,
             songArtist,
-            notificationId
+            foregroundNotificationId
         )
         val cancelIntent = SaveToDeviceActionReceiver.createCancelPendingIntent(
             applicationContext,
             songId,
-            notificationId
+            foregroundNotificationId
         )
 
         val notificationTitle = if (totalSongs > 1) {
@@ -94,12 +99,12 @@ class AudioDownloadWorker(
 
         val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(
-                notificationId,
+                foregroundNotificationId,
                 notificationBuilder.build(),
                 android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             )
         } else {
-            ForegroundInfo(notificationId, notificationBuilder.build())
+            ForegroundInfo(foregroundNotificationId, notificationBuilder.build())
         }
 
         try {
@@ -139,6 +144,22 @@ class AudioDownloadWorker(
 
             if (isStopped) {
                 Timber.d("Worker stopped during resolution for songId=$songId")
+                pausedStore.savePaused(
+                    songId = songId,
+                    title = songTitle,
+                    artist = songArtist,
+                    bytesWritten = 0L,
+                    totalBytes = 0L,
+                    progress = 0,
+                    format = userChosenFormat,
+                )
+                SaveToDeviceActionReceiver.postPausedNotification(
+                    context = applicationContext,
+                    songId = songId,
+                    title = songTitle,
+                    artist = songArtist,
+                    progress = 0,
+                )
                 return@withContext Result.failure()
             }
 
@@ -150,7 +171,7 @@ class AudioDownloadWorker(
             // 2. Download audio stream (resumable)
             notificationBuilder.setContentText("Downloading audio stream...")
             notificationBuilder.setProgress(100, 0, false)
-            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+            try { notificationManager.notify(foregroundNotificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
             var lastProgress = -1
             val startTime = System.currentTimeMillis()
@@ -172,7 +193,7 @@ class AudioDownloadWorker(
 
                     notificationBuilder.setProgress(100, percent, false)
                     notificationBuilder.setContentText("Downloading... $percent% (ETA: ${etaSec}s)")
-                    try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+                    try { notificationManager.notify(foregroundNotificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
                     setProgressAsync(
                         androidx.work.workDataOf(
@@ -196,7 +217,7 @@ class AudioDownloadWorker(
             // 3. Resolve & download artwork, then native 1:1 center crop
             notificationBuilder.setProgress(0, 0, true)
             notificationBuilder.setContentText("Processing album artwork...")
-            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+            try { notificationManager.notify(foregroundNotificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
             setProgress(
                 androidx.work.workDataOf(
@@ -217,12 +238,30 @@ class AudioDownloadWorker(
 
             if (isStopped) {
                 Timber.d("Worker stopped before transcode for songId=$songId")
+                val fileSize = tempSourceFile?.length() ?: 0L
+                val percent = 85
+                pausedStore.savePaused(
+                    songId = songId,
+                    title = songTitle,
+                    artist = songArtist,
+                    bytesWritten = fileSize,
+                    totalBytes = fileSize,
+                    progress = percent,
+                    format = userChosenFormat,
+                )
+                SaveToDeviceActionReceiver.postPausedNotification(
+                    context = applicationContext,
+                    songId = songId,
+                    title = songTitle,
+                    artist = songArtist,
+                    progress = percent,
+                )
                 return@withContext Result.failure()
             }
 
             // 4. FFmpeg audio transcode and metadata tagging
             notificationBuilder.setContentText("Tagging and finalizing audio...")
-            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+            try { notificationManager.notify(foregroundNotificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
             setProgress(
                 androidx.work.workDataOf(
@@ -259,11 +298,12 @@ class AudioDownloadWorker(
 
             // Remove paused store entry upon complete finish
             pausedStore.remove(songId)
+            notificationManager.cancel(pausedNotificationId)
 
             notificationBuilder.setContentText("Download Complete!")
             notificationBuilder.setProgress(100, 100, false)
             notificationBuilder.setOngoing(false)
-            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+            try { notificationManager.notify(foregroundNotificationId, notificationBuilder.build()) } catch (_: Exception) {}
 
             Result.success()
         } catch (e: Exception) {
@@ -275,7 +315,7 @@ class AudioDownloadWorker(
             notificationBuilder.setContentText("Download Failed: ${e.message ?: "Unknown error"}")
             notificationBuilder.setProgress(0, 0, false)
             notificationBuilder.setOngoing(false)
-            try { notificationManager.notify(notificationId, notificationBuilder.build()) } catch (_: Exception) {}
+            try { notificationManager.notify(foregroundNotificationId, notificationBuilder.build()) } catch (_: Exception) {}
             Result.failure()
         } finally {
             if (!isStopped) {
@@ -372,6 +412,13 @@ class AudioDownloadWorker(
                             format = userChosenFormat,
                         )
                         Timber.d("AudioDownloadWorker isStopped=true. Paused at bytesWritten=$bytesWritten/$effectiveTotalBytes ($percent%)")
+                        SaveToDeviceActionReceiver.postPausedNotification(
+                            context = applicationContext,
+                            songId = songId,
+                            title = songTitle,
+                            artist = songArtist,
+                            progress = percent,
+                        )
                         return
                     }
                     output.write(buffer, 0, read)

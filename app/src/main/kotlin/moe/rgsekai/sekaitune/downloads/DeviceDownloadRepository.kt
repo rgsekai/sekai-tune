@@ -7,6 +7,7 @@
 
 package moe.rgsekai.sekaitune.downloads
 
+import android.app.NotificationManager
 import android.content.ContentUris
 import android.content.Context
 import android.database.ContentObserver
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import moe.rgsekai.sekaitune.download.PausedDeviceDownloadStore
+import moe.rgsekai.sekaitune.download.SaveToDeviceActionReceiver
 import moe.rgsekai.sekaitune.download.TAG_SAVE_TO_DEVICE
 import moe.rgsekai.sekaitune.download.startDownload
 import moe.rgsekai.sekaitune.models.MediaMetadata
@@ -177,8 +179,15 @@ class DeviceDownloadRepository
                 songId = songId,
                 title = title,
                 artist = artist,
-                bytesWritten = 0L,
-                totalBytes = 0L,
+                bytesWritten = paused?.bytesWritten ?: 0L,
+                totalBytes = paused?.totalBytes ?: 0L,
+                progress = entry.percent,
+            )
+            SaveToDeviceActionReceiver.postPausedNotification(
+                context = context,
+                songId = songId,
+                title = title,
+                artist = artist,
                 progress = entry.percent,
             )
             workManager.cancelAllWorkByTag("song_id:$songId")
@@ -195,6 +204,9 @@ class DeviceDownloadRepository
             val artist = paused?.artist
                 ?: entry.supportingText?.substringBefore(" •")
                 ?: "Unknown Artist"
+
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(SaveToDeviceActionReceiver.getPausedNotificationId(songId))
 
             pausedStore.remove(songId)
             startDownload(
@@ -225,6 +237,10 @@ class DeviceDownloadRepository
                 workManager.cancelWorkById(UUID.fromString(entry.id))
                 workManager.pruneWork()
             }
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(SaveToDeviceActionReceiver.getPausedNotificationId(songId))
+            notificationManager.cancel(SaveToDeviceActionReceiver.getForegroundNotificationId(songId))
+
             pausedStore.remove(songId)
             val partFile = PausedDeviceDownloadStore.getPartFile(context, songId)
             if (partFile.exists()) {
