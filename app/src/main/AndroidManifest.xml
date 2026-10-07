@@ -323,7 +323,7 @@
 
         <receiver
             android:name=".download.SaveToDeviceActionReceiver"
-            android:exported="true" />
+            android:exported="false" />
 
         <receiver
             android:name="androidx.media3.session.MediaButtonReceiver"

@@ -65,7 +65,7 @@ Firebase Spark (free plan) does not support Cloud Functions. Instead of leaving 
 
 ### Step 3: Set Environment Variables in Render
 In the **Environment Variables** section on Render, add:
-1. `RELAY_API_KEY`: Generate a random secure string (e.g. `sk_relay_9f8a7b6c5d4e3f2a1b0c`).
+1. `RELAY_API_KEY`: Generate a random secure secret (e.g. any long random alphanumeric string or UUID).
 2. `FIREBASE_SERVICE_ACCOUNT_JSON`: Paste the entire raw JSON text from Step 1 (or its base64-encoded string).
 
 Click **Deploy Web Service**.
@@ -76,6 +76,6 @@ Once deployed, Render will give you an HTTPS URL (e.g. `https://sekai-tune-relay
 Add these two lines to your `local.properties` file on your development machine:
 ```properties
 RELAY_SERVICE_URL=https://sekai-tune-relay.onrender.com
-RELAY_API_KEY=sk_relay_9f8a7b6c5d4e3f2a1b0c
+RELAY_API_KEY=your_secure_relay_api_key_here
 ```
 Now build your Android app. The app will automatically route push notifications through your relay service!
