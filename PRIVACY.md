@@ -1,6 +1,6 @@
 # Sekai Tune Privacy Notice
 
-_Last updated: October 6, 2026_
+_Last updated: October 7, 2026_
 
 This notice covers the Sekai Tune Android app in this repository. It explains what the app stores on your device, what it can send to external services when you use specific features, and what Android permissions it requests.
 
@@ -13,7 +13,7 @@ It is based on the current source code and build configuration. It does not repl
 - Sekai Tune does not include third-party analytics, install counters, or automatic crash-reporting services. Crash reports are shown on your device and leave it only if you choose to share them.
 - Some features need an online account or service: YouTube Music, Google Sign-In, Together Online, Buddy List, and Spotify. If you do not use a feature, its data is not sent.
 - When data leaves your device, it is because you used a feature that requires it, or because of a small number of background requests listed below (playback pre-loading, update checks, player configuration).
-- Together Online, Buddy List and push notifications use **Google Firebase** (Authentication, Cloud Firestore and Cloud Messaging). Data stored there is held by Google on behalf of this project.
+- Together Online, Buddy List and push notifications use **Google Firebase** (Authentication, Cloud Firestore and Cloud Messaging). Firebase stores only your display name, profile picture, and the Together and Buddy List data described below. Your app settings, API keys, account sessions and tokens are never uploaded to Firebase. Older versions of the app could upload an encrypted copy of these; the current version deletes that copy from your account the first time you sign in.
 - Android backup and device-transfer may copy part of the app's local data unless excluded by the app's backup rules.
 - The current Android manifest does not request location, contacts, camera, calendar, SMS, or call log permissions.
 
@@ -47,17 +47,17 @@ Sekai Tune contacts external services only for the features below. The exact pay
 | Google Sign-In and Firebase Authentication | Your Google account identity (name, email, profile picture URL) through Google's sign-in flow. Anonymous sign-in (no account details) is used for guests in Together Online. | When you sign in, or host or join an online Together session |
 | Cloud Firestore (Google Firebase) | See "Firebase features" below | When you use Together Online or Buddy List |
 | Firebase Cloud Messaging (Google) | A push token identifying your app install, used to deliver notifications | When you are signed in and Buddy List notifications are enabled |
-| Notification relay (self-hosted on Render) | The information needed to deliver a Buddy List push notification: the recipient, the notification type (buddy request or session invite) and the sender's display name. The relay holds the credentials needed to send via Firebase. Render may keep standard server logs such as IP address and request time. | When you send a buddy request or a session invite |
+| Notification relay (self-hosted on Render) | The recipient's push token, the sender's display name and the session ID, used to deliver a Buddy List or session-invite notification. The relay holds the credentials needed to send via Firebase. It logs only timestamps and response codes, and stores no message contents. Render, the hosting provider, may keep standard server logs such as IP address. | When you send a buddy request or a session invite |
 | Spotify | Session cookie and tokens, playlist and artist requests, actions you take (add to playlist, follow artist), Canvas lookups | When Spotify is connected and you use Spotify features |
 | Canvas and artwork providers (BetterLyrics, Apple Music, TIDAL, Spotify Canvas) | Song title, artist name, album identifiers or URLs used to look up animated artwork | When animated artwork (Canvas) is enabled and a track is playing |
 | Lyrics providers (LrcLib, KuGou, SimpMusic, Paxsenix and others) | Song title, artist, album and duration needed to find lyrics | When lyrics are requested |
 | Uploaded songs (YouTube Music) | The audio files you choose to upload go to YouTube Music. For playback and downloads, the song title, artist and duration are used to search the public YouTube Music catalog for a matching version. | When you upload, play, download or save an uploaded song |
-| Music recognition | An audio signature created from the microphone input, sent to the recognition service. | Only when you start music recognition |
+| Music recognition (Shazam) | A frequency-hash signature created on your device from the microphone input and sent to Shazam's service (`amp.shazam.com`). Raw audio is never sent or saved. | Only when you start music recognition |
 | GitHub releases | Update-check requests, and the update APK download if you accept an update. Your IP address is visible to GitHub. | Periodically in the background (about every six hours) and when you open update prompts |
 | Together LAN mode | Playback state and queue data sent directly to other devices on your local network. No cloud server is involved. | When you host or join a LAN session |
 | Donation links | Nothing from the app. Tapping a donation option opens Buy Me a Coffee or your UPI app, which have their own privacy terms. The app does not process payments. | When you tap a donation option |
 
-## Firebase Features (Together Online, Buddy List)
+## Firebase Features (Together Online and Buddy List)
 
 These features store data in Google Firebase, in a project owned by the Sekai Tune maintainer.
 
@@ -68,14 +68,17 @@ These features store data in Google Firebase, in a project owned by the Sekai Tu
 - Other participants in the same session can see your display name and profile picture.
 
 **Buddy List**
-- Buddy requests are stored until accepted, rejected or cancelled. Accepted buddies are stored as an ID and a cached display name on both users' lists.
+- Buddy requests are stored until accepted, rejected or cancelled. A request holds both people's IDs, display names and profile picture URLs. Accepted buddies are stored as an ID, display name and profile picture URL on both users' lists.
 - Buddies are added only through people you meet in the same session. Buddies cannot see your email address.
 - Removing a buddy deletes the entry on both sides.
-- Each signed-in device stores a push token (under your account) so notifications can reach it. Tokens are not automatically cleaned up when you stop using a device.
+- Each signed-in device stores a push token, its device model and the time it was updated (under your account) so notifications can reach it. Tokens are not automatically cleaned up when you stop using a device.
 
 **Your profile**
-- When you sign in with Google, a profile record is created with your display name and related profile details. You can choose a custom display name; it is not overwritten by your Google name on later sign-ins.
-- Your Google email address is held by Firebase Authentication and is not copied to buddy lists or Together sessions.
+- When you sign in with Google, a profile record is created containing your account ID, display name, profile picture URL, and the time it was last updated. You can choose a custom display name; it is not overwritten by your Google name on later sign-ins.
+- Your Google email address is held by Firebase Authentication. It is not written to your profile record, buddy lists or Together sessions.
+
+**Settings and keys stay on your device**
+- Your app settings, API keys, YouTube Music and Spotify sessions, and proxy credentials are not uploaded to Firebase. Signing in on a new device does not restore them; you set them up again on that device.
 
 **Retention**
 - Data in Firebase stays until it is removed by app actions (leaving or ending a session, removing a buddy, cancelling a request) or until you ask for it to be deleted. To request deletion of your Firebase-stored data, open an issue in the project repository.
@@ -108,8 +111,8 @@ Local data remains on your device until you clear app data, uninstall the app, r
 ## User Controls and Choices
 
 - Use many core features without signing in to anything.
-- Choose whether to sign in to YouTube Music, Google (for Together Online, Buddy List and settings sync) or Spotify.
-- Turn off Canvas, lyrics providers, the Spotify playlist and artist features, and settings sync from within the app.
+- Choose whether to sign in to YouTube Music, Google (for Together Online and Buddy List) or Spotify.
+- Turn off Canvas, lyrics providers, and the Spotify playlist and artist features from within the app.
 - Join Together Online sessions anonymously.
 - Grant or deny Android runtime permissions (notifications, media access, microphone).
 - Configure or disable proxy-related settings.
@@ -121,9 +124,9 @@ Local data remains on your device until you clear app data, uninstall the app, r
 
 ## Security Notes and Limitations
 
-- The current Android manifest allows cleartext traffic, so some connections may use HTTP if a feature or configured endpoint uses it.
-- The manifest enables Android audio playback capture. Under Android platform rules, compatible system features or authorized apps may be able to capture app audio.
-- Local app data (database, preferences, caches) is not encrypted by the app. Only synced settings are encrypted before upload, as described above.
+- The current Android manifest allows cleartext traffic. This is needed for the local streaming proxy, Cast and local-network features, so some connections may use HTTP if a feature or configured endpoint uses it.
+- The manifest enables Android audio playback capture, used for music recognition and the audio visualizer. Under Android platform rules, compatible system features or authorized apps may be able to capture app audio.
+- Local app data (database, preferences, caches) is not encrypted by the app. This includes API keys, YouTube Music session values, Spotify tokens and proxy credentials, which stay on your device and are never uploaded to Firebase.
 - Buddy List accept, reject and remove actions are performed by your device writing to Firebase, protected by security rules that tie each action to your account ID.
 - The notification relay runs on a free hosting tier and may take time to start after being idle.
 - Third-party services (Google, Spotify, Render, lyrics and Canvas providers) have their own logging, retention and security practices.
@@ -153,7 +156,7 @@ This appendix maps the main statements above to implementation surfaces in the c
 | Stream resolution | Direct YouTube clients are tried first; third-party extractor fallback and remote player configuration are used only if needed. | `ResolveAudioStreamUseCase.kt`, `YTPlayerUtils.kt`, `RemotePlayerConfigStore.kt` |
 | Together Online | Firestore-backed host and guest classes read and write session documents, participants and invited IDs. LAN mode uses a local Ktor server. | `FirestoreTogetherHost.kt`, `FirestoreTogetherGuest.kt`, `MusicTogetherScreen.kt` |
 | Buddy List and push | Repository handles buddy requests, buddy lists, invites and push-token registration; messaging service receives notifications. | `BuddyRepository.kt`, `BuddyFcmTokenManager.kt`, `BuddyMessagingService.kt` |
-| Settings sync | Encrypted settings stored under the signed-in account ID. | `user_settings/{uid}` in Firestore |
+| Local-only settings | App settings, API keys, session values and tokens are kept in local storage only. No settings or secrets are written to Firestore. | Local DataStore preferences |
 | Spotify | Spotify session, playlist and artist features; playback always comes from YouTube Music. | `spotifycore` module (`Spotify.kt`, `SpotifyAuth.kt`) |
 | Canvas providers | Lookups to BetterLyrics, Apple Music, TIDAL and Spotify using song and artist details. | `canvas` module, `TidalCanvasProvider.kt`, `SekaiTuneCanvas.kt` |
 | Uploaded songs | Resumable upload to YouTube Music and catalog matching by title, artist and duration. | `ResolveUploadedCatalogMatchUseCase.kt` |
@@ -166,7 +169,7 @@ This appendix maps the main statements above to implementation surfaces in the c
 
 The following areas should be documented carefully if the project wants stronger privacy claims.
 
-- What the notification relay logs on Render, and how long.
+- What Render itself logs for the notification relay, and for how long (the relay's own code logs only timestamps and response codes).
 - Whether every endpoint used by optional features is always HTTPS in real use, since the manifest allows cleartext traffic.
 - Whether local app storage is encrypted at rest on all supported devices.
 - Retention practices of Google Firebase, Spotify, canvas, lyrics and extractor providers.
