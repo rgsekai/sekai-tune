@@ -139,6 +139,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
 import androidx.media3.common.Player.STATE_BUFFERING
+import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Player.STATE_READY
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.navigation.NavController
@@ -729,19 +730,21 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    LaunchedEffect(mediaMetadata?.id, playbackState, aodModeEnabled, state.isExpandedOrExpanding) {
-        if (!state.isExpandedOrExpanding) {
-            return@LaunchedEffect
-        }
+    LaunchedEffect(mediaMetadata?.id, playbackState, isPlaying, aodModeEnabled, state.isExpandedOrExpanding) {
         val startTime = SystemClock.elapsedRealtime()
-        if (playbackState == STATE_READY) {
+        if (playbackState == STATE_READY || playbackState == STATE_BUFFERING) {
             val initialPos = playerConnection.player.currentPosition
             val initialDur = playerConnection.player.duration
             position = initialPos
             if (initialDur > 0L && initialDur != C.TIME_UNSET) {
                 duration = initialDur
+            } else {
+                mediaMetadata?.let {
+                    val metaDuration = it.duration.toLong() * 1000
+                    if (metaDuration > 0) duration = metaDuration
+                }
             }
-            while (isActive) {
+            while (isActive && (isPlaying || playbackState == STATE_BUFFERING)) {
                 val isTransitioning = playerConnection.player.currentMediaItem?.mediaId != mediaMetadata?.id
                 val currentPlayerPosition = playerConnection.player.currentPosition
                 val currentPlayerDuration = playerConnection.player.duration
@@ -755,7 +758,9 @@ fun BottomSheetPlayer(
                     }
                 } else {
                     position = currentPlayerPosition
-                    duration = currentPlayerDuration
+                    if (currentPlayerDuration > 0L && currentPlayerDuration != C.TIME_UNSET) {
+                        duration = currentPlayerDuration
+                    }
                     if (!isUserSeeking) {
                         sliderPosition?.let { targetPosition ->
                             val clampedTargetPosition =
@@ -774,7 +779,22 @@ fun BottomSheetPlayer(
                         }
                     }
                 }
-                delay(if (aodModeEnabled) 500L else 100L)
+                val delayMs = if (aodModeEnabled) 500L else if (!state.isExpandedOrExpanding) 200L else 100L
+                delay(delayMs)
+            }
+        } else if (playbackState == STATE_ENDED) {
+            val currentPlayerDuration = playerConnection.player.duration
+            if (currentPlayerDuration > 0L && currentPlayerDuration != C.TIME_UNSET) {
+                duration = currentPlayerDuration
+                position = currentPlayerDuration
+            } else {
+                mediaMetadata?.let {
+                    val metaDuration = it.duration.toLong() * 1000
+                    if (metaDuration > 0) {
+                        duration = metaDuration
+                        position = metaDuration
+                    }
+                }
             }
         } else {
             mediaMetadata?.let {
@@ -782,7 +802,7 @@ fun BottomSheetPlayer(
                 duration = if (metaDuration > 0) metaDuration else 0L
             }
             val currentPlayerPosition = playerConnection.player.currentPosition
-            if (sliderPosition == null && currentPlayerPosition > 0L) {
+            if (sliderPosition == null && currentPlayerPosition >= 0L) {
                 position = currentPlayerPosition
             }
         }
