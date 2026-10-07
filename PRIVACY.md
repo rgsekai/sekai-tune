@@ -102,7 +102,7 @@ Home-screen widgets, launcher shortcuts and the Quick Settings tile do not need 
 
 ## Backups, Device Transfer, and Local Retention
 
-Sekai Tune enables Android backup support. The backup and data-transfer rules exclude some cache and download paths, including the ExoPlayer cache, the download directory, and `exoplayer_internal.db`. Other app data, including the local database and preferences, may still be included in Android cloud backup or device transfer depending on your Android settings.
+Sekai Tune enables Android backup support. Android cloud backup (Google backup) excludes the app's settings and preferences files, which hold your YouTube Music and Spotify sessions, proxy credentials and Firebase sign-in cache, as well as the ExoPlayer cache, the download directory, and `exoplayer_internal.db`. Direct device-to-device transfer (for example, when you set up a new phone) does not apply the settings exclusion, so your settings can move to the new phone. The local database may still be included in Android cloud backup depending on your Android settings.
 
 The app also offers a manual backup feature that creates a ZIP archive of app settings and database files. This is a user-triggered export. Keep the file private, because the archive may include session values and tokens stored in settings.
 
