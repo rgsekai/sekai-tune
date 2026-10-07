@@ -485,6 +485,22 @@ fun NavGraphBuilder.navigationBuilder(
             },
         )
     }
+    composable(
+        route = "year_in_music?year={year}",
+        arguments =
+            listOf(
+                navArgument("year") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+    ) { backStackEntry ->
+        YearInMusicScreen(
+            navController = navController,
+            initialYear = backStackEntry.arguments?.getString("year")?.toIntOrNull(),
+        )
+    }
 }
 
 
