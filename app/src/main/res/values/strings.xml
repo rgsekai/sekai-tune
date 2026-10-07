@@ -210,6 +210,7 @@
     <string name="together_transfer_host_confirm">Transfer host ownership to %1$s?</string>
     <string name="together_requesting_song_change">Requesting host to change the song\u2026</string>
     <string name="together_guest_playback_blocked">Only the host can control playback</string>
+    <string name="together_added_to_queue">Added to session queue</string>
     <string name="together_song_change_failed">Song change not applied. Please try again.</string>
     <string name="together_participant_joined_notification">%1$s joined the room</string>
     <string name="together_participant_left_notification">%1$s left the room</string>

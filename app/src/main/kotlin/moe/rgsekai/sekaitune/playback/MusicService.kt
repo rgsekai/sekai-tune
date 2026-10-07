@@ -2952,12 +2952,8 @@ class MusicService :
         val joined = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
         val isGuest = joined?.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest
         if (!isTogetherApplyingRemote() && isGuest) {
-            Timber.tag("Together").i("playQueue as guest: joined=$joined, role=${joined?.role}, allowGuestsToControlPlayback=${joined?.roomState?.settings?.allowGuestsToControlPlayback}")
-            if (joined?.roomState?.settings?.allowGuestsToControlPlayback != true) {
-                Timber.tag("Together").w("playQueue blocked: allowGuestsToControlPlayback is false")
-                showTogetherNotice(getString(R.string.not_allowed), key = "GUEST_PLAYQUEUE_DISABLED")
-                return
-            }
+            val settings = joined?.roomState?.settings ?: moe.rgsekai.sekaitune.together.TogetherRoomSettings()
+            Timber.tag("Together").i("playQueue as guest: joined=$joined, allowGuestsToControlPlayback=${settings.allowGuestsToControlPlayback}, allowGuestsToAddTracks=${settings.allowGuestsToAddTracks}")
             ensureScopesActive()
             scope.launch(SilentHandler) {
                 val initialStatus =
@@ -2991,25 +2987,45 @@ class MusicService :
                         thumbnailUrl = meta?.thumbnailUrl,
                     )
 
-                val ops =
-                    moe.rgsekai.sekaitune.together.TogetherGuestPlaybackPlanner.planPlayTrackNow(
-                        roomState = joined.roomState,
-                        track = track,
-                        positionMs = initialStatus.position,
-                        playWhenReady = playWhenReady,
-                    )
-
-                if (ops.isEmpty()) {
-                    showTogetherNotice(getString(R.string.not_allowed), key = "GUEST_PLAYQUEUE_BLOCKED")
-                    return@launch
-                }
-
-                showTogetherNotice(getString(R.string.together_requesting_song_change), key = "GUEST_PLAYQUEUE_REQUEST")
-                ops.forEach { op ->
-                    when (op) {
-                        is moe.rgsekai.sekaitune.together.TogetherGuestOp.Control -> requestTogetherControl(op.action)
-                        is moe.rgsekai.sekaitune.together.TogetherGuestOp.AddTrack -> requestTogetherAddTrack(op.track, op.mode)
+                if (settings.allowGuestsToControlPlayback) {
+                    val existsInQueue = joined.roomState.queue.any { it.id == trackId }
+                    if (existsInQueue) {
+                        showTogetherNotice(getString(R.string.together_requesting_song_change), key = "GUEST_PLAYQUEUE_REQUEST")
+                        requestTogetherControl(moe.rgsekai.sekaitune.together.ControlAction.SeekToTrack(trackId = trackId, positionMs = initialStatus.position))
+                        if (playWhenReady) {
+                            requestTogetherControl(moe.rgsekai.sekaitune.together.ControlAction.Play)
+                        }
+                    } else if (settings.allowGuestsToAddTracks) {
+                        showTogetherNotice(getString(R.string.together_requesting_song_change), key = "GUEST_PLAYQUEUE_REQUEST")
+                        if (togetherIsOnlineSession && togetherOnlineGuest != null) {
+                            togetherOnlineGuest?.requestAddAndPlayTrack(track, initialStatus.position)
+                        } else {
+                            val ops =
+                                moe.rgsekai.sekaitune.together.TogetherGuestPlaybackPlanner.planPlayTrackNow(
+                                    roomState = joined.roomState,
+                                    track = track,
+                                    positionMs = initialStatus.position,
+                                    playWhenReady = playWhenReady,
+                                )
+                            if (ops.isEmpty()) {
+                                showTogetherNotice(getString(R.string.not_allowed), key = "GUEST_PLAYQUEUE_BLOCKED")
+                                return@launch
+                            }
+                            ops.forEach { op ->
+                                when (op) {
+                                    is moe.rgsekai.sekaitune.together.TogetherGuestOp.Control -> requestTogetherControl(op.action)
+                                    is moe.rgsekai.sekaitune.together.TogetherGuestOp.AddTrack -> requestTogetherAddTrack(op.track, op.mode)
+                                }
+                            }
+                        }
+                    } else {
+                        showTogetherNotice(getString(R.string.not_allowed), key = "GUEST_PLAYQUEUE_ADD_DISABLED")
                     }
+                } else if (settings.allowGuestsToAddTracks) {
+                    showTogetherNotice(getString(R.string.together_added_to_queue), key = "GUEST_PLAYQUEUE_ENQUEUED")
+                    requestTogetherAddTrack(track, moe.rgsekai.sekaitune.together.AddTrackMode.ADD_TO_QUEUE)
+                } else {
+                    showTogetherNotice(getString(R.string.together_guest_playback_blocked), key = "GUEST_PLAYQUEUE_DISABLED")
                 }
             }
             return
@@ -3667,6 +3683,9 @@ class MusicService :
             }
 
             togetherOnlineHost = onlineHost
+            togetherSelfParticipantId = hostUid
+            togetherAuthorityParticipantId = hostUid
+            togetherLastAppliedQueueHash = null
             val initialState = buildTogetherRoomState(sessionId = sessionId, hostId = hostUid, code = code)
             val success = onlineHost.createSession(initialState)
             if (!success) {
@@ -4420,6 +4439,10 @@ class MusicService :
                                 )
                         }
                     }
+                    if (!togetherApplyingRemote) {
+                        togetherSelfParticipantId = onlineHost.hostUid
+                        applyRemoteRoomState(event.state)
+                    }
                 } else if (event.state.hostId != togetherHostId) {
                     togetherSelfParticipantId = togetherHostId
                     applyRemoteRoomState(event.state, force = true)
@@ -4842,14 +4865,28 @@ class MusicService :
                     currentHostingLan != null ||
                     pid == state.hostId
                 togetherSessionState.value =
-                    moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
-                        role = if (isHost) moe.rgsekai.sekaitune.together.TogetherRole.Host else (currentJoined?.role ?: moe.rgsekai.sekaitune.together.TogetherRole.Guest),
-                        sessionId = state.sessionId,
-                        selfParticipantId = pid,
-                        roomState = state.copy(code = resolvedCode, joinLink = resolvedLink),
-                        code = resolvedCode,
-                        joinLink = resolvedLink,
-                    )
+                    if (currentHostingOnline != null && isHost) {
+                        currentHostingOnline.copy(
+                            roomState = state.copy(code = resolvedCode, joinLink = resolvedLink),
+                            code = resolvedCode ?: currentHostingOnline.code,
+                            settings = state.settings,
+                        )
+                    } else if (currentHostingLan != null && isHost) {
+                        currentHostingLan.copy(
+                            roomState = state.copy(code = resolvedCode, joinLink = resolvedLink),
+                            joinLink = resolvedLink ?: currentHostingLan.joinLink,
+                            settings = state.settings,
+                        )
+                    } else {
+                        moe.rgsekai.sekaitune.together.TogetherSessionState.Joined(
+                            role = if (isHost) moe.rgsekai.sekaitune.together.TogetherRole.Host else (currentJoined?.role ?: moe.rgsekai.sekaitune.together.TogetherRole.Guest),
+                            sessionId = state.sessionId,
+                            selfParticipantId = pid,
+                            roomState = state.copy(code = resolvedCode, joinLink = resolvedLink),
+                            code = resolvedCode,
+                            joinLink = resolvedLink,
+                        )
+                    }
             } finally {
                 togetherApplyingRemote = false
             }

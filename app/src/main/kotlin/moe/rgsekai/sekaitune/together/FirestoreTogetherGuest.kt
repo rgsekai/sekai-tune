@@ -254,6 +254,7 @@ class FirestoreTogetherGuest(
                                 "playback.currentIndex" to action.index,
                                 "playback.positionMs" to 0L,
                                 "playback.positionUpdatedAt" to now,
+                                "playback.isPlaying" to true,
                                 "lastUpdatedAt" to now
                             )
                         ).await()
@@ -267,6 +268,7 @@ class FirestoreTogetherGuest(
                                     "playback.currentIndex" to targetIndex,
                                     "playback.positionMs" to action.positionMs,
                                     "playback.positionUpdatedAt" to now,
+                                    "playback.isPlaying" to true,
                                     "lastUpdatedAt" to now,
                                 ),
                             ).await()
@@ -282,6 +284,7 @@ class FirestoreTogetherGuest(
                                 "playback.currentIndex" to nextIndex,
                                 "playback.positionMs" to 0L,
                                 "playback.positionUpdatedAt" to now,
+                                "playback.isPlaying" to true,
                                 "lastUpdatedAt" to now,
                             ),
                         ).await()
@@ -295,6 +298,7 @@ class FirestoreTogetherGuest(
                                 "playback.currentIndex" to prevIndex,
                                 "playback.positionMs" to 0L,
                                 "playback.positionUpdatedAt" to now,
+                                "playback.isPlaying" to true,
                                 "lastUpdatedAt" to now,
                             ),
                         ).await()
@@ -326,19 +330,113 @@ class FirestoreTogetherGuest(
         val docRef = sessionDocRef ?: return
         withContext(Dispatchers.IO) {
             try {
+                val state = lastRoomState
+                val currentQueue = state?.queue.orEmpty()
+                val newTrack = track.copy(id = track.id.trim())
                 val trackMap = mapOf(
-                    "id" to track.id,
-                    "title" to track.title,
-                    "artists" to track.artists,
-                    "durationSec" to track.durationSec,
-                    "thumbnailUrl" to track.thumbnailUrl
+                    "id" to newTrack.id,
+                    "title" to newTrack.title,
+                    "artists" to newTrack.artists,
+                    "durationSec" to newTrack.durationSec,
+                    "thumbnailUrl" to newTrack.thumbnailUrl
                 )
+                val updatedQueue = when (mode) {
+                    AddTrackMode.PLAY_NEXT -> {
+                        val currentIdx = state?.currentIndex ?: 0
+                        val insertIdx = (currentIdx + 1).coerceIn(0, currentQueue.size)
+                        val list = currentQueue.map { t ->
+                            mapOf(
+                                "id" to t.id,
+                                "title" to t.title,
+                                "artists" to t.artists,
+                                "durationSec" to t.durationSec,
+                                "thumbnailUrl" to t.thumbnailUrl
+                            )
+                        }.toMutableList()
+                        list.add(insertIdx, trackMap)
+                        list
+                    }
+                    AddTrackMode.ADD_TO_QUEUE -> {
+                        currentQueue.map { t ->
+                            mapOf(
+                                "id" to t.id,
+                                "title" to t.title,
+                                "artists" to t.artists,
+                                "durationSec" to t.durationSec,
+                                "thumbnailUrl" to t.thumbnailUrl
+                            )
+                        } + listOf(trackMap)
+                    }
+                }
                 docRef.update(
-                    "queue", FieldValue.arrayUnion(trackMap),
-                    "lastUpdatedAt", System.currentTimeMillis()
+                    mapOf(
+                        "queue" to updatedQueue,
+                        "lastUpdatedAt" to System.currentTimeMillis()
+                    )
                 ).await()
             } catch (t: Throwable) {
                 Timber.tag("Together").e(t, "Failed to add track to Firestore queue")
+            }
+        }
+    }
+
+    suspend fun requestAddAndPlayTrack(track: TogetherTrack, positionMs: Long = 0L) {
+        val docRef = sessionDocRef ?: return
+        withContext(Dispatchers.IO) {
+            try {
+                val now = System.currentTimeMillis()
+                val state = lastRoomState
+                val existingIndex = state?.queue?.indexOfFirst { it.id == track.id }?.takeIf { it >= 0 }
+                if (existingIndex != null) {
+                    docRef.update(
+                        mapOf(
+                            "playback.currentIndex" to existingIndex,
+                            "playback.positionMs" to positionMs.coerceAtLeast(0L),
+                            "playback.positionUpdatedAt" to now,
+                            "playback.isPlaying" to true,
+                            "lastUpdatedAt" to now,
+                        )
+                    ).await()
+                    return@withContext
+                }
+
+                val currentQueue = state?.queue.orEmpty()
+                val newTrack = track.copy(id = track.id.trim())
+                val trackMap = mapOf(
+                    "id" to newTrack.id,
+                    "title" to newTrack.title,
+                    "artists" to newTrack.artists,
+                    "durationSec" to newTrack.durationSec,
+                    "thumbnailUrl" to newTrack.thumbnailUrl
+                )
+                val updatedQueue = currentQueue.map { t ->
+                    mapOf(
+                        "id" to t.id,
+                        "title" to t.title,
+                        "artists" to t.artists,
+                        "durationSec" to t.durationSec,
+                        "thumbnailUrl" to t.thumbnailUrl
+                    )
+                } + listOf(trackMap)
+
+                val newIndex = updatedQueue.lastIndex
+                val queueHash = moe.rgsekai.sekaitune.utils.md5(
+                    (currentQueue.map { it.id } + listOf(newTrack.id)).joinToString("|")
+                )
+
+                docRef.update(
+                    mapOf(
+                        "queue" to updatedQueue,
+                        "playback.currentIndex" to newIndex,
+                        "playback.positionMs" to positionMs.coerceAtLeast(0L),
+                        "playback.positionUpdatedAt" to now,
+                        "playback.isPlaying" to true,
+                        "playback.queueHash" to queueHash,
+                        "lastUpdatedAt" to now,
+                    )
+                ).await()
+            } catch (t: Throwable) {
+                Timber.tag("Together").e(t, "Failed to add and play track in Firestore")
             }
         }
     }
