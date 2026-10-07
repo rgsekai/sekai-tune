@@ -66,7 +66,6 @@ import moe.rgsekai.sekaitune.playback.PlayerConnection
 import moe.rgsekai.sekaitune.ui.component.ExpressivePullToRefreshBox
 import moe.rgsekai.sekaitune.ui.component.LocalMenuState
 import moe.rgsekai.sekaitune.ui.component.MenuState
-import moe.rgsekai.sekaitune.ui.utils.SnapLayoutInfoProvider
 import moe.rgsekai.sekaitune.viewmodels.HomeViewModel
 
 private val HomeFeedMaxWidth = 1_200.dp
@@ -300,15 +299,6 @@ private fun HomeContent(
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val forgottenItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
                 val forgottenItemWidth = maxWidth.coerceAtMost(HomeFeedMaxWidth) * forgottenItemWidthFactor
-                val forgottenSnapLayoutInfoProvider =
-                    remember(forgottenFavoritesGridState, forgottenItemWidthFactor) {
-                        SnapLayoutInfoProvider(
-                            lazyGridState = forgottenFavoritesGridState,
-                            positionInLayout = { layoutSize, itemSize ->
-                                layoutSize * forgottenItemWidthFactor / 2f - itemSize / 2f
-                            },
-                        )
-                    }
 
                 LazyColumn(
                     state = lazyListState,
@@ -472,7 +462,6 @@ private fun HomeContent(
                                 isPlaying = isPlaying,
                                 horizontalLazyGridItemWidth = forgottenItemWidth,
                                 lazyGridState = forgottenFavoritesGridState,
-                                snapLayoutInfoProvider = forgottenSnapLayoutInfoProvider,
                                 navController = navController,
                                 playerConnection = playerConnection,
                                 menuState = menuState,

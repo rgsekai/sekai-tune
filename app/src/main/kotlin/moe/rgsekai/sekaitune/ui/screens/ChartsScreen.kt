@@ -51,7 +51,6 @@ import moe.rgsekai.sekaitune.ui.component.shimmer.GridItemPlaceHolder
 import moe.rgsekai.sekaitune.ui.component.shimmer.ShimmerHost
 import moe.rgsekai.sekaitune.ui.component.shimmer.TextPlaceholder
 import moe.rgsekai.sekaitune.ui.menu.YouTubeSongMenu
-import moe.rgsekai.sekaitune.ui.utils.SnapLayoutInfoProvider
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.viewmodels.ChartsViewModel
 
@@ -208,20 +207,11 @@ fun ChartsScreen(
                                 val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
 
                                 val lazyGridState = rememberLazyGridState()
-                                val snapLayoutInfoProvider =
-                                    remember(lazyGridState) {
-                                        SnapLayoutInfoProvider(
-                                            lazyGridState = lazyGridState,
-                                            positionInLayout = { layoutSize, itemSize ->
-                                                (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
-                                            },
-                                        )
-                                    }
 
                                 LazyHorizontalGrid(
                                     state = lazyGridState,
                                     rows = GridCells.Fixed(4),
-                                    flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider),
+                                    flingBehavior = rememberSnapFlingBehavior(lazyGridState),
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)

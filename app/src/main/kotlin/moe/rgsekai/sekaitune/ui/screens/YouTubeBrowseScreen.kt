@@ -73,7 +73,6 @@ import moe.rgsekai.sekaitune.ui.menu.YouTubeAlbumMenu
 import moe.rgsekai.sekaitune.ui.menu.YouTubeArtistMenu
 import moe.rgsekai.sekaitune.ui.menu.YouTubePlaylistMenu
 import moe.rgsekai.sekaitune.ui.menu.YouTubeSongMenu
-import moe.rgsekai.sekaitune.ui.utils.SnapLayoutInfoProvider
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.viewmodels.YouTubeBrowseViewModel
 
@@ -96,17 +95,7 @@ fun YouTubeBrowseScreen(
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
     ) {
-        val horizontalLazyGridItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
         val lazyGridState = rememberLazyGridState()
-        val snapLayoutInfoProvider =
-            remember(lazyGridState) {
-                SnapLayoutInfoProvider(
-                    lazyGridState = lazyGridState,
-                    positionInLayout = { layoutSize, itemSize ->
-                        (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
-                    },
-                )
-            }
         LazyColumn(
             contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
         ) {
@@ -143,7 +132,7 @@ fun YouTubeBrowseScreen(
                             LazyHorizontalGrid(
                                 state = lazyGridState,
                                 rows = GridCells.Fixed(4),
-                                flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider),
+                                flingBehavior = rememberSnapFlingBehavior(lazyGridState),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)

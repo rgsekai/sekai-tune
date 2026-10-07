@@ -333,7 +333,6 @@ dependencies {
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.server.content.negotiation)
 
-    coreLibraryDesugaring(libs.desugaring)
 
     implementation(libs.timber)
     testImplementation(libs.junit)
@@ -347,8 +346,6 @@ dependencies {
     implementation("androidx.compose.material3.adaptive:adaptive:1.3.0-rc01")
     implementation(libs.accompanist.lyrics.ui)
     implementation(libs.accompanist.lyrics.core)
-
-    implementation("org.json:json:20240303")
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

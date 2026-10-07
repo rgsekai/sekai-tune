@@ -15,7 +15,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -135,7 +134,6 @@ import moe.rgsekai.sekaitune.ui.menu.YouTubeSongMenu
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
-import moe.rgsekai.sekaitune.ui.utils.SnapLayoutInfoProvider as buildSnapLayoutInfoProvider
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -418,19 +416,10 @@ fun QuickPicksSection(
                 val widthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
                 val itemWidth = maxWidth * widthFactor
                 val lazyGridState = rememberLazyGridState()
-                val snapLayoutInfoProvider =
-                    remember(lazyGridState, widthFactor) {
-                        buildSnapLayoutInfoProvider(
-                            lazyGridState = lazyGridState,
-                            positionInLayout = { layoutSize, itemSize ->
-                                layoutSize * widthFactor / 2f - itemSize / 2f
-                            },
-                        )
-                    }
                 LazyHorizontalGrid(
                     state = lazyGridState,
                     rows = GridCells.Fixed(4),
-                    flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider),
+                    flingBehavior = rememberSnapFlingBehavior(lazyGridState),
                     contentPadding =
                         WindowInsets.systemBars
                             .only(WindowInsetsSides.Horizontal)
@@ -958,7 +947,6 @@ fun ForgottenFavoritesSection(
     isPlaying: Boolean,
     horizontalLazyGridItemWidth: Dp,
     lazyGridState: LazyGridState,
-    snapLayoutInfoProvider: SnapLayoutInfoProvider,
     navController: NavController,
     playerConnection: PlayerConnection,
     menuState: MenuState,
@@ -971,7 +959,7 @@ fun ForgottenFavoritesSection(
     LazyHorizontalGrid(
         state = lazyGridState,
         rows = GridCells.Fixed(rows),
-        flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider),
+        flingBehavior = rememberSnapFlingBehavior(lazyGridState),
         contentPadding =
             WindowInsets.systemBars
                 .only(WindowInsetsSides.Horizontal)
