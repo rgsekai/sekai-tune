@@ -21,11 +21,6 @@
 
 ---
 
-> [!IMPORTANT]  
-> **Geographic Availability:** If YouTube Music is not supported in your region, a VPN or proxy set to a supported country is required for initial catalog browsing and playback.
-
----
-
 ## 📥 Download
 
 <p align="center">
