@@ -19,6 +19,11 @@
     box-sizing: border-box;
 }
 
+img {
+    max-width: 100%;
+    height: auto;
+}
+
 html {
     scroll-behavior: smooth;
     overflow-x: hidden;
@@ -76,10 +81,11 @@ h1, h2, h3, h4 {
 }
 
 .gradient-text {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(135deg, #ff4081 0%, #c084fc 50%, #7c4dff 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    color: #ff4081;
     display: inline-block;
 }
 
@@ -122,6 +128,7 @@ h1, h2, h3, h4 {
 .logo img {
     height: 28px;
     width: 28px;
+    display: block;
 }
 
 .nav-links {
@@ -213,6 +220,8 @@ h1, h2, h3, h4 {
 .hero-content {
     flex: 1;
     max-width: 600px;
+    position: relative;
+    z-index: 10;
 }
 
 .hero-title {
@@ -242,34 +251,42 @@ h1, h2, h3, h4 {
     justify-content: center;
     align-items: center;
     width: 100%;
+    max-width: 520px;
 }
 
 .app-mockup {
-    height: 85%;
+    height: auto;
+    width: auto;
     max-height: 480px;
+    max-width: 215px;
+    aspect-ratio: 1080 / 2412;
     border-radius: 28px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-    border: 3px solid #222;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(124, 77, 255, 0.25);
+    border: 2px solid rgba(255, 255, 255, 0.15);
     z-index: 2;
-    object-fit: contain;
+    object-fit: cover;
+    display: block;
 }
 
 .floating {
     position: absolute;
-    height: 75%;
-    max-height: 420px;
-    right: 5%;
+    height: auto;
+    width: auto;
+    max-height: 430px;
+    max-width: 195px;
+    aspect-ratio: 1080 / 2412;
+    right: 8%;
     top: 50%;
-    transform: translateY(-40%) rotate(6deg);
+    transform: translateY(-48%) rotate(8deg);
     z-index: 1;
-    opacity: 0.75;
-    filter: blur(1px);
+    opacity: 0.65;
+    filter: blur(0.5px);
     animation: float-mockup 6s ease-in-out infinite alternate;
 }
 
 @keyframes float-mockup {
-    0% { transform: translateY(-40%) rotate(6deg); }
-    100% { transform: translateY(-46%) rotate(9deg); }
+    0% { transform: translateY(-48%) rotate(8deg); }
+    100% { transform: translateY(-54%) rotate(11deg); }
 }
 
 /* Sections */
@@ -396,8 +413,11 @@ section {
 
 .gallery-track img {
     height: 380px;
+    width: auto;
+    aspect-ratio: 1080 / 2412;
+    object-fit: cover;
     border-radius: 18px;
-    border: 2px solid #222;
+    border: 2px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     transition: var(--transition-smooth);
     cursor: pointer;
@@ -552,9 +572,11 @@ footer {
     
     .app-mockup {
         max-height: 380px;
+        max-width: 170px;
         height: auto;
         width: auto;
-        max-width: 80%;
+        aspect-ratio: 1080 / 2412;
+        margin: 0 auto;
     }
     
     .floating {
