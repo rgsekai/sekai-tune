@@ -25,7 +25,7 @@
 - [ ] Local library / Room database
 - [ ] Widgets / notification / shortcuts
 - [ ] Settings / preferences / DataStore
-- [ ] Discord / Last.fm / ListenBrainz / external integration
+- [ ] Spotify / external integration
 - [ ] Localization / strings / fastlane metadata
 - [ ] Build / Gradle / CI / release packaging
 - [ ] Dependency update

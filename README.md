@@ -14,7 +14,7 @@
   <p>
     <strong>Sekai Tune is an open-source, privacy-focused YouTube Music client for Android built with Jetpack Compose and Material 3 design.</strong>
     <br />
-    <em>Enjoy fast, ad-free streaming, live synced lyrics, customizable audio effects, and rich personalization without tracking or bloat.</em>
+    <em>Enjoy fast streaming with no ads inside the app, live synced lyrics, customizable audio effects, and rich personalization without tracking or bloat.</em>
   </p>
 
 </div>
@@ -54,7 +54,7 @@ When installing the APK, Android may display a Google Play Protect prompt statin
 <details>
 <summary><b>🎵 Playback &amp; Library</b></summary>
 
-- **Ad-free Audio Streaming:** Background playback, streaming cache, and persistent audio queues.
+- **Clean Audio Streaming:** Background playback with no ads inside the app, streaming cache, and persistent audio queues.
 - **YouTube Music Integration:** Sign in to sync your playlists, subscriptions, history, and liked songs.
 - **Local Audio Support:** Seamless playback for local audio files and offline downloaded tracks.
 - **Multi-Account Support:** Switch between multiple accounts quickly without data loss.
