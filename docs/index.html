@@ -33,7 +33,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="styles.css?v=1.1">
+    <link rel="stylesheet" href="styles.css?v=1.2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Structured Data (JSON-LD) -->
@@ -85,9 +85,19 @@
                 <a href="#features" class="btn btn-secondary">Explore Features</a>
             </div>
         </div>
-        <div class="hero-image reveal delay-1">
-            <img src="assets/home_screen.jpg" alt="Sekai Tune Home Screen showing Quick Picks and personalized recommendations" class="app-mockup" width="215" height="480" style="width:215px; height:480px; max-width:215px; max-height:480px; aspect-ratio:1080/2412; object-fit:cover; border-radius:28px; display:block; flex-shrink:0;">
-            <img src="assets/player.jpg" alt="Sekai Tune Player Screen displaying now playing album art and audio controls" class="app-mockup floating" width="195" height="435" style="width:195px; height:435px; max-width:195px; max-height:435px; aspect-ratio:1080/2412; object-fit:cover; border-radius:28px; display:block; flex-shrink:0;">
+        <div class="phone-mockup-wrapper reveal delay-1">
+            <div class="device-frame secondary-device">
+                <div class="device-screen">
+                    <img src="assets/player.jpg" alt="Sekai Tune Player Screen displaying now playing album art and audio controls" loading="eager">
+                </div>
+            </div>
+            <div class="device-frame primary-device">
+                <div class="device-camera"></div>
+                <div class="device-screen">
+                    <img src="assets/home_screen.jpg" alt="Sekai Tune Home Screen showing Quick Picks and personalized recommendations" loading="eager">
+                </div>
+                <div class="device-glare"></div>
+            </div>
         </div>
     </header>
 
