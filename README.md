@@ -171,18 +171,6 @@ For complete details on data handling and external endpoints, read our [Privacy 
 
 ---
 
-## 🌐 Community & Social Media
-
-Join our community to stay updated, report feedback, or chat with other listeners:
-
-<p align="left">
-  <a href="https://discord.gg/De269BfEA"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://t.me/+-mT3ps-V32g3ZWFl"><img src="https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"></a>
-  <a href="https://www.instagram.com/sekaiplug?stkn=MXE3azFlMGJzZDc1OQ=="><img src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" alt="Instagram"></a>
-</p>
-
----
-
 ## 💖 Support the Project
 
 Sekai Tune is free, open-source software developed in personal time. If you enjoy the app and want to support ongoing maintenance:
@@ -199,6 +187,18 @@ rgsekai@upi
 
 > [!TIP]
 > Inside the Sekai Tune Android app, tapping the UPI option under **Settings → Support** opens your installed payment app directly.
+
+---
+
+## 🌐 Community & Social Media
+
+Join our community to stay updated, report feedback, or chat with other listeners:
+
+<p align="left">
+  <a href="https://discord.gg/De269BfEA"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://t.me/+-mT3ps-V32g3ZWFl"><img src="https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"></a>
+  <a href="https://www.instagram.com/sekaiplug?stkn=MXE3azFlMGJzZDc1OQ=="><img src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" alt="Instagram"></a>
+</p>
 
 ---
 
