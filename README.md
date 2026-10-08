@@ -186,20 +186,16 @@ Sekai Tune is free, open-source software developed in personal time. If you enjo
   </a>
 </p>
 
-<details>
-<summary><b>💳 UPI Payment Details (India)</b></summary>
+### 💳 UPI (India)
 
-<br>
-
-You can copy and send support directly via UPI:
+Copy the UPI ID below to pay directly using any UPI-enabled app (Google Pay, PhonePe, Paytm, BHIM):
 
 ```text
 rgsekai@upi
 ```
 
-*Note: In the Sekai Tune Android app, tapping the UPI entry under **Settings → Support** opens your installed payment app directly.*
-
-</details>
+> [!TIP]
+> Inside the Sekai Tune Android app, tapping the UPI option under **Settings → Support** opens your installed payment app directly.
 
 ---
 
