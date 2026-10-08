@@ -40,7 +40,7 @@ When installing the APK, Android may display a Google Play Protect prompt statin
 
   <img src="docs/assets/home_screen.jpg" width="32%" alt="Sekai Tune Home Screen and Quick Picks">
   <img src="docs/assets/player.jpg" width="32%" alt="Sekai Tune Now Playing Player Screen">
-  <img src="docs/assets/glass_home.jpg" width="32%" alt="Sekai Tune Liquid Glass Theme and Interface">
+  <img src="docs/assets/lyrics.jpg" width="32%" alt="Sekai Tune Live Synced Lyrics and Translation">
   <img src="docs/assets/song_menu.jpg" width="32%" alt="Sekai Tune Song Options and Actions Menu">
   <img src="docs/assets/queue.jpg" width="32%" alt="Sekai Tune Audio Queue and Management">
   <img src="docs/assets/new_releases.jpg" width="32%" alt="Sekai Tune Explore New Releases and Discover">
