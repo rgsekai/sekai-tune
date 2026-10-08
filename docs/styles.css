@@ -251,14 +251,14 @@ h1, h2, h3, h4 {
     justify-content: center;
     align-items: center;
     width: 100%;
-    max-width: 520px;
+    max-width: 480px;
 }
 
 .app-mockup {
-    height: auto;
-    width: auto;
-    max-height: 480px;
-    max-width: 215px;
+    width: 215px !important;
+    max-width: 215px !important;
+    height: 480px !important;
+    max-height: 480px !important;
     aspect-ratio: 1080 / 2412;
     border-radius: 28px;
     box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(124, 77, 255, 0.25);
@@ -266,14 +266,15 @@ h1, h2, h3, h4 {
     z-index: 2;
     object-fit: cover;
     display: block;
+    flex-shrink: 0;
 }
 
 .floating {
     position: absolute;
-    height: auto;
-    width: auto;
-    max-height: 430px;
-    max-width: 195px;
+    width: 195px !important;
+    max-width: 195px !important;
+    height: 435px !important;
+    max-height: 435px !important;
     aspect-ratio: 1080 / 2412;
     right: 8%;
     top: 50%;
@@ -282,6 +283,9 @@ h1, h2, h3, h4 {
     opacity: 0.65;
     filter: blur(0.5px);
     animation: float-mockup 6s ease-in-out infinite alternate;
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
 }
 
 @keyframes float-mockup {
