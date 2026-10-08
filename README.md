@@ -29,7 +29,7 @@
 ## 📥 Download
 
 <p align="center">
-  <a href="https://github.com/rgsekai/sekai-tune/releases/latest"><img src="https://img.shields.io/badge/Download_Latest_Release-v1.1.9-7C4DFF?style=for-the-badge&logo=android&logoColor=white" alt="Download Latest APK"></a>
+  <a href="https://github.com/rgsekai/sekai-tune/releases/latest"><img src="https://img.shields.io/github/v/release/rgsekai/sekai-tune?style=for-the-badge&logo=android&logoColor=white&color=7C4DFF&label=DOWNLOAD%20LATEST%20RELEASE" alt="Download Latest APK"></a>
 </p>
 
 When installing the APK, Android may display a Google Play Protect prompt stating *"App scan recommended"* for apps installed outside the Play Store; tapping **"Scan app"** is completely normal.
