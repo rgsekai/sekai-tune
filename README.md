@@ -38,15 +38,12 @@ When installing the APK, Android may display a Google Play Protect prompt statin
 
 <div align="center">
 
-  <img src="docs/assets/screen1.jpg" width="32%" alt="Sekai Tune Home Screen with Quick Picks">
-  <img src="docs/assets/screen2.jpg" width="32%" alt="Sekai Tune Player Screen with Album Art and Playback Controls">
-  <img src="docs/assets/screen3.jpg" width="32%" alt="Sekai Tune Live Synced Lyrics with Translation">
-  <img src="docs/assets/screen4.jpg" width="32%" alt="Sekai Tune Library and Playlist Management">
-  <img src="docs/assets/screen5.jpg" width="32%" alt="Sekai Tune Listening Statistics and History">
-  <img src="docs/assets/screen6.jpg" width="32%" alt="Sekai Tune Audio Equalizer and Sound Effects">
-  <img src="docs/assets/screen7.jpg" width="32%" alt="Sekai Tune Queue and Player Customization">
-  <img src="docs/assets/screen8.jpg" width="32%" alt="Sekai Tune Dynamic Theme Palette">
-  <img src="docs/assets/screen9.jpg" width="32%" alt="Sekai Tune Appearance Settings">
+  <img src="docs/assets/home_screen.jpg" width="32%" alt="Sekai Tune Home Screen and Quick Picks">
+  <img src="docs/assets/player.jpg" width="32%" alt="Sekai Tune Now Playing Player Screen">
+  <img src="docs/assets/glass_home.jpg" width="32%" alt="Sekai Tune Liquid Glass Theme and Interface">
+  <img src="docs/assets/song_menu.jpg" width="32%" alt="Sekai Tune Song Options and Actions Menu">
+  <img src="docs/assets/queue.jpg" width="32%" alt="Sekai Tune Audio Queue and Management">
+  <img src="docs/assets/new_releases.jpg" width="32%" alt="Sekai Tune Explore New Releases and Discover">
 
 </div>
 
