@@ -452,21 +452,29 @@ section {
     margin-left: calc(-50vw + 50%);
     overflow: hidden;
     padding: 1.5rem 0;
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
 }
 
 .gallery-track {
     display: flex;
     gap: 1.25rem;
     width: max-content;
-    animation: scroll 35s linear infinite;
-    will-change: transform;
 }
 
-.gallery-track:hover {
+.gallery-track:hover .gallery-group {
     animation-play-state: paused;
 }
 
-.gallery-track img {
+.gallery-group {
+    display: flex;
+    gap: 1.25rem;
+    flex-shrink: 0;
+    animation: scroll 45s linear infinite;
+    will-change: transform;
+}
+
+.gallery-group img {
     height: 380px;
     width: auto;
     aspect-ratio: 1080 / 2412;
@@ -478,13 +486,14 @@ section {
     cursor: pointer;
 }
 
-.gallery-track img:hover {
+.gallery-group img:hover {
     transform: scale(1.04) translateY(-6px);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 @keyframes scroll {
     0% { transform: translateX(0); }
-    100% { transform: translateX(calc(-50% - 0.625rem)); }
+    100% { transform: translateX(calc(-100% - 1.25rem)); }
 }
 
 /* Support Callout Banner */
@@ -641,6 +650,7 @@ footer {
         border-radius: 34px;
     }
 
+    .gallery-group img,
     .gallery-track img {
         height: 280px;
     }
@@ -679,6 +689,7 @@ footer {
         padding: 1.5rem 1.25rem;
     }
 
+    .gallery-group img,
     .gallery-track img {
         height: 220px;
     }

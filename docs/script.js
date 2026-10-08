@@ -54,15 +54,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 4. Infinite Gallery Scroll Duplication
-    const track = document.querySelector('.gallery-track');
-    if (track) {
-        // Clone the images to create a seamless infinite scroll loop
-        const images = Array.from(track.children);
-        images.forEach(img => {
-            const clone = img.cloneNode(true);
-            track.appendChild(clone);
-        });
-    }
 
 });
