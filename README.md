@@ -184,8 +184,6 @@ Sekai Tune is free, open-source software developed in personal time. If you enjo
   <a href="https://buymeacoffee.com/rgsekai" target="_blank">
     <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="42" width="150">
   </a>
-  &nbsp;&nbsp;
-  <img src="https://img.shields.io/badge/UPI_ID-rgsekai%40upi-4B0082?style=for-the-badge&logo=googlepay&logoColor=white" alt="UPI: rgsekai@upi" height="42">
 </p>
 
 ```text
