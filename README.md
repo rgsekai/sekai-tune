@@ -34,10 +34,7 @@ When installing the APK, Android may display a Google Play Protect prompt statin
 
 ---
 
-<details>
-<summary><b>📸 Screenshots (Click to Expand)</b></summary>
-
-<br>
+## 📸 Showcase
 
 <div align="center">
 
@@ -52,8 +49,6 @@ When installing the APK, Android may display a Google Play Protect prompt statin
   <img src="docs/assets/screen9.jpg" width="32%" alt="Sekai Tune Appearance Settings">
 
 </div>
-
-</details>
 
 ---
 
