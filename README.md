@@ -180,15 +180,11 @@ For complete details on data handling and external endpoints, read our [Privacy 
 
 Sekai Tune is free, open-source software developed in personal time. If you enjoy the app and want to support ongoing maintenance:
 
-<div align="left">
-  <table>
-    <tr>
-      <td>
-        <a href="https://buymeacoffee.com/rgsekai"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"></a>
-      </td>
-    </tr>
-  </table>
-</div>
+<p align="left">
+  <a href="https://buymeacoffee.com/rgsekai" target="_blank">
+    <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=rgsekai&button_colour=FFDD00&font_colour=000000&font_family=Poppins&outline_colour=000000&coffee_colour=ffffff" alt="Buy Me A Coffee" height="48">
+  </a>
+</p>
 
 <details>
 <summary><b>💳 UPI Payment Details (India)</b></summary>
