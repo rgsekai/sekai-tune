@@ -182,7 +182,7 @@ Sekai Tune is free, open-source software developed in personal time. If you enjo
 
 <p align="left">
   <a href="https://buymeacoffee.com/rgsekai" target="_blank">
-    <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=rgsekai&button_colour=FFDD00&font_colour=000000&font_family=Poppins&outline_colour=000000&coffee_colour=ffffff" alt="Buy Me A Coffee" height="48">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="48" width="175">
   </a>
 </p>
 
