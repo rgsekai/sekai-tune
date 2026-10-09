@@ -1177,10 +1177,11 @@ fun OnlinePlaylistScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             if (isPrivatePlaylist) {
-                                Image(
-                                    painter = painterResource(R.drawable.anime_blank),
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_empty_state),
                                     contentDescription = null,
                                     modifier = Modifier.size(120.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
