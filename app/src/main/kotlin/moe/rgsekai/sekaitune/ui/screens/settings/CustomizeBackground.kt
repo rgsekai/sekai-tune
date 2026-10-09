@@ -18,6 +18,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -155,11 +156,8 @@ fun CustomizeBackground(navController: NavController) {
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.35f)),
                     )
-                    Image(
-                        painter = painterResource(R.drawable.player_preview),
-                        contentDescription = null,
+                    PlayerPreviewSkeleton(
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.FillBounds,
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -220,11 +218,8 @@ fun CustomizeBackground(navController: NavController) {
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.35f)),
                     )
-                    Image(
-                        painter = painterResource(R.drawable.lyrics_preview),
-                        contentDescription = null,
+                    LyricsPreviewSkeleton(
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.FillBounds,
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -275,6 +270,254 @@ fun CustomizeBackground(navController: NavController) {
             ) {
                 Text(stringResource(R.string.save))
             }
+        }
+    }
+}
+
+@Composable
+private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    Column(
+        modifier = modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        // Top handle indicator
+        Box(
+            modifier =
+                Modifier
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(onSurface.copy(alpha = 0.35f)),
+        )
+
+        // Album cover placeholder
+        Box(
+            modifier =
+                Modifier
+                    .size(170.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(onSurface.copy(alpha = 0.20f)),
+        )
+
+        // Title and artist bars
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.55f)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(onSurface.copy(alpha = 0.85f)),
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.35f)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(onSurface.copy(alpha = 0.45f)),
+            )
+        }
+
+        // Progress bar with thumb
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.85f)
+                    .height(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .weight(0.35f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(onSurface.copy(alpha = 0.85f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.95f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .weight(0.65f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(onSurface.copy(alpha = 0.25f)),
+            )
+        }
+
+        // Transport controls
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.80f),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.45f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.85f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.45f)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    Column(
+        modifier = modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        // Top handle indicator
+        Box(
+            modifier =
+                Modifier
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(onSurface.copy(alpha = 0.35f)),
+        )
+
+        // 5 horizontal lyric lines of varying widths, with active line highlighted
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.40f)
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(onSurface.copy(alpha = 0.25f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.60f)
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(onSurface.copy(alpha = 0.40f)),
+            )
+            // Active current lyric line
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.75f)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(onSurface.copy(alpha = 0.90f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.50f)
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(onSurface.copy(alpha = 0.40f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.35f)
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(onSurface.copy(alpha = 0.25f)),
+            )
+        }
+
+        // Progress bar with thumb
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.85f)
+                    .height(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .weight(0.45f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(onSurface.copy(alpha = 0.85f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.95f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .weight(0.55f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(onSurface.copy(alpha = 0.25f)),
+            )
+        }
+
+        // Transport controls
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.80f),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.45f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.85f)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(onSurface.copy(alpha = 0.45f)),
+            )
         }
     }
 }
