@@ -276,7 +276,7 @@ fun CustomizeBackground(navController: NavController) {
 
 @Composable
 private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
-    val onSurface = MaterialTheme.colorScheme.onSurface
+    val contentColor = Color.White
     Column(
         modifier = modifier.padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -288,7 +288,7 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
                 Modifier
                     .size(width = 36.dp, height = 4.dp)
                     .clip(CircleShape)
-                    .background(onSurface.copy(alpha = 0.35f)),
+                    .background(contentColor.copy(alpha = 0.35f)),
         )
 
         // Album cover placeholder
@@ -297,7 +297,7 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
                 Modifier
                     .size(170.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(onSurface.copy(alpha = 0.20f)),
+                    .background(contentColor.copy(alpha = 0.20f)),
         )
 
         // Title and artist bars
@@ -311,7 +311,7 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
                         .fillMaxWidth(0.55f)
                         .height(14.dp)
                         .clip(RoundedCornerShape(7.dp))
-                        .background(onSurface.copy(alpha = 0.85f)),
+                        .background(contentColor.copy(alpha = 0.85f)),
             )
             Spacer(modifier = Modifier.height(6.dp))
             Box(
@@ -320,7 +320,7 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
                         .fillMaxWidth(0.35f)
                         .height(10.dp)
                         .clip(RoundedCornerShape(5.dp))
-                        .background(onSurface.copy(alpha = 0.45f)),
+                        .background(contentColor.copy(alpha = 0.45f)),
             )
         }
 
@@ -338,14 +338,14 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
                         .weight(0.35f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
-                        .background(onSurface.copy(alpha = 0.85f)),
+                        .background(contentColor.copy(alpha = 0.85f)),
             )
             Box(
                 modifier =
                     Modifier
                         .size(10.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.95f)),
+                        .background(contentColor.copy(alpha = 0.95f)),
             )
             Box(
                 modifier =
@@ -353,7 +353,7 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
                         .weight(0.65f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
-                        .background(onSurface.copy(alpha = 0.25f)),
+                        .background(contentColor.copy(alpha = 0.25f)),
             )
         }
 
@@ -370,21 +370,21 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
                     Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.45f)),
+                        .background(contentColor.copy(alpha = 0.45f)),
             )
             Box(
                 modifier =
                     Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.85f)),
+                        .background(contentColor.copy(alpha = 0.85f)),
             )
             Box(
                 modifier =
                     Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.45f)),
+                        .background(contentColor.copy(alpha = 0.45f)),
             )
         }
     }
@@ -392,7 +392,7 @@ private fun PlayerPreviewSkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
-    val onSurface = MaterialTheme.colorScheme.onSurface
+    val contentColor = Color.White
     Column(
         modifier = modifier.padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -404,7 +404,7 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                 Modifier
                     .size(width = 36.dp, height = 4.dp)
                     .clip(CircleShape)
-                    .background(onSurface.copy(alpha = 0.35f)),
+                    .background(contentColor.copy(alpha = 0.35f)),
         )
 
         // 5 horizontal lyric lines of varying widths, with active line highlighted
@@ -419,7 +419,7 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                         .fillMaxWidth(0.40f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(onSurface.copy(alpha = 0.25f)),
+                        .background(contentColor.copy(alpha = 0.25f)),
             )
             Box(
                 modifier =
@@ -427,7 +427,7 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                         .fillMaxWidth(0.60f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(onSurface.copy(alpha = 0.40f)),
+                        .background(contentColor.copy(alpha = 0.40f)),
             )
             // Active current lyric line
             Box(
@@ -436,7 +436,7 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                         .fillMaxWidth(0.75f)
                         .height(16.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(onSurface.copy(alpha = 0.90f)),
+                        .background(contentColor.copy(alpha = 0.90f)),
             )
             Box(
                 modifier =
@@ -444,7 +444,7 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                         .fillMaxWidth(0.50f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(onSurface.copy(alpha = 0.40f)),
+                        .background(contentColor.copy(alpha = 0.40f)),
             )
             Box(
                 modifier =
@@ -452,7 +452,7 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                         .fillMaxWidth(0.35f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(onSurface.copy(alpha = 0.25f)),
+                        .background(contentColor.copy(alpha = 0.25f)),
             )
         }
 
@@ -470,14 +470,14 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                         .weight(0.45f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
-                        .background(onSurface.copy(alpha = 0.85f)),
+                        .background(contentColor.copy(alpha = 0.85f)),
             )
             Box(
                 modifier =
                     Modifier
                         .size(10.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.95f)),
+                        .background(contentColor.copy(alpha = 0.95f)),
             )
             Box(
                 modifier =
@@ -485,7 +485,7 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                         .weight(0.55f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
-                        .background(onSurface.copy(alpha = 0.25f)),
+                        .background(contentColor.copy(alpha = 0.25f)),
             )
         }
 
@@ -502,21 +502,21 @@ private fun LyricsPreviewSkeleton(modifier: Modifier = Modifier) {
                     Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.45f)),
+                        .background(contentColor.copy(alpha = 0.45f)),
             )
             Box(
                 modifier =
                     Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.85f)),
+                        .background(contentColor.copy(alpha = 0.85f)),
             )
             Box(
                 modifier =
                     Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(onSurface.copy(alpha = 0.45f)),
+                        .background(contentColor.copy(alpha = 0.45f)),
             )
         }
     }
