@@ -44,6 +44,43 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
+      - name: Provide dummy google-services.json if missing
+        run: |
+          if [ ! -f app/google-services.json ] || [ ! -s app/google-services.json ]; then
+            cat << 'EOF' > app/google-services.json
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "dummy-pr-build",
+              "storage_bucket": "dummy-pr-build.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "moe.rgsekai.sekaitune"
+                  }
+                },
+                "oauth_client": [
+                  {
+                    "client_id": "000000000000-dummyclientidforprbuilds.apps.googleusercontent.com",
+                    "client_type": 3
+                  }
+                ],
+                "api_key": [
+                  {
+                    "current_key": "dummy_api_key_for_fork_pr_builds"
+                  }
+                ],
+                "services": {}
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
       - name: Build and Lint Mobile Universal Debug APK
         shell: bash
         run: |
