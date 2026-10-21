@@ -919,12 +919,12 @@ inline fun <reified T : Enum<T>> EnumListPreference(
     description: String? = null,
     noinline icon: (@Composable () -> Unit)?,
     selectedValue: T,
+    values: List<T> = remember { enumValues<T>().toList() },
     noinline valueText: @Composable (T) -> String,
+    noinline valueDescription: (@Composable (T) -> String)? = null,
     noinline onValueSelected: (T) -> Unit,
     isEnabled: Boolean = true,
 ) {
-    val values = remember { enumValues<T>().toList() }
-
     ListPreference(
         modifier = modifier,
         title = title,
@@ -933,6 +933,7 @@ inline fun <reified T : Enum<T>> EnumListPreference(
         selectedValue = selectedValue,
         values = values,
         valueText = valueText,
+        valueDescription = valueDescription,
         onValueSelected = onValueSelected,
         isEnabled = isEnabled,
     )

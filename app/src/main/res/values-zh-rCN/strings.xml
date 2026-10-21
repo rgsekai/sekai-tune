@@ -352,7 +352,6 @@
     <string name="custom_value">è‡ªå®šä¹‰å˜é‡</string>
     <string name="player">æ’­æ”¾å™¨</string>
     <string name="audio_quality">éŸ³é¢‘è´¨é‡</string>
-    <string name="audio_quality_auto">è‡ªåŠ¨</string>
     <string name="audio_quality_high">é«˜è´¨é‡</string>
     <string name="audio_quality_low">ä½Žè´¨é‡</string>
     <string name="mime_type">MIMEç±»åž‹</string>
@@ -574,5 +573,6 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 

@@ -90,7 +90,7 @@ fun PlayerSettings(navController: NavController) {
     val (audioQuality, onAudioQualityChange) =
         rememberEnumPreference(
             AudioQualityKey,
-            defaultValue = AudioQuality.AUTO,
+            defaultValue = AudioQuality.MEDIUM,
         )
     val (lowDataMode, onLowDataModeChange) =
         rememberPreference(
@@ -265,10 +265,18 @@ fun PlayerSettings(navController: NavController) {
                         onValueSelected = onAudioQualityChange,
                         valueText = {
                             when (it) {
-                                AudioQuality.HIGHEST -> stringResource(R.string.audio_quality_max)
-                                AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
-                                AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
                                 AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
+                                AudioQuality.MEDIUM -> stringResource(R.string.audio_quality_medium)
+                                AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
+                                AudioQuality.MAX -> stringResource(R.string.audio_quality_max)
+                            }
+                        },
+                        valueDescription = {
+                            when (it) {
+                                AudioQuality.LOW -> stringResource(R.string.audio_quality_low_desc)
+                                AudioQuality.MEDIUM -> stringResource(R.string.audio_quality_medium_desc)
+                                AudioQuality.HIGH -> stringResource(R.string.audio_quality_high_desc)
+                                AudioQuality.MAX -> stringResource(R.string.audio_quality_max_desc)
                             }
                         },
                     )

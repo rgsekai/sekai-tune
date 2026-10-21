@@ -46,7 +46,7 @@
     <string name="library_subtitle">Jouw muziek, speciaal voor jou geordend</string>
     <string name="library_playlists_subtitle">Al je afspeellijsten, netjes voor je geordend</string>
     <string name="library_songs_subtitle">Al je liedjes, overzichtelijk voor je gerangschikt</string>
-    <string name="library_artists_subtitle">Al je artiesten, op Ã©Ã©n plek</string>
+    <string name="library_artists_subtitle">Al je artiesten, op ÃƒÂ©ÃƒÂ©n plek</string>
     <string name="library_albums_subtitle">Al je albums, overzichtelijk geordend</string>
     <string name="most_played_badge">MEEST GESPEELD</string>
     <string name="play_all">Alles afspelen</string>
@@ -58,7 +58,7 @@
     <string name="on_device">Op het apparaat</string>
     <string name="recently_played">Onlangs afgespeeld</string>
     <string name="top_mixes">De beste mixen voor jou</string>
-    <string name="library_top_mixes_loading">Je AI-mixen voorbereidenâ€¦</string>
+    <string name="library_top_mixes_loading">Je AI-mixen voorbereidenÃ¢â‚¬Â¦</string>
     <string name="library_top_mixes_refresh">Mixen vernieuwen</string>
     <string name="library_top_mixes_configure_ai">AI configureren</string>
     <string name="library_top_mixes_ai_not_configured_title">Stel de AI in om mixen te maken</string>
@@ -73,8 +73,8 @@
     <string name="all_songs">Alle Liedjes</string>
     <string name="newest_first">Nieuwste eerst</string>
     <string name="oldest_first">Oudste eerst</string>
-    <string name="sort_a_to_z">A â†’ Z</string>
-    <string name="sort_z_to_a">Z â†’ A</string>
+    <string name="sort_a_to_z">A Ã¢â€ â€™ Z</string>
+    <string name="sort_z_to_a">Z Ã¢â€ â€™ A</string>
     <string name="sort_artist">Artiesten</string>
     <string name="most_played_sort">Meest afgespeeld</string>
     <string name="recently_added">Onlangs toegevoegd</string>
@@ -115,8 +115,8 @@
     <string name="liked_songs">Nummers die je leuk vond</string>
     <string name="downloaded_songs">Gedownloade nummers</string>
     <string name="playlist_is_empty">De afspeellijst is leeg</string>
-    <string name="remove_download_playlist_confirm">Wil je echt alle nummers met â€œ%sâ€ in de afspeellijst verwijderen uit de opslag voor gedownloade nummers?</string>
-    <string name="delete_playlist_confirm">Wil je de afspeellijst â€œ%sâ€ echt verwijderen?</string>
+    <string name="remove_download_playlist_confirm">Wil je echt alle nummers met Ã¢â‚¬Å“%sÃ¢â‚¬Â in de afspeellijst verwijderen uit de opslag voor gedownloade nummers?</string>
+    <string name="delete_playlist_confirm">Wil je de afspeellijst Ã¢â‚¬Å“%sÃ¢â‚¬Â echt verwijderen?</string>
     <string name="change_playlist_cover">Afbeelding van afspeellijst wijzigen</string>
     <string name="retry">Opnieuw proberen</string>
     <string name="radio">Radio</string>
@@ -182,7 +182,7 @@
     <string name="hide_playlist">Afspeellijst verbergen</string>
     <string name="unhide_playlist">Afspeellijst weergeven</string>
     <string name="show_hidden_playlists">Verborgen weergeven</string>
-    <string name="hide_playlist_confirm">â€œ%1$sâ€ verbergen in de bibliotheek?</string>
+    <string name="hide_playlist_confirm">Ã¢â‚¬Å“%1$sÃ¢â‚¬Â verbergen in de bibliotheek?</string>
     <string name="together_participants">Deelnemers</string>
     <string name="together_connected_count">%1$d verbonden</string>
     <string name="together_role_host">Host</string>
@@ -198,7 +198,7 @@
     <string name="together_kick_confirm">Wil je %1$s wegsturen?</string>
     <string name="together_ban_confirm">Wil je %1$s verbannen?</string>
     <string name="together_transfer_host_confirm">Wilt u de host-functie overdragen aan %1$s?</string>
-    <string name="together_requesting_song_change">De host vragen om van nummer te wisselenâ€¦</string>
+    <string name="together_requesting_song_change">De host vragen om van nummer te wisselenÃ¢â‚¬Â¦</string>
     <string name="together_song_change_failed">Het nummer is niet gewijzigd, probeer het opnieuw.</string>
     <string name="together_participant_joined_notification">%1$s is de ruimte binnengekomen</string>
     <string name="together_participant_left_notification">%1$s verliet de ruimte</string>
@@ -206,7 +206,7 @@
     <string name="remove_from_history">Verwijderen uit geschiedenis</string>
     <string name="remove_from_playlist">Verwijderen uit afspeellijst</string>
     <string name="remove_from_queue">Verwijderen uit wachtrij</string>
-    <string name="removed_song_from_queue">â€œ%sâ€ uit de wachtrij verwijderd</string>
+    <string name="removed_song_from_queue">Ã¢â‚¬Å“%sÃ¢â‚¬Â uit de wachtrij verwijderd</string>
     <string name="removed_n_songs_from_queue">%d nummers uit de wachtrij verwijderd</string>
     <string name="search_online">Online zoeken</string>
     <string name="tempo_and_pitch">Tempo en Toonhoogte</string>
@@ -268,10 +268,10 @@
     <string name="sources_remove">Remove</string>
     <string name="sources_remove_confirm">Remove \"%1$s\"? This cannot be undone.</string>
     <string name="sources_test">Test</string>
-    <string name="sources_testing">Testing…</string>
+    <string name="sources_testing">Testingâ€¦</string>
     <string name="sources_matching_title">Track Matching</string>
     <string name="sources_tolerance_title">Length tolerance</string>
-    <string name="sources_tolerance_seconds">±%1$d s</string>
+    <string name="sources_tolerance_seconds">Â±%1$d s</string>
     <string name="sources_tolerance_desc">Allowable difference between track length and candidate length</string>
     <string name="sources_health_ok">Connected (%s)</string>
     <string name="sources_health_unreachable">Unreachable: %s</string>
@@ -280,10 +280,11 @@
     <string name="search_source_youtube">YouTube</string>
     <string name="search_source_library">Library</string>
     <string name="search_source_addons">Addons</string>
-    <string name="search_addons_prompt">Search addonsâ€¦</string>
+    <string name="search_addons_prompt">Search addonsÃ¢â‚¬Â¦</string>
     <string name="no_addons_configured_title">No addons configured</string>
     <string name="no_addons_configured_desc">Add external sources to search beyond YouTube and your local library.</string>
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 

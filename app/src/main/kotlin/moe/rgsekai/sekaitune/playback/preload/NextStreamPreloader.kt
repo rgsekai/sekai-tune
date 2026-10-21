@@ -25,7 +25,7 @@ class NextStreamPreloader @Inject constructor(
 
     fun preloadQueue(
         videoIds: List<String>,
-        audioQuality: AudioQuality = AudioQuality.AUTO,
+        audioQuality: AudioQuality = AudioQuality.MEDIUM,
         preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
         networkMetered: Boolean = false,
     ) {
@@ -72,7 +72,7 @@ class NextStreamPreloader @Inject constructor(
 
     fun preloadNext(
         videoId: String,
-        audioQuality: AudioQuality = AudioQuality.AUTO,
+        audioQuality: AudioQuality = AudioQuality.MEDIUM,
         preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
         networkMetered: Boolean = false,
     ) {

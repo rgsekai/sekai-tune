@@ -25,7 +25,7 @@ enum class StreamResolutionPriority {
 
 data class AudioStreamRequest(
     val mediaId: String,
-    val quality: AudioQuality = AudioQuality.AUTO,
+    val quality: AudioQuality = AudioQuality.MEDIUM,
     val networkMetered: Boolean = false,
     val purpose: StreamPurpose = StreamPurpose.PLAYBACK,
     val preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,

@@ -539,11 +539,11 @@ object SettingsSearchRepository {
             SettingsSearchEntry(
                 id = "sub_audio_quality",
                 title = "Audio quality",
-                subtitle = "Choose streaming audio quality level (Auto, High, Medium, Low)",
+                subtitle = "Choose streaming audio quality level (Low, Medium, High, Max)",
                 category = playbackCategory,
                 iconRes = R.drawable.music_note,
                 route = "settings/player",
-                keywords = listOf("audio quality", "sound quality", "high quality", "bitrate", "stream quality", "320kbps", "256kbps"),
+                keywords = listOf("audio quality", "sound quality", "high quality", "max quality", "lossless", "flac", "bitrate", "stream quality", "320kbps", "256kbps"),
             ),
         )
         add(

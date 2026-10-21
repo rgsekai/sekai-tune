@@ -281,7 +281,7 @@
     <string name="app_language">アプリ言語</string>
     <string name="open_supported_links">対応リンクをデフォルトで開く</string>
     <string name="set_first_lyrics_provider">優先歌詞プロバイダー</string>
-    <string name="audio_quality_max">最大（ベータ）</string>
+    <string name="audio_quality_max">最大</string>
     <string name="percentage_format">%d%%</string>
     <string name="import_online">「m3u」プレイリストをインポート</string>
     <string name="import_csv">「csv」プレイリストをインポート</string>
@@ -538,7 +538,13 @@
     <string name="about_contributor_translation">翻訳貢献者</string>
     <string name="about_license">ライセンス</string>
     <string name="about_license_unknown">不明なライセンス</string>    <string name="about_content_desc_github">GitHub</string>    <string name="about_based_on_SekaiTune">Sekai Tune はオープンソースの ArchiveTune プロジェクトのフォークです (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+
 
 
 

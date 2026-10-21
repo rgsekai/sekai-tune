@@ -519,7 +519,6 @@
     <string name="enable_paxsenix_lyrics">Paxsenixæ­Œè©žã‚’æœ‰åŠ¹åŒ–</string>
     <string name="player_and_audio">ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã¨éŸ³å£°</string>
     <string name="audio_quality">éŸ³è³ª</string>
-    <string name="audio_quality_auto">è‡ªå‹•</string>
     <string name="audio_quality_high">é«˜</string>
     <string name="audio_quality_low">ä½Ž</string>
     <string name="low_data_mode_title">ä½Žãƒ‡ãƒ¼ã‚¿ãƒ¢ãƒ¼ãƒ‰</string>
@@ -919,6 +918,7 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="album_backdrop">à´ªà´¶àµà´šà´¾à´¤àµà´¤à´² à´®à´™àµà´™àµ½</string>
-    <string name="album_backdrop_desc">à´ªàµà´²àµ†à´¯à´±à´¿àµ½ à´†àµ¼à´Ÿàµà´Ÿàµà´µàµ¼à´•àµà´•àµ à´®à´™àµà´™à´¿à´¯ à´ªà´¶àµà´šà´¾à´¤àµà´¤à´²à´®à´¾à´¯à´¿ à´•à´¾à´£à´¿à´•àµà´•àµà´•</string>
-    <string name="backdrop_blur_amount">à´ªà´¶àµà´šà´¾à´¤àµà´¤à´² à´®à´™àµà´™à´²à´¿à´¨àµà´±àµ† à´…à´³à´µàµ</string>
+    <string name="album_backdrop">Ã Â´ÂªÃ Â´Â¶Ã ÂµÂÃ Â´Å¡Ã Â´Â¾Ã Â´Â¤Ã ÂµÂÃ Â´Â¤Ã Â´Â² Ã Â´Â®Ã Â´â„¢Ã ÂµÂÃ Â´â„¢Ã ÂµÂ½</string>
+    <string name="album_backdrop_desc">Ã Â´ÂªÃ ÂµÂÃ Â´Â²Ã Âµâ€ Ã Â´Â¯Ã Â´Â±Ã Â´Â¿Ã ÂµÂ½ Ã Â´â€ Ã ÂµÂ¼Ã Â´Å¸Ã ÂµÂÃ Â´Å¸Ã ÂµÂÃ Â´ÂµÃ ÂµÂ¼Ã Â´â€¢Ã ÂµÂÃ Â´â€¢Ã ÂµÂ Ã Â´Â®Ã Â´â„¢Ã ÂµÂÃ Â´â„¢Ã Â´Â¿Ã Â´Â¯ Ã Â´ÂªÃ Â´Â¶Ã ÂµÂÃ Â´Å¡Ã Â´Â¾Ã Â´Â¤Ã ÂµÂÃ Â´Â¤Ã Â´Â²Ã Â´Â®Ã Â´Â¾Ã Â´Â¯Ã Â´Â¿ Ã Â´â€¢Ã Â´Â¾Ã Â´Â£Ã Â´Â¿Ã Â´â€¢Ã ÂµÂÃ Â´â€¢Ã ÂµÂÃ Â´â€¢</string>
+    <string name="backdrop_blur_amount">Ã Â´ÂªÃ Â´Â¶Ã ÂµÂÃ Â´Å¡Ã Â´Â¾Ã Â´Â¤Ã ÂµÂÃ Â´Â¤Ã Â´Â² Ã Â´Â®Ã Â´â„¢Ã ÂµÂÃ Â´â„¢Ã Â´Â²Ã Â´Â¿Ã Â´Â¨Ã ÂµÂÃ Â´Â±Ã Âµâ€  Ã Â´â€¦Ã Â´Â³Ã Â´ÂµÃ ÂµÂ</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
     <!-- External Sources -->
     <string name="sources_title">Sources</string>
@@ -17,10 +17,10 @@
     <string name="sources_remove">Remove</string>
     <string name="sources_remove_confirm">Remove \"%1$s\"? This cannot be undone.</string>
     <string name="sources_test">Test</string>
-    <string name="sources_testing">Testing…</string>
+    <string name="sources_testing">Testingâ€¦</string>
     <string name="sources_matching_title">Track Matching</string>
     <string name="sources_tolerance_title">Length tolerance</string>
-    <string name="sources_tolerance_seconds">±%1$d s</string>
+    <string name="sources_tolerance_seconds">Â±%1$d s</string>
     <string name="sources_tolerance_desc">Allowable difference between track length and candidate length</string>
     <string name="sources_health_ok">Connected (%s)</string>
     <string name="sources_health_unreachable">Unreachable: %s</string>
@@ -29,9 +29,10 @@
     <string name="search_source_youtube">YouTube</string>
     <string name="search_source_library">Library</string>
     <string name="search_source_addons">Addons</string>
-    <string name="search_addons_prompt">Search addonsâ€¦</string>
+    <string name="search_addons_prompt">Search addonsÃ¢â‚¬Â¦</string>
     <string name="no_addons_configured_title">No addons configured</string>
     <string name="no_addons_configured_desc">Add external sources to search beyond YouTube and your local library.</string>
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+

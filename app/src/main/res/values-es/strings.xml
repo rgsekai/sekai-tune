@@ -309,7 +309,6 @@
     <string name="enable_simpmusic_lyrics">Activar letras de SimpMusic</string>
     <string name="player_and_audio">Reproductor y audio</string>
     <string name="audio_quality">Calidad de audio</string>
-    <string name="audio_quality_auto">AutomÃ¡tico</string>
     <string name="audio_quality_high">Alta</string>
     <string name="audio_quality_low">Baja</string>
     <string name="queue">Cola</string>
@@ -810,6 +809,7 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 
 

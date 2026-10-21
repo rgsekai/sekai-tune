@@ -307,6 +307,27 @@ class ResolveAudioStreamUseCase
                 return ytStream
             }
 
+            // Only MAX quality queries external addons!
+            // LOW, MEDIUM, HIGH use YouTube streams directly.
+            if (request.quality != AudioQuality.MAX) {
+                val ytStream = resolveYouTube(request, request.quality)
+                if (request.purpose == StreamPurpose.PLAYBACK) {
+                    val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
+                        mimeType = ytStream.format.mimeType,
+                        bitrateBps = ytStream.format.bitrate,
+                        sampleRateHz = ytStream.format.audioSampleRate,
+                    )
+                    audioQualityManager.setFinal(
+                        mediaId = request.mediaId,
+                        label = label,
+                        isLossless = isLossless,
+                        isHiRes = false,
+                        details = "",
+                    )
+                }
+                return ytStream
+            }
+
             // Check if any external addons are enabled
             val enabledAddons = sourceRegistry.sourcesFlow.value.filter { it.kind == SourceKind.ADDON && it.isEnabled }
             if (enabledAddons.isEmpty()) {

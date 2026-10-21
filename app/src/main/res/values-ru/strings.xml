@@ -318,7 +318,6 @@
     <string name="enable_simpmusic_lyrics">Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ SimpMusic lyrics</string>
     <string name="player_and_audio">ÐŸÐ»ÐµÐµÑ€ Ð¸ Ð°ÑƒÐ´Ð¸Ð¾</string>
     <string name="audio_quality">ÐšÐ°Ñ‡ÐµÑÑ‚Ð²Ð¾ Ð°ÑƒÐ´Ð¸Ð¾</string>
-    <string name="audio_quality_auto">ÐÐ²Ñ‚Ð¾</string>
     <string name="audio_quality_high">Ð’Ñ‹ÑÐ¾ÐºÐ¾Ðµ</string>
     <string name="audio_quality_low">ÐÐ¸Ð·ÐºÐ¾Ðµ</string>
     <string name="queue">ÐžÑ‡ÐµÑ€ÐµÐ´ÑŒ</string>
@@ -662,5 +661,6 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 

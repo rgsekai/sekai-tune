@@ -608,11 +608,10 @@ object YTPlayerUtils {
         runCatching {
             val attempts =
                 when (audioQuality) {
-                    AudioQuality.HIGHEST -> listOf(AudioQuality.HIGHEST, AudioQuality.HIGH, AudioQuality.LOW)
-                    AudioQuality.HIGH -> listOf(AudioQuality.HIGH, AudioQuality.LOW)
-                    AudioQuality.AUTO -> listOf(AudioQuality.AUTO, AudioQuality.HIGH, AudioQuality.LOW)
-                    AudioQuality.LOW -> listOf(AudioQuality.LOW, AudioQuality.HIGH, AudioQuality.AUTO)
-                    else -> listOf(audioQuality)
+                    AudioQuality.MAX -> listOf(AudioQuality.MAX, AudioQuality.HIGH, AudioQuality.MEDIUM, AudioQuality.LOW)
+                    AudioQuality.HIGH -> listOf(AudioQuality.HIGH, AudioQuality.MEDIUM, AudioQuality.LOW)
+                    AudioQuality.MEDIUM -> listOf(AudioQuality.MEDIUM, AudioQuality.HIGH, AudioQuality.LOW)
+                    AudioQuality.LOW -> listOf(AudioQuality.LOW, AudioQuality.MEDIUM, AudioQuality.HIGH)
                 }.distinct()
 
             var lastError: Throwable? = null
@@ -790,7 +789,7 @@ object YTPlayerUtils {
                         ITAG.AUDIO_AAC_LOW,
                         ITAG.AUDIO_AAC_MEDIUM,
                     )
-                AudioQuality.HIGH, AudioQuality.HIGHEST ->
+                AudioQuality.HIGH, AudioQuality.MAX ->
                     listOf(
                         ITAG.AUDIO_OPUS_HIGH,
                         ITAG.AUDIO_OPUS_MEDIUM,
@@ -798,7 +797,7 @@ object YTPlayerUtils {
                         ITAG.AUDIO_AAC_MEDIUM,
                         ITAG.AUDIO_OPUS_LOW,
                     )
-                AudioQuality.AUTO ->
+                AudioQuality.MEDIUM ->
                     if (isMetered) {
                         listOf(
                             ITAG.AUDIO_OPUS_MEDIUM,
@@ -1334,7 +1333,7 @@ object YTPlayerUtils {
 
         val effectiveQuality =
             when (audioQuality) {
-                AudioQuality.AUTO -> if (networkMetered) AudioQuality.HIGH else AudioQuality.HIGHEST
+                AudioQuality.MEDIUM -> if (networkMetered) AudioQuality.HIGH else AudioQuality.MAX
                 else -> audioQuality
             }
 
@@ -1342,8 +1341,8 @@ object YTPlayerUtils {
             when (effectiveQuality) {
                 AudioQuality.LOW -> 70_000
                 AudioQuality.HIGH -> 160_000
-                AudioQuality.HIGHEST -> 320_000
-                AudioQuality.AUTO -> null
+                AudioQuality.MAX -> 320_000
+                AudioQuality.MEDIUM -> null
             }
 
         val preferHigher =
@@ -1360,7 +1359,7 @@ object YTPlayerUtils {
 
         val candidates =
             when {
-                targetBitrateBps == null || effectiveQuality == AudioQuality.HIGHEST -> {
+                targetBitrateBps == null || effectiveQuality == AudioQuality.MAX -> {
                     audioFormats.sortedWith(preferHigher)
                 }
 

@@ -181,7 +181,7 @@
         <item quantity="other">%d 倍</item>
     </plurals>
     <string name="seek_forward_dynamic">快进 %1$d 秒</string>
-    <string name="seek_backward_dynamic">快退 %1$d 秒</string>    <string name="audio_quality_max">最高（Beta）</string>
+    <string name="seek_backward_dynamic">快退 %1$d 秒</string>    <string name="audio_quality_max">最高</string>
     <string name="percentage_format">%d%%</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <plurals name="seconds">
@@ -228,4 +228,10 @@
     <string name="local_songs_permission_body">允许访问存储空间以扫描本地音频文件</string>
     <string name="local_songs_no_matches_title">未发现符合条件的本地歌曲</string>
     <string name="about_based_on_SekaiTune">Sekai Tune 是开源 ArchiveTune 项目的分支 (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+

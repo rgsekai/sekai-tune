@@ -102,7 +102,7 @@
     <string name="glow">Kuma</string>
     <string name="default_style">Vaikimisi</string>
     <string name="secondary_color_style">Teisene</string>
-    <string name="audio_quality_max">Maksimaalne (beeta)</string>
+    <string name="audio_quality_max">Maksimaalne</string>
     <string name="history_duration">Ajaloo kestus</string>
     <string name="information">Teave</string>
     <string name="description">Kirjeldus</string>
@@ -203,4 +203,10 @@
     <string name="playlist_add_local_to_synced_note">Kohalike lugude lisamine sünkroonitud või serveri esitusloendisse pole toetatud. Kõik muud kombinatsioonid on lubatud</string>
     <string name="token_adv_login_description">See on sisselogimismeetud oskuskasutajatele. Veebivaate asemel võid tunnusloa lisada otse siia ja samas seda ka uuendada. Ja see võib näiteks see kiirendab sisselogimise mitmes seadmes. Palun arvesta, et kui tunnusloa vorming on vigane ja selle töötlemine ei õnnestu, siis rakendus seda ei kasuta.</string>
     <string name="about_based_on_SekaiTune">Sekai Tune on avatud lähtekoodiga projekti ArchiveTune haru (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+

@@ -509,7 +509,6 @@
     <string name="enable_paxsenix_lyrics">Ativar letras do Paxsenix</string>
     <string name="player_and_audio">Player e Ã¡udio</string>
     <string name="audio_quality">Qualidade de Ã¡udio</string>
-    <string name="audio_quality_auto">AutomÃ¡tico</string>
     <string name="audio_quality_high">Alta</string>
     <string name="audio_quality_low">Baixa</string>
     <string name="low_data_mode_title">Modo de baixo consumo de dados</string>
@@ -910,6 +909,7 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 
 

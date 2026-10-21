@@ -235,10 +235,26 @@ val NetworkMeteredKey = booleanPreferencesKey("networkMetered")
 val LowDataModeKey = NetworkMeteredKey
 
 enum class AudioQuality {
-    AUTO,
-    HIGH,
-    HIGHEST,
     LOW,
+    MEDIUM,
+    HIGH,
+    MAX;
+
+    companion object {
+        val AUTO get() = MEDIUM
+        val HIGHEST get() = MAX
+
+        fun fromPreferences(raw: String?): AudioQuality {
+            val normalized = raw?.trim()?.uppercase() ?: return MEDIUM
+            return when {
+                normalized == "LOW" -> LOW
+                normalized == "MEDIUM" || normalized == "AUTO" -> MEDIUM
+                normalized == "HIGH" -> HIGH
+                normalized == "MAX" || normalized == "HIGHEST" || normalized.startsWith("MAX") || normalized.contains("BETA") -> MAX
+                else -> MEDIUM
+            }
+        }
+    }
 }
 
 val PlayerStreamClientKey = stringPreferencesKey("playerStreamClient")

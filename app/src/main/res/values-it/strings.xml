@@ -276,7 +276,6 @@
     <string name="enable_simpmusic_lyrics">Abilita i testi di SimpMusic</string>
     <string name="player_and_audio">Lettore e audio</string>
     <string name="audio_quality">QualitÃ  audio</string>
-    <string name="audio_quality_auto">Automatico</string>
     <string name="audio_quality_high">Alto</string>
     <string name="audio_quality_low">Basso</string>
     <string name="queue">Coda</string>
@@ -536,5 +535,6 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 

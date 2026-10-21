@@ -368,7 +368,7 @@ class MusicService :
     private val audioQuality by enumPreference(
         this,
         AudioQualityKey,
-        moe.rgsekai.sekaitune.constants.AudioQuality.AUTO,
+        moe.rgsekai.sekaitune.constants.AudioQuality.MEDIUM,
     )
     private val preferredStreamClient by enumPreference(
         this,

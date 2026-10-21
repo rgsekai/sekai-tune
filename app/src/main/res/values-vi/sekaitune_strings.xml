@@ -107,7 +107,7 @@
     <string name="app_language">Ngôn ngữ ứng dụng</string>
     <string name="open_supported_links">Mở liên kết được hỗ trợ theo mặc định</string>
     <string name="set_first_lyrics_provider">Nhà cung cấp lời bài hát ưa thích</string>
-    <string name="audio_quality_max">Tối đa (beta)</string>
+    <string name="audio_quality_max">Tối đa</string>
     <string name="percentage_format">%d%%</string>
     <string name="import_online">Nhập danh sách phát \"m3u\"</string>
     <string name="import_csv">Nhập danh sách phát \"csv\"</string>
@@ -527,7 +527,13 @@
     <string name="theme_export_failed">Xuất thất bại</string>
     <string name="theme_import_failed_title">Không thể nhập giao diện</string>
     <string name="top_albums">Album hàng đầu</string>    <string name="about_based_on_SekaiTune">Sekai Tune là một bản phân nhánh (fork) của dự án mã nguồn mở ArchiveTune (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+
 
 
 

@@ -280,7 +280,6 @@
     <string name="enable_betterlyrics">Activer BetterLyrics</string>
     <string name="player_and_audio">Lecteur &amp; Audio</string>
     <string name="audio_quality">QualitÃ© audio</string>
-    <string name="audio_quality_auto">Auto</string>
     <string name="audio_quality_high">Haute</string>
     <string name="audio_quality_low">Basse</string>
     <string name="persistent_queue">File d\'attente persistante</string>
@@ -928,6 +927,7 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 
 

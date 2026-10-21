@@ -109,7 +109,7 @@
     <string name="app_language">Uygulama dili</string>
     <string name="open_supported_links">Desteklenen bağlantıyı varsayılan olarak aç</string>
     <string name="set_first_lyrics_provider">Tercih edilen şarkı sözü sağlayıcısı</string>
-    <string name="audio_quality_max">Maksimum (beta)</string>
+    <string name="audio_quality_max">Maksimum</string>
     <string name="percentage_format">%d%%</string>
     <string name="import_online">\"m3u\" çalma listelerini içe aktar</string>
     <string name="import_csv">\"csv\" oynatma listelerini içe aktarın</string>
@@ -212,4 +212,10 @@
     <string name="local_songs_empty_desc">Üst çubuktan ayarları açın ve bu cihazda çevrimdışı ses bulmak için bir cihaz taraması yapın.</string>
     <string name="local_songs_scan_failed">Bu cihazın taraması tamamlanamadı.</string>
     <string name="about_based_on_SekaiTune">Sekai Tune, açık kaynaklı ArchiveTune projesinin bir çatalıdır (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+

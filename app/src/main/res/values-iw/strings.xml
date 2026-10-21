@@ -182,7 +182,6 @@
     <string name="downloading">×ž×•×¨×™×“</string>
     <string name="eq_manage">× ×™×”×•×œ</string>
     <string name="palette_sky_blue">×ª×›×œ×ª</string>
-    <string name="audio_quality_auto">××•×˜×•×ž×˜×™×ª</string>
     <string name="random_theme_on_startup">×¢×¨×›×ª × ×•×©× ××§×¨××™×ª ×‘×¢×ª ×”×”×¤×¢×œ×”</string>
     <string name="palette_twilight">×“×ž×“×•×</string>
     <string name="volume">×¢×•×¦×ž×ª ×§×•×œ</string>
@@ -908,6 +907,7 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 
 

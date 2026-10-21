@@ -9,4 +9,10 @@
     <string name="music_recognition_signature_failed">हस्ताक्षर उत्पन्न नहीं किया जा सका</string>
     <string name="music_recognition_recognition_failed">पहचान विफल रही</string>
     <string name="about_based_on_SekaiTune">Sekai Tune ओपन-सोर्स ArchiveTune प्रोजेक्ट (GPL-3.0) का एक फोर्क है</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+

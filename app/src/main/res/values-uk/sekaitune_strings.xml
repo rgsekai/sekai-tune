@@ -103,7 +103,7 @@
     <string name="app_language">Мова застосунку</string>
     <string name="open_supported_links">Відкривати посилання за замовчуванням</string>
     <string name="set_first_lyrics_provider">Улюблений постачальник текстів пісень</string>
-    <string name="audio_quality_max">Максимум (бета)</string>
+    <string name="audio_quality_max">Максимум</string>
     <string name="percentage_format">%d%%</string>
     <string name="import_online">Імпортувати списки відтворення у форматі «m3u»</string>
     <string name="import_csv">Імпортувати списки відтворення у форматі «csv»</string>
@@ -284,4 +284,10 @@
     <string name="sort_by_album">Альбом</string>
     <string name="lyrics_line_blur">Розмиті рядки тексту пісні</string>
     <string name="about_based_on_SekaiTune">Sekai Tune — це форк проєкту з відкритим вихідним кодом ArchiveTune (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+

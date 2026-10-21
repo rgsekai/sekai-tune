@@ -182,7 +182,7 @@
     <string name="app_language">앱 언어</string>
     <string name="open_supported_links">지원되는 링크 기본값으로 열기</string>
     <string name="set_first_lyrics_provider">선호하는 가사 제공처 설정</string>
-    <string name="audio_quality_max">최대 음질 (베타)</string>
+    <string name="audio_quality_max">최대 음질</string>
     <string name="percentage_format">%d%%</string>
     <string name="import_online">M3U 재생목록 가져오기</string>
     <string name="import_csv">CSV 재생목록 가져오기</string>
@@ -527,7 +527,13 @@
     <string name="about_contributor_translation">번역 기여자</string>
     <string name="about_license">오픈소스 라이선스</string>
     <string name="about_license_unknown">알 수 없는 라이선스</string>    <string name="about_based_on_SekaiTune">Sekai Tune은 오픈 소스 ArchiveTune 프로젝트의 포크입니다 (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+
 
 
 

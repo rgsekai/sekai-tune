@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="songs">à®ªà®¾à®Ÿà¯à®Ÿà¯à®•à®³à¯</string>
-    <string name="artists">à®•à®²à¯ˆà®žà®°à¯à®•à®³à¯</string>
-    <string name="albums">à®‡à®šà¯ˆà®¤à¯ à®¤à¯Šà®•à¯à®ªà¯à®ªà¯</string>
-    <string name="history">à®•à¯‡à®Ÿà¯à®Ÿ à®ªà®¾à®Ÿà®²à¯à®•à®³à¯</string>
-    <string name="today">à®‡à®©à¯à®±à¯</string>
-    <string name="yesterday">à®¨à¯‡à®±à¯à®±à¯</string>
-    <string name="this_week">à®‡à®¨à¯à®¤ à®µà®¾à®°à®®à¯</string>
-    <string name="last_week">à®•à®Ÿà®¨à¯à®¤ à®µà®¾à®°à®®à¯</string>
-    <string name="most_played_songs">à®…à®¤à®¿à®•à®®à¯ à®•à¯‡à®Ÿà¯à®•à®ªà¯à®ªà®Ÿà¯à®Ÿ à®ªà®¾à®Ÿà®²à¯à®•à®³à¯</string>
-    <string name="search">à®¤à¯‡à®Ÿà¯</string>
+    <string name="songs">Ã Â®ÂªÃ Â®Â¾Ã Â®Å¸Ã Â¯ÂÃ Â®Å¸Ã Â¯ÂÃ Â®â€¢Ã Â®Â³Ã Â¯Â</string>
+    <string name="artists">Ã Â®â€¢Ã Â®Â²Ã Â¯Ë†Ã Â®Å¾Ã Â®Â°Ã Â¯ÂÃ Â®â€¢Ã Â®Â³Ã Â¯Â</string>
+    <string name="albums">Ã Â®â€¡Ã Â®Å¡Ã Â¯Ë†Ã Â®Â¤Ã Â¯Â Ã Â®Â¤Ã Â¯Å Ã Â®â€¢Ã Â¯ÂÃ Â®ÂªÃ Â¯ÂÃ Â®ÂªÃ Â¯Â</string>
+    <string name="history">Ã Â®â€¢Ã Â¯â€¡Ã Â®Å¸Ã Â¯ÂÃ Â®Å¸ Ã Â®ÂªÃ Â®Â¾Ã Â®Å¸Ã Â®Â²Ã Â¯ÂÃ Â®â€¢Ã Â®Â³Ã Â¯Â</string>
+    <string name="today">Ã Â®â€¡Ã Â®Â©Ã Â¯ÂÃ Â®Â±Ã Â¯Â</string>
+    <string name="yesterday">Ã Â®Â¨Ã Â¯â€¡Ã Â®Â±Ã Â¯ÂÃ Â®Â±Ã Â¯Â</string>
+    <string name="this_week">Ã Â®â€¡Ã Â®Â¨Ã Â¯ÂÃ Â®Â¤ Ã Â®ÂµÃ Â®Â¾Ã Â®Â°Ã Â®Â®Ã Â¯Â</string>
+    <string name="last_week">Ã Â®â€¢Ã Â®Å¸Ã Â®Â¨Ã Â¯ÂÃ Â®Â¤ Ã Â®ÂµÃ Â®Â¾Ã Â®Â°Ã Â®Â®Ã Â¯Â</string>
+    <string name="most_played_songs">Ã Â®â€¦Ã Â®Â¤Ã Â®Â¿Ã Â®â€¢Ã Â®Â®Ã Â¯Â Ã Â®â€¢Ã Â¯â€¡Ã Â®Å¸Ã Â¯ÂÃ Â®â€¢Ã Â®ÂªÃ Â¯ÂÃ Â®ÂªÃ Â®Å¸Ã Â¯ÂÃ Â®Å¸ Ã Â®ÂªÃ Â®Â¾Ã Â®Å¸Ã Â®Â²Ã Â¯ÂÃ Â®â€¢Ã Â®Â³Ã Â¯Â</string>
+    <string name="search">Ã Â®Â¤Ã Â¯â€¡Ã Â®Å¸Ã Â¯Â</string>
     <!-- External Sources -->
     <string name="sources_title">Sources</string>
     <string name="sources_subtitle">Manage external audio providers and priority</string>
@@ -23,10 +23,10 @@
     <string name="sources_remove">Remove</string>
     <string name="sources_remove_confirm">Remove \"%1$s\"? This cannot be undone.</string>
     <string name="sources_test">Test</string>
-    <string name="sources_testing">Testing…</string>
+    <string name="sources_testing">Testingâ€¦</string>
     <string name="sources_matching_title">Track Matching</string>
     <string name="sources_tolerance_title">Length tolerance</string>
-    <string name="sources_tolerance_seconds">±%1$d s</string>
+    <string name="sources_tolerance_seconds">Â±%1$d s</string>
     <string name="sources_tolerance_desc">Allowable difference between track length and candidate length</string>
     <string name="sources_health_ok">Connected (%s)</string>
     <string name="sources_health_unreachable">Unreachable: %s</string>
@@ -35,9 +35,10 @@
     <string name="search_source_youtube">YouTube</string>
     <string name="search_source_library">Library</string>
     <string name="search_source_addons">Addons</string>
-    <string name="search_addons_prompt">Search addonsâ€¦</string>
+    <string name="search_addons_prompt">Search addonsÃ¢â‚¬Â¦</string>
     <string name="no_addons_configured_title">No addons configured</string>
     <string name="no_addons_configured_desc">Add external sources to search beyond YouTube and your local library.</string>
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+

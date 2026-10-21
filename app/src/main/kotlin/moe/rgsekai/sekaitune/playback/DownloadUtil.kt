@@ -90,7 +90,7 @@ class DownloadUtil
         private val resolveAudioStream: ResolveAudioStreamUseCase,
     ) {
         val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
+        private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.MEDIUM)
         private val downloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private val downloadExecutor = Executors.newFixedThreadPool(MAX_PARALLEL_DOWNLOADS)
         private val artworkJobs = mutableMapOf<String, Job>()

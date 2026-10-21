@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import moe.rgsekai.sekaitune.constants.AudioQuality
+import moe.rgsekai.sekaitune.constants.AudioQualityKey
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_LEGACY_FLOAT_KEY
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MAX
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MIN
@@ -56,6 +58,22 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
                                     .coerceIn(HISTORY_DURATION_MIN, HISTORY_DURATION_MAX)
                             this.remove(HISTORY_DURATION_LEGACY_FLOAT_KEY)
                         }
+                    }
+
+                override suspend fun cleanUp() {}
+            },
+            object : DataMigration<Preferences> {
+                override suspend fun shouldMigrate(currentData: Preferences): Boolean {
+                    val raw = currentData[AudioQualityKey] ?: return false
+                    return raw.equals("AUTO", ignoreCase = true) ||
+                        raw.equals("HIGHEST", ignoreCase = true) ||
+                        raw.contains("beta", ignoreCase = true)
+                }
+
+                override suspend fun migrate(currentData: Preferences): Preferences =
+                    currentData.toMutablePreferences().apply {
+                        val raw = currentData[AudioQualityKey]
+                        this[AudioQualityKey] = AudioQuality.fromPreferences(raw).name
                     }
 
                 override suspend fun cleanUp() {}
@@ -141,7 +159,15 @@ inline fun <reified T : Enum<T>> enumPreference(
     context: Context,
     key: Preferences.Key<String>,
     defaultValue: T,
-) = ReadOnlyProperty<Any?, T> { _, _ -> context.dataStore[key].toEnum(defaultValue) }
+) = ReadOnlyProperty<Any?, T> { _, _ ->
+    val raw = context.dataStore[key]
+    if (T::class == AudioQuality::class) {
+        @Suppress("UNCHECKED_CAST")
+        (AudioQuality.fromPreferences(raw) as T)
+    } else {
+        raw.toEnum(defaultValue)
+    }
+}
 
 @Composable
 fun <T> rememberPreference(
@@ -184,7 +210,15 @@ inline fun <reified T : Enum<T>> rememberEnumPreference(
     val state =
         remember {
             context.dataStore.data
-                .map { it[key].toEnum(defaultValue = defaultValue) }
+                .map { prefs ->
+                    val raw = prefs[key]
+                    if (T::class == AudioQuality::class) {
+                        @Suppress("UNCHECKED_CAST")
+                        (AudioQuality.fromPreferences(raw) as T)
+                    } else {
+                        raw.toEnum(defaultValue = defaultValue)
+                    }
+                }
                 .distinctUntilChanged()
         }.collectAsState(defaultValue)
 

@@ -92,7 +92,7 @@
     <string name="app_language">App-Sprache</string>
     <string name="open_supported_links">Unterstützten Link standardmäßig öffnen</string>
     <string name="set_first_lyrics_provider">Bevorzugter Textanbieter</string>
-    <string name="audio_quality_max">Max (Beta)</string>
+    <string name="audio_quality_max">Max</string>
     <string name="percentage_format">%d%%</string>
     <string name="import_online">Importieren Sie eine „m3u“-Wiedergabeliste</string>
     <string name="import_csv">Importieren Sie eine „CSV“-Wiedergabeliste</string>
@@ -449,5 +449,11 @@
     <string name="ai_api_test_failed">API-Test fehlgeschlagen</string>
     <string name="ai_translation_menu">KI-Übersetzung</string>
     <string name="about_based_on_SekaiTune">Sekai Tune ist ein Fork des quelloffenen ArchiveTune-Projekts (GPL-3.0)</string>
+    <string name="audio_quality_medium">Medium</string>
+    <string name="audio_quality_low_desc">Saves data. Streams at lower bitrate (~48-70 kbps).</string>
+    <string name="audio_quality_medium_desc">Balances quality and data usage. Adapts to your network.</string>
+    <string name="audio_quality_high_desc">Best available stream from YouTube (~160 kbps).</string>
+    <string name="audio_quality_max_desc">Highest available at the source. Lossless or 320 kbps+ from your addons when found.</string>
 </resources>
+
 

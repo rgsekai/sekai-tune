@@ -502,7 +502,6 @@
     <string name="source">Ù…ØµØ¯Ø±</string>
     <string name="enable_youlyplus_lyrics">YouLyPlus Ú©Û’ Ø¨ÙˆÙ„ Ú©Ùˆ ÙØ§Ø¹Ù„ Ú©Ø±ÛŒÚº</string>
     <string name="audio_quality">Ù…Ø¹ÛŒØ§Ø± Ø³Ø§Ù…Ø¹Û</string>
-    <string name="audio_quality_auto">Ø®ÙˆØ¯Ú©Ø§Ø±</string>
     <string name="audio_quality_high">Ø§Ø¹Ù„ÛŒÙ°</string>
     <string name="audio_quality_low">Ú©Ù…</string>
     <string name="low_data_mode_description">Ù…ÛŒÙ¹Ø±Úˆ Ù†ÛŒÙ¹ÙˆØ±Ú©Ø³ Ù¾Ø± Ù†Ø´Ø± Ú©ÛŒØ´ØŒ ØªØµÙˆÛŒØ±ØŒ Ø§ÙˆØ± Ø¨ÙˆÙ„ Ú©Ùˆ Ù¾Ø³ Ù…Ù†Ø¸Ø± Ù…ÛŒÚº Ù„Ø§Ø¯Ù†Û’ Ø³Û’ Ù…Ù†Ø³ÙˆØ® Ú©Ø±Ú©Û’ Ø§ÙˆØ± Ù†Ø´Ø± Ú©Û’ Ù…Ø¹ÛŒØ§Ø± Ú©Ùˆ Ú©Ù… Ú©Ø±Ú©Û’ Ù…ÙˆØ¨Ø§Ø¦Ù„ ÚˆÛŒÙ¹Ø§ Ú©Û’ Ø§Ø³ØªØ¹Ù…Ø§Ù„ Ú©Ùˆ Ú©Ù… Ú©Ø±ØªØ§ ÛÛ’</string>
@@ -669,5 +668,6 @@
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
 </resources>
+
 
 
