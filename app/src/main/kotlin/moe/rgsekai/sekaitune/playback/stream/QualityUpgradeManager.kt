@@ -63,6 +63,23 @@ class QualityUpgradeManager @Inject constructor(
     var swapCallback: ((mediaId: String, upgradedItem: MediaItem, customHeaders: Map<String, String>?, targetPositionMs: Long) -> Boolean)? = null
     var revertCallback: ((mediaId: String, positionMs: Long) -> Unit)? = null
     var isEligibleForUpgrade: (() -> Boolean)? = null
+    var playerCurrentMediaId: (() -> String?)? = null
+    var playerIsPlaying: (() -> Boolean)? = null
+    var playerCurrentPosition: (() -> Long)? = null
+
+    fun isBlacklisted(mediaId: String, sourceName: String): Boolean {
+        return blacklistedAddons[mediaId]?.contains(sourceName) == true
+    }
+
+    fun blacklistAddonForTrack(mediaId: String, sourceName: String) {
+        blacklistedAddons.getOrPut(mediaId) { ConcurrentHashMap.newKeySet() }.add(sourceName)
+    }
+
+    fun onDirectAddonStarted(mediaId: String, sourceName: String) {
+        cancelUpgrade("Direct addon playback started")
+        activeUpgradedSourceName = sourceName
+        startWatchdog(mediaId, sourceName, 0L)
+    }
 
     data class AuditionResult(
         val isSuccess: Boolean,
@@ -111,9 +128,24 @@ class QualityUpgradeManager @Inject constructor(
 
             // Check if already won & cached
             var candidate: AddonStreamResult? = ResolveAudioStreamUseCase.getWinningSource(mediaId)
+                ?: ResolveAudioStreamUseCase.getPendingAddonStream(mediaId)
             val blacklisted = blacklistedAddons[mediaId] ?: emptySet()
             if (candidate != null && blacklisted.contains(candidate.sourceName)) {
                 candidate = null
+            }
+
+            if (candidate == null) {
+                // Rule 3: Check if in-flight addon preload exists; await it so we don't double query
+                val inFlight = ResolveAudioStreamUseCase.getInFlightAddonPreload(mediaId)
+                if (inFlight != null) {
+                    Timber.tag(TAG).d("[QualityUpgrade] Awaiting in-flight preload for %s", mediaId)
+                    candidate = withTimeoutOrNull(ResolveAudioStreamUseCase.ADDON_RESOLUTION_BUDGET_MS) {
+                        inFlight.await()
+                    }
+                    if (candidate != null && blacklisted.contains(candidate.sourceName)) {
+                        candidate = null
+                    }
+                }
             }
 
             if (candidate == null) {
@@ -303,7 +335,32 @@ class QualityUpgradeManager @Inject constructor(
     private fun startWatchdog(mediaId: String, sourceName: String, originalPositionMs: Long) {
         watchdogJob?.cancel()
         watchdogJob = scope.launch {
-            delay(WATCHDOG_DURATION_MS)
+            var lastPos = originalPositionMs
+            var stallCount = 0
+            val checkIntervalMs = 2000L
+            val totalChecks = (WATCHDOG_DURATION_MS / checkIntervalMs).toInt()
+
+            for (i in 1..totalChecks) {
+                delay(checkIntervalMs)
+                val currentPlayingId = playerCurrentMediaId?.invoke()
+                if (currentPlayingId != null && currentPlayingId != mediaId) {
+                    return@launch
+                }
+                val isPlaying = playerIsPlaying?.invoke() == true
+                val curPos = playerCurrentPosition?.invoke() ?: 0L
+
+                if (isPlaying && curPos <= lastPos && curPos > 0L) {
+                    stallCount++
+                    if (stallCount >= 3) {
+                        Timber.tag(TAG).w("[QualityUpgrade:Watchdog] Playback stalled for %s (%s) at %d ms. Reverting.", mediaId, sourceName, curPos)
+                        onPlaybackFailedOrStalled(mediaId, curPos, "Playback stalled for 6s at pos $curPos")
+                        return@launch
+                    }
+                } else {
+                    stallCount = 0
+                    lastPos = curPos
+                }
+            }
             Timber.tag(TAG).d("[QualityUpgrade:Watchdog] 30s monitoring passed cleanly for %s from %s", mediaId, sourceName)
             if (activeUpgradedSourceName == sourceName) {
                 activeUpgradedSourceName = null

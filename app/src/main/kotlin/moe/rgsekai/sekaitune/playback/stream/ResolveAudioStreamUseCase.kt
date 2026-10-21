@@ -512,22 +512,35 @@ class ResolveAudioStreamUseCase
                 }
             }
 
-            // Wait until all addon jobs complete or 1500 ms budget expires
-            withTimeoutOrNull(ADDON_RESOLUTION_BUDGET_MS) {
-                addonJobs.forEach { it.join() }
-            }
-
             val ytBaselineBitrate = if (ytDeferred.isCompleted) {
                 runCatching { ytDeferred.getCompleted().format.bitrate / 1000 }.getOrDefault(160)
             } else {
                 160
             }
 
+            val addonDeferred = scope.async(Dispatchers.IO) {
+                withTimeoutOrNull(ADDON_RESOLUTION_BUDGET_MS) {
+                    addonJobs.forEach { it.join() }
+                }
+                val currentYtBitrate = if (ytDeferred.isCompleted) {
+                    runCatching { ytDeferred.getCompleted().format.bitrate / 1000 }.getOrDefault(ytBaselineBitrate)
+                } else {
+                    ytBaselineBitrate
+                }
+                val completedReports = queryResults.toList()
+                completedReports
+                    .mapNotNull { it.streamResult }
+                    .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, currentYtBitrate) }
+                    .maxByOrNull { it.rank }
+            }
+            inFlightAddonPreload[request.mediaId] = addonDeferred
+
+            val bestAddon = try {
+                addonDeferred.await()
+            } finally {
+                inFlightAddonPreload.remove(request.mediaId, addonDeferred)
+            }
             val completedReports = queryResults.toList()
-            val bestAddon = completedReports
-                .mapNotNull { it.streamResult }
-                .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
-                .maxByOrNull { it.rank }
 
             if (bestAddon != null) {
                 scope.launch(Dispatchers.IO) {
@@ -980,6 +993,9 @@ class ResolveAudioStreamUseCase
             val pendingAddonResults = ConcurrentHashMap<String, AddonStreamResult>()
             val winningSourceCache = ConcurrentHashMap<String, AddonStreamResult>()
             val fallbackYouTubeCache = ConcurrentHashMap<String, ResolvedAudioStream>()
+            val inFlightAddonPreload = ConcurrentHashMap<String, Deferred<AddonStreamResult?>>()
+
+            fun getInFlightAddonPreload(mediaId: String): Deferred<AddonStreamResult?>? = inFlightAddonPreload[mediaId]
 
             fun getPendingAddonStream(mediaId: String): AddonStreamResult? = pendingAddonResults[mediaId]
 
