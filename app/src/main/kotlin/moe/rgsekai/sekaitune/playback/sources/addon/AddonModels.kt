@@ -286,6 +286,133 @@ sealed interface AddonResponse<out T> {
 }
 
 /**
+ * High-level classification of an addon query outcome.
+ */
+enum class AddonOutcomeKind {
+    MATCH,
+    NO_MATCH,
+    REAL_FAILURE,
+}
+
+/**
+ * Thrown when an addon explicitly has no matching track or stream.
+ * This should never be logged as an error or warning in telemetry/logs.
+ */
+class AddonNoMatchException(
+    val statusCode: Int? = null,
+    override val message: String = "No match found at source",
+) : RuntimeException(message)
+
+/**
+ * Classifies responses from addon HTTP endpoints to distinguish between benign NO_MATCH
+ * (404, empty list, or 400/403 with unavailable/not found body) and REAL_FAILURE
+ * (timeouts, network drops, 5xx, 429, 401, 402 payment required).
+ */
+object AddonResponseClassifier {
+    /**
+     * Determines whether an HTTP status code and response body represent a NO_MATCH outcome
+     * (track not found, unavailable, empty results, region restriction) rather than an infrastructure or app failure.
+     * Specifically, HTTP 404 is always NO_MATCH, and HTTP 400/403 with bodies indicating
+     * "unavailable / not found / no results" (such as Tido 403 `{"error": "Unavailable...}`) are NO_MATCH.
+     */
+    fun isNoMatchHttp(statusCode: Int, bodyOrMessage: String?): Boolean {
+        if (statusCode == 404) return true
+        if (statusCode == 400 || statusCode == 403) {
+            if (bodyOrMessage.isNullOrBlank()) return true
+            val lower = bodyOrMessage.lowercase().trim()
+            return lower.contains("unavailab") ||
+                lower.contains("not found") ||
+                lower.contains("no result") ||
+                lower.contains("no match") ||
+                lower.contains("not available") ||
+                lower.contains("does not exist") ||
+                lower.contains("not_found") ||
+                lower.contains("empty") ||
+                lower.contains("none found") ||
+                lower.contains("track not available") ||
+                lower.contains("item not found") ||
+                lower.contains("song not found")
+        }
+        return false
+    }
+
+    /**
+     * Classifies a typed [AddonResponse] as MATCH, NO_MATCH, or REAL_FAILURE.
+     */
+    fun <T> classify(response: AddonResponse<T>, isEmpty: Boolean = false): AddonOutcomeKind {
+        return when (response) {
+            is AddonResponse.Success -> {
+                if (isEmpty) AddonOutcomeKind.NO_MATCH else AddonOutcomeKind.MATCH
+            }
+            is AddonResponse.HttpError -> {
+                if (isNoMatchHttp(response.statusCode, response.message)) {
+                    AddonOutcomeKind.NO_MATCH
+                } else {
+                    AddonOutcomeKind.REAL_FAILURE
+                }
+            }
+            is AddonResponse.RateLimited,
+            is AddonResponse.SerializationError,
+            is AddonResponse.NetworkError -> AddonOutcomeKind.REAL_FAILURE
+        }
+    }
+
+    /**
+     * Formats a short, human-readable reason for real failures (with tokens redacted).
+     * Real failures include timeout, no network, 5xx, 429, 401, 402 "Payment required" (from server), etc.
+     */
+    fun formatFailureReason(response: AddonResponse<*>): String {
+        return when (response) {
+            is AddonResponse.HttpError -> {
+                when (response.statusCode) {
+                    401 -> "Authentication required (HTTP 401)"
+                    402 -> "Payment required (HTTP 402)"
+                    429 -> "Rate limit exceeded (HTTP 429)"
+                    in 500..599 -> "Server error (HTTP ${response.statusCode})"
+                    else -> {
+                        val cleaned = AddonClient.redactTokens(response.message).take(80)
+                        if (cleaned.isNotBlank() && !cleaned.startsWith("HTTP")) {
+                            "HTTP ${response.statusCode}: $cleaned"
+                        } else {
+                            "HTTP ${response.statusCode}"
+                        }
+                    }
+                }
+            }
+            is AddonResponse.RateLimited -> {
+                val sec = response.retryAfterSeconds
+                if (sec != null && sec > 0) "Rate limited (retry in ${sec}s)" else "Rate limited"
+            }
+            is AddonResponse.NetworkError -> {
+                val cause = response.cause
+                when {
+                    cause is java.net.SocketTimeoutException || cause is java.io.InterruptedIOException -> "Request timed out"
+                    cause is java.net.UnknownHostException -> "No network connection"
+                    cause is java.net.ConnectException -> "Connection failed"
+                    else -> "Network error"
+                }
+            }
+            is AddonResponse.SerializationError -> "Invalid response format"
+            is AddonResponse.Success -> ""
+        }
+    }
+
+    fun formatFailureReason(throwable: Throwable): String {
+        val msg = throwable.message.orEmpty()
+        return when {
+            throwable is java.net.SocketTimeoutException || throwable is java.io.InterruptedIOException -> "Request timed out"
+            throwable is java.net.UnknownHostException -> "No network connection"
+            throwable is java.net.ConnectException -> "Connection failed"
+            msg.contains("401") -> "Authentication required (HTTP 401)"
+            msg.contains("402") -> "Payment required (HTTP 402)"
+            msg.contains("429") -> "Rate limit exceeded (HTTP 429)"
+            msg.contains("500") || msg.contains("502") || msg.contains("503") || msg.contains("504") -> "Server error"
+            else -> AddonClient.redactTokens(msg.take(80)).ifBlank { "Connection failed" }
+        }
+    }
+}
+
+/**
  * Safely parses a [JsonElement] as a boolean flag.
  * Supports boolean literals, 0/1 integers, "true"/"false", "yes"/"no", "on"/"off".
  */

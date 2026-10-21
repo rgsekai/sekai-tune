@@ -14,6 +14,7 @@ import moe.rgsekai.sekaitune.playback.sources.SourceStream
 import moe.rgsekai.sekaitune.playback.sources.SourceTrack
 import moe.rgsekai.sekaitune.playback.sources.StreamFormat
 import moe.rgsekai.sekaitune.playback.sources.StreamRequest
+import timber.log.Timber
 
 /**
  * Concrete [MusicSource] implementation backed by an external HTTP REST addon server.
@@ -74,12 +75,26 @@ class AddonMusicSource(
                 Result.success(tracks)
             }
             is AddonResponse.HttpError -> {
-                val msg = if (response.message.startsWith("HTTP")) response.message else "HTTP ${response.statusCode}: ${response.message}"
-                Result.failure(IllegalStateException(msg))
+                if (AddonResponseClassifier.isNoMatchHttp(response.statusCode, response.message)) {
+                    Timber.d("Addon search NO_MATCH (HTTP %d) from %s: %s", response.statusCode, displayName, response.message)
+                    Result.success(emptyList())
+                } else {
+                    val reason = AddonResponseClassifier.formatFailureReason(response)
+                    Result.failure(IllegalStateException(reason))
+                }
             }
-            is AddonResponse.RateLimited -> Result.failure(IllegalStateException("Rate limited (retry after ${response.retryAfterSeconds ?: 0}s)"))
-            is AddonResponse.SerializationError -> Result.failure(response.cause)
-            is AddonResponse.NetworkError -> Result.failure(response.cause)
+            is AddonResponse.RateLimited -> {
+                val reason = AddonResponseClassifier.formatFailureReason(response)
+                Result.failure(IllegalStateException(reason))
+            }
+            is AddonResponse.SerializationError -> {
+                val reason = AddonResponseClassifier.formatFailureReason(response)
+                Result.failure(IllegalStateException(reason, response.cause))
+            }
+            is AddonResponse.NetworkError -> {
+                val reason = AddonResponseClassifier.formatFailureReason(response)
+                Result.failure(IllegalStateException(reason, response.cause))
+            }
         }
     }
 
@@ -95,7 +110,14 @@ class AddonMusicSource(
                 val dto = response.value
                 val streamUrl = dto.resolvedUrl()
                 if (streamUrl.isNullOrBlank()) {
-                    Result.failure(IllegalStateException(dto.error ?: "No stream URL returned by addon"))
+                    val err = dto.error ?: "No stream URL returned by addon"
+                    if (AddonResponseClassifier.isNoMatchHttp(404, err)) {
+                        Timber.d("Addon stream NO_MATCH from %s: %s", displayName, err)
+                        Result.failure(AddonNoMatchException(404, err))
+                    } else {
+                        val reason = AddonResponseClassifier.formatFailureReason(IllegalStateException(err))
+                        Result.failure(IllegalStateException(reason))
+                    }
                 } else {
                     val stream = SourceStream(
                         url = streamUrl,
@@ -110,12 +132,26 @@ class AddonMusicSource(
                 }
             }
             is AddonResponse.HttpError -> {
-                val msg = if (response.message.startsWith("HTTP")) response.message else "HTTP ${response.statusCode}: ${response.message}"
-                Result.failure(IllegalStateException(msg))
+                if (AddonResponseClassifier.isNoMatchHttp(response.statusCode, response.message)) {
+                    Timber.d("Addon stream NO_MATCH (HTTP %d) from %s: %s", response.statusCode, displayName, response.message)
+                    Result.failure(AddonNoMatchException(response.statusCode, response.message))
+                } else {
+                    val reason = AddonResponseClassifier.formatFailureReason(response)
+                    Result.failure(IllegalStateException(reason))
+                }
             }
-            is AddonResponse.RateLimited -> Result.failure(IllegalStateException("Rate limited (retry after ${response.retryAfterSeconds ?: 0}s)"))
-            is AddonResponse.SerializationError -> Result.failure(response.cause)
-            is AddonResponse.NetworkError -> Result.failure(response.cause)
+            is AddonResponse.RateLimited -> {
+                val reason = AddonResponseClassifier.formatFailureReason(response)
+                Result.failure(IllegalStateException(reason))
+            }
+            is AddonResponse.SerializationError -> {
+                val reason = AddonResponseClassifier.formatFailureReason(response)
+                Result.failure(IllegalStateException(reason, response.cause))
+            }
+            is AddonResponse.NetworkError -> {
+                val reason = AddonResponseClassifier.formatFailureReason(response)
+                Result.failure(IllegalStateException(reason, response.cause))
+            }
         }
     }
 }

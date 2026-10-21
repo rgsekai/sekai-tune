@@ -40,7 +40,9 @@ import moe.rgsekai.sekaitune.playback.sources.SourceRegistry
 import moe.rgsekai.sekaitune.playback.sources.SourceTrack
 import moe.rgsekai.sekaitune.playback.sources.StreamFormat
 import moe.rgsekai.sekaitune.playback.sources.StreamRequest
+import moe.rgsekai.sekaitune.playback.sources.addon.AddonClient
 import moe.rgsekai.sekaitune.playback.sources.addon.AddonMusicSource
+import moe.rgsekai.sekaitune.playback.sources.addon.AddonResponseClassifier
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -48,9 +50,12 @@ data class AddonSourceResults(
     val sourceId: String,
     val sourceName: String,
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val realFailure: String? = null,
     val tracks: List<SourceTrack> = emptyList(),
-)
+) {
+    val isNoMatch: Boolean
+        get() = tracks.isEmpty() && realFailure == null
+}
 
 data class AddonSearchUiState(
     val hasConfiguredAddons: Boolean = false,
@@ -129,13 +134,20 @@ class AddonSearchViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 addons.map { (registered, source) ->
                     async {
-                        val searchResult = runCatching { source.search(q, limit = 20).getOrThrow() }
+                        val searchResult = source.search(q, limit = 20)
+                        val tracks = searchResult.getOrDefault(emptyList())
+                        val failure = searchResult.exceptionOrNull()
+                        val realFailureReason = if (failure != null) {
+                            val rawReason = AddonResponseClassifier.formatFailureReason(failure)
+                            AddonClient.redactTokens(rawReason).ifBlank { "Connection error" }
+                        } else null
+
                         AddonSourceResults(
                             sourceId = registered.id,
                             sourceName = registered.displayName,
                             isLoading = false,
-                            error = searchResult.exceptionOrNull()?.message,
-                            tracks = searchResult.getOrDefault(emptyList()),
+                            realFailure = realFailureReason,
+                            tracks = tracks,
                         )
                     }
                 }.awaitAll()

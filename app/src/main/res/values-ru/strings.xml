@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+﻿<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="home">Ð“Ð»Ð°Ð²Ð½Ð°Ñ</string>
     <string name="songs">ÐŸÐµÑÐ½Ð¸</string>
@@ -660,6 +660,11 @@
     <string name="no_addons_configured_desc">Add external sources to search beyond YouTube and your local library.</string>
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
+    <string name="addon_search_no_match_title">No addon has this song</string>
+    <string name="addon_search_no_match_hint">Try searching on the YouTube tab</string>
+    <string name="addon_search_all_failed_title">Couldn\'t reach your addons</string>
+    <string name="addon_problems_summary_singular">1 addon had a problem</string>
+    <string name="addon_problems_summary_plural">%d addons had a problem</string>
 </resources>
 
 

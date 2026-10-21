@@ -257,7 +257,11 @@ class AddonClient(
                     } catch (_: Exception) { "" }
 
                     val errorDetail = if (rawBody.isNotBlank()) rawBody else resp.message.ifBlank { "HTTP $code" }
-                    Timber.w("Addon HTTP %d from %s: %s", code, redact(url), errorDetail)
+                    if (AddonResponseClassifier.isNoMatchHttp(code, errorDetail)) {
+                        Timber.d("Addon HTTP %d (no match) from %s: %s", code, redact(url), errorDetail)
+                    } else {
+                        Timber.w("Addon HTTP %d from %s: %s", code, redact(url), errorDetail)
+                    }
                     return AddonResponse.HttpError(code, errorDetail)
                 }
 

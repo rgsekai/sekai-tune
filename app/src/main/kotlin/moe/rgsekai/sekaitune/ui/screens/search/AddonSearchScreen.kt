@@ -33,10 +33,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +76,11 @@ fun AddonSearchScreen(
     LaunchedEffect(query) {
         viewModel.query.value = query
     }
+
+    val realFailures = uiState.results.filter { it.realFailure != null }
+    val hasTracks = uiState.results.any { it.tracks.isNotEmpty() }
+    val allAreNoMatch = uiState.results.isNotEmpty() && uiState.results.all { it.isNoMatch }
+    val allFailedReal = uiState.results.isNotEmpty() && uiState.results.all { it.realFailure != null }
 
     Box(
         modifier =
@@ -116,17 +125,83 @@ fun AddonSearchScreen(
                 }
             }
 
-            uiState.results.isEmpty() || uiState.results.all { it.tracks.isEmpty() && it.error == null } -> {
+            allAreNoMatch -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = stringResource(R.string.no_results_found),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.addon_search_no_match_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(R.string.addon_search_no_match_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+
+            allFailedReal -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.addon_search_all_failed_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AddonProblemsRow(realFailures = realFailures)
+                    }
+                }
+            }
+
+            !hasTracks -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.addon_search_no_match_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(R.string.addon_search_no_match_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        if (realFailures.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            AddonProblemsRow(realFailures = realFailures)
+                        }
+                    }
                 }
             }
 
@@ -137,12 +212,6 @@ fun AddonSearchScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     uiState.results.forEach { sourceResult ->
-                        if (sourceResult.error != null) {
-                            item(key = "error_${sourceResult.sourceId}") {
-                                SourceErrorBanner(sourceResult = sourceResult)
-                            }
-                        }
-
                         if (sourceResult.tracks.isNotEmpty()) {
                             item(key = "header_${sourceResult.sourceId}") {
                                 SourceSectionHeader(
@@ -164,6 +233,12 @@ fun AddonSearchScreen(
                                     },
                                 )
                             }
+                        }
+                    }
+
+                    if (realFailures.isNotEmpty()) {
+                        item(key = "problems_summary_row") {
+                            AddonProblemsRow(realFailures = realFailures)
                         }
                     }
                 }
@@ -269,44 +344,89 @@ private fun SourceSectionHeader(
 }
 
 @Composable
-private fun SourceErrorBanner(
-    sourceResult: AddonSourceResults,
+private fun AddonProblemsRow(
+    realFailures: List<AddonSourceResults>,
+    modifier: Modifier = Modifier,
 ) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-            ),
-        modifier = Modifier.fillMaxWidth(),
+    var expanded by remember { mutableStateOf(false) }
+    val count = realFailures.size
+    val summaryText = if (count == 1) {
+        stringResource(R.string.addon_problems_summary_singular)
+    } else {
+        stringResource(R.string.addon_problems_summary_plural, count)
+    }
+
+    Surface(
+        onClick = { expanded = !expanded },
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.75f),
+        modifier = modifier.fillMaxWidth(),
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.error),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp),
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Text(
-                    text = sourceResult.sourceName,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.info),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = summaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(
+                    painter = painterResource(if (expanded) R.drawable.expand_less else R.drawable.expand_more),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
                 )
-                Text(
-                    text = sourceResult.error ?: stringResource(R.string.error_unknown),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    realFailures.forEach { failure ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Text(
+                                text = "• ",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = failure.sourceName,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = ": ${failure.realFailure.orEmpty()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="album_backdrop">Kabus latar belakang</string>
     <string name="album_backdrop_desc">Tunjukkan karya seni sebagai latar belakang kabur pada pemain</string>
@@ -29,10 +29,15 @@
     <string name="search_source_youtube">YouTube</string>
     <string name="search_source_library">Library</string>
     <string name="search_source_addons">Addons</string>
-    <string name="search_addons_prompt">Search addonsÃ¢â‚¬Â¦</string>
+    <string name="search_addons_prompt">Search addons&#8230;</string>
     <string name="no_addons_configured_title">No addons configured</string>
     <string name="no_addons_configured_desc">Add external sources to search beyond YouTube and your local library.</string>
     <string name="quality_checking">Checking quality...</string>
     <string name="quality_upgrading">Upgrading quality</string>
+    <string name="addon_search_no_match_title">No addon has this song</string>
+    <string name="addon_search_no_match_hint">Try searching on the YouTube tab</string>
+    <string name="addon_search_all_failed_title">Couldn\'t reach your addons</string>
+    <string name="addon_problems_summary_singular">1 addon had a problem</string>
+    <string name="addon_problems_summary_plural">%d addons had a problem</string>
 </resources>
 
