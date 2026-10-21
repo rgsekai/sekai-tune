@@ -519,7 +519,7 @@ fun Thumbnail(
                                 try {
                                     canvasArtwork =
                                         resolveCanvasArtworkForPlayback(
-                                            mediaId = item.mediaId,
+                                            mediaId = itemMetadata?.matchedCatalogId ?: item.mediaId,
                                             songTitleRaw = songTitleRaw,
                                             artistNameRaw = artistNameRaw,
                                             albumId = itemMetadata?.album?.id,

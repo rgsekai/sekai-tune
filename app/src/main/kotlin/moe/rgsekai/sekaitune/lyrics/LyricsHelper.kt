@@ -137,13 +137,14 @@ class LyricsHelper
 
             val allResult = mutableListOf<LyricsResult>()
             val providers = orderedProviders()
+            val effectiveMediaId = moe.rgsekai.sekaitune.playback.MusicService.getMatchedCatalogId(mediaId) ?: mediaId
             currentLyricsJob =
                 CoroutineScope(SupervisorJob() + Dispatchers.IO).async {
                     providers.forEach { provider ->
                         if (!provider.isEnabled(context)) return@forEach
 
                         try {
-                            provider.getAllLyrics(mediaId, songTitle, songArtists, songAlbum, duration) lyricsCallback@{ lyrics ->
+                            provider.getAllLyrics(effectiveMediaId, songTitle, songArtists, songAlbum, duration) lyricsCallback@{ lyrics ->
                                 val normalizedLyrics = LyricsUtils.lyricsOrNotFound(lyrics)
                                 if (normalizedLyrics == LYRICS_NOT_FOUND) return@lyricsCallback
                                 val result = LyricsResult(provider.name, normalizedLyrics)
@@ -214,9 +215,10 @@ class LyricsHelper
             artist: String,
         ): String? =
             try {
+                val targetId = mediaMetadata.matchedCatalogId ?: mediaMetadata.id
                 provider
                     .getLyrics(
-                        mediaMetadata.id,
+                        targetId,
                         mediaMetadata.title,
                         artist,
                         mediaMetadata.album?.title,

@@ -113,6 +113,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -313,6 +314,9 @@ class MusicService :
 
     @Inject
     lateinit var qualityUpgradeManager: moe.rgsekai.sekaitune.playback.stream.QualityUpgradeManager
+
+    @Inject
+    lateinit var addonCatalogMatcher: moe.rgsekai.sekaitune.playback.sources.AddonCatalogMatcher
 
     @Volatile
     var isQualityUpgradeSwapInProgress = false
@@ -3315,9 +3319,9 @@ class MusicService :
         currentQueue = EmptyQueue
     }
 
-    fun onInfiniteQueueEnabled() {
+    fun onInfiniteQueueEnabled(seedVideoIdOverride: String? = null) {
         val currentMeta = player.currentMetadata ?: return
-        if (isCurrentPlaybackItemLocal(currentMeta)) return
+        if (isCurrentPlaybackItemLocal(currentMeta) && seedVideoIdOverride == null) return
         if (infiniteQueueJob?.isActive == true) return
 
         val generation = ++infiniteQueueGeneration
@@ -3330,19 +3334,50 @@ class MusicService :
                     val hideVideo = dataStore.get(HideVideoKey, false)
                     val filter = currentQueueFilter.value
 
+                    val seedId = seedVideoIdOverride
+                        ?: getMatchedCatalogId(currentMeta.id)
+                        ?: currentMeta.matchedCatalogId
+                        ?: currentMeta.id
+
+                    val seedMeta = currentMeta.copy(id = seedId)
+
                     val (filteredItems, radioQueue) =
                         QueueFilterProvider.fetchFilteredQueue(
-                            seedSong = currentMeta,
+                            seedSong = seedMeta,
                             filter = filter,
                             database = database,
                             hideExplicit = hideExplicit,
                             hideVideo = hideVideo,
                         )
 
+                    val currentNormTitle = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.normalizeTitle(currentMeta.title)
+                    val currentArtistWords = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.tokenizeArtistWords(currentMeta.artists.map { it.name })
+
                     val knownIds =
                         (0 until player.mediaItemCount)
-                            .mapTo(mutableSetOf()) { player.getMediaItemAt(it).mediaId }
-                    val newItems = filteredItems.filter { knownIds.add(it.mediaId) }.toMutableList()
+                            .mapTo(mutableSetOf()) { player.getMediaItemAt(it).mediaId.trim() }
+                    knownIds.add(currentMeta.id.trim())
+                    currentMeta.matchedCatalogId?.let { knownIds.add(it.trim()) }
+                    seedVideoIdOverride?.let { knownIds.add(it.trim()) }
+
+                    fun isDuplicateOfCurrent(item: MediaItem): Boolean {
+                        val itemId = item.mediaId.trim()
+                        if (knownIds.contains(itemId)) return true
+                        val meta = item.metadata ?: return false
+                        val itemNormTitle = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.normalizeTitle(meta.title)
+                        if (itemNormTitle.isNotBlank() && itemNormTitle == currentNormTitle) {
+                            val itemArtistWords = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.tokenizeArtistWords(meta.artists.map { it.name })
+                            if (currentArtistWords.isNotEmpty() && itemArtistWords.isNotEmpty() &&
+                                currentArtistWords.intersect(itemArtistWords).isNotEmpty()
+                            ) {
+                                return true
+                            }
+                        }
+                        return false
+                    }
+
+                    val newItems = filteredItems.filterNot { isDuplicateOfCurrent(it) }.toMutableList()
+                    newItems.forEach { knownIds.add(it.mediaId.trim()) }
                     var loadedPageCount = 1
 
                     while (
@@ -3358,7 +3393,9 @@ class MusicService :
                                     .filterExplicit(hideExplicit)
                                     .filterVideo(hideVideo)
                             }
-                        newItems += page.filter { knownIds.add(it.mediaId) }
+                        val uniquePage = page.filterNot { isDuplicateOfCurrent(it) }
+                        uniquePage.forEach { knownIds.add(it.mediaId.trim()) }
+                        newItems += uniquePage
                     }
 
                     if (generation != infiniteQueueGeneration) return@launch
@@ -5641,6 +5678,14 @@ class MusicService :
             return false
         }
 
+        val targetId = getMatchedCatalogId(mediaId)
+            ?: player.currentMetadata?.takeIf { it.id == mediaId }?.matchedCatalogId
+            ?: database.song(mediaId).firstOrNull()?.song?.matchedCatalogId
+            ?: mediaId
+        if (targetId.startsWith("addon:") || targetId.isLocalMediaId()) {
+            return false
+        }
+
         suspend fun registerTracking(playbackTrackingUrl: String): Boolean =
             YouTube
                 .registerPlayback(
@@ -5653,22 +5698,22 @@ class MusicService :
                     Timber.tag("MusicService").w(
                         throwable,
                         "Failed to register remote playback history for %s",
-                        mediaId,
+                        targetId,
                     )
                 }.onSuccess {
                     YouTube.notifyHistorySynced()
                 }.isSuccess
 
-        remotePlaybackTrackingUrlCache[mediaId]?.let { cachedPlaybackTrackingUrl ->
+        remotePlaybackTrackingUrlCache[targetId]?.let { cachedPlaybackTrackingUrl ->
             if (registerTracking(cachedPlaybackTrackingUrl)) {
                 return true
             }
-            remotePlaybackTrackingUrlCache.remove(mediaId, cachedPlaybackTrackingUrl)
+            remotePlaybackTrackingUrlCache.remove(targetId, cachedPlaybackTrackingUrl)
         }
 
         val remotePlaybackTracking =
             retryWithoutPlaybackLoginContext {
-                YTPlayerUtils.playerResponseForMetadata(mediaId)
+                YTPlayerUtils.playerResponseForMetadata(targetId)
             }.onFailure { throwable ->
                 if (throwable is CancellationException) {
                     throw throwable
@@ -5960,13 +6005,63 @@ class MusicService :
             val title = meta?.title?.toString()
             val artists = meta?.artists?.map { it.name } ?: emptyList()
             val durationMs = meta?.duration?.toLong()?.times(1000L) ?: player.duration.takeIf { it > 0 } ?: 0L
-            qualityUpgradeManager.onTrackStarted(
-                mediaId = mediaId,
-                currentPositionMs = player.currentPosition.coerceAtLeast(0L),
-                durationMs = durationMs,
-                targetTitle = title,
-                targetArtists = artists,
-            )
+            if (!mediaId.startsWith("addon:")) {
+                qualityUpgradeManager.onTrackStarted(
+                    mediaId = mediaId,
+                    currentPositionMs = player.currentPosition.coerceAtLeast(0L),
+                    durationMs = durationMs,
+                    targetTitle = title,
+                    targetArtists = artists,
+                )
+            } else {
+                handleAddonTrackPlayback(
+                    mediaId = mediaId,
+                    title = title.orEmpty(),
+                    artists = artists,
+                    durationSec = (durationMs / 1000L).toInt().takeIf { it > 0 },
+                )
+            }
+        }
+    }
+
+    private var addonCatalogMatchJob: Job? = null
+
+    private fun handleAddonTrackPlayback(
+        mediaId: String,
+        title: String,
+        artists: List<String>,
+        durationSec: Int?,
+    ) {
+        addonCatalogMatchJob?.cancel()
+        addonCatalogMatchJob = scope.launch(Dispatchers.IO) {
+            val existingMatch = getMatchedCatalogId(mediaId)
+                ?: database.song(mediaId).firstOrNull()?.song?.matchedCatalogId
+
+            val matchedVideoId = if (!existingMatch.isNullOrBlank()) {
+                existingMatch
+            } else {
+                when (val result = addonCatalogMatcher.findCatalogMatch(title, artists, durationSec)) {
+                    is moe.rgsekai.sekaitune.playback.CatalogMatchResult.Success -> result.catalogId
+                    is moe.rgsekai.sekaitune.playback.CatalogMatchResult.NoMatch -> null
+                }
+            }
+
+            if (matchedVideoId != null) {
+                setMatchedCatalogId(mediaId, matchedVideoId)
+                database.song(mediaId).firstOrNull()?.let { dbSong ->
+                    database.update(dbSong.song.copy(matchedCatalogId = matchedVideoId))
+                }
+                withContext(Dispatchers.Main) {
+                    if (player.currentMediaItem?.mediaId?.trim() == mediaId) {
+                        currentMediaMetadata.value = currentMediaMetadata.value?.copy(matchedCatalogId = matchedVideoId)
+
+                        val autoPlayEnabled = dataStore.get(AutoLoadMoreKey, true)
+                        if (autoPlayEnabled && player.repeatMode == REPEAT_MODE_OFF) {
+                            onInfiniteQueueEnabled(seedVideoIdOverride = matchedVideoId)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -8462,6 +8557,16 @@ class MusicService :
         const val MIN_AUDIBLE_EFFECTIVE_VOLUME = 0.01f
         const val STUCK_MUTED_VOLUME_EPSILON = 0.001f
         const val AUDIBLE_PLAYBACK_VOLUME_CHECK_MS = 2_000L
+
+        private val matchedCatalogIds = ConcurrentHashMap<String, String>()
+
+        fun getMatchedCatalogId(mediaId: String): String? = matchedCatalogIds[mediaId]
+        fun setMatchedCatalogId(mediaId: String, catalogId: String) {
+            matchedCatalogIds[mediaId] = catalogId
+        }
+        fun clearMatchedCatalogId(mediaId: String) {
+            matchedCatalogIds.remove(mediaId)
+        }
     }
 }
 

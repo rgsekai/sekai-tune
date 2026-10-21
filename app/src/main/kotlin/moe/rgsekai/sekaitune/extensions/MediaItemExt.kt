@@ -29,7 +29,15 @@ const val ExtraUploadEntityId = "moe.rgsekai.sekaitune.extra.UPLOAD_ENTITY_ID"
 private const val NotificationArtworkSizePx = 1080
 
 val MediaItem.metadata: MediaMetadata?
-    get() = localConfiguration?.tag as? MediaMetadata
+    get() {
+        val meta = localConfiguration?.tag as? MediaMetadata ?: return null
+        val matched = moe.rgsekai.sekaitune.playback.MusicService.getMatchedCatalogId(mediaId)
+        return if (matched != null && meta.matchedCatalogId == null) {
+            meta.copy(matchedCatalogId = matched)
+        } else {
+            meta
+        }
+    }
 
 private fun String?.toNotificationArtworkUri(): Uri? {
     if (this.isNullOrBlank()) return null
