@@ -16,6 +16,13 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class PreloadTarget(
+    val mediaId: String,
+    val title: String? = null,
+    val artists: List<String> = emptyList(),
+    val durationSec: Int? = null,
+)
+
 @Singleton
 class NextStreamPreloader @Inject constructor(
     private val resolveAudioStreamUseCase: ResolveAudioStreamUseCase,
@@ -23,19 +30,20 @@ class NextStreamPreloader @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var queueJob: Job? = null
 
-    fun preloadQueue(
-        videoIds: List<String>,
+    fun preloadTargets(
+        targets: List<PreloadTarget>,
         audioQuality: AudioQuality = AudioQuality.MEDIUM,
         preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
         networkMetered: Boolean = false,
     ) {
-        val targets = videoIds.map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(MAX_QUEUE_PRELOAD_ITEMS)
-        if (targets.isEmpty()) return
+        val distinctTargets = targets.distinctBy { it.mediaId.trim() }.filter { it.mediaId.isNotBlank() }.take(MAX_QUEUE_PRELOAD_ITEMS)
+        if (distinctTargets.isEmpty()) return
 
         synchronized(this) {
             queueJob?.cancel()
             queueJob = scope.launch {
-                for ((index, trimmedId) in targets.withIndex()) {
+                for ((index, target) in distinctTargets.withIndex()) {
+                    val trimmedId = target.mediaId.trim()
                     val request = AudioStreamRequest(
                         mediaId = trimmedId,
                         quality = audioQuality,
@@ -43,6 +51,9 @@ class NextStreamPreloader @Inject constructor(
                         purpose = StreamPurpose.PLAYBACK,
                         preferredStreamClient = preferredStreamClient,
                         authState = YouTube.currentPlaybackAuthState(),
+                        targetTitle = target.title,
+                        targetArtists = target.artists,
+                        targetDurationSec = target.durationSec,
                     )
                     if (resolveAudioStreamUseCase.peek(request) != null) {
                         Timber.tag(TAG).d("[Preload] Track %s already preloaded & cached (index=%d)", trimmedId, index)
@@ -69,6 +80,21 @@ class NextStreamPreloader @Inject constructor(
             }
         }
     }
+
+    fun preloadQueue(
+        videoIds: List<String>,
+        audioQuality: AudioQuality = AudioQuality.MEDIUM,
+        preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
+        networkMetered: Boolean = false,
+    ) {
+        preloadTargets(
+            targets = videoIds.map { PreloadTarget(it) },
+            audioQuality = audioQuality,
+            preferredStreamClient = preferredStreamClient,
+            networkMetered = networkMetered,
+        )
+    }
+
 
     fun preloadNext(
         videoId: String,

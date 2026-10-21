@@ -311,6 +311,13 @@ class MusicService :
     @Inject
     lateinit var audioQualityManager: moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
 
+    @Inject
+    lateinit var qualityUpgradeManager: moe.rgsekai.sekaitune.playback.stream.QualityUpgradeManager
+
+    @Volatile
+    var isQualityUpgradeSwapInProgress = false
+    private val customStreamHeaders = ConcurrentHashMap<String, Map<String, String>>()
+
     private var lastTransitionTimeMs = 0L
     private var lastTransitionMediaId: String? = null
     private var firstPlaybackLogged = false
@@ -1081,6 +1088,16 @@ class MusicService :
                 loadWidgetShortcuts = loadWidgetShortcutsUseCase,
             )
 
+        qualityUpgradeManager.swapCallback = { mediaId, upgradedItem, customHeaders, targetPositionMs ->
+            swapToUpgradedStream(mediaId, upgradedItem, customHeaders, targetPositionMs)
+        }
+        qualityUpgradeManager.revertCallback = { mediaId, positionMs ->
+            revertToYouTubeStream(mediaId, positionMs)
+        }
+        qualityUpgradeManager.isEligibleForUpgrade = {
+            isEligibleForQualityUpgrade()
+        }
+
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audioOutputResolver = AudioOutputResolver(audioManager)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1147,6 +1164,9 @@ class MusicService :
         scope.launch {
             connectivityObserver.networkStatus.collect { isConnected ->
                 isNetworkConnected.value = isConnected
+                if (!audioQualityManager.isMaxAllowed()) {
+                    qualityUpgradeManager.cancelUpgrade("Network does not permit Max quality")
+                }
                 if (isConnected && waitingForNetworkConnection.value) {
                     waitingForNetworkConnection.value = false
                     if (player.currentMediaItem != null && player.playWhenReady &&
@@ -5686,27 +5706,125 @@ class MusicService :
         return false
     }
 
+    private fun isEligibleForQualityUpgrade(): Boolean {
+        if (audioQuality != moe.rgsekai.sekaitune.constants.AudioQuality.MAX) return false
+        if (!audioQualityManager.isMaxAllowed()) return false
+        val currentMediaId = player.currentMediaItem?.mediaId?.trim().orEmpty()
+        if (currentMediaId.isBlank() || currentMediaId.isLocalMediaId() ||
+            currentMediaId.startsWith("content://") || currentMediaId.startsWith("file://")
+        ) {
+            return false
+        }
+        if (currentSong.value?.song?.isLocal == true) return false
+        return true
+    }
+
+    private fun swapToUpgradedStream(
+        mediaId: String,
+        upgradedItem: MediaItem,
+        customHeaders: Map<String, String>?,
+        targetPositionMs: Long,
+    ): Boolean {
+        val currentIdx = player.currentMediaItemIndex
+        val currentItem = player.currentMediaItem ?: return false
+        if (currentItem.mediaId.trim() != mediaId.trim()) return false
+
+        Timber.tag("MusicService").i("[QualityUpgrade] Performing seamless swap for %s at position %d ms", mediaId, targetPositionMs)
+        if (customHeaders != null) {
+            customStreamHeaders[mediaId] = customHeaders
+        }
+
+        val seamlessItem = upgradedItem.buildUpon()
+            .setMediaMetadata(currentItem.mediaMetadata)
+            .setTag(currentItem.localConfiguration?.tag ?: player.currentMetadata)
+            .build()
+
+        isQualityUpgradeSwapInProgress = true
+        val playWhenReady = player.playWhenReady
+        try {
+            player.replaceMediaItem(currentIdx, seamlessItem)
+            player.seekTo(currentIdx, targetPositionMs.coerceAtLeast(0L))
+            player.playWhenReady = playWhenReady
+        } catch (e: Exception) {
+            Timber.tag("MusicService").w(e, "[QualityUpgrade] Failed to swap media item for %s", mediaId)
+            isQualityUpgradeSwapInProgress = false
+            return false
+        }
+
+        android.os.Handler(mainLooper).postDelayed({
+            isQualityUpgradeSwapInProgress = false
+        }, 500L)
+        return true
+    }
+
+    private fun revertToYouTubeStream(mediaId: String, positionMs: Long) {
+        val currentIdx = player.currentMediaItemIndex
+        val currentItem = player.currentMediaItem ?: return
+        if (currentItem.mediaId.trim() != mediaId.trim()) return
+
+        Timber.tag("MusicService").w("[QualityUpgrade] Reverting stream for %s to baseline YouTube at position %d ms", mediaId, positionMs)
+        customStreamHeaders.remove(mediaId)
+        audioQualityManager.setFinal(
+            mediaId = mediaId,
+            label = "High",
+            isLossless = false,
+            isHiRes = false,
+            details = "YouTube baseline",
+        )
+
+        val revertedItem = currentItem.buildUpon()
+            .setUri(mediaId)
+            .setCustomCacheKey(mediaId)
+            .build()
+
+        isQualityUpgradeSwapInProgress = true
+        val playWhenReady = player.playWhenReady
+        try {
+            player.replaceMediaItem(currentIdx, revertedItem)
+            player.seekTo(currentIdx, positionMs.coerceAtLeast(0L))
+            player.prepare()
+            player.playWhenReady = playWhenReady
+        } catch (e: Exception) {
+            Timber.tag("MusicService").e(e, "[QualityUpgrade] Failed to revert stream for %s", mediaId)
+        } finally {
+            android.os.Handler(mainLooper).postDelayed({
+                isQualityUpgradeSwapInProgress = false
+            }, 500L)
+        }
+    }
+
     private fun updateNextStreamPreload() {
         if (!::nextStreamPreloader.isInitialized) return
         val currentMediaId = player.currentMediaItem?.mediaId?.trim()
         val currentIndex = player.currentMediaItemIndex
-        val upcomingIds = mutableListOf<String>()
+        val upcomingTargets = mutableListOf<moe.rgsekai.sekaitune.playback.preload.PreloadTarget>()
         val maxUpcoming = 3
         for (i in 1..maxUpcoming) {
             val idx = currentIndex + i
             if (idx in 0 until player.mediaItemCount) {
                 val item = player.getMediaItemAt(idx)
                 val vid = item.mediaId.trim()
-                if (vid.isNotEmpty() && vid != currentMediaId && !upcomingIds.contains(vid)) {
-                    upcomingIds.add(vid)
+                if (vid.isNotEmpty() && vid != currentMediaId && upcomingTargets.none { it.mediaId == vid }) {
+                    val meta = item.metadata
+                    val title = meta?.title?.toString()
+                    val artists = meta?.artists?.map { it.name } ?: emptyList()
+                    val durationSec = meta?.duration
+                    upcomingTargets.add(
+                        moe.rgsekai.sekaitune.playback.preload.PreloadTarget(
+                            mediaId = vid,
+                            title = title,
+                            artists = artists,
+                            durationSec = durationSec,
+                        )
+                    )
                 }
             }
         }
-        if (upcomingIds.isNotEmpty()) {
+        if (upcomingTargets.isNotEmpty()) {
             val isNetworkMetered = isLowDataModeActive()
             val quality = if (isNetworkMetered) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality
-            nextStreamPreloader.preloadQueue(
-                videoIds = upcomingIds,
+            nextStreamPreloader.preloadTargets(
+                targets = upcomingTargets,
                 audioQuality = quality,
                 preferredStreamClient = preferredStreamClient,
                 networkMetered = isNetworkMetered,
@@ -5719,6 +5837,11 @@ class MusicService :
         mediaItem: MediaItem?,
         reason: Int,
     ) {
+        if (isQualityUpgradeSwapInProgress) {
+            Timber.tag("MusicService").d("[QualityUpgrade] onMediaItemTransition suppressed during seamless swap (mediaId=%s, reason=%d)", mediaItem?.mediaId, reason)
+            super.onMediaItemTransition(mediaItem, reason)
+            return
+        }
         lastTransitionTimeMs = android.os.SystemClock.elapsedRealtime()
         lastTransitionMediaId = mediaItem?.mediaId
         Timber.tag("PlaybackTiming").i("[PlaybackTiming] onMediaItemTransition for %s (reason=%d) at elapsedRealtime=%d", lastTransitionMediaId, reason, lastTransitionTimeMs)
@@ -5830,6 +5953,21 @@ class MusicService :
         if (!isCrossfading) {
             scheduleCrossfade()
         }
+
+        val mediaId = mediaItem?.mediaId?.trim().orEmpty()
+        if (mediaId.isNotBlank() && !mediaId.isLocalMediaId() && !mediaId.startsWith("content://") && !mediaId.startsWith("file://")) {
+            val meta = mediaItem?.metadata ?: player.currentMetadata
+            val title = meta?.title?.toString()
+            val artists = meta?.artists?.map { it.name } ?: emptyList()
+            val durationMs = meta?.duration?.toLong()?.times(1000L) ?: player.duration.takeIf { it > 0 } ?: 0L
+            qualityUpgradeManager.onTrackStarted(
+                mediaId = mediaId,
+                currentPositionMs = player.currentPosition.coerceAtLeast(0L),
+                durationMs = durationMs,
+                targetTitle = title,
+                targetArtists = artists,
+            )
+        }
     }
 
     private fun isCurrentPlaybackItemLocal(currentMediaMetadata: MediaMetadata): Boolean =
@@ -5859,6 +5997,14 @@ class MusicService :
         super.onPlaybackStateChanged(playbackState)
 
         updateHistoryTrackingPlaybackState()
+        if (playbackState == Player.STATE_ENDED) {
+            val curId = player.currentMediaItem?.mediaId
+            val duration = player.duration
+            val pos = player.currentPosition
+            if (duration > 0 && pos < duration - 10_000L && curId != null) {
+                qualityUpgradeManager.onPlaybackFailedOrStalled(curId, pos, "Premature STATE_ENDED at pos $pos / duration $duration")
+            }
+        }
         if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
             enqueueCurrentHistorySessionForFinalization()
             if (!isCrossfading || playbackState == Player.STATE_IDLE) {
@@ -5970,6 +6116,9 @@ class MusicService :
             updateNextStreamPreload()
         }
         if (events.contains(Player.EVENT_TIMELINE_CHANGED)) {
+            if (!isQualityUpgradeSwapInProgress && player.currentMediaItem == null) {
+                qualityUpgradeManager.cancelUpgrade("Timeline cleared")
+            }
             updateNextStreamPreload()
         }
         if (events.containsAny(
@@ -5980,7 +6129,7 @@ class MusicService :
         ) {
             updateAudiblePlaybackRecovery()
         }
-        if (events.contains(Player.EVENT_MEDIA_METADATA_CHANGED)) {
+        if (events.contains(Player.EVENT_MEDIA_METADATA_CHANGED) && !isQualityUpgradeSwapInProgress) {
             currentMediaMetadata.value = player.currentMetadata
         }
         if (events.containsAny(
@@ -6123,9 +6272,13 @@ class MusicService :
         reason: Int,
     ) {
         super.onPositionDiscontinuity(oldPosition, newPosition, reason)
+        if (isQualityUpgradeSwapInProgress) {
+            return
+        }
         val isSeekDiscontinuity =
             reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT
         if (isSeekDiscontinuity) {
+            qualityUpgradeManager.cancelUpgrade("User seek detected")
             if (!crossfadeHandoffInProgress) {
                 cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
             }
@@ -6235,6 +6388,7 @@ class MusicService :
         super.onPlayerError(error)
 
         val currentMediaId = player.currentMediaItem?.mediaId ?: return
+        qualityUpgradeManager.onPlaybackFailedOrStalled(currentMediaId, player.currentPosition, "onPlayerError: ${error.message}")
         val isLocalMedia = currentMediaId.isLocalMediaId()
 
         if (isLocalMedia) {
@@ -6568,10 +6722,25 @@ class MusicService :
         dataSpec: DataSpec,
         allowCacheShortCircuit: Boolean,
     ): DataSpec {
-        if (dataSpec.uri.shouldBypassYouTubeResolver()) {
-            return dataSpec
+        val currentMediaId = if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper() && ::player.isInitialized) {
+            player.currentMediaItem?.mediaId
+        } else {
+            null
         }
-        val mediaId = dataSpec.key ?: return dataSpec
+        val cleanKey = dataSpec.key?.removePrefix("upgraded:")?.substringAfter(":") ?: dataSpec.key
+        val headers = customStreamHeaders[dataSpec.key]
+            ?: cleanKey?.let { customStreamHeaders[it] }
+            ?: currentMediaId?.let { customStreamHeaders[it] }
+
+        val specWithHeaders = if (!headers.isNullOrEmpty()) {
+            dataSpec.buildUpon().setHttpRequestHeaders(headers).build()
+        } else {
+            dataSpec
+        }
+        if (specWithHeaders.uri.shouldBypassYouTubeResolver()) {
+            return specWithHeaders
+        }
+        val mediaId = specWithHeaders.key ?: return specWithHeaders
         ColdStartTimer.addStage("resolvePlaybackDataSpec for $mediaId (pos=${dataSpec.position}, shortCircuit=$allowCacheShortCircuit)")
         val storedFormat =
             runBlocking(Dispatchers.IO) {
@@ -7862,6 +8031,8 @@ class MusicService :
 
     override fun onDestroy() {
         super.onDestroy()
+        qualityUpgradeManager.cancelUpgrade("MusicService destroyed")
+        customStreamHeaders.clear()
         effectiveVolumeRampJob?.cancel()
         effectiveVolumeRampJob = null
         cancelCrossfade(resetVolume = false, resetPauseAtEnd = true)
@@ -8150,7 +8321,7 @@ class MusicService :
     private fun buildPlaybackAudioStreamRequest(mediaId: String): moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest {
         val lowDataModeActive = isLowDataModeActive()
         val currentMeta = currentMediaMetadata.value?.takeIf { it.id == mediaId }
-        val matchingItem = if (::player.isInitialized) {
+        val matchingItem = if (::player.isInitialized && android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
             val count = player.mediaItemCount
             var found: androidx.media3.common.MediaItem? = null
             for (i in 0 until count) {
@@ -8183,11 +8354,13 @@ class MusicService :
     }
 
     private fun preResolveAudioStream(mediaId: String) {
-        if (mediaId.isBlank() || mediaId.isLocalMediaId() || mediaId.startsWith("content://") || mediaId.startsWith("file://")) return
+        if (mediaId.isBlank() || mediaId.isLocalMediaId() || mediaId.startsWith("content://") || mediaId.startsWith("file://") || mediaId.startsWith("addon:")) return
         if (!::resolveAudioStreamUseCase.isInitialized) return
+        val isMain = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+        val initialRequest = if (isMain) buildPlaybackAudioStreamRequest(mediaId) else null
         ioScope.launch {
             ColdStartTimer.addStage("Pre-Resolve Stream Start for $mediaId")
-            val request = buildPlaybackAudioStreamRequest(mediaId)
+            val request = initialRequest ?: buildPlaybackAudioStreamRequest(mediaId)
             runCatching {
                 resolveAudioStreamUseCase.preload(request)
             }.onSuccess {

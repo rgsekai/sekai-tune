@@ -333,14 +333,16 @@ class App :
         try {
             Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
                 try {
+                    android.util.Log.e("SEKAI_CRASH", "FATAL UNCAUGHT EXCEPTION in thread ${thread.name}", throwable)
                     val sw = StringWriter()
                     val pw = PrintWriter(sw)
                     throwable.printStackTrace(pw)
                     val stack = sw.toString()
+                    val safeStack = if (stack.length > 30000) stack.take(30000) + "\n...[truncated]" else stack
 
                     val intent =
                         Intent(this@App, DebugActivity::class.java).apply {
-                            putExtra(DebugActivity.EXTRA_STACK_TRACE, stack)
+                            putExtra(DebugActivity.EXTRA_STACK_TRACE, safeStack)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         }
                     startActivity(intent)
