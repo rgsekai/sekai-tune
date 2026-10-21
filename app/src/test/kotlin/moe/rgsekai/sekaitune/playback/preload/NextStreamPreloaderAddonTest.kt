@@ -92,21 +92,23 @@ class NextStreamPreloaderAddonTest {
     }
 
     @Test
-    fun preloadWindow_limitsToNextTwoTracks() {
+    fun preloadWindow_limitsToNextTracks() {
         val targets = listOf(
             PreloadTarget("track1"),
             PreloadTarget("track2"),
             PreloadTarget("track3"),
             PreloadTarget("track4"),
             PreloadTarget("track5"),
+            PreloadTarget("track6"),
+            PreloadTarget("track7"),
         )
         val window = targets.distinctBy { it.mediaId.trim() }
             .filter { it.mediaId.isNotBlank() }
             .take(NextStreamPreloader.MAX_QUEUE_PRELOAD_ITEMS)
 
-        assertEquals(2, window.size)
+        assertEquals(5, window.size)
         assertEquals("track1", window[0].mediaId)
-        assertEquals("track2", window[1].mediaId)
+        assertEquals("track5", window[4].mediaId)
     }
 
     @Test

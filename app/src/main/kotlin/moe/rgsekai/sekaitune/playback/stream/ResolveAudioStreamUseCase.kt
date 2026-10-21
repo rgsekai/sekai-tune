@@ -252,7 +252,7 @@ class ResolveAudioStreamUseCase
                     scope.async {
                         val startMs = System.currentTimeMillis()
                         try {
-                            val resolved = resolveUncached(request)
+                            val resolved = resolveUncached(request, consumer)
                             storeResolvedStream(cacheKey, resolved)
                             Timber.tag(TAG).i("[StreamResolution] COLD RESOLUTION COMPLETED for %s in %d ms", cacheKey.mediaId, System.currentTimeMillis() - startMs)
                             resolved
@@ -333,7 +333,10 @@ class ResolveAudioStreamUseCase
             pendingAddonResults.clear()
         }
 
-        private suspend fun resolveUncached(request: AudioStreamRequest): ResolvedAudioStream {
+        private suspend fun resolveUncached(
+            request: AudioStreamRequest,
+            consumer: ResolutionConsumer = ResolutionConsumer.PLAYBACK,
+        ): ResolvedAudioStream {
             // Low Quality or Low Data Mode on metered network skips addons entirely
             val isLowQuality = request.quality == AudioQuality.LOW
             val isMetered = request.networkMetered || audioQualityManager.isMeteredNetwork()
@@ -500,96 +503,131 @@ class ResolveAudioStreamUseCase
                 return ytStream
             }
 
-            val targetTrack = getMatchTarget(request.mediaId, request)
-            if (targetTrack == null) {
-                Timber.tag(TAG).i(
-                    "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=[], chosenSource=YouTube, reason=Target track metadata unavailable from request, DB, and YouTube",
-                    request.mediaId,
-                )
+            val isLivePlayback = (consumer == ResolutionConsumer.PLAYBACK && request.purpose == StreamPurpose.PLAYBACK)
+
+            if (isLivePlayback) {
+                // Task 1 & 2: Instant playback start like original Sekai Tune on GitHub.
+                // Do NOT block ExoPlayer with addon queries or 1500ms budget.
+                // Do NOT show "Checking..." badge before starting.
                 val ytStream = resolveYouTube(request)
-                if (request.purpose == StreamPurpose.PLAYBACK) {
-                    val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
-                        mimeType = ytStream.format.mimeType,
-                        bitrateBps = ytStream.format.bitrate,
-                        sampleRateHz = ytStream.format.audioSampleRate,
-                    )
-                    audioQualityManager.setFinal(
-                        mediaId = request.mediaId,
-                        label = label,
-                        isLossless = isLossless,
-                        isHiRes = false,
-                        details = "",
-                        sourceName = "YouTube",
-                        format = ytStream.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
-                        bitDepth = "16-bit",
-                        sampleRate = ytStream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
-                        bitrate = ytStream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
-                        pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
-                    )
+                fallbackYouTubeCache[request.mediaId] = ytStream
+
+                val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
+                    mimeType = ytStream.format.mimeType,
+                    bitrateBps = ytStream.format.bitrate,
+                    sampleRateHz = ytStream.format.audioSampleRate,
+                )
+                audioQualityManager.setFinal(
+                    mediaId = request.mediaId,
+                    label = label,
+                    isLossless = isLossless,
+                    isHiRes = false,
+                    details = "",
+                    sourceName = "YouTube",
+                    format = ytStream.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
+                    bitDepth = "16-bit",
+                    sampleRate = ytStream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
+                    bitrate = ytStream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
+                    pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+                )
+
+                // Launch parallel background query across all enabled addons for seamless quality upgrade
+                val targetTrack = getMatchTarget(request.mediaId, request)
+                    ?: ytStream.videoDetails?.let { details ->
+                        MatchTarget(
+                            title = details.title,
+                            artists = details.author.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList(),
+                            durationSec = details.lengthSeconds.toIntOrNull(),
+                        )
+                    }
+
+                if (targetTrack != null && enabledAddons.isNotEmpty()) {
+                    val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
+                    val query = TrackMatcher.buildAddonSearchQuery(targetTrack.title, targetTrack.artists)
+                    val ytBaselineBitrate = runCatching { ytStream.format.bitrate / 1000 }.getOrDefault(160)
+
+                    val addonDeferred = scope.async(Dispatchers.IO) {
+                        val collectedResults = CopyOnWriteArrayList<AddonStreamResult>()
+                        val addonJobs = enabledAddons.map { registeredSource ->
+                            launch(Dispatchers.IO) {
+                                val source = registeredSource.instance as? AddonMusicSource ?: return@launch
+                                val result = querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
+                                if (result != null) {
+                                    collectedResults.add(result)
+                                }
+                            }
+                        }
+                        addonJobs.forEach { runCatching { it.join() } }
+                        val best = collectedResults
+                            .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
+                            .maxByOrNull { it.rank }
+
+                        if (best != null) {
+                            Timber.tag(TAG).i(
+                                "[StreamResolution] Background parallel addon query found strictly better stream: %s (%s)",
+                                best.sourceName,
+                                best.formatDescription,
+                            )
+                            winningSourceCache[request.mediaId] = best
+                            pendingAddonResults[request.mediaId] = best
+                        }
+                        best
+                    }
+                    inFlightAddonPreload[request.mediaId] = addonDeferred
                 }
+
                 return ytStream
             }
 
-            if (request.purpose == StreamPurpose.PLAYBACK) {
-                audioQualityManager.setChecking(request.mediaId)
-            }
-
-            // Start YouTube stream resolution immediately in parallel
+            // Background Preload (ResolutionConsumer.PRELOAD or StreamPurpose.DOWNLOAD):
+            // Resolve YouTube and query enabled addons concurrently in parallel.
             val ytDeferred = scope.async(Dispatchers.IO) {
                 resolveYouTube(request)
             }
 
-            // Query all enabled addons in parallel within 1500 ms budget
-            val toleranceSec = 30
-            val query = TrackMatcher.buildAddonSearchQuery(targetTrack.title, targetTrack.artists)
+            val targetTrack = getMatchTarget(request.mediaId, request)
+            val effectiveTarget = targetTrack ?: run {
+                val ytStream = ytDeferred.await()
+                ytStream.videoDetails?.let { details ->
+                    MatchTarget(
+                        title = details.title,
+                        artists = details.author.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList(),
+                        durationSec = details.lengthSeconds.toIntOrNull(),
+                    )
+                }
+            }
 
+            if (effectiveTarget == null) {
+                val ytStream = ytDeferred.await()
+                fallbackYouTubeCache[request.mediaId] = ytStream
+                return ytStream
+            }
+
+            val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
+            val query = TrackMatcher.buildAddonSearchQuery(effectiveTarget.title, effectiveTarget.artists)
             val queryResults = CopyOnWriteArrayList<AddonQueryResult>()
             val addonJobs = enabledAddons.map { registeredSource ->
                 scope.launch(Dispatchers.IO) {
                     val source = registeredSource.instance as? AddonMusicSource ?: return@launch
-                    val result = querySingleAddonDetailed(source, registeredSource.displayName, targetTrack, query, toleranceSec)
+                    val result = querySingleAddonDetailed(source, registeredSource.displayName, effectiveTarget, query, toleranceSec)
                     queryResults.add(result)
                 }
             }
 
-            val ytBaselineBitrate = if (ytDeferred.isCompleted) {
-                runCatching { ytDeferred.getCompleted().format.bitrate / 1000 }.getOrDefault(160)
-            } else {
-                160
-            }
+            addonJobs.forEach { runCatching { it.join() } }
+            val ytStream = ytDeferred.await()
+            fallbackYouTubeCache[request.mediaId] = ytStream
 
-            val addonDeferred = scope.async(Dispatchers.IO) {
-                withTimeoutOrNull(ADDON_RESOLUTION_BUDGET_MS) {
-                    addonJobs.forEach { it.join() }
-                }
-                val currentYtBitrate = if (ytDeferred.isCompleted) {
-                    runCatching { ytDeferred.getCompleted().format.bitrate / 1000 }.getOrDefault(ytBaselineBitrate)
-                } else {
-                    ytBaselineBitrate
-                }
-                val completedReports = queryResults.toList()
-                completedReports
-                    .mapNotNull { it.streamResult }
-                    .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, currentYtBitrate) }
-                    .maxByOrNull { it.rank }
-            }
-            inFlightAddonPreload[request.mediaId] = addonDeferred
-
-            val bestAddon = try {
-                addonDeferred.await()
-            } finally {
-                inFlightAddonPreload.remove(request.mediaId, addonDeferred)
-            }
+            val ytBaselineBitrate = runCatching { ytStream.format.bitrate / 1000 }.getOrDefault(160)
             val completedReports = queryResults.toList()
+            val bestAddon = completedReports
+                .mapNotNull { it.streamResult }
+                .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
+                .maxByOrNull { it.rank }
 
             if (bestAddon != null) {
-                scope.launch(Dispatchers.IO) {
-                    runCatching {
-                        val ytStream = ytDeferred.await()
-                        fallbackYouTubeCache[request.mediaId] = ytStream
-                    }
-                }
                 winningSourceCache[request.mediaId] = bestAddon
+                pendingAddonResults[request.mediaId] = bestAddon
                 val reportsLog = completedReports.joinToString("; ") { report ->
                     val candidateSummary = report.candidates.joinToString(", ") { c ->
                         val status = if (c.isMatch) "MATCH(${c.score})" else "REJECT(${c.rejectReason})"
@@ -606,105 +644,21 @@ class ResolveAudioStreamUseCase
                     query,
                     reportsLog,
                 )
-                if (request.purpose == StreamPurpose.PLAYBACK) {
-                    val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
-                        mimeType = bestAddon.sourceStream.format.name,
-                        bitrateBps = (bestAddon.sourceStream.bitrateKbps ?: 1411) * 1000,
-                        sampleRateHz = bestAddon.sourceStream.sampleRateHz,
-                        bitDepth = bestAddon.sourceStream.bitDepth,
-                        addonFormat = bestAddon.sourceStream.format,
-                    )
-                    val isHiRes = isLossless && ((bestAddon.sourceStream.bitDepth ?: 16) > 16 || (bestAddon.sourceStream.sampleRateHz ?: 44100) > 48000)
-                    val bitDepthStr = bestAddon.sourceStream.bitDepth?.let { "${it}-bit" } ?: if (isHiRes) "24-bit" else "16-bit"
-                    val sampleRateStr = bestAddon.sourceStream.sampleRateHz?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "44.1 kHz"
-                    val bitrateStr = bestAddon.sourceStream.bitrateKbps?.let { "${it} kbps" } ?: "1411 kbps"
-                    audioQualityManager.setFinal(
-                        mediaId = request.mediaId,
-                        label = label,
-                        isLossless = isLossless,
-                        isHiRes = isHiRes,
-                        details = bestAddon.formatDescription,
-                        sourceName = bestAddon.sourceName,
-                        format = bestAddon.sourceStream.format.name,
-                        bitDepth = bitDepthStr,
-                        sampleRate = sampleRateStr,
-                        bitrate = bitrateStr,
-                        pipelineStatus = AudioPipelineStatus.PRELOADED_INSTANT,
-                    )
-                }
                 return bestAddon.resolvedStream
             }
 
-            // Addon timed out, failed, or was not strictly better. Fall back to YouTube immediately!
-            addonJobs.forEach { job ->
-                job.invokeOnCompletion {
-                    val lateReports = queryResults.toList()
-                    val lateBest = lateReports
-                        .mapNotNull { it.streamResult }
-                        .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
-                        .maxByOrNull { it.rank }
-                    if (lateBest != null) {
-                        Timber.tag("ExternalSources").d(
-                            "Caching pending addon stream for %s from %s for background upgrade",
-                            request.mediaId,
-                            lateBest.sourceName,
-                        )
-                        pendingAddonResults[request.mediaId] = lateBest
-                        winningSourceCache[request.mediaId] = lateBest
-                    }
-                }
-            }
-
-            val ytStream = ytDeferred.await()
-            fallbackYouTubeCache[request.mediaId] = ytStream
             val whyYouTubeWon = when {
-                completedReports.isEmpty() -> "All addons timed out past ${ADDON_RESOLUTION_BUDGET_MS}ms budget"
-                completedReports.none { it.streamResult != null } -> "No addon returned a playable matching stream within budget"
+                completedReports.isEmpty() -> "No addons responded"
+                completedReports.none { it.streamResult != null } -> "No addon returned a playable matching stream"
                 else -> "Addon stream quality not strictly better than YouTube baseline (${ytBaselineBitrate} kbps)"
             }
-            val reportsLog = completedReports.joinToString("; ") { report ->
-                val candidateSummary = report.candidates.joinToString(", ") { c ->
-                    val status = if (c.isMatch) "MATCH(${c.score})" else "REJECT(${c.rejectReason})"
-                    "\"${c.title}\" [${c.durationSec}s] -> $status"
-                }
-                "${report.sourceName} (${report.elapsedMs}ms): ${report.error ?: candidateSummary.ifEmpty { "no valid candidate" }}"
-            }
             Timber.tag(TAG).i(
-                "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=%s, chosenSource=YouTube, reason=%s, query=\"%s\", reports=[%s]",
+                "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=%s, chosenSource=YouTube, reason=%s, query=\"%s\"",
                 request.mediaId,
                 enabledAddons.map { it.displayName },
                 whyYouTubeWon,
                 query,
-                reportsLog,
             )
-
-            if (request.purpose == StreamPurpose.PLAYBACK) {
-                val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
-                    mimeType = ytStream.format.mimeType,
-                    bitrateBps = ytStream.format.bitrate,
-                    sampleRateHz = ytStream.format.audioSampleRate,
-                )
-                val has429 = queryResults.any { it.error?.contains("429") == true || it.error?.contains("rate", ignoreCase = true) == true || addonBackoffs.isNotEmpty() }
-                val hasCandidates = completedReports.any { it.candidates.isNotEmpty() }
-                val pipelineStatus = when {
-                    has429 -> AudioPipelineStatus.SETTLED_RATE_LIMITED
-                    hasCandidates -> AudioPipelineStatus.SETTLED_LOWER_QUALITY
-                    else -> AudioPipelineStatus.SETTLED_NO_MATCH
-                }
-                audioQualityManager.setFinal(
-                    mediaId = request.mediaId,
-                    label = label,
-                    isLossless = isLossless,
-                    isHiRes = false,
-                    details = "",
-                    sourceName = "YouTube",
-                    format = ytStream.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
-                    bitDepth = "16-bit",
-                    sampleRate = ytStream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
-                    bitrate = ytStream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
-                    pipelineStatus = pipelineStatus,
-                )
-            }
             return ytStream
         }
 

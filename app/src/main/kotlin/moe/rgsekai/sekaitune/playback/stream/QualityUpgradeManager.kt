@@ -140,7 +140,7 @@ class QualityUpgradeManager @Inject constructor(
                 val inFlight = ResolveAudioStreamUseCase.getInFlightAddonPreload(mediaId)
                 if (inFlight != null) {
                     Timber.tag(TAG).d("[QualityUpgrade] Awaiting in-flight preload for %s", mediaId)
-                    candidate = withTimeoutOrNull(ResolveAudioStreamUseCase.ADDON_RESOLUTION_BUDGET_MS) {
+                    candidate = withTimeoutOrNull(BACKGROUND_QUERY_TIMEOUT_MS) {
                         inFlight.await()
                     }
                     if (candidate != null && blacklisted.contains(candidate.sourceName)) {

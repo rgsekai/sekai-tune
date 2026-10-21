@@ -5895,7 +5895,7 @@ class MusicService :
         val currentMediaId = player.currentMediaItem?.mediaId?.trim()
         val currentIndex = player.currentMediaItemIndex
         val upcomingTargets = mutableListOf<moe.rgsekai.sekaitune.playback.preload.PreloadTarget>()
-        val maxUpcoming = 3
+        val maxUpcoming = 5
         for (i in 1..maxUpcoming) {
             val idx = currentIndex + i
             if (idx in 0 until player.mediaItemCount) {
