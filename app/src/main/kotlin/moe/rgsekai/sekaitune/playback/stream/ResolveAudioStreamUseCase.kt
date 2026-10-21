@@ -45,10 +45,14 @@ import moe.rgsekai.sekaitune.playback.sources.RegisteredSource
 import moe.rgsekai.sekaitune.playback.sources.SourceKind
 import moe.rgsekai.sekaitune.playback.sources.SourceRegistry
 import moe.rgsekai.sekaitune.playback.sources.SourceStream
+import moe.rgsekai.sekaitune.playback.sources.SourceTrack
 import moe.rgsekai.sekaitune.playback.sources.StreamFormat
 import moe.rgsekai.sekaitune.playback.sources.StreamRequest
 import moe.rgsekai.sekaitune.playback.sources.TrackMatcher
+import moe.rgsekai.sekaitune.playback.sources.addon.AddonClient
 import moe.rgsekai.sekaitune.playback.sources.addon.AddonMusicSource
+import moe.rgsekai.sekaitune.playback.sources.addon.AddonNoMatchException
+import moe.rgsekai.sekaitune.playback.sources.addon.AddonResponseClassifier
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.roundToInt
 
@@ -58,6 +62,23 @@ data class AddonStreamResult(
     val formatDescription: String,
     val rank: CandidateQualityRank,
     val sourceStream: SourceStream,
+)
+
+data class CandidateEvaluation(
+    val title: String,
+    val artists: List<String>,
+    val durationSec: Int?,
+    val isMatch: Boolean,
+    val score: Int,
+    val rejectReason: String?,
+)
+
+data class AddonQueryResult(
+    val sourceName: String,
+    val elapsedMs: Long,
+    val candidates: List<CandidateEvaluation>,
+    val streamResult: AddonStreamResult?,
+    val error: String?,
 )
 
 @Singleton
@@ -260,6 +281,7 @@ class ResolveAudioStreamUseCase
                         .mapNotNull { inFlight.remove(it)?.deferred }
                 }
             deferredsToCancel.forEach { it.cancel() }
+            winningSourceCache.remove(mediaId)
         }
 
         fun invalidateUrl(url: String) {
@@ -281,13 +303,19 @@ class ResolveAudioStreamUseCase
                     inFlight.values.map(InFlightResolution::deferred).also { inFlight.clear() }
                 }
             deferredsToCancel.forEach { it.cancel() }
+            winningSourceCache.clear()
         }
 
         private suspend fun resolveUncached(request: AudioStreamRequest): ResolvedAudioStream {
-            // Problem 5: Low Quality or Low Data Mode on metered network skips addons entirely
+            // Low Quality or Low Data Mode on metered network skips addons entirely
             val isLowQuality = request.quality == AudioQuality.LOW
             val isMetered = request.networkMetered || audioQualityManager.isMeteredNetwork()
             if (isLowQuality || (request.networkMetered && isMetered)) {
+                Timber.tag(TAG).i(
+                    "[StreamResolution:Decision] mediaId=%s, tier=%s, networkAllowed=true, addonsQueried=[], chosenSource=YouTube, reason=Low quality or metered network selected",
+                    request.mediaId,
+                    request.quality.name,
+                )
                 val effectiveQuality = if (isLowQuality) AudioQuality.LOW else request.quality
                 val ytStream = resolveYouTube(request, effectiveQuality)
                 if (request.purpose == StreamPurpose.PLAYBACK) {
@@ -310,6 +338,11 @@ class ResolveAudioStreamUseCase
             // Only MAX quality queries external addons!
             // LOW, MEDIUM, HIGH use YouTube streams directly.
             if (request.quality != AudioQuality.MAX) {
+                Timber.tag(TAG).i(
+                    "[StreamResolution:Decision] mediaId=%s, tier=%s, networkAllowed=true, addonsQueried=[], chosenSource=YouTube, reason=Addon queries only run on MAX tier",
+                    request.mediaId,
+                    request.quality.name,
+                )
                 val ytStream = resolveYouTube(request, request.quality)
                 if (request.purpose == StreamPurpose.PLAYBACK) {
                     val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
@@ -331,6 +364,10 @@ class ResolveAudioStreamUseCase
             // When Max is selected but the current network is not allowed, behave exactly like High
             // (no addon queries, YouTube only) and do not show Upgrading.
             if (!audioQualityManager.isMaxAllowed()) {
+                Timber.tag(TAG).i(
+                    "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=false, addonsQueried=[], chosenSource=YouTube, reason=Max quality gated by network preference (Wi-Fi/Mobile)",
+                    request.mediaId,
+                )
                 val ytStream = resolveYouTube(request, AudioQuality.HIGH)
                 if (request.purpose == StreamPurpose.PLAYBACK) {
                     val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
@@ -349,9 +386,42 @@ class ResolveAudioStreamUseCase
                 return ytStream
             }
 
+            // Check winning source cache per track so subsequent plays/preloads don't re-resolve or re-fail
+            val cachedWinning = winningSourceCache[request.mediaId]
+            if (cachedWinning != null && isFresh(cachedWinning.resolvedStream)) {
+                Timber.tag(TAG).i(
+                    "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=[], chosenSource=%s (WINNING_CACHE_HIT), format=%s",
+                    request.mediaId,
+                    cachedWinning.sourceName,
+                    cachedWinning.formatDescription,
+                )
+                if (request.purpose == StreamPurpose.PLAYBACK) {
+                    val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
+                        mimeType = cachedWinning.sourceStream.format.name,
+                        bitrateBps = (cachedWinning.sourceStream.bitrateKbps ?: 1411) * 1000,
+                        sampleRateHz = cachedWinning.sourceStream.sampleRateHz,
+                        bitDepth = cachedWinning.sourceStream.bitDepth,
+                        addonFormat = cachedWinning.sourceStream.format,
+                    )
+                    val isHiRes = isLossless && ((cachedWinning.sourceStream.bitDepth ?: 16) > 16 || (cachedWinning.sourceStream.sampleRateHz ?: 44100) > 48000)
+                    audioQualityManager.setFinal(
+                        mediaId = request.mediaId,
+                        label = label,
+                        isLossless = isLossless,
+                        isHiRes = isHiRes,
+                        details = cachedWinning.formatDescription,
+                    )
+                }
+                return cachedWinning.resolvedStream
+            }
+
             // Check if any external addons are enabled
             val enabledAddons = sourceRegistry.sourcesFlow.value.filter { it.kind == SourceKind.ADDON && it.isEnabled }
             if (enabledAddons.isEmpty()) {
+                Timber.tag(TAG).i(
+                    "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=[], chosenSource=YouTube, reason=No external addons enabled",
+                    request.mediaId,
+                )
                 val ytStream = resolveYouTube(request)
                 if (request.purpose == StreamPurpose.PLAYBACK) {
                     val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
@@ -370,8 +440,12 @@ class ResolveAudioStreamUseCase
                 return ytStream
             }
 
-            val targetTrack = getMatchTarget(request.mediaId)
+            val targetTrack = getMatchTarget(request.mediaId, request)
             if (targetTrack == null) {
+                Timber.tag(TAG).i(
+                    "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=[], chosenSource=YouTube, reason=Target track metadata unavailable from request, DB, and YouTube",
+                    request.mediaId,
+                )
                 val ytStream = resolveYouTube(request)
                 if (request.purpose == StreamPurpose.PLAYBACK) {
                     val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
@@ -401,22 +475,14 @@ class ResolveAudioStreamUseCase
 
             // Query all enabled addons in parallel within 1500 ms budget
             val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
-            val query = buildString {
-                append(targetTrack.title)
-                if (targetTrack.artists.isNotEmpty()) {
-                    append(" ")
-                    append(targetTrack.artists.first())
-                }
-            }.trim()
+            val query = TrackMatcher.buildAddonSearchQuery(targetTrack.title, targetTrack.artists)
 
-            val collectedResults = CopyOnWriteArrayList<AddonStreamResult>()
+            val queryResults = CopyOnWriteArrayList<AddonQueryResult>()
             val addonJobs = enabledAddons.map { registeredSource ->
                 scope.launch(Dispatchers.IO) {
                     val source = registeredSource.instance as? AddonMusicSource ?: return@launch
-                    val result = querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
-                    if (result != null) {
-                        collectedResults.add(result)
-                    }
+                    val result = querySingleAddonDetailed(source, registeredSource.displayName, targetTrack, query, toleranceSec)
+                    queryResults.add(result)
                 }
             }
 
@@ -431,17 +497,30 @@ class ResolveAudioStreamUseCase
                 160
             }
 
-            val bestAddon = collectedResults
+            val completedReports = queryResults.toList()
+            val bestAddon = completedReports
+                .mapNotNull { it.streamResult }
                 .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
                 .maxByOrNull { it.rank }
 
             if (bestAddon != null) {
                 ytDeferred.cancel()
-                Timber.tag("ExternalSources").i(
-                    "Resolved active playback stream from external addon %s for %s (%s)",
-                    bestAddon.sourceName,
+                winningSourceCache[request.mediaId] = bestAddon
+                val reportsLog = completedReports.joinToString("; ") { report ->
+                    val candidateSummary = report.candidates.joinToString(", ") { c ->
+                        val status = if (c.isMatch) "MATCH(${c.score})" else "REJECT(${c.rejectReason})"
+                        "\"${c.title}\" [${c.durationSec}s] -> $status"
+                    }
+                    "${report.sourceName} (${report.elapsedMs}ms): ${report.error ?: candidateSummary.ifEmpty { "stream resolved" }}"
+                }
+                Timber.tag(TAG).i(
+                    "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=%s, chosenSource=%s, format=%s, query=\"%s\", reports=[%s]",
                     request.mediaId,
+                    enabledAddons.map { it.displayName },
+                    bestAddon.sourceName,
                     bestAddon.formatDescription,
+                    query,
+                    reportsLog,
                 )
                 if (request.purpose == StreamPurpose.PLAYBACK) {
                     val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
@@ -466,21 +545,45 @@ class ResolveAudioStreamUseCase
             // Addon timed out, failed, or was not strictly better. Fall back to YouTube immediately!
             addonJobs.forEach { job ->
                 job.invokeOnCompletion {
-                    val lateBest = collectedResults
+                    val lateReports = queryResults.toList()
+                    val lateBest = lateReports
+                        .mapNotNull { it.streamResult }
                         .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
                         .maxByOrNull { it.rank }
                     if (lateBest != null) {
                         Timber.tag("ExternalSources").d(
-                            "Caching pending addon stream for %s from %s for Phase 3",
+                            "Caching pending addon stream for %s from %s for background upgrade",
                             request.mediaId,
                             lateBest.sourceName,
                         )
                         pendingAddonResults[request.mediaId] = lateBest
+                        winningSourceCache[request.mediaId] = lateBest
                     }
                 }
             }
 
             val ytStream = ytDeferred.await()
+            val whyYouTubeWon = when {
+                completedReports.isEmpty() -> "All addons timed out past ${ADDON_RESOLUTION_BUDGET_MS}ms budget"
+                completedReports.none { it.streamResult != null } -> "No addon returned a playable matching stream within budget"
+                else -> "Addon stream quality not strictly better than YouTube baseline (${ytBaselineBitrate} kbps)"
+            }
+            val reportsLog = completedReports.joinToString("; ") { report ->
+                val candidateSummary = report.candidates.joinToString(", ") { c ->
+                    val status = if (c.isMatch) "MATCH(${c.score})" else "REJECT(${c.rejectReason})"
+                    "\"${c.title}\" [${c.durationSec}s] -> $status"
+                }
+                "${report.sourceName} (${report.elapsedMs}ms): ${report.error ?: candidateSummary.ifEmpty { "no valid candidate" }}"
+            }
+            Timber.tag(TAG).i(
+                "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=%s, chosenSource=YouTube, reason=%s, query=\"%s\", reports=[%s]",
+                request.mediaId,
+                enabledAddons.map { it.displayName },
+                whyYouTubeWon,
+                query,
+                reportsLog,
+            )
+
             if (request.purpose == StreamPurpose.PLAYBACK) {
                 val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
                     mimeType = ytStream.format.mimeType,
@@ -498,7 +601,15 @@ class ResolveAudioStreamUseCase
             return ytStream
         }
 
-        private suspend fun getMatchTarget(mediaId: String): MatchTarget? {
+        private suspend fun getMatchTarget(mediaId: String, request: AudioStreamRequest? = null): MatchTarget? {
+            if (request != null && !request.targetTitle.isNullOrBlank()) {
+                return MatchTarget(
+                    title = request.targetTitle,
+                    artists = request.targetArtists,
+                    durationSec = request.targetDurationSec,
+                )
+            }
+
             val dbSong = runCatching { database.song(mediaId).firstOrNull() }.getOrNull()
             if (dbSong != null && dbSong.song.title.isNotBlank()) {
                 return MatchTarget(
@@ -507,6 +618,20 @@ class ResolveAudioStreamUseCase
                     durationSec = dbSong.song.duration.takeIf { it > 0 },
                 )
             }
+
+            val meta = runCatching { YTPlayerUtils.playerResponseForMetadata(mediaId).getOrNull() }.getOrNull()
+            val videoDetails = meta?.videoDetails
+            if (videoDetails != null && !videoDetails.title.isNullOrBlank()) {
+                val author = videoDetails.author.takeIf { it.isNotBlank() }
+                val artists = if (author != null) listOf(author) else emptyList()
+                val durationSec = videoDetails.lengthSeconds.toIntOrNull()?.takeIf { it > 0 }
+                return MatchTarget(
+                    title = videoDetails.title,
+                    artists = artists,
+                    durationSec = durationSec,
+                )
+            }
+
             return null
         }
 
@@ -516,13 +641,7 @@ class ResolveAudioStreamUseCase
             youtubeBitrateKbps: Int = 160,
         ): AddonStreamResult? = coroutineScope {
             val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
-            val query = buildString {
-                append(targetTrack.title)
-                if (targetTrack.artists.isNotEmpty()) {
-                    append(" ")
-                    append(targetTrack.artists.first())
-                }
-            }.trim()
+            val query = TrackMatcher.buildAddonSearchQuery(targetTrack.title, targetTrack.artists)
 
             val collectedResults = CopyOnWriteArrayList<AddonStreamResult>()
             val jobs = enabledAddons.map { registeredSource ->
@@ -547,26 +666,66 @@ class ResolveAudioStreamUseCase
             targetTrack: MatchTarget,
             query: String,
             toleranceSec: Int,
-        ): AddonStreamResult? {
-            return runCatching {
-                val tracks = source.search(query, limit = 10).getOrNull() ?: return null
-                val bestCandidate = tracks.mapNotNull { track ->
+        ): AddonStreamResult? = querySingleAddonDetailed(source, sourceName, targetTrack, query, toleranceSec).streamResult
+
+        internal suspend fun querySingleAddonDetailed(
+            source: AddonMusicSource,
+            sourceName: String,
+            targetTrack: MatchTarget,
+            query: String,
+            toleranceSec: Int,
+        ): AddonQueryResult {
+            val startMs = System.currentTimeMillis()
+            return try {
+                val tracks = source.search(query, limit = 10).getOrThrow()
+                if (tracks.isEmpty()) {
+                    return AddonQueryResult(
+                        sourceName = sourceName,
+                        elapsedMs = System.currentTimeMillis() - startMs,
+                        candidates = emptyList(),
+                        streamResult = null,
+                        error = "No search results returned for query: $query",
+                    )
+                }
+
+                val evaluations = mutableListOf<CandidateEvaluation>()
+                var bestCandidate: SourceTrack? = null
+                var bestScore = -1
+
+                for (track in tracks) {
                     val candidate = MatchCandidate(
                         title = track.title,
                         artists = track.artists,
                         durationSec = track.durationSec,
                     )
                     val match = TrackMatcher.match(targetTrack, candidate, toleranceSec)
-                    if (match.isMatch) {
-                        track to match.score
-                    } else {
-                        null
+                    evaluations.add(
+                        CandidateEvaluation(
+                            title = track.title,
+                            artists = track.artists,
+                            durationSec = track.durationSec,
+                            isMatch = match.isMatch,
+                            score = match.score,
+                            rejectReason = match.rejectReason,
+                        )
+                    )
+                    if (match.isMatch && match.score > bestScore) {
+                        bestScore = match.score
+                        bestCandidate = track
                     }
-                }.maxByOrNull { it.second }?.first ?: return null
+                }
 
-                // Request best/lossless stream from addon
-                val sourceStream = source.stream(bestCandidate.id, StreamRequest.Best).getOrNull() ?: return null
+                if (bestCandidate == null) {
+                    return AddonQueryResult(
+                        sourceName = sourceName,
+                        elapsedMs = System.currentTimeMillis() - startMs,
+                        candidates = evaluations,
+                        streamResult = null,
+                        error = "None of ${tracks.size} candidate(s) matched target",
+                    )
+                }
 
+                val sourceStream = source.stream(bestCandidate.id, StreamRequest.Best).getOrThrow()
                 val rank = CandidateQualityRank.from(sourceStream)
 
                 val mimeType = when (sourceStream.format) {
@@ -619,14 +778,30 @@ class ResolveAudioStreamUseCase
                     authFingerprint = "addon:${source.configId}",
                 )
 
-                AddonStreamResult(
-                    resolvedStream = resolved,
+                AddonQueryResult(
                     sourceName = sourceName,
-                    formatDescription = formatDesc,
-                    rank = rank,
-                    sourceStream = sourceStream,
+                    elapsedMs = System.currentTimeMillis() - startMs,
+                    candidates = evaluations,
+                    streamResult = AddonStreamResult(
+                        resolvedStream = resolved,
+                        sourceName = sourceName,
+                        formatDescription = formatDesc,
+                        rank = rank,
+                        sourceStream = sourceStream,
+                    ),
+                    error = null,
                 )
-            }.getOrNull()
+            } catch (e: Exception) {
+                val rawMsg = e.message ?: e.javaClass.simpleName
+                val safeMsg = AddonClient.redactTokens(rawMsg)
+                AddonQueryResult(
+                    sourceName = sourceName,
+                    elapsedMs = System.currentTimeMillis() - startMs,
+                    candidates = emptyList(),
+                    streamResult = null,
+                    error = safeMsg,
+                )
+            }
         }
 
         private suspend fun resolveYouTube(
@@ -732,11 +907,22 @@ class ResolveAudioStreamUseCase
             const val ADDON_RESOLUTION_BUDGET_MS = 1500L
 
             val pendingAddonResults = ConcurrentHashMap<String, AddonStreamResult>()
+            val winningSourceCache = ConcurrentHashMap<String, AddonStreamResult>()
 
             fun getPendingAddonStream(mediaId: String): AddonStreamResult? = pendingAddonResults[mediaId]
 
             fun clearPendingAddonStream(mediaId: String) {
                 pendingAddonResults.remove(mediaId)
+            }
+
+            fun getWinningSource(mediaId: String): AddonStreamResult? = winningSourceCache[mediaId]
+
+            fun clearWinningSource(mediaId: String) {
+                winningSourceCache.remove(mediaId)
+            }
+
+            fun clearAllWinningSources() {
+                winningSourceCache.clear()
             }
         }
     }

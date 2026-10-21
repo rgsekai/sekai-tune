@@ -89,7 +89,7 @@ class NextStreamPreloader @Inject constructor(
     fun isPreloaded(videoId: String): Boolean {
         val request = AudioStreamRequest(
             mediaId = videoId.trim(),
-            quality = AudioQuality.AUTO,
+            quality = AudioQuality.MEDIUM,
             networkMetered = false,
             purpose = StreamPurpose.PLAYBACK,
             preferredStreamClient = PlayerStreamClient.ANDROID_VR,

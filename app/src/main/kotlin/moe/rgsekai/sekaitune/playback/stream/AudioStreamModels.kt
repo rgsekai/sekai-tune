@@ -30,6 +30,9 @@ data class AudioStreamRequest(
     val purpose: StreamPurpose = StreamPurpose.PLAYBACK,
     val preferredStreamClient: PlayerStreamClient = PlayerStreamClient.ANDROID_VR,
     val authState: PlaybackAuthState = YouTube.currentPlaybackAuthState(),
+    val targetTitle: String? = null,
+    val targetArtists: List<String> = emptyList(),
+    val targetDurationSec: Int? = null,
 )
 
 data class ResolvedAudioStream(

@@ -174,6 +174,10 @@ object TrackMatcher {
     fun normalizeTitle(title: String): String {
         var text = normalizeString(title)
 
+        // Remove bracketed packaging phrases e.g. [explicit], (official video), [clean], etc.
+        val bracketPackagingRegex = Regex("""[\(\[\{][^\)\]\}]*(?:official|video|audio|mv|pv|visualizer|remaster|hd|hq|4k|explicit|clean|lyric)[^\)\]\}]*[\)\]\}]""", RegexOption.IGNORE_CASE)
+        text = text.replace(bracketPackagingRegex, " ")
+
         // Remove packaging words
         for (pkg in PACKAGING_WORDS) {
             text = text.replace(Regex("""\b${Regex.escape(pkg)}\b""", RegexOption.IGNORE_CASE), " ")
@@ -187,6 +191,54 @@ object TrackMatcher {
         // Strip non-alphanumeric punctuation (while keeping Japanese and unicode characters)
         text = text.replace(Regex("""[\[\]\(\)\{\}\-_.,:;!?'"~`+*/\\#@$%^&=|<>]"""), " ")
         return text.replace(Regex("""\s+"""), " ").trim()
+    }
+
+    /**
+     * Cleans a track title for external addon search by removing packaging phrases
+     * like "(Official Video)", "[Explicit]", "(Audio)", and leading artist prefixes (e.g. "Ariana Grande - positions").
+     */
+    fun cleanTitleForSearch(title: String, artist: String? = null): String {
+        var text = title.trim()
+
+        // Strip artist prefix if present: "Artist - Title" or "Artist: Title"
+        if (!artist.isNullOrBlank()) {
+            val prefixRegex = Regex("""^${Regex.escape(artist.trim())}\s*[-–—:]\s*""", RegexOption.IGNORE_CASE)
+            text = text.replace(prefixRegex, "")
+        }
+
+        // Remove bracketed packaging phrases
+        val bracketPackagingRegex = Regex("""[\(\[\{][^\)\]\}]*(?:official|video|audio|mv|pv|visualizer|remaster|hd|hq|4k|explicit|clean|lyric)[^\)\]\}]*[\)\]\}]""", RegexOption.IGNORE_CASE)
+        text = text.replace(bracketPackagingRegex, " ")
+
+        // Remove explicit standalone packaging words
+        for (pkg in PACKAGING_WORDS) {
+            text = text.replace(Regex("""\b${Regex.escape(pkg)}\b""", RegexOption.IGNORE_CASE), " ")
+        }
+
+        // Clean up punctuation and whitespace
+        text = text.replace(Regex("""[\[\]\(\)\{\}\-_.,:;!?'"~`+*/\\#@$%^&=|<>]"""), " ")
+        return text.replace(Regex("""\s+"""), " ").trim()
+    }
+
+    /**
+     * Builds a clean query string for external addon search APIs.
+     * Prevents duplicate artist mentions and strips packaging terms that degrade search relevance.
+     */
+    fun buildAddonSearchQuery(title: String, artists: List<String>): String {
+        val primaryArtist = artists.firstOrNull()?.trim()
+        val cleanTitle = cleanTitleForSearch(title, primaryArtist)
+        return buildString {
+            append(cleanTitle)
+            if (!primaryArtist.isNullOrBlank()) {
+                val titleWords = cleanTitle.lowercase(Locale.ROOT).split(Regex("""\s+""")).toSet()
+                val artistWords = primaryArtist.lowercase(Locale.ROOT).split(Regex("""\s+""")).toSet()
+                // Only append artist if not already embedded in the clean title
+                if (titleWords.intersect(artistWords).isEmpty()) {
+                    append(" ")
+                    append(primaryArtist)
+                }
+            }
+        }.trim()
     }
 
     /**
@@ -246,8 +298,10 @@ object TrackMatcher {
     }
 
     private fun normalizeString(text: String): String {
-        val nfkc = Normalizer.normalize(text, Normalizer.Form.NFKC)
-        return nfkc.lowercase(Locale.ROOT)
+        val nfd = Normalizer.normalize(text, Normalizer.Form.NFD)
+        val stripped = nfd.replace(Regex("""\p{InCombiningDiacriticalMarks}"""), "")
+        val nfc = Normalizer.normalize(stripped, Normalizer.Form.NFC)
+        return nfc.lowercase(Locale.ROOT)
     }
 
     /**

@@ -8149,6 +8149,26 @@ class MusicService :
 
     private fun buildPlaybackAudioStreamRequest(mediaId: String): moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest {
         val lowDataModeActive = isLowDataModeActive()
+        val currentMeta = currentMediaMetadata.value?.takeIf { it.id == mediaId }
+        val matchingItem = if (::player.isInitialized) {
+            val count = player.mediaItemCount
+            var found: androidx.media3.common.MediaItem? = null
+            for (i in 0 until count) {
+                val item = player.getMediaItemAt(i)
+                if (item.mediaId == mediaId) {
+                    found = item
+                    break
+                }
+            }
+            found
+        } else null
+
+        val title = currentMeta?.title ?: matchingItem?.mediaMetadata?.title?.toString()
+        val artists = currentMeta?.artists?.mapNotNull { it.name }
+            ?.ifEmpty { null }
+            ?: listOfNotNull(matchingItem?.mediaMetadata?.artist?.toString())
+        val duration = currentMeta?.duration?.takeIf { it > 0 }
+
         return moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest(
             mediaId = mediaId,
             quality = if (lowDataModeActive) moe.rgsekai.sekaitune.constants.AudioQuality.LOW else audioQuality,
@@ -8156,6 +8176,9 @@ class MusicService :
             purpose = moe.rgsekai.sekaitune.playback.stream.StreamPurpose.PLAYBACK,
             preferredStreamClient = preferredStreamClient,
             authState = YouTube.currentPlaybackAuthState(),
+            targetTitle = title,
+            targetArtists = artists,
+            targetDurationSec = duration,
         )
     }
 
