@@ -174,6 +174,14 @@ object TrackMatcher {
     fun normalizeTitle(title: String): String {
         var text = normalizeString(title)
 
+        // Remove soundtrack / motion picture subtitle suffixes:
+        // "- From ...", "- Theme from ...", "(From ...)", "[From ...]", "(Original Motion Picture Soundtrack)", etc.
+        val soundtrackSuffixRegex = Regex("""\s*[-–—:]\s*(?:from|theme\s+from|featured\s+in|music\s+from)\b.*$""", RegexOption.IGNORE_CASE)
+        text = text.replace(soundtrackSuffixRegex, " ")
+
+        val bracketSoundtrackRegex = Regex("""[\(\[\{][^\)\]\}]*(?:from\b|soundtrack\b|ost\b|motion\s+picture|original\s+score)[^\)\]\}]*[\)\]\}]""", RegexOption.IGNORE_CASE)
+        text = text.replace(bracketSoundtrackRegex, " ")
+
         // Remove bracketed packaging phrases e.g. [explicit], (official video), [clean], etc.
         val bracketPackagingRegex = Regex("""[\(\[\{][^\)\]\}]*(?:official|video|audio|mv|pv|visualizer|remaster|hd|hq|4k|explicit|clean|lyric)[^\)\]\}]*[\)\]\}]""", RegexOption.IGNORE_CASE)
         text = text.replace(bracketPackagingRegex, " ")
@@ -205,6 +213,13 @@ object TrackMatcher {
             val prefixRegex = Regex("""^${Regex.escape(artist.trim())}\s*[-–—:]\s*""", RegexOption.IGNORE_CASE)
             text = text.replace(prefixRegex, "")
         }
+
+        // Remove soundtrack / motion picture subtitle suffixes and bracketed tags
+        val soundtrackSuffixRegex = Regex("""\s*[-–—:]\s*(?:from|theme\s+from|featured\s+in|music\s+from)\b.*$""", RegexOption.IGNORE_CASE)
+        text = text.replace(soundtrackSuffixRegex, " ")
+
+        val bracketSoundtrackRegex = Regex("""[\(\[\{][^\)\]\}]*(?:from\b|soundtrack\b|ost\b|motion\s+picture|original\s+score)[^\)\]\}]*[\)\]\}]""", RegexOption.IGNORE_CASE)
+        text = text.replace(bracketSoundtrackRegex, " ")
 
         // Remove bracketed packaging phrases
         val bracketPackagingRegex = Regex("""[\(\[\{][^\)\]\}]*(?:official|video|audio|mv|pv|visualizer|remaster|hd|hq|4k|explicit|clean|lyric)[^\)\]\}]*[\)\]\}]""", RegexOption.IGNORE_CASE)

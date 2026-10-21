@@ -103,4 +103,33 @@ class TrackMatcherTest {
         val result = TrackMatcher.match(target, candidate)
         assertTrue("Expected match after stripping packaging words (Official Music Video, HD)", result.isMatch)
     }
+
+    @Test
+    fun testSoundtrackSuffixStripped_matchesStandardAlbumTrack() {
+        val target = MatchTarget(
+            title = "Love Me Like You Do - From \"Fifty Shades Of Grey\"",
+            artists = listOf("Ellie Goulding"),
+            durationSec = 252,
+        )
+        val candidate = MatchCandidate(
+            title = "Love Me Like You Do",
+            artists = listOf("Ellie Goulding"),
+            durationSec = 252,
+        )
+
+        val result = TrackMatcher.match(target, candidate)
+        assertTrue("Expected match after stripping soundtrack suffix (- From \"Fifty Shades Of Grey\")", result.isMatch)
+    }
+
+    @Test
+    fun testCleanTitleForSearch_soundtrackPhrasesStripped() {
+        val cleaned = TrackMatcher.cleanTitleForSearch("Love Me Like You Do - From \"Fifty Shades Of Grey\"", "Ellie Goulding")
+        assertEquals("Love Me Like You Do", cleaned)
+
+        val query = TrackMatcher.buildAddonSearchQuery(
+            "Love Me Like You Do - From \"Fifty Shades Of Grey\"",
+            listOf("Ellie Goulding"),
+        )
+        assertEquals("Love Me Like You Do Ellie Goulding", query)
+    }
 }

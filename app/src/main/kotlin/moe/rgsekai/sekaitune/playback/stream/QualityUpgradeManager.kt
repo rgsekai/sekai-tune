@@ -297,11 +297,11 @@ class QualityUpgradeManager @Inject constructor(
                     val duration = headlessPlayer.duration
                     if (playingDurationMs > 0 && duration > 0) {
                         val deltaMs = abs(duration - playingDurationMs)
-                        if (deltaMs > 2000L) { // 2s tolerance check
+                        if (deltaMs > 3500L) { // 3.5s tolerance check
                             deferred.complete(
                                 AuditionResult(
                                     isSuccess = false,
-                                    failureReason = "Duration delta ${deltaMs}ms exceeds 2s tolerance",
+                                    failureReason = "Duration delta ${deltaMs}ms exceeds 3.5s tolerance",
                                 )
                             )
                             return

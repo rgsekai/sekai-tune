@@ -5621,7 +5621,7 @@ class MusicService :
                                 playTimeMs = playedMs,
                                 mediaMetadata = mediaMetadataSnapshot,
                             )
-                    val remoteRegistered = remoteRegisteredSnapshot || registerRemotePlaybackHistory(mediaId)
+                    val remoteRegistered = remoteRegisteredSnapshot || registerRemotePlaybackHistory(mediaId, mediaMetadataSnapshot)
                     ImmediateHistoryResult(
                         eventId = resolvedEventId,
                         remoteRegistered = remoteRegistered,
@@ -5680,7 +5680,10 @@ class MusicService :
             null
         }
 
-    private suspend fun registerRemotePlaybackHistory(mediaId: String): Boolean {
+    private suspend fun registerRemotePlaybackHistory(
+        mediaId: String,
+        mediaMetadata: moe.rgsekai.sekaitune.models.MediaMetadata? = null,
+    ): Boolean {
         if (database
                 .song(mediaId)
                 .first()
@@ -5691,7 +5694,14 @@ class MusicService :
         }
 
         val targetId = getMatchedCatalogId(mediaId)
-            ?: player.currentMetadata?.takeIf { it.id == mediaId }?.matchedCatalogId
+            ?: mediaMetadata?.takeIf { it.id == mediaId }?.matchedCatalogId
+            ?: (if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper() && ::player.isInitialized) {
+                player.currentMetadata?.takeIf { it.id == mediaId }?.matchedCatalogId
+            } else {
+                withContext(Dispatchers.Main) {
+                    runCatching { player.currentMetadata?.takeIf { it.id == mediaId }?.matchedCatalogId }.getOrNull()
+                }
+            })
             ?: database.song(mediaId).firstOrNull()?.song?.matchedCatalogId
             ?: mediaId
         if (targetId.startsWith("addon:") || targetId.isLocalMediaId()) {
@@ -7787,7 +7797,7 @@ class MusicService :
                 }
 
                 if (pendingResult?.remoteRegistered != true) {
-                    registerRemotePlaybackHistory(mediaId)
+                    registerRemotePlaybackHistory(mediaId, fallbackMetadata)
                 }
             }
 

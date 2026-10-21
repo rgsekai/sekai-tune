@@ -59,8 +59,13 @@ class NextStreamPreloader @Inject constructor(
         synchronized(this) {
             queueJob?.cancel()
             queueJob = scope.launch {
+                // Yield priority to currently playing track so it doesn't collide on addon bridge rate limits
+                kotlinx.coroutines.delay(2000)
                 for ((index, target) in distinctTargets.withIndex()) {
                     if (currentGen != generationToken.get()) return@launch
+                    if (index > 0) {
+                        kotlinx.coroutines.delay(800)
+                    }
                     val trimmedId = target.mediaId.trim()
                     val request = AudioStreamRequest(
                         mediaId = trimmedId,
