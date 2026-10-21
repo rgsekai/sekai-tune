@@ -257,6 +257,22 @@ enum class AudioQuality {
     }
 }
 
+val PlayMaxQualityOnKey = stringPreferencesKey("playMaxQualityOn")
+
+enum class MaxQualityNetwork {
+    WIFI_ONLY,
+    MOBILE_DATA_ONLY,
+    WIFI_AND_MOBILE_DATA;
+
+    companion object {
+        fun fromPreferences(raw: String?): MaxQualityNetwork = when (raw?.trim()?.uppercase()) {
+            "MOBILE_DATA_ONLY", "MOBILE_ONLY" -> MOBILE_DATA_ONLY
+            "WIFI_AND_MOBILE_DATA", "BOTH", "ALL" -> WIFI_AND_MOBILE_DATA
+            else -> WIFI_ONLY
+        }
+    }
+}
+
 val PlayerStreamClientKey = stringPreferencesKey("playerStreamClient")
 
 enum class PlayerStreamClient {

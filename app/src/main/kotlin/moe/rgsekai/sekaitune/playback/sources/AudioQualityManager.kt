@@ -8,6 +8,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import moe.rgsekai.sekaitune.constants.LowDataModeKey
+import moe.rgsekai.sekaitune.constants.MaxQualityNetwork
+import moe.rgsekai.sekaitune.constants.PlayMaxQualityOnKey
+import moe.rgsekai.sekaitune.utils.dataStore
+import moe.rgsekai.sekaitune.utils.get
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -47,6 +52,56 @@ class AudioQualityManager @Inject constructor(
         return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
+
+    fun isCellularConnected(): Boolean {
+        val cm = connectivityManager ?: return false
+        val activeNetwork = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(activeNetwork) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+    }
+
+    fun getPlayMaxQualityOn(): MaxQualityNetwork {
+        val raw = context.dataStore[PlayMaxQualityOnKey]
+        return MaxQualityNetwork.fromPreferences(raw)
+    }
+
+    fun isLowDataMode(): Boolean {
+        return context.dataStore[LowDataModeKey] ?: true
+    }
+
+    companion object {
+        fun isMaxAllowed(
+            preference: MaxQualityNetwork,
+            isWifi: Boolean,
+            isCellular: Boolean,
+            isMetered: Boolean,
+            lowDataMode: Boolean,
+        ): Boolean {
+            // When Low Data Mode is on and the network is metered, it still wins
+            if (lowDataMode && isMetered) {
+                return false
+            }
+            return when (preference) {
+                MaxQualityNetwork.WIFI_ONLY -> isWifi
+                MaxQualityNetwork.MOBILE_DATA_ONLY -> isCellular
+                MaxQualityNetwork.WIFI_AND_MOBILE_DATA -> isWifi || isCellular || !isMetered
+            }
+        }
+    }
+
+    fun isMaxAllowed(
+        preference: MaxQualityNetwork = getPlayMaxQualityOn(),
+        isWifi: Boolean = isWifiConnected(),
+        isCellular: Boolean = isCellularConnected(),
+        isMetered: Boolean = isMeteredNetwork(),
+        lowDataMode: Boolean = isLowDataMode(),
+    ): Boolean = Companion.isMaxAllowed(
+        preference = preference,
+        isWifi = isWifi,
+        isCellular = isCellular,
+        isMetered = isMetered,
+        lowDataMode = lowDataMode,
+    )
 
     fun setChecking(mediaId: String) {
         _qualityBadgeFlow.value = PlaybackQualityBadgeInfo(

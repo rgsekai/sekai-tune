@@ -548,6 +548,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_play_max_quality_on",
+                title = "Play Max quality on",
+                subtitle = "Choose allowed network types for Max quality streaming (Wi-Fi only, Mobile data only, Wi-Fi and mobile data)",
+                category = playbackCategory,
+                iconRes = R.drawable.wifi,
+                route = "settings/player",
+                keywords = listOf("play max quality on", "max quality network", "wifi only", "mobile data", "streaming network", "cellular max quality"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_sources",
                 title = context.getString(R.string.sources_title),
                 subtitle = context.getString(R.string.sources_subtitle),

@@ -32,6 +32,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import moe.rgsekai.sekaitune.constants.AudioQuality
 import moe.rgsekai.sekaitune.constants.AudioQualityKey
+import moe.rgsekai.sekaitune.constants.MaxQualityNetwork
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_LEGACY_FLOAT_KEY
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MAX
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MIN
@@ -164,6 +165,9 @@ inline fun <reified T : Enum<T>> enumPreference(
     if (T::class == AudioQuality::class) {
         @Suppress("UNCHECKED_CAST")
         (AudioQuality.fromPreferences(raw) as T)
+    } else if (T::class == MaxQualityNetwork::class) {
+        @Suppress("UNCHECKED_CAST")
+        (MaxQualityNetwork.fromPreferences(raw) as T)
     } else {
         raw.toEnum(defaultValue)
     }
@@ -215,6 +219,9 @@ inline fun <reified T : Enum<T>> rememberEnumPreference(
                     if (T::class == AudioQuality::class) {
                         @Suppress("UNCHECKED_CAST")
                         (AudioQuality.fromPreferences(raw) as T)
+                    } else if (T::class == MaxQualityNetwork::class) {
+                        @Suppress("UNCHECKED_CAST")
+                        (MaxQualityNetwork.fromPreferences(raw) as T)
                     } else {
                         raw.toEnum(defaultValue = defaultValue)
                     }

@@ -60,9 +60,11 @@ import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_DEFAULT
 import moe.rgsekai.sekaitune.constants.HistoryDuration
 import moe.rgsekai.sekaitune.constants.LowDataModeKey
+import moe.rgsekai.sekaitune.constants.MaxQualityNetwork
 import moe.rgsekai.sekaitune.constants.PauseOnDeviceMuteKey
 import moe.rgsekai.sekaitune.constants.PermanentShuffleKey
 import moe.rgsekai.sekaitune.constants.PersistentQueueKey
+import moe.rgsekai.sekaitune.constants.PlayMaxQualityOnKey
 import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
 import moe.rgsekai.sekaitune.constants.SkipSilenceKey
@@ -91,6 +93,11 @@ fun PlayerSettings(navController: NavController) {
         rememberEnumPreference(
             AudioQualityKey,
             defaultValue = AudioQuality.MEDIUM,
+        )
+    val (playMaxQualityOn, onPlayMaxQualityOnChange) =
+        rememberEnumPreference(
+            PlayMaxQualityOnKey,
+            defaultValue = MaxQualityNetwork.WIFI_ONLY,
         )
     val (lowDataMode, onLowDataModeChange) =
         rememberPreference(
@@ -280,6 +287,24 @@ fun PlayerSettings(navController: NavController) {
                             }
                         },
                     )
+                }
+
+                if (audioQuality == AudioQuality.MAX) {
+                    item {
+                        EnumListPreference(
+                            title = { Text(stringResource(R.string.play_max_quality_on)) },
+                            icon = { Icon(painterResource(R.drawable.wifi), null) },
+                            selectedValue = playMaxQualityOn,
+                            onValueSelected = onPlayMaxQualityOnChange,
+                            valueText = {
+                                when (it) {
+                                    MaxQualityNetwork.WIFI_ONLY -> stringResource(R.string.max_quality_network_wifi_only)
+                                    MaxQualityNetwork.MOBILE_DATA_ONLY -> stringResource(R.string.max_quality_network_mobile_data_only)
+                                    MaxQualityNetwork.WIFI_AND_MOBILE_DATA -> stringResource(R.string.max_quality_network_wifi_and_mobile_data)
+                                }
+                            },
+                        )
+                    }
                 }
 
                 item {

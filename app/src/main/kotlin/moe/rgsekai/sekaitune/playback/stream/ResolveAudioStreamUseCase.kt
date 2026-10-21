@@ -328,6 +328,27 @@ class ResolveAudioStreamUseCase
                 return ytStream
             }
 
+            // When Max is selected but the current network is not allowed, behave exactly like High
+            // (no addon queries, YouTube only) and do not show Upgrading.
+            if (!audioQualityManager.isMaxAllowed()) {
+                val ytStream = resolveYouTube(request, AudioQuality.HIGH)
+                if (request.purpose == StreamPurpose.PLAYBACK) {
+                    val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
+                        mimeType = ytStream.format.mimeType,
+                        bitrateBps = ytStream.format.bitrate,
+                        sampleRateHz = ytStream.format.audioSampleRate,
+                    )
+                    audioQualityManager.setFinal(
+                        mediaId = request.mediaId,
+                        label = label,
+                        isLossless = isLossless,
+                        isHiRes = false,
+                        details = "",
+                    )
+                }
+                return ytStream
+            }
+
             // Check if any external addons are enabled
             val enabledAddons = sourceRegistry.sourcesFlow.value.filter { it.kind == SourceKind.ADDON && it.isEnabled }
             if (enabledAddons.isEmpty()) {
