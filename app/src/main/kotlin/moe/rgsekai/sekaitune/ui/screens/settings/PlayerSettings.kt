@@ -275,6 +275,15 @@ fun PlayerSettings(navController: NavController) {
                 }
 
                 item {
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.sources_title)) },
+                        description = stringResource(R.string.sources_subtitle),
+                        icon = { Icon(painterResource(R.drawable.sync), null) },
+                        onClick = { navController.navigate("settings/sources") },
+                    )
+                }
+
+                item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.low_data_mode_title)) },
                         description = stringResource(R.string.low_data_mode_description),

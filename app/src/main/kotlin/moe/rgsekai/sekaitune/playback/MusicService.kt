@@ -308,6 +308,9 @@ class MusicService :
     @Inject
     lateinit var nextStreamPreloader: moe.rgsekai.sekaitune.playback.preload.NextStreamPreloader
 
+    @Inject
+    lateinit var audioQualityManager: moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
+
     private var lastTransitionTimeMs = 0L
     private var lastTransitionMediaId: String? = null
     private var firstPlaybackLogged = false

@@ -176,6 +176,7 @@ fun Queue(
     val currentSongLiked = currentSong?.song?.liked == true
 
     val currentFormat by playerConnection.currentFormat.collectAsState(initial = null)
+    val qualityBadgeInfo by playerConnection.qualityBadgeFlow.collectAsState()
     val queueTitle by playerConnection.queueTitle.collectAsState()
 
     val selectedSongs = remember { mutableStateListOf<MediaMetadata>() }
@@ -436,6 +437,7 @@ fun Queue(
                     QueueCollapsedContentV2(
                         showCodecOnPlayer = showCodecOnPlayer,
                         currentFormat = currentFormat,
+                        qualityBadgeInfo = qualityBadgeInfo,
                         textBackgroundColor = TextBackgroundColor,
                         textButtonColor = textButtonColor,
                         iconButtonColor = iconButtonColor,

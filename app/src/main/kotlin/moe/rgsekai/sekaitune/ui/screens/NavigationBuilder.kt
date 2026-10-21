@@ -80,6 +80,7 @@ import moe.rgsekai.sekaitune.ui.screens.settings.StorageSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.SupportScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.ThemeCreatorScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.UpdateScreen
+import moe.rgsekai.sekaitune.ui.screens.settings.sources.SourcesScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun NavGraphBuilder.navigationBuilder(
@@ -382,6 +383,9 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/lyrics") {
         LyricsSettings(navController)
+    }
+    composable("settings/sources") {
+        SourcesScreen(navController)
     }
     composable("settings/canvas") {
         CanvasSettings(navController)

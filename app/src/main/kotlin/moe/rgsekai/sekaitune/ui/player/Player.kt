@@ -1029,8 +1029,19 @@ fun BottomSheetPlayer(
             }
 
         val enrichedMetadata =
-            remember(mediaMetadata, currentSong) {
-                val meta = mediaMetadata ?: return@remember null
+            remember(mediaMetadata, currentSong, currentWindowIndex) {
+                val fallbackItem = playerConnection.player.currentMediaItem
+                val fallbackMeta = fallbackItem?.let { item ->
+                    (item.localConfiguration?.tag as? MediaMetadata) ?: MediaMetadata(
+                        id = item.mediaId,
+                        title = item.mediaMetadata.title?.toString() ?: item.mediaId,
+                        artists = listOfNotNull(item.mediaMetadata.artist?.toString()?.let { MediaMetadata.Artist(id = null, name = it) }),
+                        album = item.mediaMetadata.albumTitle?.toString()?.let { MediaMetadata.Album(id = "", title = it) },
+                        thumbnailUrl = item.mediaMetadata.artworkUri?.toString(),
+                        duration = (playerConnection.player.duration.takeIf { it > 0 } ?: 0L).toInt() / 1000,
+                    )
+                }
+                val meta = mediaMetadata ?: fallbackMeta ?: return@remember null
                 if (meta.album != null) return@remember meta
                 val dbAlbum = currentSong?.album
                 val dbAlbumId = currentSong?.song?.albumId
@@ -1153,7 +1164,7 @@ fun BottomSheetPlayer(
                 context = context,
                 onSliderValueChange = onSliderValueChange,
                 onSliderValueChangeFinished = onSliderValueChangeFinished,
-                currentFormat = if (playerDesignStyle == PlayerDesignStyle.V7) currentFormat else null,
+                currentFormat = currentFormat,
                 lyricsSyncOffset = lyricsSyncOffset,
                 showOneLineLyrics = showOneLineLyrics,
                 onShowLyrics = { isLyricsScreenVisible = true },

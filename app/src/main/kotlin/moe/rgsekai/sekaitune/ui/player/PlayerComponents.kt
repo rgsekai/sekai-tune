@@ -14,6 +14,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -26,6 +28,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import moe.rgsekai.sekaitune.playback.sources.CandidateQualityRank
+import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
+import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -531,13 +536,14 @@ fun PlayerTimeLabel(
     duration: Long,
     textBackgroundColor: Color,
     showRemainingTime: Boolean = false,
+    modifier: Modifier =
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = PlayerHorizontalPadding + 4.dp),
     centerContent: @Composable (() -> Unit)? = null,
 ) {
     Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = PlayerHorizontalPadding + 4.dp),
+        modifier = modifier,
     ) {
         Text(
             text = makeTimeString(sliderPosition ?: position),
@@ -575,6 +581,160 @@ fun PlayerTimeLabel(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.CenterEnd),
         )
+    }
+}
+
+fun deriveDisplayBadge(
+    badgeInfo: PlaybackQualityBadgeInfo,
+    currentFormat: FormatEntity?,
+    currentMediaId: String?,
+): PlaybackQualityBadgeInfo {
+    if (currentMediaId != null && badgeInfo.mediaId == currentMediaId) {
+        when (badgeInfo.state) {
+            PlaybackQualityBadgeState.CHECKING -> return badgeInfo
+            PlaybackQualityBadgeState.UPGRADING -> return badgeInfo
+            PlaybackQualityBadgeState.FINAL -> {
+                if (badgeInfo.label.isNotBlank()) {
+                    if (badgeInfo.isLossless && currentFormat != null) {
+                        val rawMime = currentFormat.mimeType.uppercase()
+                        val rawCodecs = currentFormat.codecs.uppercase()
+                        val actuallyLossless = rawMime.contains("FLAC") || rawCodecs.contains("FLAC") ||
+                            rawMime.contains("ALAC") || rawCodecs.contains("ALAC") ||
+                            rawMime.contains("WAV") || rawCodecs.contains("WAV")
+                        if (!actuallyLossless) {
+                            val (fallbackLabel, _) = CandidateQualityRank.computeFinalQualityLabel(
+                                mimeType = currentFormat.mimeType,
+                                codecs = currentFormat.codecs,
+                                bitrateBps = currentFormat.bitrate,
+                                sampleRateHz = currentFormat.sampleRate,
+                            )
+                            return badgeInfo.copy(label = fallbackLabel, isLossless = false, isHiRes = false)
+                        }
+                    }
+                    return badgeInfo
+                }
+            }
+        }
+    }
+
+    if (currentFormat != null) {
+        val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
+            mimeType = currentFormat.mimeType,
+            codecs = currentFormat.codecs,
+            bitrateBps = currentFormat.bitrate,
+            sampleRateHz = currentFormat.sampleRate,
+        )
+        val isHiRes = isLossless && ((currentFormat.sampleRate ?: 0) > 48000)
+        return PlaybackQualityBadgeInfo(
+            mediaId = currentMediaId,
+            state = PlaybackQualityBadgeState.FINAL,
+            label = label,
+            isLossless = isLossless,
+            isHiRes = isHiRes,
+            details = "",
+        )
+    }
+
+    return badgeInfo
+}
+
+@Composable
+fun PlaybackQualityBadge(
+    badgeInfo: PlaybackQualityBadgeInfo,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    if (badgeInfo.label.isBlank()) return
+
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = textColor.copy(alpha = 0.12f),
+        modifier = modifier,
+    ) {
+        Crossfade(
+            targetState = badgeInfo,
+            animationSpec = tween(durationMillis = 250),
+            label = "qualityBadgeCrossfade",
+        ) { info ->
+            when (info.state) {
+                PlaybackQualityBadgeState.CHECKING -> {
+                    val transition = rememberInfiniteTransition(label = "checkingPulse")
+                    val alpha by transition.animateFloat(
+                        initialValue = 0.45f,
+                        targetValue = 0.95f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(800, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "checkingAlpha",
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.quality_checking),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = alpha),
+                            maxLines = 1,
+                        )
+                    }
+                }
+                PlaybackQualityBadgeState.UPGRADING -> {
+                    val transition = rememberInfiniteTransition(label = "upgradingPulse")
+                    val alpha by transition.animateFloat(
+                        initialValue = 0.5f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(600, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "upgradingAlpha",
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.graphic_eq),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = textColor.copy(alpha = alpha),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.quality_upgrading),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = alpha),
+                            maxLines = 1,
+                        )
+                    }
+                }
+                PlaybackQualityBadgeState.FINAL -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.graphic_eq),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = textColor.copy(alpha = 0.8f),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = info.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = 0.8f),
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -748,6 +908,10 @@ fun PlayerControlsContent(
 ) {
     val currentSong by playerConnection.currentSong.collectAsState(initial = null)
     val currentSongLiked = currentSong?.song?.liked == true
+    val qualityBadgeInfo by playerConnection.qualityBadgeFlow.collectAsState()
+    val displayBadgeInfo = remember(qualityBadgeInfo, currentFormat, mediaMetadata.id) {
+        deriveDisplayBadge(qualityBadgeInfo, currentFormat, mediaMetadata.id)
+    }
 
     val playPauseRoundness by animateDpAsState(
         targetValue = if (isPlaying) 24.dp else 36.dp,
@@ -835,40 +999,12 @@ fun PlayerControlsContent(
         textBackgroundColor = textBackgroundColor,
         showRemainingTime = playerDesignStyle == PlayerDesignStyle.V7,
         centerContent =
-            if (playerDesignStyle == PlayerDesignStyle.V7 && currentFormat != null) {
+            if (displayBadgeInfo.label.isNotBlank()) {
                 {
-                    val codec = currentFormat.mimeType.substringAfter("/").uppercase()
-                    val label =
-                        when {
-                            codec.contains("FLAC") || codec.contains("ALAC") -> "Lossless"
-                            codec.contains("OPUS") -> codec
-                            codec.contains("AAC") -> codec
-                            codec.contains("MP4A") -> "AAC"
-                            codec.contains("VORBIS") -> "Vorbis"
-                            else -> codec
-                        }
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = textBackgroundColor.copy(alpha = 0.12f),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.graphic_eq),
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = textBackgroundColor.copy(alpha = 0.8f),
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = textBackgroundColor.copy(alpha = 0.8f),
-                            )
-                        }
-                    }
+                    PlaybackQualityBadge(
+                        badgeInfo = displayBadgeInfo,
+                        textColor = textBackgroundColor,
+                    )
                 }
             } else {
                 null
@@ -925,6 +1061,7 @@ fun V8PlayerControlsContent(
 ) {
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
+    val qualityBadgeInfo by playerConnection.qualityBadgeFlow.collectAsState()
     val onMenuClick =
         remember(mediaMetadata, navController, state, menuState, bottomSheetPageState) {
             {
@@ -1043,6 +1180,7 @@ fun V8PlayerControlsContent(
                 foreground = foreground,
                 onSliderValueChange = onSliderValueChange,
                 onSliderValueChangeFinished = onSliderValueChangeFinished,
+                qualityBadgeInfo = qualityBadgeInfo,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -1195,6 +1333,7 @@ private fun V8PlaybackProgress(
     foreground: Color,
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
+    qualityBadgeInfo: PlaybackQualityBadgeInfo = PlaybackQualityBadgeInfo(),
 ) {
     val safeDuration = if (duration <= 0L || duration == C.TIME_UNSET) 0f else duration.toFloat()
     val safeValue = (sliderPosition ?: position).toFloat().coerceIn(0f, safeDuration.coerceAtLeast(0f))
@@ -1251,38 +1390,32 @@ private fun V8PlaybackProgress(
 
         Spacer(Modifier.height(4.dp))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        val displayBadgeInfo = remember(qualityBadgeInfo, currentFormat, mediaId) {
+            deriveDisplayBadge(qualityBadgeInfo, currentFormat, mediaId)
+        }
+
+        PlayerTimeLabel(
+            sliderPosition = sliderPosition,
+            position = position,
+            duration = duration,
+            textBackgroundColor = foreground,
+            showRemainingTime = true,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp),
-        ) {
-            Text(
-                text = makeTimeString(sliderPosition ?: position),
-                style = MaterialTheme.typography.labelMedium,
-                color = foreground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-
-            Text(
-                text =
-                    if (duration != C.TIME_UNSET && duration > 0L) {
-                        val remaining = duration - (sliderPosition ?: position)
-                        "-${makeTimeString(remaining.coerceAtLeast(0L))}"
-                    } else {
-                        ""
-                    },
-                style = MaterialTheme.typography.labelMedium,
-                color = foreground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f),
-            )
-        }
+            centerContent =
+                if (displayBadgeInfo.label.isNotBlank()) {
+                    {
+                        PlaybackQualityBadge(
+                            badgeInfo = displayBadgeInfo,
+                            textColor = foreground,
+                        )
+                    }
+                } else {
+                    null
+                },
+        )
     }
 }
 

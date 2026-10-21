@@ -654,14 +654,16 @@ val SwipeThumbnailKey = booleanPreferencesKey("swipeThumbnail")
 val SwipeSensitivityKey = floatPreferencesKey("swipeSensitivity")
 
 enum class SearchSource {
-    LOCAL,
     ONLINE,
+    LOCAL,
+    ADDONS,
     ;
 
     fun toggle() =
         when (this) {
-            LOCAL -> ONLINE
             ONLINE -> LOCAL
+            LOCAL -> ADDONS
+            ADDONS -> ONLINE
         }
 }
 

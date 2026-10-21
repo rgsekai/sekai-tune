@@ -829,6 +829,7 @@ fun QueueCollapsedContentV2(
     onRepeatModeClick: () -> Unit,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier,
+    qualityBadgeInfo: moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo? = null,
 ) {
     val view = LocalView.current
     val (enableHapticFeedback) = rememberPreference(EnableHapticFeedbackKey, true)
@@ -838,35 +839,59 @@ fun QueueCollapsedContentV2(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        if (showCodecOnPlayer && currentFormat != null) {
-            val codec =
-                currentFormat.codecs
-                    .takeIf { it.isNotBlank() }
-                    ?: currentFormat.containerLabel()
+        if (showCodecOnPlayer) {
+            val isAddonPlaying = qualityBadgeInfo != null &&
+                qualityBadgeInfo.mediaId == mediaMetadata?.id &&
+                qualityBadgeInfo.details.isNotBlank()
 
-            val container = currentFormat.containerLabel()
-
-            val codecLabel =
-                if (container.isNotBlank() && !codec.equals(container, ignoreCase = true)) {
-                    "$codec ($container)"
-                } else {
-                    codec
+            if (isAddonPlaying) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 30.dp, end = 30.dp, top = 6.dp, bottom = 2.dp),
+                ) {
+                    Text(
+                        text = qualityBadgeInfo.details,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = textBackgroundColor.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
+            } else if (currentFormat != null) {
+                val codec =
+                    currentFormat.codecs
+                        .takeIf { it.isNotBlank() }
+                        ?: currentFormat.containerLabel()
 
-            val bitrate = currentFormat.formattedBitrate()
+                val container = currentFormat.containerLabel()
 
-            val extraText =
-                listOfNotNull(
-                    currentFormat.formattedSampleRate(),
-                    currentFormat.formattedFileSize().takeIf { it.isNotBlank() },
-                ).joinToString(separator = " • ")
+                val codecLabel =
+                    if (container.isNotBlank() && !codec.equals(container, ignoreCase = true)) {
+                        "$codec ($container)"
+                    } else {
+                        codec
+                    }
 
-            CodecInfoRow(
-                codec = codecLabel,
-                bitrate = bitrate,
-                fileSize = extraText,
-                textColor = textBackgroundColor.copy(alpha = 0.7f),
-            )
+                val bitrate = currentFormat.formattedBitrate()
+
+                val extraText =
+                    listOfNotNull(
+                        currentFormat.formattedSampleRate(),
+                        currentFormat.formattedFileSize().takeIf { it.isNotBlank() },
+                    ).joinToString(separator = " • ")
+
+                CodecInfoRow(
+                    codec = codecLabel,
+                    bitrate = bitrate,
+                    fileSize = extraText,
+                    textColor = textBackgroundColor.copy(alpha = 0.7f),
+                )
+            }
         }
 
         Row(

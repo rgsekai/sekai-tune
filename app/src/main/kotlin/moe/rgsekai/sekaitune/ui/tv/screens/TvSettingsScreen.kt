@@ -193,7 +193,7 @@ private fun tvCategoryTopBarHeight(category: TvSettingsCategory, subRoute: Strin
 }
 
 /**
- * TV split-screen Settings layout (BitChord style):
+ * TV split-screen Settings layout (two-pane style):
  * - Left column (~30% width): Vertical list of categories in phone settings order.
  * - Right pane (~70% width): Embedded settings composables with TopAppBar hidden.
  * - Moving Up/Down in the left column changes the right pane preview without stealing focus.

@@ -90,6 +90,8 @@ class PlayerConnection(
     val queueRestoreCompleted = service.queueRestoreCompleted
     val currentQueueFilter = service.currentQueueFilter
     val activeQueueType = service.activeQueueType
+    val qualityBadgeFlow: kotlinx.coroutines.flow.StateFlow<moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo>
+        get() = service.audioQualityManager.qualityBadgeFlow
 
     init {
         player.addListener(this)

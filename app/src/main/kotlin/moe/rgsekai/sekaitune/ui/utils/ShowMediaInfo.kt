@@ -181,6 +181,10 @@ fun ShowMediaInfo(videoId: String) {
 
     val technicalDetails =
         buildList {
+            if (currentFormat != null) {
+                val isAddon = currentFormat?.itag == 999 || videoId.startsWith("addon:")
+                add(MediaInfoDetail(label = "Source", value = if (isAddon) "Addon" else "YouTube"))
+            }
             currentFormat?.itag?.toString()?.let { add(MediaInfoDetail(label = "Itag", value = it)) }
             currentFormat
                 ?.mimeType

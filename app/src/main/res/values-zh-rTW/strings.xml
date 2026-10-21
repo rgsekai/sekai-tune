@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="home">é¦–é </string>
     <string name="songs">æ­Œæ›²</string>
@@ -859,6 +859,36 @@
     <string name="hidden_playlists_description">å¾žåª’é«”åº«ä¸­éš±è—çš„æ’­æ”¾æ¸…å–®æœƒé¡¯ç¤ºåœ¨æ­¤</string>
     <string name="no_hidden_playlists">æ²’æœ‰éš±è—çš„æ’­æ”¾æ¸…å–®</string>
     <string name="unhide">å–æ¶ˆéš±è—</string>
+    <!-- External Sources -->
+    <string name="sources_title">Sources</string>
+    <string name="sources_subtitle">Manage external audio providers and priority</string>
+    <string name="sources_disclaimer">You are responsible for the addons you add.</string>
+    <string name="sources_list_title">Audio Sources</string>
+    <string name="sources_always_on">Always on</string>
+    <string name="sources_add_addon">Add an addon</string>
+    <string name="sources_add_dialog_title">Add Addon Source</string>
+    <string name="sources_add_dialog_hint">Enter addon URL (https://...)</string>
+    <string name="sources_add_dialog_error">Failed to connect to addon: %s</string>
+    <string name="sources_remove">Remove</string>
+    <string name="sources_remove_confirm">Remove \"%1$s\"? This cannot be undone.</string>
+    <string name="sources_test">Test</string>
+    <string name="sources_testing">Testing…</string>
+    <string name="sources_matching_title">Track Matching</string>
+    <string name="sources_tolerance_title">Length tolerance</string>
+    <string name="sources_tolerance_seconds">±%1$d s</string>
+    <string name="sources_tolerance_desc">Allowable difference between track length and candidate length</string>
+    <string name="sources_health_ok">Connected (%s)</string>
+    <string name="sources_health_unreachable">Unreachable: %s</string>
+    <string name="sources_health_rejected">Rejected: %s</string>
+    <string name="audio_quality_title">Audio quality</string>
+    <string name="search_source_youtube">YouTube</string>
+    <string name="search_source_library">Library</string>
+    <string name="search_source_addons">Addons</string>
+    <string name="search_addons_prompt">Search addonsâ€¦</string>
+    <string name="no_addons_configured_title">No addons configured</string>
+    <string name="no_addons_configured_desc">Add external sources to search beyond YouTube and your local library.</string>
+    <string name="quality_checking">Checking quality...</string>
+    <string name="quality_upgrading">Upgrading quality</string>
 </resources>
 
 

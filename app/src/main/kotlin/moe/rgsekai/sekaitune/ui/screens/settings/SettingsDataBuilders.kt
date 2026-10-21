@@ -7,12 +7,7 @@
 
 package moe.rgsekai.sekaitune.ui.screens.settings
 
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import android.widget.Toast
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
@@ -20,7 +15,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.R
-@Composable
+
+@Composable
 fun buildSettingsGroups(
     navController: NavController,
     isAndroid12OrLater: Boolean,
@@ -172,7 +168,7 @@ fun buildSettingsGroups(
                                     title = stringResource(R.string.updates),
                                     subtitle =
                                         if (hasUpdate) {
-                                            stringResource(R.string.new_version_available)
+                                             stringResource(R.string.new_version_available)
                                         } else {
                                             stringResource(R.string.settings_updates_subtitle)
                                         },
@@ -212,7 +208,3 @@ fun buildSettingsGroups(
             ),
         )
     }
-
-
-
-

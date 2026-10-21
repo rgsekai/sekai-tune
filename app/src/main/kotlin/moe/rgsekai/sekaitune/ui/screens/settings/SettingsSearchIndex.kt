@@ -548,6 +548,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_sources",
+                title = context.getString(R.string.sources_title),
+                subtitle = context.getString(R.string.sources_subtitle),
+                category = playbackCategory,
+                iconRes = R.drawable.sync,
+                route = "settings/sources",
+                keywords = listOf("sources", "addon", "addons", "providers", "external sources", "audio quality", "flac", "stream", "matcher"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_audio_offload",
                 title = "Audio offload",
                 subtitle = "Use device hardware DSP decoding for energy efficiency and battery saving",

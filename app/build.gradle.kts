@@ -317,8 +317,10 @@ dependencies {
 
 
     implementation(libs.timber)
+    implementation(libs.security.crypto)
     testImplementation(libs.junit)
     testImplementation(libs.turbine)
+    testImplementation(libs.mockwebserver)
     androidTestImplementation(libs.junit)
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")

@@ -94,9 +94,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RichTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -244,6 +246,7 @@ import moe.rgsekai.sekaitune.constants.SYSTEM_DEFAULT
 import moe.rgsekai.sekaitune.constants.SearchSource
 import moe.rgsekai.sekaitune.constants.SearchSourceKey
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
+import moe.rgsekai.sekaitune.ui.screens.search.AddonSearchScreen
 import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
 import moe.rgsekai.sekaitune.ui.component.GlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
@@ -2022,6 +2025,7 @@ class MainActivity : ComponentActivity() {
                                                             when (searchSource) {
                                                                 SearchSource.LOCAL -> R.string.search_library
                                                                 SearchSource.ONLINE -> R.string.search_yt_music
+                                                                SearchSource.ADDONS -> R.string.search_addons_prompt
                                                             },
                                                         ),
                                                 )
@@ -2096,14 +2100,7 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                         IconButton(
                                                             onClick = {
-                                                                searchSource =
-                                                                    if (searchSource ==
-                                                                        SearchSource.ONLINE
-                                                                    ) {
-                                                                        SearchSource.LOCAL
-                                                                    } else {
-                                                                        SearchSource.ONLINE
-                                                                    }
+                                                                searchSource = searchSource.toggle()
                                                             },
                                                         ) {
                                                             Icon(
@@ -2112,6 +2109,7 @@ class MainActivity : ComponentActivity() {
                                                                         when (searchSource) {
                                                                             SearchSource.LOCAL -> R.drawable.library_music
                                                                             SearchSource.ONLINE -> R.drawable.language
+                                                                            SearchSource.ADDONS -> R.drawable.integration
                                                                         },
                                                                     ),
                                                                 contentDescription = null,
@@ -2153,43 +2151,99 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 },
                                         ) {
-                                            Crossfade(
-                                                targetState = searchSource,
-                                                animationSpec = tween(durationMillis = if (disableAnimations) 0 else 300),
-                                                label = "",
-                                                modifier =
-                                                    Modifier
-                                                        .fillMaxSize()
-                                                        .padding(
-                                                            bottom = if (!playerBottomSheetState.isDismissed) MiniPlayerHeight else 0.dp,
-                                                        ).navigationBarsPadding(),
-                                            ) { searchSource ->
-                                                when (searchSource) {
-                                                    SearchSource.LOCAL -> {
-                                                        LocalSearchScreen(
-                                                            query = query.text,
-                                                            navController = navController,
-                                                            onDismiss = { onActiveChange(false) },
-                                                            pureBlack = pureBlack,
-                                                        )
-                                                    }
+                                            Column(modifier = Modifier.fillMaxSize()) {
+                                                PrimaryTabRow(
+                                                    selectedTabIndex =
+                                                        when (searchSource) {
+                                                            SearchSource.ONLINE -> 0
+                                                            SearchSource.LOCAL -> 1
+                                                            SearchSource.ADDONS -> 2
+                                                        },
+                                                    containerColor = Color.Transparent,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                ) {
+                                                    Tab(
+                                                        selected = searchSource == SearchSource.ONLINE,
+                                                        onClick = { searchSource = SearchSource.ONLINE },
+                                                        text = {
+                                                            Text(
+                                                                text = stringResource(R.string.search_source_youtube),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                            )
+                                                        },
+                                                    )
+                                                    Tab(
+                                                        selected = searchSource == SearchSource.LOCAL,
+                                                        onClick = { searchSource = SearchSource.LOCAL },
+                                                        text = {
+                                                            Text(
+                                                                text = stringResource(R.string.search_source_library),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                            )
+                                                        },
+                                                    )
+                                                    Tab(
+                                                        selected = searchSource == SearchSource.ADDONS,
+                                                        onClick = { searchSource = SearchSource.ADDONS },
+                                                        text = {
+                                                            Text(
+                                                                text = stringResource(R.string.search_source_addons),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                            )
+                                                        },
+                                                    )
+                                                }
 
-                                                    SearchSource.ONLINE -> {
-                                                        OnlineSearchScreen(
-                                                            query = query.text,
-                                                            onQueryChange = onQueryChange,
-                                                            navController = navController,
-                                                            onSearch = {
-                                                                navController.navigate(onlineSearchResultRoute(it))
-                                                                if (!pauseSearchHistory) {
-                                                                    database.query {
-                                                                        insert(SearchHistory(query = it))
+                                                Crossfade(
+                                                    targetState = searchSource,
+                                                    animationSpec = tween(durationMillis = if (disableAnimations) 0 else 300),
+                                                    label = "",
+                                                    modifier =
+                                                        Modifier
+                                                            .fillMaxSize()
+                                                            .padding(
+                                                                bottom = if (!playerBottomSheetState.isDismissed) MiniPlayerHeight else 0.dp,
+                                                            ).navigationBarsPadding(),
+                                                ) { currentSearchSource ->
+                                                    when (currentSearchSource) {
+                                                        SearchSource.LOCAL -> {
+                                                            LocalSearchScreen(
+                                                                query = query.text,
+                                                                navController = navController,
+                                                                onDismiss = { onActiveChange(false) },
+                                                                pureBlack = pureBlack,
+                                                            )
+                                                        }
+
+                                                        SearchSource.ONLINE -> {
+                                                            OnlineSearchScreen(
+                                                                query = query.text,
+                                                                onQueryChange = onQueryChange,
+                                                                navController = navController,
+                                                                onSearch = {
+                                                                    navController.navigate(onlineSearchResultRoute(it))
+                                                                    if (!pauseSearchHistory) {
+                                                                        database.query {
+                                                                            insert(SearchHistory(query = it))
+                                                                        }
                                                                     }
-                                                                }
-                                                            },
-                                                            onDismiss = { onActiveChange(false) },
-                                                            pureBlack = pureBlack,
-                                                        )
+                                                                },
+                                                                onDismiss = { onActiveChange(false) },
+                                                                pureBlack = pureBlack,
+                                                            )
+                                                        }
+
+                                                        SearchSource.ADDONS -> {
+                                                            AddonSearchScreen(
+                                                                query = query.text,
+                                                                navController = navController,
+                                                                pureBlack = pureBlack,
+                                                                onDismiss = { onActiveChange(false) },
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }

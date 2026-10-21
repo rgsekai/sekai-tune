@@ -33,6 +33,7 @@ data class SettingsItem(
     val title: String,
     val subtitle: String? = null,
     val badge: String? = null,
+    val trailingText: String? = null,
     val showUpdateIndicator: Boolean = false,
     val accentColor: Color = Color.Unspecified,
     val keywords: List<String> = emptyList(),
