@@ -29,6 +29,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import moe.rgsekai.sekaitune.playback.sources.CandidateQualityRank
+import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeState
 import androidx.compose.foundation.Image
@@ -74,8 +75,10 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -625,6 +628,19 @@ fun deriveDisplayBadge(
             sampleRateHz = currentFormat.sampleRate,
         )
         val isHiRes = isLossless && ((currentFormat.sampleRate ?: 0) > 48000)
+        val formatStr = when {
+            currentFormat.mimeType.contains("flac", ignoreCase = true) -> "FLAC"
+            currentFormat.mimeType.contains("opus", ignoreCase = true) -> "Opus"
+            currentFormat.mimeType.contains("mp4", ignoreCase = true) || currentFormat.mimeType.contains("aac", ignoreCase = true) -> "AAC"
+            else -> currentFormat.mimeType.substringAfter("audio/").uppercase()
+        }
+        val bitDepthStr = if (isHiRes) "24-bit" else "16-bit"
+        val sampleRateStr = currentFormat.sampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz"
+        val bitrateStr = currentFormat.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps"
+        val transferSizeStr = currentFormat.contentLength?.let {
+            String.format(java.util.Locale.US, "%.1f MB", it / (1024.0 * 1024.0))
+        } ?: ""
+
         return PlaybackQualityBadgeInfo(
             mediaId = currentMediaId,
             state = PlaybackQualityBadgeState.FINAL,
@@ -632,6 +648,13 @@ fun deriveDisplayBadge(
             isLossless = isLossless,
             isHiRes = isHiRes,
             details = "",
+            sourceName = "YouTube",
+            format = formatStr,
+            bitDepth = bitDepthStr,
+            sampleRate = sampleRateStr,
+            bitrate = bitrateStr,
+            transferSize = transferSizeStr,
+            pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
         )
     }
 
@@ -643,13 +666,20 @@ fun PlaybackQualityBadge(
     badgeInfo: PlaybackQualityBadgeInfo,
     textColor: Color,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     if (badgeInfo.label.isBlank()) return
 
     Surface(
         shape = RoundedCornerShape(4.dp),
         color = textColor.copy(alpha = 0.12f),
-        modifier = modifier,
+        modifier = modifier.then(
+            if (onClick != null) {
+                Modifier.clickable(onClick = onClick)
+            } else {
+                Modifier
+            }
+        ),
     ) {
         Crossfade(
             targetState = badgeInfo,
@@ -679,6 +709,17 @@ fun PlaybackQualityBadge(
                             color = textColor.copy(alpha = alpha),
                             maxLines = 1,
                         )
+                        if (onClick != null) {
+                            Spacer(Modifier.width(3.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.navigate_next),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .alpha(0.6f),
+                                tint = textColor,
+                            )
+                        }
                     }
                 }
                 PlaybackQualityBadgeState.UPGRADING -> {
@@ -710,6 +751,17 @@ fun PlaybackQualityBadge(
                             color = textColor.copy(alpha = alpha),
                             maxLines = 1,
                         )
+                        if (onClick != null) {
+                            Spacer(Modifier.width(3.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.navigate_next),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .alpha(0.6f),
+                                tint = textColor,
+                            )
+                        }
                     }
                 }
                 PlaybackQualityBadgeState.FINAL -> {
@@ -731,6 +783,17 @@ fun PlaybackQualityBadge(
                             color = textColor.copy(alpha = 0.8f),
                             maxLines = 1,
                         )
+                        if (onClick != null) {
+                            Spacer(Modifier.width(3.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.navigate_next),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .alpha(0.6f),
+                                tint = textColor,
+                            )
+                        }
                     }
                 }
             }
@@ -912,6 +975,7 @@ fun PlayerControlsContent(
     val displayBadgeInfo = remember(qualityBadgeInfo, currentFormat, mediaMetadata.id) {
         deriveDisplayBadge(qualityBadgeInfo, currentFormat, mediaMetadata.id)
     }
+    var showPipelineDetails by rememberSaveable { mutableStateOf(false) }
 
     val playPauseRoundness by animateDpAsState(
         targetValue = if (isPlaying) 24.dp else 36.dp,
@@ -1004,6 +1068,7 @@ fun PlayerControlsContent(
                     PlaybackQualityBadge(
                         badgeInfo = displayBadgeInfo,
                         textColor = textBackgroundColor,
+                        onClick = { showPipelineDetails = true },
                     )
                 }
             } else {
@@ -1028,6 +1093,14 @@ fun PlayerControlsContent(
         playerConnection = playerConnection,
         currentSongLiked = currentSongLiked,
     )
+
+    if (showPipelineDetails) {
+        AudioPipelineDetailsBottomSheet(
+            onDismiss = { showPipelineDetails = false },
+            badgeInfo = displayBadgeInfo,
+            currentFormat = currentFormat,
+        )
+    }
 }
 
 @Composable
@@ -1062,6 +1135,7 @@ fun V8PlayerControlsContent(
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
     val qualityBadgeInfo by playerConnection.qualityBadgeFlow.collectAsState()
+    var showPipelineDetails by rememberSaveable { mutableStateOf(false) }
     val onMenuClick =
         remember(mediaMetadata, navController, state, menuState, bottomSheetPageState) {
             {
@@ -1181,6 +1255,7 @@ fun V8PlayerControlsContent(
                 onSliderValueChange = onSliderValueChange,
                 onSliderValueChangeFinished = onSliderValueChangeFinished,
                 qualityBadgeInfo = qualityBadgeInfo,
+                onBadgeClick = { showPipelineDetails = true },
             )
 
             Spacer(Modifier.height(16.dp))
@@ -1207,6 +1282,17 @@ fun V8PlayerControlsContent(
                 )
             }
         }
+    }
+
+    if (showPipelineDetails) {
+        val displayBadge = remember(qualityBadgeInfo, currentFormat, mediaMetadata.id) {
+            deriveDisplayBadge(qualityBadgeInfo, currentFormat, mediaMetadata.id)
+        }
+        AudioPipelineDetailsBottomSheet(
+            onDismiss = { showPipelineDetails = false },
+            badgeInfo = displayBadge,
+            currentFormat = currentFormat,
+        )
     }
 }
 
@@ -1334,6 +1420,7 @@ private fun V8PlaybackProgress(
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
     qualityBadgeInfo: PlaybackQualityBadgeInfo = PlaybackQualityBadgeInfo(),
+    onBadgeClick: (() -> Unit)? = null,
 ) {
     val safeDuration = if (duration <= 0L || duration == C.TIME_UNSET) 0f else duration.toFloat()
     val safeValue = (sliderPosition ?: position).toFloat().coerceIn(0f, safeDuration.coerceAtLeast(0f))
@@ -1410,6 +1497,7 @@ private fun V8PlaybackProgress(
                         PlaybackQualityBadge(
                             badgeInfo = displayBadgeInfo,
                             textColor = foreground,
+                            onClick = onBadgeClick,
                         )
                     }
                 } else {

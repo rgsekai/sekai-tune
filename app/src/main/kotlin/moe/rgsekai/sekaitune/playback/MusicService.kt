@@ -222,6 +222,7 @@ import moe.rgsekai.sekaitune.models.MediaMetadata
 import moe.rgsekai.sekaitune.models.PersistPlayerState
 import moe.rgsekai.sekaitune.models.PersistQueue
 import moe.rgsekai.sekaitune.models.toMediaMetadata
+import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
 import moe.rgsekai.sekaitune.playback.queues.EmptyQueue
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
 import moe.rgsekai.sekaitune.playback.queues.Queue
@@ -5835,6 +5836,12 @@ class MusicService :
                 isLossless = isLossless,
                 isHiRes = false,
                 details = "",
+                sourceName = "YouTube",
+                format = fallbackYt.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
+                bitDepth = "16-bit",
+                sampleRate = fallbackYt.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
+                bitrate = fallbackYt.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
+                pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
             )
         } else {
             audioQualityManager.setFinal(
@@ -5843,6 +5850,12 @@ class MusicService :
                 isLossless = false,
                 isHiRes = false,
                 details = "",
+                sourceName = "YouTube",
+                format = "Opus",
+                bitDepth = "16-bit",
+                sampleRate = "48.0 kHz",
+                bitrate = "149 kbps",
+                pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
             )
         }
 
@@ -6052,12 +6065,21 @@ class MusicService :
                         addonFormat = winning.sourceStream.format,
                     )
                     val isHiRes = isLossless && ((winning.sourceStream.bitDepth ?: 16) > 16 || (winning.sourceStream.sampleRateHz ?: 44100) > 48000)
+                    val bitDepthStr = winning.sourceStream.bitDepth?.let { "${it}-bit" } ?: if (isHiRes) "24-bit" else "16-bit"
+                    val sampleRateStr = winning.sourceStream.sampleRateHz?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "44.1 kHz"
+                    val bitrateStr = winning.sourceStream.bitrateKbps?.let { "${it} kbps" } ?: "1411 kbps"
                     audioQualityManager.setFinal(
                         mediaId = mediaId,
                         label = label,
                         isLossless = isLossless,
                         isHiRes = isHiRes,
                         details = winning.formatDescription,
+                        sourceName = winning.sourceName,
+                        format = winning.sourceStream.format.name,
+                        bitDepth = bitDepthStr,
+                        sampleRate = sampleRateStr,
+                        bitrate = bitrateStr,
+                        pipelineStatus = AudioPipelineStatus.PRELOADED_INSTANT,
                     )
                     qualityUpgradeManager.onDirectAddonStarted(mediaId, winning.sourceName)
                 } else {

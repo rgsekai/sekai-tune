@@ -701,6 +701,34 @@
     <string name="addon_search_all_failed_title">Couldn\'t reach your addons</string>
     <string name="addon_problems_summary_singular">1 addon had a problem</string>
     <string name="addon_problems_summary_plural">%d addons had a problem</string>
+    <!-- Audio Pipeline Details -->
+    <string name="audio_pipeline_title">Audio Pipeline</string>
+    <string name="audio_pipeline_subtitle">Live signal path, decoder to output</string>
+    <string name="audio_pipeline_section_track">TRACK INFO</string>
+    <string name="audio_pipeline_section_decoder">DECODER</string>
+    <string name="audio_pipeline_section_resampler">RESAMPLER</string>
+    <string name="audio_pipeline_source">Source</string>
+    <string name="audio_pipeline_format">Format</string>
+    <string name="audio_pipeline_bit_depth">Bit Depth</string>
+    <string name="audio_pipeline_sample_rate">Sample Rate</string>
+    <string name="audio_pipeline_bitrate">Bitrate</string>
+    <string name="audio_pipeline_audio_spec">Audio Spec</string>
+    <string name="audio_pipeline_channels">Channels</string>
+    <string name="audio_pipeline_decoder_name">Decoder Name</string>
+    <string name="audio_pipeline_decoder_format">Format</string>
+    <string name="audio_pipeline_io_rate">I/O Rate</string>
+    <string name="audio_pipeline_resampler_type">Type</string>
+    <string name="audio_pipeline_cutoff">Cutoff</string>
+    <string name="audio_pipeline_quality">Quality</string>
+    <string name="audio_pipeline_size">Transfer Size</string>
+    <string name="audio_pipeline_status">Status</string>
+    <string name="audio_pipeline_done">Done</string>
+    <string name="status_preloaded_instant">Preloaded (ready instantly)</string>
+    <string name="status_upgraded_from_opus">Upgraded from Opus 149</string>
+    <string name="status_settled_no_match">Settled for YouTube: no addon match found</string>
+    <string name="status_settled_lower_quality">Settled for YouTube: addon stream was lower quality</string>
+    <string name="status_settled_metered">Settled for YouTube: metered network</string>
+    <string name="status_settled_rate_limited">Settled for YouTube: rate-limited by addon (HTTP 429)</string>
 </resources>
 
 

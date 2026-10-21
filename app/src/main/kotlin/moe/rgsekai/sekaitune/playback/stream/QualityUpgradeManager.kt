@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.firstOrNull
 import moe.rgsekai.sekaitune.db.MusicDatabase
+import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
 import moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
 import moe.rgsekai.sekaitune.playback.sources.CandidateQualityRank
 import moe.rgsekai.sekaitune.playback.sources.MatchTarget
@@ -238,12 +239,22 @@ class QualityUpgradeManager @Inject constructor(
                     )
                     val isHiRes = isLossless && (bitDepth > 16 || sampleRate > 48000)
 
+                    val bitDepthStr = "${bitDepth}-bit"
+                    val sampleRateStr = String.format(java.util.Locale.US, "%.1f kHz", sampleRate / 1000.0)
+                    val bitrateStr = candidate.sourceStream.bitrateKbps?.let { "${it} kbps" } ?: "1411 kbps"
+
                     audioQualityManager.setFinal(
                         mediaId = mediaId,
                         label = label,
                         isLossless = isLossless,
                         isHiRes = isHiRes,
                         details = candidate.formatDescription,
+                        sourceName = candidate.sourceName,
+                        format = candidate.sourceStream.format.name,
+                        bitDepth = bitDepthStr,
+                        sampleRate = sampleRateStr,
+                        bitrate = bitrateStr,
+                        pipelineStatus = AudioPipelineStatus.UPGRADED_FROM_OPUS,
                     )
                     startWatchdog(mediaId, candidate.sourceName, currentPlayingPos)
                 }

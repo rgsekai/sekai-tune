@@ -22,6 +22,15 @@ enum class PlaybackQualityBadgeState {
     FINAL,
 }
 
+enum class AudioPipelineStatus {
+    PRELOADED_INSTANT,
+    UPGRADED_FROM_OPUS,
+    SETTLED_NO_MATCH,
+    SETTLED_LOWER_QUALITY,
+    SETTLED_METERED,
+    SETTLED_RATE_LIMITED,
+}
+
 data class PlaybackQualityBadgeInfo(
     val mediaId: String? = null,
     val state: PlaybackQualityBadgeState = PlaybackQualityBadgeState.FINAL,
@@ -29,6 +38,19 @@ data class PlaybackQualityBadgeInfo(
     val isLossless: Boolean = false,
     val isHiRes: Boolean = false,
     val details: String = "",
+    val sourceName: String = "",
+    val format: String = "",
+    val bitDepth: String = "",
+    val sampleRate: String = "",
+    val bitrate: String = "",
+    val pcmDataRate: String = "",
+    val channels: String = "Stereo",
+    val decoderName: String = "",
+    val outputFormat: String = "",
+    val resamplerInfo: String = "",
+    val transferSize: String = "",
+    val statusText: String = "",
+    val pipelineStatus: AudioPipelineStatus? = null,
 )
 
 @Singleton
@@ -125,6 +147,19 @@ class AudioQualityManager @Inject constructor(
         isLossless: Boolean = false,
         isHiRes: Boolean = false,
         details: String = "",
+        sourceName: String = "",
+        format: String = "",
+        bitDepth: String = "",
+        sampleRate: String = "",
+        bitrate: String = "",
+        pcmDataRate: String = "",
+        channels: String = "Stereo",
+        decoderName: String = "",
+        outputFormat: String = "",
+        resamplerInfo: String = "",
+        transferSize: String = "",
+        statusText: String = "",
+        pipelineStatus: AudioPipelineStatus? = null,
     ) {
         _qualityBadgeFlow.value = PlaybackQualityBadgeInfo(
             mediaId = mediaId,
@@ -133,6 +168,19 @@ class AudioQualityManager @Inject constructor(
             isLossless = isLossless,
             isHiRes = isHiRes,
             details = details,
+            sourceName = sourceName,
+            format = format,
+            bitDepth = bitDepth,
+            sampleRate = sampleRate,
+            bitrate = bitrate,
+            pcmDataRate = pcmDataRate,
+            channels = channels,
+            decoderName = decoderName,
+            outputFormat = outputFormat,
+            resamplerInfo = resamplerInfo,
+            transferSize = transferSize,
+            statusText = statusText,
+            pipelineStatus = pipelineStatus,
         )
     }
 }
