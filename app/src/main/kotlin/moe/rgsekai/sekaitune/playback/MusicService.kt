@@ -7257,7 +7257,7 @@ class MusicService :
         }
 
         val requiredCachedLength =
-            if (dataSpec.length >= 0) {
+            if (dataSpec.length > 0) {
                 dataSpec.length
             } else {
                 knownContentLength?.let { nonNullContentLength ->
@@ -7265,18 +7265,32 @@ class MusicService :
                 }
             }
 
-        if (allowCacheShortCircuit && requiredCachedLength != null) {
+        val lowDataModeActive = isLowDataModeActive()
+        val authFingerprint = YouTube.currentPlaybackAuthState().fingerprint
+
+        if (allowCacheShortCircuit && requiredCachedLength != null && requiredCachedLength > 0L) {
             val isFullyCached =
                 downloadCache.isCached(mediaId, dataSpec.position, requiredCachedLength) ||
                     playerCache.isCached(mediaId, dataSpec.position, requiredCachedLength)
             if (isFullyCached) {
-                scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
-                return dataSpec
+                if (dataSpec.uri.shouldBypassYouTubeResolver()) {
+                    scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+                    return dataSpec
+                }
+                val cachedUrl = ResolveAudioStreamUseCase.getWinningSource(mediaId)?.takeIf { ResolveAudioStreamUseCase.isFresh(it.resolvedStream) }?.resolvedStream?.url
+                    ?: ResolveAudioStreamUseCase.getFallbackYouTubeStream(mediaId)?.url
+                    ?: playbackUrlCache[mediaId]?.takeIf { it.isValidFor(authFingerprint, YTPlayerUtils.STREAM_URL_EXPIRY_SAFETY_MS) }?.url
+                    ?: if (downloadCache.isCached(mediaId, dataSpec.position, requiredCachedLength)) {
+                        "https://music.youtube.com/watch?v=$mediaId"
+                    } else {
+                        null
+                    }
+                if (cachedUrl != null) {
+                    scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+                    return dataSpec.withUri(cachedUrl.toUri())
+                }
             }
         }
-
-        val lowDataModeActive = isLowDataModeActive()
-        val authFingerprint = YouTube.currentPlaybackAuthState().fingerprint
 
         // Rule 1: Check if winning addon stream is already preloaded and fresh
         val winningAddon = if (!lowDataModeActive && audioQuality == AudioQuality.MAX && audioQualityManager.isMaxAllowed()) {
@@ -7585,7 +7599,20 @@ class MusicService :
 
         if (cachedLength < requestedLength) return null
 
-        return dataSpec.subrange(0L, requestedLength)
+        if (dataSpec.uri.shouldBypassYouTubeResolver()) {
+            return dataSpec.subrange(0L, requestedLength)
+        }
+
+        val cachedUrl = ResolveAudioStreamUseCase.getWinningSource(mediaId)?.takeIf { ResolveAudioStreamUseCase.isFresh(it.resolvedStream) }?.resolvedStream?.url
+            ?: ResolveAudioStreamUseCase.getFallbackYouTubeStream(mediaId)?.url
+            ?: playbackUrlCache[mediaId]?.takeIf { it.isValidFor(YouTube.currentPlaybackAuthState().fingerprint, YTPlayerUtils.STREAM_URL_EXPIRY_SAFETY_MS) }?.url
+            ?: if (downloadCache.isCached(mediaId, dataSpec.position, requestedLength)) {
+                "https://music.youtube.com/watch?v=$mediaId"
+            } else {
+                null
+            } ?: return null
+
+        return dataSpec.withUri(cachedUrl.toUri()).subrange(0L, requestedLength)
     }
 
     private fun getContinuousCachedLength(
