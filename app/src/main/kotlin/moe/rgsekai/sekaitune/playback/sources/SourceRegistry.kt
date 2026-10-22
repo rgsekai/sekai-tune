@@ -120,6 +120,8 @@ class SourceRegistry @Inject constructor(
     private val _toleranceSecondsFlow = MutableStateFlow(DEFAULT_TOLERANCE_SECONDS)
     val toleranceSecondsFlow: StateFlow<Int> = _toleranceSecondsFlow.asStateFlow()
 
+    var onSourceTested: ((String) -> Unit)? = null
+
     init {
         _toleranceSecondsFlow.value = loadTolerance()
         updateSourcesList(loadSources())
@@ -310,6 +312,8 @@ class SourceRegistry @Inject constructor(
         val source = _sourcesFlow.value.find { it.id == id }
             ?: return@withContext SourceHealth.Unreachable("Source not found")
 
+        (source.instance as? AddonMusicSource)?.clearCache()
+        onSourceTested?.invoke(id)
         val health = source.instance.health()
         val now = System.currentTimeMillis()
 

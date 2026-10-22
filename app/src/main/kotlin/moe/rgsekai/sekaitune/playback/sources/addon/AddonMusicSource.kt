@@ -27,6 +27,10 @@ class AddonMusicSource(
 
     override val kind: SourceKind = SourceKind.ADDON
 
+    fun clearCache() {
+        client.clearCache()
+    }
+
     override suspend fun health(): SourceHealth {
         return when (val response = client.fetchManifest()) {
             is AddonResponse.Success -> {

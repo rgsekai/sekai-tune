@@ -203,8 +203,13 @@ class AddonClient(
 
         val now = System.currentTimeMillis()
         if (now < quietUntilMs) {
-            val waitSec = (quietUntilMs - now) / 1000L
-            return@withContext AddonResponse.RateLimited(waitSec.coerceAtLeast(1L))
+            val waitMs = quietUntilMs - now
+            if (waitMs <= 3000L) {
+                delay(waitMs)
+            } else {
+                val waitSec = waitMs / 1000L
+                return@withContext AddonResponse.RateLimited(waitSec.coerceAtLeast(1L))
+            }
         }
 
         val cacheKey = "$trimmed|${quality ?: "LOSSLESS"}"
@@ -304,7 +309,7 @@ class AddonClient(
         isSearch: Boolean = false,
         parser: (String) -> T,
     ): AddonResponse<T> {
-        val maxAttempts = if (isSearch) 1 else MAX_RETRIES
+        val maxAttempts = if (isSearch) 2 else MAX_RETRIES
         var attempt = 0
         while (attempt < maxAttempts) {
             attempt++
@@ -339,7 +344,8 @@ class AddonClient(
 
                     quietUntilMs = System.currentTimeMillis() + delayMs
 
-                    if (isSearch || attempt >= maxAttempts) {
+                    val shouldFailFastSearch = isSearch && (delayMs > 3000L || attempt >= maxAttempts)
+                    if (shouldFailFastSearch || attempt >= maxAttempts) {
                         Timber.d("Received 429 from %s, failing fast for search or max retries", redact(url))
                         return AddonResponse.RateLimited(retrySeconds ?: (delayMs / 1000L).coerceAtLeast(1L))
                     } else {

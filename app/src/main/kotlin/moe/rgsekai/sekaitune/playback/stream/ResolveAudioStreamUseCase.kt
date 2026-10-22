@@ -137,6 +137,12 @@ class ResolveAudioStreamUseCase
         private val addonSemaphores = ConcurrentHashMap<String, Semaphore>()
         private val addonBackoffs = ConcurrentHashMap<String, Long>()
 
+        init {
+            sourceRegistry.onSourceTested = { configId ->
+                clearAddonBackoff(configId)
+            }
+        }
+
         private fun getAddonSemaphore(configId: String): Semaphore =
             addonSemaphores.computeIfAbsent(configId) { Semaphore(2) }
 
@@ -166,6 +172,14 @@ class ResolveAudioStreamUseCase
             val backoffMs = (retryAfterSeconds.coerceIn(5, 300)) * 1000L
             addonBackoffs[configId] = System.currentTimeMillis() + backoffMs
             Timber.tag(TAG).w("Addon %s rate limited (HTTP 429); backing off for %d s", configId, backoffMs / 1000)
+        }
+
+        fun clearAddonBackoff(configId: String) {
+            addonBackoffs.remove(configId)
+        }
+
+        fun clearAllAddonBackoffs() {
+            addonBackoffs.clear()
         }
 
         suspend operator fun invoke(request: AudioStreamRequest): ResolvedAudioStream =
