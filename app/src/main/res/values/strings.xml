@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="home">Home</string>
     <string name="tile_play_label">Play</string>
@@ -1041,6 +1041,22 @@
     <string name="audio_pipeline_size">Transfer Size</string>
     <string name="audio_pipeline_status">Status</string>
     <string name="audio_pipeline_done">Done</string>
+    <string name="audio_pipeline_section_dsp">DSP</string>
+    <string name="audio_pipeline_section_output">OUTPUT DEVICE</string>
+    <string name="audio_pipeline_pcm_format">PCM Format</string>
+    <string name="audio_pipeline_gain">Gain</string>
+    <string name="audio_pipeline_measured">Measured</string>
+    <string name="audio_pipeline_eq_preset">EQ Preset</string>
+    <string name="audio_pipeline_stereo_expand">Stereo Expand</string>
+    <string name="audio_pipeline_buffers">Buffers</string>
+    <string name="audio_pipeline_output_api">Output API</string>
+    <string name="audio_pipeline_bit_exact">Bit-exact</string>
+    <string name="audio_pipeline_device_name">Device Name</string>
+    <string name="audio_pipeline_route">Route</string>
+    <string name="audio_pipeline_transport">Transport</string>
+    <string name="audio_pipeline_direct">Direct</string>
+    <string name="audio_pipeline_audiotrack">AudioTrack</string>
+    <string name="audio_pipeline_system">System</string>
     <string name="status_preloaded_instant">Preloaded (ready instantly)</string>
     <string name="status_upgraded_from_opus">Upgraded from Opus 149</string>
     <string name="status_settled_no_match">Settled for YouTube: no addon match found</string>

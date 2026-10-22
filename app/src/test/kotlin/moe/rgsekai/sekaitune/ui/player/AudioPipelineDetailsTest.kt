@@ -292,5 +292,40 @@ class AudioPipelineDetailsTest {
         assertEquals("c2.android.opus.decoder", details.decoderName)
         assertEquals(AudioPipelineStatus.SETTLED_NO_MATCH, details.pipelineStatus)
     }
+
+    @Test
+    fun `resolveAudioPipelineDetails populates DSP and Output Device stage parameters`() {
+        val badge = PlaybackQualityBadgeInfo(
+            mediaId = "track_dsp_test",
+            state = PlaybackQualityBadgeState.FINAL,
+            label = "Hi-Res Lossless",
+            isLossless = true,
+            isHiRes = true,
+            format = "FLAC",
+            bitDepth = "24-bit",
+            sampleRate = "96.0 kHz",
+            bitrate = "2840 kbps",
+        )
+
+        val details = resolveAudioPipelineDetails(badge)
+
+        // DSP stage validations
+        assertEquals("Float32", details.dspPcmFormat)
+        assertEquals("96.0 kHz", details.dspSampleRate)
+        assertEquals("—", details.dspGain)
+        assertEquals("Flat", details.dspEqPreset)
+        assertEquals("100%", details.dspStereoExpand)
+        assertEquals("2x (500ms, 48000 frames)", details.dspBuffers)
+        assertEquals("AudioTrack", details.dspOutputApi)
+        assertEquals("Yes", details.dspBitExact)
+
+        // Output device validations
+        assertTrue(details.deviceName.isNotEmpty())
+        assertEquals("PHONE", details.routeKind)
+        assertEquals("AudioTrack", details.transport)
+        assertEquals("Supported (Framework Mixed)", details.directStatus)
+        assertEquals("PCM16 / 96.0 kHz", details.audioTrackSpec)
+        assertTrue(details.systemMixerSpec.contains("AudioFlinger Mixer"))
+    }
 }
 

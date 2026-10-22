@@ -1193,6 +1193,8 @@ fun PlayerControlsContent(
             onDismiss = { showPipelineDetails = false },
             badgeInfo = displayBadgeInfo,
             currentFormat = currentFormat,
+            artworkUrl = mediaMetadata.thumbnailUrl,
+            isPlaying = isPlaying,
         )
     }
 }
@@ -1386,6 +1388,8 @@ fun V8PlayerControlsContent(
             onDismiss = { showPipelineDetails = false },
             badgeInfo = displayBadge,
             currentFormat = currentFormat,
+            artworkUrl = mediaMetadata.thumbnailUrl,
+            isPlaying = isPlaying,
         )
     }
 }
