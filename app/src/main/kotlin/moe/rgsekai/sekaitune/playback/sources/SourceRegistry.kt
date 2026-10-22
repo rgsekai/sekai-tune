@@ -79,9 +79,9 @@ class SourceRegistry @Inject constructor(
         const val KEY_SOURCES = "sources_list_v1"
         const val KEY_MATCH_TOLERANCE_SECONDS = "source_match_tolerance_seconds"
 
-        const val DEFAULT_TOLERANCE_SECONDS = 3
+        const val DEFAULT_TOLERANCE_SECONDS = 10
         const val MIN_TOLERANCE_SECONDS = 1
-        const val MAX_TOLERANCE_SECONDS = 10
+        const val MAX_TOLERANCE_SECONDS = 20
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -122,7 +122,13 @@ class SourceRegistry @Inject constructor(
 
     init {
         _toleranceSecondsFlow.value = loadTolerance()
-        _sourcesFlow.value = loadSources()
+        updateSourcesList(loadSources())
+    }
+
+    private fun updateSourcesList(newList: List<RegisteredSource>) {
+        _sourcesFlow.value = newList
+        val primaryAddon = newList.firstOrNull { it.kind == SourceKind.ADDON && it.isEnabled }?.displayName
+        AudioQualityManager.setDefaultAddonName(primaryAddon)
     }
 
     /**
@@ -291,7 +297,7 @@ class SourceRegistry @Inject constructor(
         val currentList = _sourcesFlow.value.filter { it.kind != SourceKind.YOUTUBE }
         val updated = currentList + newSource + _sourcesFlow.value.filter { it.kind == SourceKind.YOUTUBE }
 
-        _sourcesFlow.value = updated
+        updateSourcesList(updated)
         persistSources(updated)
 
         Result.success(newSource)
@@ -315,7 +321,7 @@ class SourceRegistry @Inject constructor(
             }
         }
 
-        _sourcesFlow.value = updated
+        updateSourcesList(updated)
         persistSources(updated)
         health
     }
@@ -334,7 +340,7 @@ class SourceRegistry @Inject constructor(
                 item
             }
         }
-        _sourcesFlow.value = updated
+        updateSourcesList(updated)
         persistSources(updated)
     }
 
@@ -354,7 +360,7 @@ class SourceRegistry @Inject constructor(
         val item = currentList.removeAt(fromIndex)
         currentList.add(clampedTo, item)
 
-        _sourcesFlow.value = currentList
+        updateSourcesList(currentList)
         persistSources(currentList)
     }
 
@@ -370,7 +376,7 @@ class SourceRegistry @Inject constructor(
         if (updated.size == currentList.size) return false
 
         instanceCache.remove(id)
-        _sourcesFlow.value = updated
+        updateSourcesList(updated)
         persistSources(updated)
         return true
     }

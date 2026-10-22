@@ -19,6 +19,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +27,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import moe.rgsekai.sekaitune.db.MusicDatabase
 import moe.rgsekai.sekaitune.db.entities.ArtistEntity
 import moe.rgsekai.sekaitune.db.entities.FormatEntity
@@ -54,7 +58,7 @@ data class AddonSourceResults(
     val tracks: List<SourceTrack> = emptyList(),
 ) {
     val isNoMatch: Boolean
-        get() = tracks.isEmpty() && realFailure == null
+        get() = !isLoading && tracks.isEmpty() && realFailure == null
 }
 
 data class AddonSearchUiState(
@@ -123,41 +127,81 @@ class AddonSearchViewModel @Inject constructor(
             return
         }
 
+        val initialResults = addons.map { (registered, _) ->
+            AddonSourceResults(
+                sourceId = registered.id,
+                sourceName = registered.displayName,
+                isLoading = true,
+                realFailure = null,
+                tracks = emptyList(),
+            )
+        }
+
         _uiState.value =
             _uiState.value.copy(
                 hasConfiguredAddons = true,
                 isSearching = true,
+                results = initialResults,
                 errorMessage = null,
             )
 
-        val results =
-            withContext(Dispatchers.IO) {
-                addons.map { (registered, source) ->
-                    async {
-                        val searchResult = source.search(q, limit = 20)
-                        val tracks = searchResult.getOrDefault(emptyList())
-                        val failure = searchResult.exceptionOrNull()
-                        val realFailureReason = if (failure != null) {
-                            val rawReason = AddonResponseClassifier.formatFailureReason(failure)
-                            AddonClient.redactTokens(rawReason).ifBlank { "Connection error" }
-                        } else null
+        val resultsMutex = Mutex()
+        coroutineScope {
+            addons.forEach { (registered, source) ->
+                launch(Dispatchers.IO) {
+                    val searchResult = runCatching {
+                        withTimeoutOrNull(ADDON_SEARCH_TIMEOUT_MS) {
+                            source.search(q, limit = 20)
+                        }
+                    }
 
-                        AddonSourceResults(
-                            sourceId = registered.id,
-                            sourceName = registered.displayName,
-                            isLoading = false,
-                            realFailure = realFailureReason,
-                            tracks = tracks,
+                    val (tracks, realFailureReason) = when {
+                        searchResult.isFailure -> {
+                            val failure = searchResult.exceptionOrNull()
+                            val rawReason = failure?.let { AddonResponseClassifier.formatFailureReason(it) } ?: "Search failed"
+                            emptyList<SourceTrack>() to AddonClient.redactTokens(rawReason).ifBlank { "Connection error" }
+                        }
+                        searchResult.getOrNull() == null -> {
+                            emptyList<SourceTrack>() to "Search timed out"
+                        }
+                        else -> {
+                            val res = searchResult.getOrNull()!!
+                            val failure = res.exceptionOrNull()
+                            val tracks = res.getOrDefault(emptyList())
+                            val reason = if (failure != null) {
+                                val rawReason = AddonResponseClassifier.formatFailureReason(failure)
+                                AddonClient.redactTokens(rawReason).ifBlank { "Connection error" }
+                            } else null
+                            tracks to reason
+                        }
+                    }
+
+                    val updatedSourceResult = AddonSourceResults(
+                        sourceId = registered.id,
+                        sourceName = registered.displayName,
+                        isLoading = false,
+                        realFailure = realFailureReason,
+                        tracks = tracks,
+                    )
+
+                    resultsMutex.withLock {
+                        if (query.value.trim() != q.trim()) return@withLock
+                        val currentList = _uiState.value.results.toMutableList()
+                        val index = currentList.indexOfFirst { it.sourceId == registered.id }
+                        if (index != -1) {
+                            currentList[index] = updatedSourceResult
+                        } else {
+                            currentList.add(updatedSourceResult)
+                        }
+                        val stillSearching = currentList.any { it.isLoading }
+                        _uiState.value = _uiState.value.copy(
+                            isSearching = stillSearching,
+                            results = currentList,
                         )
                     }
-                }.awaitAll()
+                }
             }
-
-        _uiState.value =
-            _uiState.value.copy(
-                isSearching = false,
-                results = results,
-            )
+        }
     }
 
     fun playTrack(
@@ -272,5 +316,9 @@ class AddonSearchViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(errorMessage = e.message ?: "Failed to play stream")
             }
         }
+    }
+
+    companion object {
+        private const val ADDON_SEARCH_TIMEOUT_MS = 10_000L
     }
 }

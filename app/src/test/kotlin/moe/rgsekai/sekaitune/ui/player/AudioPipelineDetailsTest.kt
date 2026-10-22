@@ -8,6 +8,7 @@ package moe.rgsekai.sekaitune.ui.player
 
 import moe.rgsekai.sekaitune.db.entities.FormatEntity
 import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
+import moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeState
 import org.junit.Assert.assertEquals
@@ -170,5 +171,94 @@ class AudioPipelineDetailsTest {
         assertEquals("32.0 MB", details.transferSize)
         assertEquals("128 kbps", details.bitrate)
         assertEquals("44.1 kHz", details.sampleRate)
+    }
+
+    @Test
+    fun `deriveDisplayBadge resolves registered addon source for FLAC format instead of hardcoded YouTube`() {
+        val mediaId = "track_flac_restored"
+        AudioQualityManager.registerSourceRecord(
+            mediaId = mediaId,
+            sourceName = "Lossless Bridge",
+            pipelineStatus = AudioPipelineStatus.UPGRADED_FROM_OPUS,
+            format = "FLAC",
+            details = "FLAC 16-bit / 44.1 kHz",
+        )
+
+        val uninitializedBadge = PlaybackQualityBadgeInfo()
+        val format = FormatEntity(
+            id = mediaId,
+            itag = 0,
+            mimeType = "audio/flac",
+            codecs = "flac",
+            bitrate = 1411000,
+            sampleRate = 44100,
+            contentLength = 30 * 1024 * 1024L,
+            loudnessDb = null,
+            playbackUrl = null,
+        )
+
+        val displayBadge = deriveDisplayBadge(uninitializedBadge, format, mediaId)
+
+        assertEquals("Lossless Bridge", displayBadge.sourceName)
+        assertEquals("FLAC", displayBadge.format)
+        assertEquals(AudioPipelineStatus.UPGRADED_FROM_OPUS, displayBadge.pipelineStatus)
+        assertTrue(displayBadge.isLossless)
+
+        val pipelineDetails = resolveAudioPipelineDetails(displayBadge, format)
+        assertEquals("Lossless Bridge", pipelineDetails.source)
+        assertEquals("FLAC", pipelineDetails.format)
+        assertEquals(AudioPipelineStatus.UPGRADED_FROM_OPUS, pipelineDetails.pipelineStatus)
+    }
+
+    @Test
+    fun `deriveDisplayBadge resolves local storage for local content uri instead of YouTube`() {
+        val localMediaId = "content://media/external/audio/media/12345"
+        val uninitializedBadge = PlaybackQualityBadgeInfo()
+        val format = FormatEntity(
+            id = localMediaId,
+            itag = 0,
+            mimeType = "audio/flac",
+            codecs = "flac",
+            bitrate = 900000,
+            sampleRate = 44100,
+            contentLength = 20 * 1024 * 1024L,
+            loudnessDb = null,
+            playbackUrl = null,
+        )
+
+        val displayBadge = deriveDisplayBadge(uninitializedBadge, format, localMediaId)
+        assertEquals("Local Storage", displayBadge.sourceName)
+
+        val pipelineDetails = resolveAudioPipelineDetails(displayBadge, format)
+        assertEquals("Local Storage", pipelineDetails.source)
+    }
+
+    @Test
+    fun `resolveAudioPipelineDetails corrects YouTube source to addon when stream format is FLAC`() {
+        val badgeErroneouslyMarkedYouTube = PlaybackQualityBadgeInfo(
+            mediaId = "track_test_flac",
+            state = PlaybackQualityBadgeState.FINAL,
+            label = "Lossless",
+            isLossless = true,
+            isHiRes = false,
+            sourceName = "YouTube",
+            format = "FLAC",
+            pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+        )
+        val flacFormat = FormatEntity(
+            id = "track_test_flac",
+            itag = 0,
+            mimeType = "audio/flac",
+            codecs = "flac",
+            bitrate = 1411000,
+            sampleRate = 44100,
+            contentLength = 30 * 1024 * 1024L,
+            loudnessDb = null,
+            playbackUrl = null,
+        )
+
+        val details = resolveAudioPipelineDetails(badgeErroneouslyMarkedYouTube, flacFormat)
+        assertTrue(details.source != "YouTube")
+        assertTrue(details.pipelineStatus != AudioPipelineStatus.SETTLED_NO_MATCH)
     }
 }

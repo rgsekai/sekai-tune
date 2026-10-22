@@ -42,8 +42,10 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.DocumentsContract
 import android.widget.Toast
 import java.io.FileInputStream
@@ -223,6 +225,7 @@ import moe.rgsekai.sekaitune.models.PersistPlayerState
 import moe.rgsekai.sekaitune.models.PersistQueue
 import moe.rgsekai.sekaitune.models.toMediaMetadata
 import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
+import moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
 import moe.rgsekai.sekaitune.playback.queues.EmptyQueue
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
 import moe.rgsekai.sekaitune.playback.queues.Queue
@@ -324,6 +327,7 @@ class MusicService :
     @Volatile
     var isQualityUpgradeSwapInProgress = false
     private val customStreamHeaders = ConcurrentHashMap<String, Map<String, String>>()
+    val queueMediaMetadataCache = ConcurrentHashMap<String, MediaMetadata>()
 
     private var lastTransitionTimeMs = 0L
     private var lastTransitionMediaId: String? = null
@@ -488,6 +492,33 @@ class MusicService :
     private val normalizeFactor = MutableStateFlow(1f)
     private val audioNormalizationFactorCache = ConcurrentHashMap<String, Float>()
     private var audioNormalizationEnabled = true
+
+    @Volatile
+    private var safePlaybackMediaId: String? = null
+    @Volatile
+    private var safeIsPlaybackActive: Boolean = false
+    @Volatile
+    private var safeTrackDurationMs: Long = 0L
+    @Volatile
+    private var safeLastPlaybackPositionMs: Long = 0L
+    @Volatile
+    private var safeLastPlaybackPositionElapsedRealtime: Long = 0L
+
+    private fun getSafePlaybackPosition(): Long {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            val pos = try { player.currentPosition.coerceAtLeast(0L) } catch (e: Exception) { safeLastPlaybackPositionMs }
+            safeLastPlaybackPositionMs = pos
+            safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
+            return pos
+        }
+        val base = safeLastPlaybackPositionMs
+        val baseTime = safeLastPlaybackPositionElapsedRealtime
+        if (!safeIsPlaybackActive || baseTime <= 0L) {
+            return base
+        }
+        val elapsed = (SystemClock.elapsedRealtime() - baseTime).coerceAtLeast(0L)
+        return base + elapsed
+    }
     var playerVolume = MutableStateFlow(1f)
     private val audioFocusVolumeFactor = MutableStateFlow(1f)
     private var effectiveVolumeRampJob: Job? = null
@@ -1095,23 +1126,74 @@ class MusicService :
                 loadWidgetShortcuts = loadWidgetShortcutsUseCase,
             )
 
-        qualityUpgradeManager.swapCallback = { mediaId, upgradedItem, customHeaders, targetPositionMs ->
-            swapToUpgradedStream(mediaId, upgradedItem, customHeaders, targetPositionMs)
+        qualityUpgradeManager.swapCallback = { mediaId, upgradedItem, customHeaders, targetPositionMs, bitrateBps, sampleRateHz ->
+            swapToUpgradedStream(mediaId, upgradedItem, customHeaders, targetPositionMs, bitrateBps, sampleRateHz)
         }
         qualityUpgradeManager.revertCallback = { mediaId, positionMs ->
-            revertToYouTubeStream(mediaId, positionMs)
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                revertToYouTubeStream(mediaId, positionMs)
+            } else {
+                android.os.Handler(mainLooper).post {
+                    revertToYouTubeStream(mediaId, positionMs)
+                }
+            }
+        }
+        qualityUpgradeManager.onUpgradeSettled = { settledMediaId ->
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                if (player.currentMediaItem?.mediaId?.trim() == settledMediaId.trim()) {
+                    updateNextStreamPreload()
+                }
+            } else {
+                android.os.Handler(mainLooper).post {
+                    if (player.currentMediaItem?.mediaId?.trim() == settledMediaId.trim()) {
+                        updateNextStreamPreload()
+                    }
+                }
+            }
         }
         qualityUpgradeManager.isEligibleForUpgrade = {
-            isEligibleForQualityUpgrade()
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                isEligibleForQualityUpgrade()
+            } else {
+                audioQuality == moe.rgsekai.sekaitune.constants.AudioQuality.MAX &&
+                    audioQualityManager.isMaxAllowed() &&
+                    !isLowDataModeActive() &&
+                    safePlaybackMediaId?.let { id ->
+                        id.isNotBlank() && !id.isLocalMediaId() &&
+                            !id.startsWith("content://") && !id.startsWith("file://") && !id.startsWith("addon:")
+                    } == true &&
+                    currentSong.value?.song?.isLocal != true
+            }
         }
         qualityUpgradeManager.playerCurrentMediaId = {
-            player.currentMediaItem?.mediaId
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                val id = player.currentMediaItem?.mediaId
+                safePlaybackMediaId = id
+                id
+            } else {
+                safePlaybackMediaId
+            }
         }
         qualityUpgradeManager.playerIsPlaying = {
-            player.isPlaying
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                val playing = player.isPlaying
+                safeIsPlaybackActive = playing
+                playing
+            } else {
+                safeIsPlaybackActive
+            }
         }
         qualityUpgradeManager.playerCurrentPosition = {
-            player.currentPosition
+            getSafePlaybackPosition()
+        }
+        qualityUpgradeManager.playerDuration = {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                val dur = try { player.duration } catch (e: Exception) { safeTrackDurationMs }
+                if (dur > 0L) safeTrackDurationMs = dur
+                dur
+            } else {
+                safeTrackDurationMs
+            }
         }
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -5786,17 +5868,61 @@ class MusicService :
         return true
     }
 
-    private fun swapToUpgradedStream(
+    private fun createHandoffPlayer(): ExoPlayer =
+        ExoPlayer
+            .Builder(this)
+            .setMediaSourceFactory(createMediaSourceFactory())
+            .setRenderersFactory(createRenderersFactory())
+            .setLoadControl(createCrossfadeLoadControl())
+            .setTrackSelector(DefaultTrackSelector(this, SafeTrackSelectionFactory()))
+            .setHandleAudioBecomingNoisy(false)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
+            .setAudioAttributes(playbackAudioAttributes(), false)
+            .build()
+            .apply {
+                setOffloadEnabled(false)
+                skipSilenceEnabled = localPlayer.skipSilenceEnabled
+            }
+
+    private fun updateFormatInDatabase(
+        mediaId: String,
+        seamlessItem: MediaItem,
+        bitrateBps: Int?,
+        sampleRateHz: Int?,
+    ) {
+        val uriStr = seamlessItem.localConfiguration?.uri?.toString()
+        val formatEntity = FormatEntity(
+            id = mediaId,
+            itag = 0,
+            mimeType = "audio/flac",
+            codecs = "flac",
+            bitrate = bitrateBps ?: 1411000,
+            sampleRate = sampleRateHz ?: 44100,
+            contentLength = contentLengthCache[mediaId] ?: 0L,
+            loudnessDb = null,
+            perceptualLoudnessDb = null,
+            playbackUrl = uriStr,
+        )
+        database.query {
+            upsert(formatEntity)
+        }
+    }
+
+    private suspend fun swapToUpgradedStream(
         mediaId: String,
         upgradedItem: MediaItem,
         customHeaders: Map<String, String>?,
         targetPositionMs: Long,
-    ): Boolean {
+        bitrateBps: Int? = null,
+        sampleRateHz: Int? = null,
+    ): Boolean = withContext(Dispatchers.Main) {
         val currentIdx = player.currentMediaItemIndex
-        val currentItem = player.currentMediaItem ?: return false
-        if (currentItem.mediaId.trim() != mediaId.trim()) return false
+        val currentItem = player.currentMediaItem ?: return@withContext false
+        if (currentItem.mediaId.trim() != mediaId.trim()) return@withContext false
 
-        Timber.tag("MusicService").i("[QualityUpgrade] Performing seamless swap for %s at position %d ms", mediaId, targetPositionMs)
+        val livePos = player.currentPosition.coerceAtLeast(0L)
+        val swapPos = if (livePos > 0L) livePos else targetPositionMs.coerceAtLeast(0L)
+        Timber.tag("MusicService").i("[QualityUpgrade] Preparing seamless swap for %s at position %d ms (target=%d ms)", mediaId, swapPos, targetPositionMs)
         if (customHeaders != null) {
             customStreamHeaders[mediaId] = customHeaders
         }
@@ -5806,22 +5932,101 @@ class MusicService :
             .setTag(currentItem.localConfiguration?.tag ?: player.currentMetadata)
             .build()
 
-        isQualityUpgradeSwapInProgress = true
-        val playWhenReady = player.playWhenReady
-        try {
-            player.replaceMediaItem(currentIdx, seamlessItem)
-            player.seekTo(currentIdx, targetPositionMs.coerceAtLeast(0L))
-            player.playWhenReady = playWhenReady
-        } catch (e: Exception) {
-            Timber.tag("MusicService").w(e, "[QualityUpgrade] Failed to swap media item for %s", mediaId)
-            isQualityUpgradeSwapInProgress = false
-            return false
+        if (!player.isPlaying) {
+            isQualityUpgradeSwapInProgress = true
+            try {
+                player.replaceMediaItem(currentIdx, seamlessItem)
+                player.seekTo(currentIdx, swapPos)
+                safeLastPlaybackPositionMs = swapPos
+                safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
+                updateFormatInDatabase(mediaId, seamlessItem, bitrateBps, sampleRateHz)
+            } finally {
+                android.os.Handler(mainLooper).postDelayed({
+                    isQualityUpgradeSwapInProgress = false
+                }, 500L)
+            }
+            return@withContext true
         }
 
-        android.os.Handler(mainLooper).postDelayed({
-            isQualityUpgradeSwapInProgress = false
-        }, 500L)
-        return true
+        var handoffPlayer: ExoPlayer? = null
+        try {
+            handoffPlayer = createHandoffPlayer().apply {
+                volume = 0f
+                setMediaItem(seamlessItem)
+                seekTo(swapPos)
+                prepare()
+            }
+
+            val deadline = SystemClock.elapsedRealtime() + 10000L
+            var ready = false
+            while (kotlinx.coroutines.currentCoroutineContext().isActive && SystemClock.elapsedRealtime() < deadline) {
+                if (player.currentMediaItem?.mediaId?.trim() != mediaId.trim()) {
+                    Timber.tag("MusicService").d("[QualityUpgrade] Track changed while preparing handoff")
+                    handoffPlayer.release()
+                    return@withContext false
+                }
+                if (handoffPlayer.playerError != null || handoffPlayer.playbackState == Player.STATE_ENDED) {
+                    Timber.tag("MusicService").w(handoffPlayer.playerError, "[QualityUpgrade] Handoff player preparation failed")
+                    handoffPlayer.release()
+                    return@withContext false
+                }
+                if (handoffPlayer.playbackState == Player.STATE_READY) {
+                    ready = true
+                    break
+                }
+                delay(30L)
+            }
+
+            if (!ready) {
+                Timber.tag("MusicService").w("[QualityUpgrade] Handoff player preparation timed out for %s", mediaId)
+                handoffPlayer.release()
+                return@withContext false
+            }
+
+            val syncPos = player.currentPosition.coerceAtLeast(0L)
+            handoffPlayer.seekTo(syncPos)
+            handoffPlayer.playbackParameters = player.playbackParameters
+            handoffPlayer.playWhenReady = true
+            val targetVolume = player.volume
+            handoffPlayer.volume = targetVolume
+            handoffPlayer.play()
+
+            isQualityUpgradeSwapInProgress = true
+            player.volume = 0f
+            player.replaceMediaItem(currentIdx, seamlessItem)
+            player.seekTo(currentIdx, syncPos)
+            player.playWhenReady = true
+
+            val primaryDeadline = SystemClock.elapsedRealtime() + 4000L
+            while (kotlinx.coroutines.currentCoroutineContext().isActive && SystemClock.elapsedRealtime() < primaryDeadline) {
+                if (player.playbackState == Player.STATE_READY) {
+                    break
+                }
+                delay(20L)
+            }
+
+            val finalPos = handoffPlayer.currentPosition.coerceAtLeast(0L)
+            player.seekTo(currentIdx, finalPos)
+            player.volume = targetVolume
+            player.play()
+            safeLastPlaybackPositionMs = finalPos
+            safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
+
+            handoffPlayer.stop()
+            handoffPlayer.release()
+
+            updateFormatInDatabase(mediaId, seamlessItem, bitrateBps, sampleRateHz)
+            Timber.tag("MusicService").i("[QualityUpgrade] Seamless handoff completed for %s at %d ms", mediaId, finalPos)
+            return@withContext true
+        } catch (e: Exception) {
+            Timber.tag("MusicService").e(e, "[QualityUpgrade] Seamless handoff error for %s", mediaId)
+            handoffPlayer?.release()
+            return@withContext false
+        } finally {
+            android.os.Handler(mainLooper).postDelayed({
+                isQualityUpgradeSwapInProgress = false
+            }, 500L)
+        }
     }
 
     private fun revertToYouTubeStream(mediaId: String, positionMs: Long) {
@@ -5886,23 +6091,65 @@ class MusicService :
         } finally {
             android.os.Handler(mainLooper).postDelayed({
                 isQualityUpgradeSwapInProgress = false
-            }, 500L)
+                if (player.isPlaying || player.playWhenReady) {
+                    checkAndTriggerQualityUpgrade()
+                }
+            }, 1000L)
         }
+    }
+
+    private fun checkAndTriggerQualityUpgrade() {
+        val item = player.currentMediaItem ?: return
+        val mediaId = item.mediaId.trim()
+        if (mediaId.isBlank() || mediaId.isLocalMediaId() ||
+            mediaId.startsWith("content://") || mediaId.startsWith("file://") || mediaId.startsWith("addon:")
+        ) {
+            return
+        }
+        if (audioQuality != moe.rgsekai.sekaitune.constants.AudioQuality.MAX || !audioQualityManager.isMaxAllowed() || isLowDataModeActive()) {
+            return
+        }
+        if (qualityUpgradeManager.isActiveUpgraded(mediaId) || qualityUpgradeManager.isUpgradeRunning(mediaId)) {
+            return
+        }
+        val durationMs = player.duration.takeIf { it > 0 }
+            ?: (item.metadata ?: player.currentMetadata)?.duration?.toLong()?.times(1000L)
+            ?: 0L
+        val currentPos = player.currentPosition.coerceAtLeast(0L)
+        if (durationMs > 0 && (durationMs - currentPos) <= moe.rgsekai.sekaitune.playback.stream.QualityUpgradeManager.MIN_REMAINING_DURATION_FOR_SWAP_MS) {
+            return
+        }
+        val meta = item.metadata ?: player.currentMetadata
+        val title = meta?.title?.toString()
+        val artists = meta?.artists?.map { it.name } ?: emptyList()
+
+        qualityUpgradeManager.onTrackStarted(
+            mediaId = mediaId,
+            currentPositionMs = currentPos,
+            durationMs = durationMs,
+            targetTitle = title,
+            targetArtists = artists,
+        )
     }
 
     private fun updateNextStreamPreload() {
         if (!::nextStreamPreloader.isInitialized) return
-        val currentMediaId = player.currentMediaItem?.mediaId?.trim()
+        val currentMediaId = player.currentMediaItem?.mediaId?.trim().orEmpty()
+        if (currentMediaId.isNotEmpty() && qualityUpgradeManager.isUpgradeRunning(currentMediaId)) {
+            Timber.tag("MusicService").d("[Preload] Deferring queue preload: now-playing track %s is resolving upgrade", currentMediaId)
+            return
+        }
         val currentIndex = player.currentMediaItemIndex
         val upcomingTargets = mutableListOf<moe.rgsekai.sekaitune.playback.preload.PreloadTarget>()
-        val maxUpcoming = 5
+        val maxUpcoming = 2
         for (i in 1..maxUpcoming) {
             val idx = currentIndex + i
             if (idx in 0 until player.mediaItemCount) {
                 val item = player.getMediaItemAt(idx)
                 val vid = item.mediaId.trim()
                 if (vid.isNotEmpty() && vid != currentMediaId && upcomingTargets.none { it.mediaId == vid }) {
-                    val meta = item.metadata
+                    val meta = item.metadata ?: queueMediaMetadataCache[vid]
+                    meta?.let { queueMediaMetadataCache[vid] = it }
                     val title = meta?.title?.toString()
                     val artists = meta?.artists?.map { it.name } ?: emptyList()
                     val durationSec = meta?.duration
@@ -5945,6 +6192,11 @@ class MusicService :
         super.onMediaItemTransition(mediaItem, reason)
         updateNotification()
 
+        val currentMeta = mediaItem?.metadata ?: player.currentMetadata
+        if (currentMeta != null) {
+            queueMediaMetadataCache[currentMeta.id] = currentMeta
+        }
+
         beginHistorySession(mediaItem?.mediaId, forceNew = true)
 
         // Pre-load lyrics for upcoming songs in queue
@@ -5954,7 +6206,9 @@ class MusicService :
         if (queue.isNotEmpty()) {
             lyricsPreloadManager?.onSongChanged(currentIndex, queue)
         }
-        updateNextStreamPreload()
+        if (!isEligibleForQualityUpgrade() || qualityUpgradeManager.isActiveUpgraded(mediaItem?.mediaId?.trim().orEmpty())) {
+            updateNextStreamPreload()
+        }
 
         val joined = togetherSessionState.value as? moe.rgsekai.sekaitune.together.TogetherSessionState.Joined
         if (joined?.role is moe.rgsekai.sekaitune.together.TogetherRole.Guest &&
@@ -6093,15 +6347,7 @@ class MusicService :
                     )
                     qualityUpgradeManager.onDirectAddonStarted(mediaId, winning.sourceName)
                 } else {
-                    // Rule 2 & 3: Not preloaded or preloading in-flight
-                    // Starts immediately on fastest YouTube client, then triggers background upgrade
-                    qualityUpgradeManager.onTrackStarted(
-                        mediaId = mediaId,
-                        currentPositionMs = player.currentPosition.coerceAtLeast(0L),
-                        durationMs = durationMs,
-                        targetTitle = title,
-                        targetArtists = artists,
-                    )
+                    // Starts immediately on fastest YouTube client; background upgrade will trigger when isPlaying == true
                 }
             } else {
                 handleAddonTrackPlayback(
@@ -6184,10 +6430,21 @@ class MusicService :
         updateHistoryTrackingPlaybackState()
         if (playbackState == Player.STATE_ENDED) {
             val curId = player.currentMediaItem?.mediaId
-            val duration = player.duration
-            val pos = player.currentPosition
-            if (duration > 0 && pos < duration - 10_000L && curId != null) {
-                qualityUpgradeManager.onPlaybackFailedOrStalled(curId, pos, "Premature STATE_ENDED at pos $pos / duration $duration")
+            val pos = player.currentPosition.coerceAtLeast(0L)
+            val expectedDurationMs = (player.currentMediaItem?.metadata ?: player.currentMetadata)?.duration?.toLong()?.times(1000L)
+                ?: currentSong.value?.song?.duration?.toLong()?.times(1000L)
+                ?: safeTrackDurationMs
+            val isUpgradedOrAddon = curId != null && (
+                qualityUpgradeManager.isActiveUpgraded(curId) ||
+                ResolveAudioStreamUseCase.getWinningSource(curId) != null ||
+                AudioQualityManager.getSourceRecord(curId)?.sourceName?.let { it != "YouTube" && it.isNotBlank() } == true ||
+                customStreamHeaders.containsKey(curId)
+            )
+            if (isUpgradedOrAddon && expectedDurationMs > 0 && pos < expectedDurationMs - 10_000L && curId != null) {
+                Timber.tag("MusicService").w("Addon stream ended prematurely at pos %d ms (expected %d ms) for %s; reverting to YouTube fastest client", pos, expectedDurationMs, curId)
+                if (qualityUpgradeManager.onPlaybackFailedOrStalled(curId, pos, "Premature STATE_ENDED at pos $pos / expected $expectedDurationMs")) {
+                    return
+                }
             }
         }
         if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
@@ -6257,6 +6514,9 @@ class MusicService :
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         super.onIsPlayingChanged(isPlaying)
+        safeIsPlaybackActive = isPlaying
+        safeLastPlaybackPositionMs = try { player.currentPosition.coerceAtLeast(0L) } catch (e: Exception) { 0L }
+        safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
         secondaryCrossfadePlayer?.let { secondaryPlayer ->
             if (isCrossfading && !crossfadeHandoffInProgress) {
                 if (isPlaying) {
@@ -6268,6 +6528,7 @@ class MusicService :
         }
         if (isPlaying && !isCrossfading) {
             scheduleCrossfade()
+            checkAndTriggerQualityUpgrade()
         }
         updateAudiblePlaybackRecovery()
 
@@ -6280,6 +6541,21 @@ class MusicService :
         events: Player.Events,
     ) {
         val currentMediaId = player.currentMediaItem?.mediaId
+        if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+            safePlaybackMediaId = currentMediaId
+            safeTrackDurationMs = try { player.duration.takeIf { it > 0 } ?: 0L } catch (e: Exception) { 0L }
+            safeLastPlaybackPositionMs = 0L
+            safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
+        }
+        if (events.contains(Player.EVENT_IS_PLAYING_CHANGED)) {
+            safeIsPlaybackActive = player.isPlaying
+            safeLastPlaybackPositionMs = try { player.currentPosition.coerceAtLeast(0L) } catch (e: Exception) { 0L }
+            safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
+        }
+        if (events.contains(Player.EVENT_TIMELINE_CHANGED) || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)) {
+            val dur = try { player.duration.takeIf { it > 0 } ?: 0L } catch (e: Exception) { 0L }
+            if (dur > 0L) safeTrackDurationMs = dur
+        }
         if (currentMediaId == null && currentHistoryMediaId != null) {
             beginHistorySession(null, forceNew = true)
         } else if (currentHistoryMediaId == null && currentMediaId != null) {
@@ -6298,13 +6574,28 @@ class MusicService :
                 ?.url
                 ?.let(YTPlayerUtils::markStreamUrlSuccessful)
             ensureAudiblePlaybackVolume("player_event")
-            updateNextStreamPreload()
+            if (player.isPlaying && !isCrossfading) {
+                checkAndTriggerQualityUpgrade()
+            }
+            if (!isEligibleForQualityUpgrade() || qualityUpgradeManager.isActiveUpgraded(currentMediaId.orEmpty())) {
+                updateNextStreamPreload()
+            }
         }
         if (events.contains(Player.EVENT_TIMELINE_CHANGED)) {
+            val count = player.mediaItemCount
+            for (i in 0 until count) {
+                val it = player.getMediaItemAt(i)
+                val m = it.metadata
+                if (m != null) {
+                    queueMediaMetadataCache[it.mediaId.trim()] = m
+                }
+            }
             if (!isQualityUpgradeSwapInProgress && player.currentMediaItem == null) {
                 qualityUpgradeManager.cancelUpgrade("Timeline cleared")
             }
-            updateNextStreamPreload()
+            if (!isEligibleForQualityUpgrade() || !qualityUpgradeManager.isUpgradeRunning(player.currentMediaItem?.mediaId?.trim().orEmpty())) {
+                updateNextStreamPreload()
+            }
         }
         if (events.containsAny(
                 Player.EVENT_PLAYBACK_STATE_CHANGED,
@@ -6316,6 +6607,9 @@ class MusicService :
         }
         if (events.contains(Player.EVENT_MEDIA_METADATA_CHANGED) && !isQualityUpgradeSwapInProgress) {
             currentMediaMetadata.value = player.currentMetadata
+            player.currentMetadata?.let { meta ->
+                queueMediaMetadataCache[meta.id] = meta
+            }
         }
         if (events.containsAny(
                 Player.EVENT_PLAYBACK_STATE_CHANGED,
@@ -6457,6 +6751,8 @@ class MusicService :
         reason: Int,
     ) {
         super.onPositionDiscontinuity(oldPosition, newPosition, reason)
+        safeLastPlaybackPositionMs = try { player.currentPosition.coerceAtLeast(0L) } catch (e: Exception) { 0L }
+        safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
         if (isQualityUpgradeSwapInProgress) {
             return
         }
@@ -6573,7 +6869,9 @@ class MusicService :
         super.onPlayerError(error)
 
         val currentMediaId = player.currentMediaItem?.mediaId ?: return
-        qualityUpgradeManager.onPlaybackFailedOrStalled(currentMediaId, player.currentPosition, "onPlayerError: ${error.message}")
+        if (qualityUpgradeManager.onPlaybackFailedOrStalled(currentMediaId, player.currentPosition, "onPlayerError: ${error.message}")) {
+            return
+        }
         val isLocalMedia = currentMediaId.isLocalMediaId()
 
         if (isLocalMedia) {
@@ -6988,6 +7286,7 @@ class MusicService :
         } else null
 
         if (winningAddon != null) {
+            qualityUpgradeManager.onDirectAddonStarted(mediaId, winningAddon.sourceName)
             winningAddon.sourceStream.headers.takeIf { it.isNotEmpty() }?.let {
                 customStreamHeaders[mediaId] = it
             }
@@ -8558,7 +8857,8 @@ class MusicService :
 
     private fun buildPlaybackAudioStreamRequest(mediaId: String): moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest {
         val lowDataModeActive = isLowDataModeActive()
-        val currentMeta = currentMediaMetadata.value?.takeIf { it.id == mediaId }
+        val cachedMeta = queueMediaMetadataCache[mediaId]
+            ?: currentMediaMetadata.value?.takeIf { it.id == mediaId }
         val matchingItem = if (::player.isInitialized && android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
             val count = player.mediaItemCount
             var found: androidx.media3.common.MediaItem? = null
@@ -8572,11 +8872,11 @@ class MusicService :
             found
         } else null
 
-        val title = currentMeta?.title ?: matchingItem?.mediaMetadata?.title?.toString()
-        val artists = currentMeta?.artists?.mapNotNull { it.name }
+        val title = cachedMeta?.title ?: matchingItem?.mediaMetadata?.title?.toString()
+        val artists = cachedMeta?.artists?.mapNotNull { it.name }
             ?.ifEmpty { null }
             ?: listOfNotNull(matchingItem?.mediaMetadata?.artist?.toString())
-        val duration = currentMeta?.duration?.takeIf { it > 0 }
+        val duration = cachedMeta?.duration?.takeIf { it > 0 }
 
         return moe.rgsekai.sekaitune.playback.stream.AudioStreamRequest(
             mediaId = mediaId,

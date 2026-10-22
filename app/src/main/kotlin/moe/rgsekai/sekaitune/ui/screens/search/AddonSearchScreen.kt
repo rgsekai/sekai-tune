@@ -29,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -98,7 +99,7 @@ fun AddonSearchScreen(
                 )
             }
 
-            uiState.isSearching -> {
+            uiState.isSearching && !hasTracks -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
@@ -125,7 +126,7 @@ fun AddonSearchScreen(
                 }
             }
 
-            allAreNoMatch -> {
+            allAreNoMatch && !uiState.isSearching -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
@@ -152,7 +153,7 @@ fun AddonSearchScreen(
                 }
             }
 
-            allFailedReal -> {
+            allFailedReal && !uiState.isSearching -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
@@ -174,7 +175,7 @@ fun AddonSearchScreen(
                 }
             }
 
-            !hasTracks -> {
+            !hasTracks && !uiState.isSearching -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
@@ -243,6 +244,16 @@ fun AddonSearchScreen(
                     }
                 }
             }
+        }
+
+        if (uiState.isSearching && hasTracks) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = Color.Transparent,
+            )
         }
     }
 }

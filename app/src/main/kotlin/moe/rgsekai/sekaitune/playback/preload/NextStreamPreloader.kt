@@ -60,11 +60,11 @@ class NextStreamPreloader @Inject constructor(
             queueJob?.cancel()
             queueJob = scope.launch {
                 // Yield priority to currently playing track so it doesn't collide on addon bridge rate limits
-                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.delay(1200)
                 for ((index, target) in distinctTargets.withIndex()) {
                     if (currentGen != generationToken.get()) return@launch
                     if (index > 0) {
-                        kotlinx.coroutines.delay(600)
+                        kotlinx.coroutines.delay(2000)
                     }
                     val trimmedId = target.mediaId.trim()
                     val request = AudioStreamRequest(
@@ -179,6 +179,6 @@ class NextStreamPreloader @Inject constructor(
 
     companion object {
         private const val TAG = "NextStreamPreloader"
-        const val MAX_QUEUE_PRELOAD_ITEMS = 5
+        const val MAX_QUEUE_PRELOAD_ITEMS = 2
     }
 }

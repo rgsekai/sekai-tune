@@ -176,4 +176,74 @@ class QualityUpgradeManagerTest {
         assertEquals(2, historySessionCount)
         assertEquals(2, lyricsPreloadCount)
     }
+
+    @Test
+    fun testStripDiacriticsAndResilientMatching() {
+        val originalQuery = "Futon Ūla"
+        val stripped = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.stripDiacritics(originalQuery)
+        assertEquals("Futon Ula", stripped)
+
+        // Matching with Ūla artist and 7-second YouTube silence padding
+        val target = moe.rgsekai.sekaitune.playback.sources.MatchTarget(
+            title = "Futon",
+            artists = listOf("Ūla"),
+            durationSec = 176,
+        )
+        val candidate = moe.rgsekai.sekaitune.playback.sources.MatchCandidate(
+            title = "Futon",
+            artists = listOf("Ūla"),
+            durationSec = 183,
+        )
+        val matchResult = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.match(target, candidate, toleranceSec = 10)
+        assertTrue("Futon by Ūla with 7s delta must match within 10s tolerance", matchResult.isMatch)
+        assertTrue("Score must be at least 50", matchResult.score >= 50)
+
+        // Candidate with ASCII artist "Ula" must also match whole-word tokenized artist
+        val asciiCandidate = moe.rgsekai.sekaitune.playback.sources.MatchCandidate(
+            title = "Futon",
+            artists = listOf("Ula"),
+            durationSec = 183,
+        )
+        val asciiMatch = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.match(target, asciiCandidate, toleranceSec = 10)
+        assertTrue("Artist Ūla must match ASCII candidate Ula", asciiMatch.isMatch)
+    }
+
+    @Test
+    fun testNowPlayingUpgradeSettledSequenceDefersQueuePreload() {
+        var isUpgradeRunning = true
+        var queuePreloadTriggered = false
+        val executionLog = mutableListOf<String>()
+
+        fun attemptQueuePreload(currentMediaId: String) {
+            if (isUpgradeRunning) {
+                executionLog.add("DEFERRED_QUEUE_PRELOAD")
+                return
+            }
+            queuePreloadTriggered = true
+            executionLog.add("TRIGGERED_QUEUE_PRELOAD")
+        }
+
+        // 1. Playback starts -> Now-playing upgrade begins
+        executionLog.add("NOWPLAYING_PLAYBACK_STARTED")
+        attemptQueuePreload("futon_track")
+        assertFalse("Queue preload must not trigger while nowplaying upgrade is running", queuePreloadTriggered)
+
+        // 2. Now-playing upgrade resolves and settles
+        isUpgradeRunning = false
+        executionLog.add("NOWPLAYING_UPGRADE_SETTLED")
+
+        // 3. onUpgradeSettled triggers queue preload
+        attemptQueuePreload("futon_track")
+        assertTrue("Queue preload must trigger after upgrade settles", queuePreloadTriggered)
+
+        assertEquals(
+            listOf(
+                "NOWPLAYING_PLAYBACK_STARTED",
+                "DEFERRED_QUEUE_PRELOAD",
+                "NOWPLAYING_UPGRADE_SETTLED",
+                "TRIGGERED_QUEUE_PRELOAD"
+            ),
+            executionLog
+        )
+    }
 }

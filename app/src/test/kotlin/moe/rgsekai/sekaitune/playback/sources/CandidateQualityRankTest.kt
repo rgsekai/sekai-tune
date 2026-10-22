@@ -153,6 +153,40 @@ class CandidateQualityRankTest {
     }
 
     @Test
+    fun testDeriveDisplayBadge_upgradedStreamPreservesLosslessBadge() {
+        val opusFormat = FormatEntity(
+            id = "track_1",
+            itag = 251,
+            mimeType = "audio/webm",
+            codecs = "opus",
+            bitrate = 149000,
+            sampleRate = 48000,
+            contentLength = 3000000,
+            loudnessDb = null,
+            playbackUrl = null,
+        )
+
+        val upgradedBadge = PlaybackQualityBadgeInfo(
+            mediaId = "track_1",
+            state = PlaybackQualityBadgeState.FINAL,
+            label = "Lossless",
+            isLossless = true,
+            isHiRes = false,
+            details = "flac - 16-bit - 44.1 kHz - 902 kbps",
+            sourceName = "Lossless Bridge",
+            format = "FLAC",
+            bitDepth = "16-bit",
+            sampleRate = "44.1 kHz",
+            bitrate = "902 kbps",
+            pipelineStatus = moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus.UPGRADED_FROM_OPUS,
+        )
+
+        val derived = deriveDisplayBadge(upgradedBadge, opusFormat, "track_1")
+        assertTrue("Upgraded stream from Lossless Bridge must remain Lossless", derived.isLossless)
+        assertEquals("Lossless", derived.label)
+    }
+
+    @Test
     fun testBadgeStates_checkingAndUpgradingPreserved() {
         val checking = PlaybackQualityBadgeInfo(
             mediaId = "track_2",

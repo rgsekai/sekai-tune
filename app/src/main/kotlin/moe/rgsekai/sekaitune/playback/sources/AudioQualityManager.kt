@@ -92,6 +92,74 @@ class AudioQualityManager @Inject constructor(
     }
 
     companion object {
+        private const val PREFS_NAME = "sekai_audio_source_provenance"
+        private val sourceRecords = java.util.concurrent.ConcurrentHashMap<String, AudioSourceRecord>()
+        @Volatile
+        private var defaultAddonName: String? = null
+        @Volatile
+        private var appContext: Context? = null
+
+        fun setDefaultAddonName(name: String?) {
+            if (!name.isNullOrBlank()) {
+                defaultAddonName = name
+            }
+        }
+
+        fun getDefaultAddonName(): String? = defaultAddonName
+
+        fun getSourceRecord(mediaId: String?): AudioSourceRecord? {
+            if (mediaId.isNullOrBlank()) return null
+            return sourceRecords[mediaId]
+        }
+
+        fun registerSourceRecord(
+            mediaId: String,
+            sourceName: String,
+            pipelineStatus: AudioPipelineStatus?,
+            format: String = "",
+            bitDepth: String = "",
+            sampleRate: String = "",
+            bitrate: String = "",
+            details: String = "",
+            statusText: String = "",
+        ) {
+            if (mediaId.isBlank()) return
+            val record = AudioSourceRecord(
+                mediaId = mediaId,
+                sourceName = sourceName,
+                pipelineStatus = pipelineStatus,
+                format = format,
+                bitDepth = bitDepth,
+                sampleRate = sampleRate,
+                bitrate = bitrate,
+                details = details,
+                statusText = statusText,
+            )
+            sourceRecords[mediaId] = record
+
+            appContext?.let { ctx ->
+                runCatching {
+                    val sp = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    val statusStr = pipelineStatus?.name ?: ""
+                    val serialized = "$sourceName\t$statusStr\t$format\t$bitDepth\t$sampleRate\t$bitrate\t$details\t$statusText"
+                    sp.edit().putString(mediaId, serialized).apply()
+                }
+            }
+        }
+
+        fun resolveAddonDisplayName(mediaId: String?): String? {
+            if (mediaId == null || !mediaId.startsWith("addon:")) return null
+            val parts = mediaId.split(":")
+            if (parts.size >= 2) {
+                val configId = parts[1]
+                return configId.replace("_", " ").replace("-", " ")
+                    .split(" ")
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+            }
+            return defaultAddonName ?: "External Addon"
+        }
+
         fun isMaxAllowed(
             preference: MaxQualityNetwork,
             isWifi: Boolean,
@@ -107,6 +175,40 @@ class AudioQualityManager @Inject constructor(
                 MaxQualityNetwork.WIFI_ONLY -> isWifi
                 MaxQualityNetwork.MOBILE_DATA_ONLY -> isCellular
                 MaxQualityNetwork.WIFI_AND_MOBILE_DATA -> isWifi || isCellular || !isMetered
+            }
+        }
+    }
+
+    init {
+        appContext = context.applicationContext
+        runCatching {
+            val sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            sp.all.forEach { (key, value) ->
+                if (value is String) {
+                    val parts = value.split("\t")
+                    if (parts.isNotEmpty()) {
+                        val src = parts.getOrNull(0).orEmpty()
+                        val statStr = parts.getOrNull(1).orEmpty()
+                        val fmt = parts.getOrNull(2).orEmpty()
+                        val bd = parts.getOrNull(3).orEmpty()
+                        val sr = parts.getOrNull(4).orEmpty()
+                        val br = parts.getOrNull(5).orEmpty()
+                        val det = parts.getOrNull(6).orEmpty()
+                        val st = parts.getOrNull(7).orEmpty()
+                        val status = AudioPipelineStatus.values().firstOrNull { it.name == statStr }
+                        sourceRecords[key] = AudioSourceRecord(
+                            mediaId = key,
+                            sourceName = src,
+                            pipelineStatus = status,
+                            format = fmt,
+                            bitDepth = bd,
+                            sampleRate = sr,
+                            bitrate = br,
+                            details = det,
+                            statusText = st,
+                        )
+                    }
+                }
             }
         }
     }
@@ -161,6 +263,19 @@ class AudioQualityManager @Inject constructor(
         statusText: String = "",
         pipelineStatus: AudioPipelineStatus? = null,
     ) {
+        if (sourceName.isNotBlank()) {
+            registerSourceRecord(
+                mediaId = mediaId,
+                sourceName = sourceName,
+                pipelineStatus = pipelineStatus,
+                format = format,
+                bitDepth = bitDepth,
+                sampleRate = sampleRate,
+                bitrate = bitrate,
+                details = details,
+                statusText = statusText,
+            )
+        }
         _qualityBadgeFlow.value = PlaybackQualityBadgeInfo(
             mediaId = mediaId,
             state = PlaybackQualityBadgeState.FINAL,
@@ -184,3 +299,15 @@ class AudioQualityManager @Inject constructor(
         )
     }
 }
+
+data class AudioSourceRecord(
+    val mediaId: String,
+    val sourceName: String,
+    val pipelineStatus: AudioPipelineStatus?,
+    val format: String = "",
+    val bitDepth: String = "",
+    val sampleRate: String = "",
+    val bitrate: String = "",
+    val details: String = "",
+    val statusText: String = "",
+)

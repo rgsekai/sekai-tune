@@ -147,6 +147,21 @@ class ResolveAudioStreamUseCase
             return false
         }
 
+        fun getRemainingAddonBackoffMs(configId: String): Long {
+            val backoffUntil = addonBackoffs[configId] ?: return 0L
+            val remaining = backoffUntil - System.currentTimeMillis()
+            return if (remaining > 0L) remaining else 0L
+        }
+
+        fun hasAnyAddonBackoff(enabledAddons: List<RegisteredSource>): Boolean {
+            return enabledAddons.any { it.kind == SourceKind.ADDON && isAddonBackingOff(it.id) }
+        }
+
+        fun getMaxRemainingAddonBackoffMs(enabledAddons: List<RegisteredSource>): Long {
+            return enabledAddons.filter { it.kind == SourceKind.ADDON }
+                .maxOfOrNull { getRemainingAddonBackoffMs(it.id) } ?: 0L
+        }
+
         fun recordAddon429(configId: String, retryAfterSeconds: Int = 30) {
             val backoffMs = (retryAfterSeconds.coerceIn(5, 300)) * 1000L
             addonBackoffs[configId] = System.currentTimeMillis() + backoffMs
@@ -509,7 +524,26 @@ class ResolveAudioStreamUseCase
                 // Task 1 & 2: Instant playback start like original Sekai Tune on GitHub.
                 // Do NOT block ExoPlayer with addon queries or 1500ms budget.
                 // Do NOT show "Checking..." badge before starting.
-                val ytStream = resolveYouTube(request)
+                val ytStream = try {
+                    resolveYouTube(request)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Timber.tag(TAG).w(e, "[StreamResolution] YouTube stream resolution failed for %s; checking emergency addon fallback", request.mediaId)
+                    val emergencyAddon = winningSourceCache[request.mediaId]?.takeIf { isFresh(it.resolvedStream) }
+                        ?: if (enabledAddons.isNotEmpty()) {
+                            val target = getMatchTarget(request.mediaId, request)
+                            if (target != null) {
+                                resolveAddonStream(target, enabledAddons, youtubeBitrateKbps = 128)
+                            } else null
+                        } else null
+
+                    if (emergencyAddon != null) {
+                        Timber.tag(TAG).i("[StreamResolution] Emergency addon fallback succeeded for %s via %s", request.mediaId, emergencyAddon.sourceName)
+                        winningSourceCache[request.mediaId] = emergencyAddon
+                        return emergencyAddon.resolvedStream
+                    }
+                    throw e
+                }
                 fallbackYouTubeCache[request.mediaId] = ytStream
 
                 val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
@@ -528,7 +562,8 @@ class ResolveAudioStreamUseCase
                     bitDepth = "16-bit",
                     sampleRate = ytStream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
                     bitrate = ytStream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
-                    pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+                    statusText = "Checking external addons for lossless upgrade…",
+                    pipelineStatus = null,
                 )
 
                 // Launch parallel background query across all enabled addons for seamless quality upgrade
@@ -570,10 +605,42 @@ class ResolveAudioStreamUseCase
                             )
                             winningSourceCache[request.mediaId] = best
                             pendingAddonResults[request.mediaId] = best
+                        } else {
+                            if (audioQualityManager.qualityBadgeFlow.value.mediaId == request.mediaId &&
+                                !audioQualityManager.qualityBadgeFlow.value.isLossless
+                            ) {
+                                audioQualityManager.setFinal(
+                                    mediaId = request.mediaId,
+                                    label = label,
+                                    isLossless = false,
+                                    isHiRes = false,
+                                    details = "",
+                                    sourceName = "YouTube",
+                                    format = ytStream.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
+                                    bitDepth = "16-bit",
+                                    sampleRate = ytStream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
+                                    bitrate = ytStream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
+                                    pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+                                )
+                            }
                         }
                         best
                     }
                     inFlightAddonPreload[request.mediaId] = addonDeferred
+                } else if (enabledAddons.isEmpty()) {
+                    audioQualityManager.setFinal(
+                        mediaId = request.mediaId,
+                        label = label,
+                        isLossless = false,
+                        isHiRes = false,
+                        details = "",
+                        sourceName = "YouTube",
+                        format = ytStream.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
+                        bitDepth = "16-bit",
+                        sampleRate = ytStream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
+                        bitrate = ytStream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
+                        pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+                    )
                 }
 
                 return ytStream
@@ -750,7 +817,7 @@ class ResolveAudioStreamUseCase
             return semaphore.withPermit {
                 try {
                     val tracksResult = source.search(query, limit = 10)
-                    val tracks = tracksResult.getOrElse { err ->
+                    val initialTracks = tracksResult.getOrElse { err ->
                         val msg = err.message.orEmpty()
                         if (msg.contains("429")) {
                             recordAddon429(source.configId)
@@ -763,40 +830,67 @@ class ResolveAudioStreamUseCase
                             error = AddonResponseClassifier.formatFailureReason(err),
                         )
                     }
-                    if (tracks.isEmpty()) {
-                        return@withPermit AddonQueryResult(
-                            sourceName = sourceName,
-                            elapsedMs = System.currentTimeMillis() - startMs,
-                            candidates = emptyList(),
-                            streamResult = null,
-                            error = null,
-                        )
-                    }
 
-                    val evaluations = mutableListOf<CandidateEvaluation>()
-                    var bestCandidate: SourceTrack? = null
-                    var bestScore = -1
-
-                    for (track in tracks) {
-                        val candidate = MatchCandidate(
-                            title = track.title,
-                            artists = track.artists,
-                            durationSec = track.durationSec,
-                        )
-                        val match = TrackMatcher.match(targetTrack, candidate, toleranceSec)
-                        evaluations.add(
-                            CandidateEvaluation(
+                    fun evaluateCandidateTracks(trackList: List<SourceTrack>): Pair<SourceTrack?, List<CandidateEvaluation>> {
+                        val evals = mutableListOf<CandidateEvaluation>()
+                        var best: SourceTrack? = null
+                        var maxScore = -1
+                        for (track in trackList) {
+                            val candidate = MatchCandidate(
                                 title = track.title,
                                 artists = track.artists,
                                 durationSec = track.durationSec,
-                                isMatch = match.isMatch,
-                                score = match.score,
-                                rejectReason = match.rejectReason,
                             )
-                        )
-                        if (match.isMatch && match.score > bestScore) {
-                            bestScore = match.score
-                            bestCandidate = track
+                            val match = TrackMatcher.match(targetTrack, candidate, toleranceSec)
+                            evals.add(
+                                CandidateEvaluation(
+                                    title = track.title,
+                                    artists = track.artists,
+                                    durationSec = track.durationSec,
+                                    isMatch = match.isMatch,
+                                    score = match.score,
+                                    rejectReason = match.rejectReason,
+                                )
+                            )
+                            if (match.isMatch && match.score > maxScore) {
+                                maxScore = match.score
+                                best = track
+                            }
+                        }
+                        return Pair(best, evals)
+                    }
+
+                    var (bestCandidate, evaluations) = evaluateCandidateTracks(initialTracks)
+
+                    // Resilient search retry 1: If no match found, retry with diacritics stripped
+                    val strippedQuery = TrackMatcher.stripDiacritics(query)
+                    if (bestCandidate == null && strippedQuery != query) {
+                        Timber.tag(TAG).d("[AddonSearch] Query '%s' yielded no match; retrying with stripped diacritics '%s'", query, strippedQuery)
+                        val retryTracks = source.search(strippedQuery, limit = 10).getOrNull()
+                        if (!retryTracks.isNullOrEmpty()) {
+                            val (retryBest, retryEvals) = evaluateCandidateTracks(retryTracks)
+                            if (retryBest != null) {
+                                bestCandidate = retryBest
+                                evaluations = retryEvals
+                            } else if (evaluations.isEmpty()) {
+                                evaluations = retryEvals
+                            }
+                        }
+                    }
+
+                    // Resilient search retry 2: If still no match found, retry with clean title alone
+                    val cleanTitle = TrackMatcher.cleanTitleForSearch(targetTrack.title)
+                    if (bestCandidate == null && cleanTitle.isNotBlank() && cleanTitle != query && cleanTitle != strippedQuery) {
+                        Timber.tag(TAG).d("[AddonSearch] Query '%s' yielded no match; retrying with clean title '%s'", query, cleanTitle)
+                        val titleTracks = source.search(cleanTitle, limit = 10).getOrNull()
+                        if (!titleTracks.isNullOrEmpty()) {
+                            val (titleBest, titleEvals) = evaluateCandidateTracks(titleTracks)
+                            if (titleBest != null) {
+                                bestCandidate = titleBest
+                                evaluations = titleEvals
+                            } else if (evaluations.isEmpty()) {
+                                evaluations = titleEvals
+                            }
                         }
                     }
 

@@ -30,8 +30,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import moe.rgsekai.sekaitune.playback.sources.CandidateQualityRank
 import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
+import moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeState
+import moe.rgsekai.sekaitune.playback.stream.ResolveAudioStreamUseCase
+import moe.rgsekai.sekaitune.utils.isLocalMediaId
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -592,13 +595,21 @@ fun deriveDisplayBadge(
     currentFormat: FormatEntity?,
     currentMediaId: String?,
 ): PlaybackQualityBadgeInfo {
+    val isFormatFlacOrLossless = currentFormat != null && (
+        currentFormat.mimeType.contains("flac", ignoreCase = true) ||
+        currentFormat.mimeType.contains("alac", ignoreCase = true) ||
+        currentFormat.mimeType.contains("wav", ignoreCase = true)
+    )
+
     if (currentMediaId != null && badgeInfo.mediaId == currentMediaId) {
         when (badgeInfo.state) {
             PlaybackQualityBadgeState.CHECKING -> return badgeInfo
             PlaybackQualityBadgeState.UPGRADING -> return badgeInfo
             PlaybackQualityBadgeState.FINAL -> {
                 if (badgeInfo.label.isNotBlank()) {
-                    if (badgeInfo.isLossless && currentFormat != null) {
+                    val isUpgradedOrExternal = badgeInfo.pipelineStatus == AudioPipelineStatus.UPGRADED_FROM_OPUS ||
+                        (badgeInfo.sourceName.isNotBlank() && !badgeInfo.sourceName.equals("YouTube", ignoreCase = true))
+                    if (badgeInfo.isLossless && currentFormat != null && !isUpgradedOrExternal) {
                         val rawMime = currentFormat.mimeType.uppercase()
                         val rawCodecs = currentFormat.codecs.uppercase()
                         val actuallyLossless = rawMime.contains("FLAC") || rawCodecs.contains("FLAC") ||
@@ -614,6 +625,36 @@ fun deriveDisplayBadge(
                             return badgeInfo.copy(label = fallbackLabel, isLossless = false, isHiRes = false)
                         }
                     }
+
+                    // Dynamically resolve actual source if badgeInfo mistakenly fell back to "YouTube" on a lossless/addon stream
+                    if (isFormatFlacOrLossless || badgeInfo.isLossless) {
+                        if (badgeInfo.sourceName.isBlank() || badgeInfo.sourceName.equals("YouTube", ignoreCase = true)) {
+                            val winning = ResolveAudioStreamUseCase.getWinningSource(currentMediaId)
+                            val record = AudioQualityManager.getSourceRecord(currentMediaId)
+                            val trueSource = record?.sourceName?.takeIf { it.isNotBlank() && !it.equals("YouTube", ignoreCase = true) }
+                                ?: winning?.sourceName
+                                ?: AudioQualityManager.getDefaultAddonName()
+                                ?: "Lossless Source"
+                            val trueStatus = if (badgeInfo.pipelineStatus == AudioPipelineStatus.SETTLED_NO_MATCH || badgeInfo.pipelineStatus == null) {
+                                record?.pipelineStatus ?: AudioPipelineStatus.UPGRADED_FROM_OPUS
+                            } else {
+                                badgeInfo.pipelineStatus
+                            }
+                            return badgeInfo.copy(
+                                sourceName = trueSource,
+                                pipelineStatus = trueStatus,
+                            )
+                        }
+                    } else if (currentMediaId.isLocalMediaId() || currentMediaId.startsWith("content://") || currentMediaId.startsWith("file://")) {
+                        if (badgeInfo.sourceName.isBlank() || badgeInfo.sourceName.equals("YouTube", ignoreCase = true)) {
+                            return badgeInfo.copy(
+                                sourceName = "Local Storage",
+                                pipelineStatus = null,
+                                statusText = "Playing from local device storage",
+                            )
+                        }
+                    }
+
                     return badgeInfo
                 }
             }
@@ -630,6 +671,8 @@ fun deriveDisplayBadge(
         val isHiRes = isLossless && ((currentFormat.sampleRate ?: 0) > 48000)
         val formatStr = when {
             currentFormat.mimeType.contains("flac", ignoreCase = true) -> "FLAC"
+            currentFormat.mimeType.contains("alac", ignoreCase = true) -> "ALAC"
+            currentFormat.mimeType.contains("wav", ignoreCase = true) -> "WAV"
             currentFormat.mimeType.contains("opus", ignoreCase = true) -> "Opus"
             currentFormat.mimeType.contains("mp4", ignoreCase = true) || currentFormat.mimeType.contains("aac", ignoreCase = true) -> "AAC"
             else -> currentFormat.mimeType.substringAfter("audio/").uppercase()
@@ -641,20 +684,47 @@ fun deriveDisplayBadge(
             String.format(java.util.Locale.US, "%.1f MB", it / (1024.0 * 1024.0))
         } ?: ""
 
+        val sourceRecord = currentMediaId?.let { AudioQualityManager.getSourceRecord(it) }
+        val winningSource = currentMediaId?.let { ResolveAudioStreamUseCase.getWinningSource(it) }
+
+        val (resolvedSource, resolvedStatus, resolvedStatusText) = when {
+            currentMediaId != null && (currentMediaId.isLocalMediaId() || currentMediaId.startsWith("content://") || currentMediaId.startsWith("file://")) -> {
+                Triple("Local Storage", null, "Playing from local device storage")
+            }
+            currentMediaId?.startsWith("addon:") == true -> {
+                val addonName = AudioQualityManager.resolveAddonDisplayName(currentMediaId) ?: "External Addon"
+                Triple(addonName, AudioPipelineStatus.PRELOADED_INSTANT, "Instant playback from $addonName")
+            }
+            sourceRecord != null && sourceRecord.sourceName.isNotBlank() && (!sourceRecord.sourceName.equals("YouTube", ignoreCase = true) || !isLossless) -> {
+                Triple(sourceRecord.sourceName, sourceRecord.pipelineStatus, sourceRecord.statusText)
+            }
+            winningSource != null -> {
+                Triple(winningSource.sourceName, AudioPipelineStatus.UPGRADED_FROM_OPUS, "")
+            }
+            isLossless || formatStr == "FLAC" || formatStr == "ALAC" || formatStr == "WAV" -> {
+                val defaultAddon = AudioQualityManager.getDefaultAddonName() ?: "Lossless Source"
+                Triple(defaultAddon, AudioPipelineStatus.UPGRADED_FROM_OPUS, "")
+            }
+            else -> {
+                Triple("YouTube", AudioPipelineStatus.SETTLED_NO_MATCH, "")
+            }
+        }
+
         return PlaybackQualityBadgeInfo(
             mediaId = currentMediaId,
             state = PlaybackQualityBadgeState.FINAL,
             label = label,
             isLossless = isLossless,
             isHiRes = isHiRes,
-            details = "",
-            sourceName = "YouTube",
+            details = sourceRecord?.details ?: winningSource?.formatDescription ?: "",
+            sourceName = resolvedSource,
             format = formatStr,
             bitDepth = bitDepthStr,
             sampleRate = sampleRateStr,
             bitrate = bitrateStr,
             transferSize = transferSizeStr,
-            pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+            statusText = resolvedStatusText,
+            pipelineStatus = resolvedStatus,
         )
     }
 

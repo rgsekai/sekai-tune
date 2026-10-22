@@ -312,11 +312,18 @@ object TrackMatcher {
         }
     }
 
-    private fun normalizeString(text: String): String {
+    /**
+     * Strips combining diacritical marks (e.g. Ū -> U, é -> e) while preserving casing.
+     */
+    fun stripDiacritics(text: String): String {
         val nfd = Normalizer.normalize(text, Normalizer.Form.NFD)
         val stripped = nfd.replace(Regex("""\p{InCombiningDiacriticalMarks}"""), "")
-        val nfc = Normalizer.normalize(stripped, Normalizer.Form.NFC)
-        return nfc.lowercase(Locale.ROOT)
+        return Normalizer.normalize(stripped, Normalizer.Form.NFC)
+    }
+
+    private fun normalizeString(text: String): String {
+        val stripped = stripDiacritics(text)
+        return stripped.lowercase(Locale.ROOT)
     }
 
     /**

@@ -49,10 +49,13 @@ import androidx.compose.ui.unit.sp
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.db.entities.FormatEntity
 import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
+import moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
+import moe.rgsekai.sekaitune.playback.stream.ResolveAudioStreamUseCase
 import moe.rgsekai.sekaitune.ui.component.GlassComponent
 import moe.rgsekai.sekaitune.ui.component.GlassModalBottomSheet
 import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
+import moe.rgsekai.sekaitune.utils.isLocalMediaId
 
 data class AudioPipelineDetails(
     val source: String,
@@ -81,9 +84,22 @@ fun resolveAudioPipelineDetails(
     val isLossless = badgeInfo.isLossless
     val isHiRes = badgeInfo.isHiRes
 
+    val isFormatFlacOrLossless = isLossless || (currentFormat != null && (
+        currentFormat.mimeType.contains("flac", ignoreCase = true) ||
+        currentFormat.mimeType.contains("alac", ignoreCase = true) ||
+        currentFormat.mimeType.contains("wav", ignoreCase = true)
+    ))
+
+    val sourceRecord = badgeInfo.mediaId?.let { AudioQualityManager.getSourceRecord(it) }
+    val winning = badgeInfo.mediaId?.let { ResolveAudioStreamUseCase.getWinningSource(it) }
+
     val source = when {
-        badgeInfo.sourceName.isNotBlank() -> badgeInfo.sourceName
-        isLossless -> "Lossless Source"
+        badgeInfo.mediaId != null && (badgeInfo.mediaId.isLocalMediaId() || badgeInfo.mediaId.startsWith("content://") || badgeInfo.mediaId.startsWith("file://")) -> "Local Storage"
+        badgeInfo.mediaId?.startsWith("addon:") == true -> AudioQualityManager.resolveAddonDisplayName(badgeInfo.mediaId) ?: "External Addon"
+        badgeInfo.sourceName.isNotBlank() && (!badgeInfo.sourceName.equals("YouTube", ignoreCase = true) || !isFormatFlacOrLossless) -> badgeInfo.sourceName
+        sourceRecord != null && sourceRecord.sourceName.isNotBlank() && (!sourceRecord.sourceName.equals("YouTube", ignoreCase = true) || !isFormatFlacOrLossless) -> sourceRecord.sourceName
+        winning != null -> winning.sourceName
+        isFormatFlacOrLossless -> AudioQualityManager.getDefaultAddonName() ?: "Lossless Source"
         else -> "YouTube"
     }
 
@@ -94,6 +110,7 @@ fun resolveAudioPipelineDetails(
             when {
                 mime.contains("FLAC") -> "FLAC"
                 mime.contains("ALAC") -> "ALAC"
+                mime.contains("WAV") -> "WAV"
                 mime.contains("OPUS") -> "Opus"
                 mime.contains("MP4") || mime.contains("AAC") -> "AAC"
                 mime.contains("MP3") -> "MP3"
@@ -166,6 +183,21 @@ fun resolveAudioPipelineDetails(
     val cutoff = "—"
     val resamplerQuality = "Passthrough"
 
+    val effectivePipelineStatus = when {
+        isFormatFlacOrLossless && badgeInfo.pipelineStatus == AudioPipelineStatus.SETTLED_NO_MATCH -> {
+            sourceRecord?.pipelineStatus ?: AudioPipelineStatus.UPGRADED_FROM_OPUS
+        }
+        badgeInfo.mediaId != null && (badgeInfo.mediaId.isLocalMediaId() || badgeInfo.mediaId.startsWith("content://") || badgeInfo.mediaId.startsWith("file://")) -> null
+        else -> badgeInfo.pipelineStatus ?: sourceRecord?.pipelineStatus
+    }
+
+    val effectiveStatusText = when {
+        badgeInfo.mediaId != null && (badgeInfo.mediaId.isLocalMediaId() || badgeInfo.mediaId.startsWith("content://") || badgeInfo.mediaId.startsWith("file://")) -> "Playing from local device storage"
+        isFormatFlacOrLossless && badgeInfo.statusText.contains("YouTube", ignoreCase = true) -> ""
+        badgeInfo.statusText.isNotBlank() -> badgeInfo.statusText
+        else -> sourceRecord?.statusText.orEmpty()
+    }
+
     return AudioPipelineDetails(
         source = source,
         format = format,
@@ -182,8 +214,8 @@ fun resolveAudioPipelineDetails(
         resamplerType = resamplerType,
         cutoff = cutoff,
         resamplerQuality = resamplerQuality,
-        pipelineStatus = badgeInfo.pipelineStatus,
-        statusFallbackText = badgeInfo.statusText,
+        pipelineStatus = effectivePipelineStatus,
+        statusFallbackText = effectiveStatusText,
     )
 }
 
@@ -211,8 +243,13 @@ fun AudioPipelineDetailsBottomSheet(
         AudioPipelineStatus.SETTLED_METERED -> stringResource(R.string.status_settled_metered)
         AudioPipelineStatus.SETTLED_RATE_LIMITED -> stringResource(R.string.status_settled_rate_limited)
         null -> details.statusFallbackText.ifBlank {
-            if (badgeInfo.isLossless) stringResource(R.string.status_preloaded_instant)
-            else stringResource(R.string.status_settled_no_match)
+            if (badgeInfo.isLossless || details.format == "FLAC" || details.format == "ALAC" || details.format == "WAV") {
+                stringResource(R.string.status_upgraded_from_opus)
+            } else if (details.source.equals("YouTube", ignoreCase = true)) {
+                stringResource(R.string.status_settled_no_match)
+            } else {
+                "Active stream from ${details.source}"
+            }
         }
     }
 

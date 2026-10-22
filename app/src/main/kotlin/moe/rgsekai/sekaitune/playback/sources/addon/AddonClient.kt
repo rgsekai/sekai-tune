@@ -1,7 +1,13 @@
 package moe.rgsekai.sekaitune.playback.sources.addon
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
@@ -11,6 +17,7 @@ import okhttp3.Request
 import okhttp3.Response
 import timber.log.Timber
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
@@ -29,6 +36,9 @@ class AddonClient(
         private const val CALL_TIMEOUT_SECONDS = 25L
         private const val MAX_RETRIES = 3
         private const val MAX_RETRY_DELAY_MS = 10_000L
+        private const val SEARCH_CACHE_TTL_MS = 10 * 60 * 1000L // 10 minutes
+        private const val STREAM_CACHE_TTL_MS = 5 * 60 * 1000L  // 5 minutes
+        private const val MAX_CACHE_ENTRIES = 128
 
         val defaultHttpClient: OkHttpClient by lazy {
             OkHttpClient.Builder()
@@ -92,6 +102,25 @@ class AddonClient(
 
     @Volatile
     var cachedManifest: AddonManifest? = manifest
+
+    private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val searchCache = ConcurrentHashMap<String, CacheEntry<List<AddonTrackDto>>>()
+    private val streamCache = ConcurrentHashMap<String, CacheEntry<AddonStreamDto>>()
+    private val cacheMutex = Mutex()
+
+    @Volatile
+    private var quietUntilMs = 0L
+
+    private class CacheEntry<T>(
+        val deferred: Deferred<AddonResponse<T>>,
+        val timestampMs: Long,
+    )
+
+    fun clearCache() {
+        searchCache.clear()
+        streamCache.clear()
+        quietUntilMs = 0L
+    }
 
     /**
      * Builds an endpoint URL keeping the full base path intact without dropped segments.
@@ -163,6 +192,7 @@ class AddonClient(
 
     /**
      * Executes a track search via GET /search?q={query}&quality={quality}
+     * Results are cached for 10 minutes, and in-flight searches are deduplicated.
      */
     suspend fun search(
         query: String,
@@ -171,13 +201,46 @@ class AddonClient(
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return@withContext AddonResponse.Success(emptyList())
 
+        val now = System.currentTimeMillis()
+        if (now < quietUntilMs) {
+            val waitSec = (quietUntilMs - now) / 1000L
+            return@withContext AddonResponse.RateLimited(waitSec.coerceAtLeast(1L))
+        }
+
+        val cacheKey = "$trimmed|${quality ?: "LOSSLESS"}"
+        val entry = cacheMutex.withLock {
+            val live = searchCache[cacheKey]?.takeIf { it.deferred.isActive || now - it.timestampMs < SEARCH_CACHE_TTL_MS }
+            if (live != null) {
+                live
+            } else {
+                if (searchCache.size >= MAX_CACHE_ENTRIES) {
+                    searchCache.entries.removeIf { !it.value.deferred.isActive && now - it.value.timestampMs >= SEARCH_CACHE_TTL_MS }
+                }
+                val deferred = clientScope.async {
+                    performSearchNetwork(trimmed, quality)
+                }
+                CacheEntry(deferred, now).also { searchCache[cacheKey] = it }
+            }
+        }
+
+        val response = entry.deferred.await()
+        if (response !is AddonResponse.Success) {
+            searchCache.remove(cacheKey, entry)
+        }
+        response
+    }
+
+    private suspend fun performSearchNetwork(
+        trimmed: String,
+        quality: String?,
+    ): AddonResponse<List<AddonTrackDto>> {
         val params = resolveParameters(wantedQuality = quality ?: "LOSSLESS")
         val queryParams = params + ("q" to trimmed)
 
         val httpUrl = buildEndpointUrl(listOf("search"), queryParams)
-            ?: return@withContext AddonResponse.HttpError(400, "Invalid search URL")
+            ?: return AddonResponse.HttpError(400, "Invalid search URL")
 
-        executeWithBackoff(httpUrl.toString()) { bodyString ->
+        return executeWithBackoff(httpUrl.toString(), isSearch = true) { bodyString ->
             try {
                 val container = json.decodeFromString<AddonSearchContainer>(bodyString)
                 container.allTracks()
@@ -189,16 +252,46 @@ class AddonClient(
 
     /**
      * Resolves stream URL for a track via GET /stream/{id}?quality={quality}
+     * Results are cached for 5 minutes, and in-flight lookups are deduplicated.
      */
     suspend fun stream(
         trackId: String,
         quality: String? = null,
     ): AddonResponse<AddonStreamDto> = withContext(Dispatchers.IO) {
+        val cacheKey = "$trackId|${quality ?: "LOSSLESS"}"
+        val now = System.currentTimeMillis()
+
+        val entry = cacheMutex.withLock {
+            val live = streamCache[cacheKey]?.takeIf { it.deferred.isActive || now - it.timestampMs < STREAM_CACHE_TTL_MS }
+            if (live != null) {
+                live
+            } else {
+                if (streamCache.size >= MAX_CACHE_ENTRIES) {
+                    streamCache.entries.removeIf { !it.value.deferred.isActive && now - it.value.timestampMs >= STREAM_CACHE_TTL_MS }
+                }
+                val deferred = clientScope.async {
+                    performStreamNetwork(trackId, quality)
+                }
+                CacheEntry(deferred, now).also { streamCache[cacheKey] = it }
+            }
+        }
+
+        val response = entry.deferred.await()
+        if (response !is AddonResponse.Success) {
+            streamCache.remove(cacheKey, entry)
+        }
+        response
+    }
+
+    private suspend fun performStreamNetwork(
+        trackId: String,
+        quality: String?,
+    ): AddonResponse<AddonStreamDto> {
         val params = resolveParameters(wantedQuality = quality ?: "LOSSLESS")
         val httpUrl = buildEndpointUrl(listOf("stream", trackId), params)
-            ?: return@withContext AddonResponse.HttpError(400, "Invalid stream URL")
+            ?: return AddonResponse.HttpError(400, "Invalid stream URL")
 
-        executeWithBackoff(httpUrl.toString()) { bodyString ->
+        return executeWithBackoff(httpUrl.toString(), isSearch = false) { bodyString ->
             json.decodeFromString<AddonStreamDto>(bodyString)
         }
     }
@@ -208,10 +301,12 @@ class AddonClient(
      */
     private suspend fun <T> executeWithBackoff(
         url: String,
+        isSearch: Boolean = false,
         parser: (String) -> T,
     ): AddonResponse<T> {
+        val maxAttempts = if (isSearch) 1 else MAX_RETRIES
         var attempt = 0
-        while (attempt < MAX_RETRIES) {
+        while (attempt < maxAttempts) {
             attempt++
             val request = Request.Builder()
                 .url(url)
@@ -224,7 +319,7 @@ class AddonClient(
                 response = httpClient.newCall(request).execute()
             } catch (e: IOException) {
                 Timber.w(e, "AddonClient request failed on attempt $attempt: %s", redact(url))
-                if (attempt >= MAX_RETRIES) {
+                if (attempt >= maxAttempts) {
                     return AddonResponse.NetworkError(e)
                 }
                 delay(calculateExponentialDelay(attempt))
@@ -242,12 +337,15 @@ class AddonClient(
                         calculateExponentialDelay(attempt)
                     }
 
-                    if (attempt < MAX_RETRIES) {
+                    quietUntilMs = System.currentTimeMillis() + delayMs
+
+                    if (isSearch || attempt >= maxAttempts) {
+                        Timber.d("Received 429 from %s, failing fast for search or max retries", redact(url))
+                        return AddonResponse.RateLimited(retrySeconds ?: (delayMs / 1000L).coerceAtLeast(1L))
+                    } else {
                         Timber.d("Received 429 from %s, backing off for %dms (attempt %d)", redact(url), delayMs, attempt)
                         delay(delayMs)
                         return@use
-                    } else {
-                        return AddonResponse.RateLimited(retrySeconds)
                     }
                 }
 

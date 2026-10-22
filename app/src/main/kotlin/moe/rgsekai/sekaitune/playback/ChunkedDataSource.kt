@@ -47,9 +47,10 @@ class ChunkedDataSource(
         closeChunk()
         baseSpec = dataSpec
         position = dataSpec.position
-
+        // Bounded range chunks are strictly for YouTube googlevideo URLs (which carry ?clen=).
+        // External addon streams (FLAC, MP3, etc.) do not carry clen and must use passthrough
+        // to maintain a single continuous HTTP connection without rapid-fire 1MB slice requests.
         val total = dataSpec.uri.getQueryParameter("clen")?.toLongOrNull()
-            ?: (if (dataSpec.length != C.LENGTH_UNSET.toLong() && dataSpec.length > 0L) position + dataSpec.length else null)
 
         if (total == null) {
             passthrough = true
