@@ -261,4 +261,36 @@ class AudioPipelineDetailsTest {
         assertTrue(details.source != "YouTube")
         assertTrue(details.pipelineStatus != AudioPipelineStatus.SETTLED_NO_MATCH)
     }
+
+    @Test
+    fun `resolveAudioPipelineDetails corrects stale addon source to YouTube when stream format is WEBM Opus`() {
+        val badgeWithStaleAddon = PlaybackQualityBadgeInfo(
+            mediaId = "track_test_opus",
+            state = PlaybackQualityBadgeState.FINAL,
+            label = "Opus 135",
+            isLossless = false,
+            isHiRes = false,
+            sourceName = "Lossless Bridge",
+            format = "WEBM",
+            pipelineStatus = AudioPipelineStatus.PRELOADED_INSTANT,
+        )
+        val opusFormat = FormatEntity(
+            id = "track_test_opus",
+            itag = 251,
+            mimeType = "audio/webm",
+            codecs = "opus",
+            bitrate = 135000,
+            sampleRate = 48000,
+            contentLength = 3 * 1024 * 1024L,
+            loudnessDb = null,
+            playbackUrl = null,
+        )
+
+        val details = resolveAudioPipelineDetails(badgeWithStaleAddon, opusFormat)
+        assertEquals("YouTube", details.source)
+        assertEquals("WEBM", details.format)
+        assertEquals("c2.android.opus.decoder", details.decoderName)
+        assertEquals(AudioPipelineStatus.SETTLED_NO_MATCH, details.pipelineStatus)
+    }
 }
+

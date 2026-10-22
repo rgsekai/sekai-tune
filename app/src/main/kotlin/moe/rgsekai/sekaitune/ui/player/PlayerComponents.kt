@@ -653,6 +653,20 @@ fun deriveDisplayBadge(
                                 statusText = "Playing from local device storage",
                             )
                         }
+                    } else {
+                        if (!badgeInfo.sourceName.equals("YouTube", ignoreCase = true)) {
+                            val correctedStatus = if (badgeInfo.pipelineStatus == AudioPipelineStatus.PRELOADED_INSTANT || badgeInfo.pipelineStatus == AudioPipelineStatus.UPGRADED_FROM_OPUS) {
+                                AudioPipelineStatus.SETTLED_NO_MATCH
+                            } else {
+                                badgeInfo.pipelineStatus ?: AudioPipelineStatus.SETTLED_NO_MATCH
+                            }
+                            return badgeInfo.copy(
+                                sourceName = "YouTube",
+                                pipelineStatus = correctedStatus,
+                                isLossless = false,
+                                isHiRes = false,
+                            )
+                        }
                     }
 
                     return badgeInfo
@@ -695,7 +709,15 @@ fun deriveDisplayBadge(
                 val addonName = AudioQualityManager.resolveAddonDisplayName(currentMediaId) ?: "External Addon"
                 Triple(addonName, AudioPipelineStatus.PRELOADED_INSTANT, "Instant playback from $addonName")
             }
-            sourceRecord != null && sourceRecord.sourceName.isNotBlank() && (!sourceRecord.sourceName.equals("YouTube", ignoreCase = true) || !isLossless) -> {
+            !isLossless && !isFormatFlacOrLossless -> {
+                val correctedStatus = if (sourceRecord?.pipelineStatus == AudioPipelineStatus.PRELOADED_INSTANT || sourceRecord?.pipelineStatus == AudioPipelineStatus.UPGRADED_FROM_OPUS) {
+                    AudioPipelineStatus.SETTLED_NO_MATCH
+                } else {
+                    sourceRecord?.pipelineStatus ?: AudioPipelineStatus.SETTLED_NO_MATCH
+                }
+                Triple("YouTube", correctedStatus, "")
+            }
+            sourceRecord != null && sourceRecord.sourceName.isNotBlank() && !sourceRecord.sourceName.equals("YouTube", ignoreCase = true) -> {
                 Triple(sourceRecord.sourceName, sourceRecord.pipelineStatus, sourceRecord.statusText)
             }
             winningSource != null -> {

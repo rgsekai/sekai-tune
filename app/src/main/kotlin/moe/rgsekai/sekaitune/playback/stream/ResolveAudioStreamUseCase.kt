@@ -210,6 +210,9 @@ class ResolveAudioStreamUseCase
                     consumer,
                     System.currentTimeMillis() - resolveStartMs,
                 )
+                if (consumer == ResolutionConsumer.PLAYBACK && request.purpose == StreamPurpose.PLAYBACK) {
+                    syncQualityBadge(key.mediaId, lease.stream)
+                }
                 return lease.stream
             }
 
@@ -225,12 +228,64 @@ class ResolveAudioStreamUseCase
                     if (isJoin) "PRELOAD_IN_FLIGHT_JOIN" else "COLD_RESOLVE",
                     System.currentTimeMillis() - resolveStartMs,
                 )
+                if (consumer == ResolutionConsumer.PLAYBACK && request.purpose == StreamPurpose.PLAYBACK) {
+                    syncQualityBadge(key.mediaId, stream)
+                }
                 stream
             } catch (cancellation: CancellationException) {
                 coroutineContext.ensureActive()
                 throw cancellation
             } finally {
                 releaseResolution(activeLease.key, consumer)
+            }
+        }
+
+        private fun syncQualityBadge(mediaId: String, stream: ResolvedAudioStream) {
+            val winning = winningSourceCache[mediaId]?.takeIf { isFresh(it.resolvedStream) }
+            if (winning != null) {
+                val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
+                    mimeType = winning.sourceStream.format.name,
+                    bitrateBps = (winning.sourceStream.bitrateKbps ?: 1411) * 1000,
+                    sampleRateHz = winning.sourceStream.sampleRateHz,
+                    bitDepth = winning.sourceStream.bitDepth,
+                    addonFormat = winning.sourceStream.format,
+                )
+                val isHiRes = isLossless && ((winning.sourceStream.bitDepth ?: 16) > 16 || (winning.sourceStream.sampleRateHz ?: 44100) > 48000)
+                val bitDepthStr = winning.sourceStream.bitDepth?.let { "${it}-bit" } ?: if (isHiRes) "24-bit" else "16-bit"
+                val sampleRateStr = winning.sourceStream.sampleRateHz?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "44.1 kHz"
+                val bitrateStr = winning.sourceStream.bitrateKbps?.let { "${it} kbps" } ?: "1411 kbps"
+                audioQualityManager.setFinal(
+                    mediaId = mediaId,
+                    label = label,
+                    isLossless = isLossless,
+                    isHiRes = isHiRes,
+                    details = winning.formatDescription,
+                    sourceName = winning.sourceName,
+                    format = winning.sourceStream.format.name,
+                    bitDepth = bitDepthStr,
+                    sampleRate = sampleRateStr,
+                    bitrate = bitrateStr,
+                    pipelineStatus = AudioPipelineStatus.PRELOADED_INSTANT,
+                )
+            } else {
+                val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
+                    mimeType = stream.format.mimeType,
+                    bitrateBps = stream.format.bitrate,
+                    sampleRateHz = stream.format.audioSampleRate,
+                )
+                audioQualityManager.setFinal(
+                    mediaId = mediaId,
+                    label = label,
+                    isLossless = isLossless,
+                    isHiRes = false,
+                    details = "",
+                    sourceName = "YouTube",
+                    format = stream.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
+                    bitDepth = "16-bit",
+                    sampleRate = stream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
+                    bitrate = stream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
+                    pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+                )
             }
         }
 
@@ -733,6 +788,17 @@ class ResolveAudioStreamUseCase
                 completedReports.none { it.streamResult != null } -> "No addon returned a playable matching stream"
                 else -> "Addon stream quality not strictly better than YouTube baseline (${ytBaselineBitrate} kbps)"
             }
+            winningSourceCache.remove(request.mediaId)
+            pendingAddonResults.remove(request.mediaId)
+            AudioQualityManager.registerSourceRecord(
+                mediaId = request.mediaId,
+                sourceName = "YouTube",
+                pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
+                format = ytStream.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
+                bitDepth = "16-bit",
+                sampleRate = ytStream.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
+                bitrate = ytStream.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
+            )
             Timber.tag(TAG).i(
                 "[StreamResolution:Decision] mediaId=%s, tier=MAX, networkAllowed=true, addonsQueried=%s, chosenSource=YouTube, reason=%s, query=\"%s\"",
                 request.mediaId,

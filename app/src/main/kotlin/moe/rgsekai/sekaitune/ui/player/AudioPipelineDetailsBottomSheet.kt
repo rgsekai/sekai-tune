@@ -96,8 +96,9 @@ fun resolveAudioPipelineDetails(
     val source = when {
         badgeInfo.mediaId != null && (badgeInfo.mediaId.isLocalMediaId() || badgeInfo.mediaId.startsWith("content://") || badgeInfo.mediaId.startsWith("file://")) -> "Local Storage"
         badgeInfo.mediaId?.startsWith("addon:") == true -> AudioQualityManager.resolveAddonDisplayName(badgeInfo.mediaId) ?: "External Addon"
-        badgeInfo.sourceName.isNotBlank() && (!badgeInfo.sourceName.equals("YouTube", ignoreCase = true) || !isFormatFlacOrLossless) -> badgeInfo.sourceName
-        sourceRecord != null && sourceRecord.sourceName.isNotBlank() && (!sourceRecord.sourceName.equals("YouTube", ignoreCase = true) || !isFormatFlacOrLossless) -> sourceRecord.sourceName
+        !isFormatFlacOrLossless -> "YouTube"
+        badgeInfo.sourceName.isNotBlank() && !badgeInfo.sourceName.equals("YouTube", ignoreCase = true) -> badgeInfo.sourceName
+        sourceRecord != null && sourceRecord.sourceName.isNotBlank() && !sourceRecord.sourceName.equals("YouTube", ignoreCase = true) -> sourceRecord.sourceName
         winning != null -> winning.sourceName
         isFormatFlacOrLossless -> AudioQualityManager.getDefaultAddonName() ?: "Lossless Source"
         else -> "YouTube"
@@ -166,7 +167,7 @@ fun resolveAudioPipelineDetails(
         badgeInfo.decoderName.isNotBlank() -> badgeInfo.decoderName
         format.contains("FLAC") -> "c2.android.flac.decoder"
         format.contains("ALAC") -> "c2.android.alac.decoder"
-        format.contains("OPUS") -> "c2.android.opus.decoder"
+        format.contains("OPUS") || format.contains("WEBM") -> "c2.android.opus.decoder"
         format.contains("AAC") || format.contains("MP4") -> "c2.android.aac.decoder"
         format.contains("MP3") -> "c2.android.mp3.decoder"
         else -> "c2.android.audio.decoder"
@@ -184,6 +185,13 @@ fun resolveAudioPipelineDetails(
     val resamplerQuality = "Passthrough"
 
     val effectivePipelineStatus = when {
+        !isFormatFlacOrLossless -> {
+            if (badgeInfo.pipelineStatus == AudioPipelineStatus.PRELOADED_INSTANT || badgeInfo.pipelineStatus == AudioPipelineStatus.UPGRADED_FROM_OPUS) {
+                AudioPipelineStatus.SETTLED_NO_MATCH
+            } else {
+                badgeInfo.pipelineStatus ?: AudioPipelineStatus.SETTLED_NO_MATCH
+            }
+        }
         isFormatFlacOrLossless && badgeInfo.pipelineStatus == AudioPipelineStatus.SETTLED_NO_MATCH -> {
             sourceRecord?.pipelineStatus ?: AudioPipelineStatus.UPGRADED_FROM_OPUS
         }
