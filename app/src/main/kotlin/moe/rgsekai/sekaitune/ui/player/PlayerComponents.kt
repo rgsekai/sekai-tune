@@ -763,15 +763,17 @@ fun PlaybackQualityBadge(
     if (badgeInfo.label.isBlank()) return
 
     Surface(
-        shape = RoundedCornerShape(4.dp),
+        shape = CircleShape,
         color = textColor.copy(alpha = 0.12f),
-        modifier = modifier.then(
-            if (onClick != null) {
-                Modifier.clickable(onClick = onClick)
-            } else {
-                Modifier
-            }
-        ),
+        modifier = modifier
+            .clip(CircleShape)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            ),
     ) {
         Crossfade(
             targetState = badgeInfo,
@@ -793,7 +795,7 @@ fun PlaybackQualityBadge(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.quality_checking),
@@ -828,7 +830,7 @@ fun PlaybackQualityBadge(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.graphic_eq),
@@ -860,7 +862,7 @@ fun PlaybackQualityBadge(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.graphic_eq),
