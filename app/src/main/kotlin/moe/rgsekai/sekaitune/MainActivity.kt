@@ -308,6 +308,7 @@ import moe.rgsekai.sekaitune.ui.screens.buildLoginRoute
 import moe.rgsekai.sekaitune.ui.screens.navigationBuilder
 import moe.rgsekai.sekaitune.ui.screens.search.LocalSearchScreen
 import moe.rgsekai.sekaitune.ui.screens.search.OnlineSearchResultArgument
+import moe.rgsekai.sekaitune.ui.screens.search.OnlineSearchResultRoute
 import moe.rgsekai.sekaitune.ui.screens.search.OnlineSearchResultRoutePrefix
 import moe.rgsekai.sekaitune.ui.screens.search.OnlineSearchScreen
 import moe.rgsekai.sekaitune.ui.screens.search.decodeOnlineSearchQuery
@@ -999,13 +1000,48 @@ class MainActivity : ComponentActivity() {
                         searchBarFocusRequester.requestFocus()
                     }
 
-                    val onSearch: (String) -> Unit = {
-                        if (it.isNotEmpty()) {
+                    val onSearchOnline: (String) -> Unit = {
+                        val trimmed = it.trim()
+                        if (trimmed.isNotEmpty()) {
+                            searchSource = SearchSource.ONLINE
                             onActiveChange(false)
-                            navController.navigate(onlineSearchResultRoute(it))
-                            if (!pauseSearchHistory) {
-                                database.query {
-                                    insert(SearchHistory(query = it))
+                            val isCurrentRouteSearchResult =
+                                navBackStackEntry?.destination?.route?.startsWith(OnlineSearchResultRoutePrefix) == true
+                            val isSameQuery =
+                                if (isCurrentRouteSearchResult) {
+                                    val currentRouteQuery =
+                                        decodeOnlineSearchQuery(
+                                            navBackStackEntry
+                                                ?.arguments
+                                                ?.getString(OnlineSearchResultArgument)
+                                                .orEmpty(),
+                                        )
+                                    currentRouteQuery == trimmed
+                                } else {
+                                    false
+                                }
+                            if (!isSameQuery) {
+                                navController.navigate(onlineSearchResultRoute(trimmed)) {
+                                    if (isCurrentRouteSearchResult) {
+                                        popUpTo(OnlineSearchResultRoute) { inclusive = true }
+                                    }
+                                }
+                                if (!pauseSearchHistory) {
+                                    database.query {
+                                        insert(SearchHistory(query = trimmed))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    val onSearch: (String) -> Unit = {
+                        val trimmed = it.trim()
+                        if (trimmed.isNotEmpty()) {
+                            when (searchSource) {
+                                SearchSource.ONLINE -> onSearchOnline(trimmed)
+                                SearchSource.LOCAL, SearchSource.ADDONS -> {
+                                    focusManager.clearFocus()
                                 }
                             }
                         }
@@ -1426,6 +1462,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         if (navBackStackEntry?.destination?.route?.startsWith(OnlineSearchResultRoutePrefix) == true) {
+                            searchSource = SearchSource.ONLINE
                             val searchQuery =
                                 decodeOnlineSearchQuery(
                                     navBackStackEntry
@@ -2100,7 +2137,11 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                         IconButton(
                                                             onClick = {
-                                                                searchSource = searchSource.toggle()
+                                                                val nextSource = searchSource.toggle()
+                                                                searchSource = nextSource
+                                                                if (nextSource == SearchSource.ONLINE && query.text.isNotBlank()) {
+                                                                    onSearchOnline(query.text)
+                                                                }
                                                             },
                                                         ) {
                                                             Icon(
@@ -2164,7 +2205,12 @@ class MainActivity : ComponentActivity() {
                                                 ) {
                                                     Tab(
                                                         selected = searchSource == SearchSource.ONLINE,
-                                                        onClick = { searchSource = SearchSource.ONLINE },
+                                                        onClick = {
+                                                            searchSource = SearchSource.ONLINE
+                                                            if (query.text.isNotBlank()) {
+                                                                onSearchOnline(query.text)
+                                                            }
+                                                        },
                                                         text = {
                                                             Text(
                                                                 text = stringResource(R.string.search_source_youtube),
@@ -2223,14 +2269,7 @@ class MainActivity : ComponentActivity() {
                                                                 query = query.text,
                                                                 onQueryChange = onQueryChange,
                                                                 navController = navController,
-                                                                onSearch = {
-                                                                    navController.navigate(onlineSearchResultRoute(it))
-                                                                    if (!pauseSearchHistory) {
-                                                                        database.query {
-                                                                            insert(SearchHistory(query = it))
-                                                                        }
-                                                                    }
-                                                                },
+                                                                onSearch = onSearchOnline,
                                                                 onDismiss = { onActiveChange(false) },
                                                                 pureBlack = pureBlack,
                                                             )
