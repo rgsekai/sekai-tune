@@ -5868,22 +5868,6 @@ class MusicService :
         return true
     }
 
-    private fun createHandoffPlayer(): ExoPlayer =
-        ExoPlayer
-            .Builder(this)
-            .setMediaSourceFactory(createMediaSourceFactory())
-            .setRenderersFactory(createRenderersFactory())
-            .setLoadControl(createCrossfadeLoadControl())
-            .setTrackSelector(DefaultTrackSelector(this, SafeTrackSelectionFactory()))
-            .setHandleAudioBecomingNoisy(false)
-            .setWakeMode(C.WAKE_MODE_NETWORK)
-            .setAudioAttributes(playbackAudioAttributes(), false)
-            .build()
-            .apply {
-                setOffloadEnabled(false)
-                skipSilenceEnabled = localPlayer.skipSilenceEnabled
-            }
-
     private fun updateFormatInDatabase(
         mediaId: String,
         seamlessItem: MediaItem,
@@ -5922,9 +5906,10 @@ class MusicService :
 
         val livePos = player.currentPosition.coerceAtLeast(0L)
         val swapPos = if (livePos > 0L) livePos else targetPositionMs.coerceAtLeast(0L)
-        Timber.tag("MusicService").i("[QualityUpgrade] Preparing seamless swap for %s at position %d ms (target=%d ms)", mediaId, swapPos, targetPositionMs)
+        Timber.tag("MusicService").i("[QualityUpgrade] Performing seamless direct swap for %s at position %d ms (target=%d ms)", mediaId, swapPos, targetPositionMs)
         if (customHeaders != null) {
             customStreamHeaders[mediaId] = customHeaders
+            upgradedItem.localConfiguration?.customCacheKey?.let { customStreamHeaders[it] = customHeaders }
         }
 
         val seamlessItem = upgradedItem.buildUpon()
@@ -5932,95 +5917,20 @@ class MusicService :
             .setTag(currentItem.localConfiguration?.tag ?: player.currentMetadata)
             .build()
 
-        if (!player.isPlaying) {
-            isQualityUpgradeSwapInProgress = true
-            try {
-                player.replaceMediaItem(currentIdx, seamlessItem)
-                player.seekTo(currentIdx, swapPos)
-                safeLastPlaybackPositionMs = swapPos
-                safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
-                updateFormatInDatabase(mediaId, seamlessItem, bitrateBps, sampleRateHz)
-            } finally {
-                android.os.Handler(mainLooper).postDelayed({
-                    isQualityUpgradeSwapInProgress = false
-                }, 500L)
-            }
-            return@withContext true
-        }
-
-        var handoffPlayer: ExoPlayer? = null
+        isQualityUpgradeSwapInProgress = true
+        val playWhenReady = player.playWhenReady
         try {
-            handoffPlayer = createHandoffPlayer().apply {
-                volume = 0f
-                setMediaItem(seamlessItem)
-                seekTo(swapPos)
-                prepare()
-            }
-
-            val deadline = SystemClock.elapsedRealtime() + 10000L
-            var ready = false
-            while (kotlinx.coroutines.currentCoroutineContext().isActive && SystemClock.elapsedRealtime() < deadline) {
-                if (player.currentMediaItem?.mediaId?.trim() != mediaId.trim()) {
-                    Timber.tag("MusicService").d("[QualityUpgrade] Track changed while preparing handoff")
-                    handoffPlayer.release()
-                    return@withContext false
-                }
-                if (handoffPlayer.playerError != null || handoffPlayer.playbackState == Player.STATE_ENDED) {
-                    Timber.tag("MusicService").w(handoffPlayer.playerError, "[QualityUpgrade] Handoff player preparation failed")
-                    handoffPlayer.release()
-                    return@withContext false
-                }
-                if (handoffPlayer.playbackState == Player.STATE_READY) {
-                    ready = true
-                    break
-                }
-                delay(30L)
-            }
-
-            if (!ready) {
-                Timber.tag("MusicService").w("[QualityUpgrade] Handoff player preparation timed out for %s", mediaId)
-                handoffPlayer.release()
-                return@withContext false
-            }
-
-            val syncPos = player.currentPosition.coerceAtLeast(0L)
-            handoffPlayer.seekTo(syncPos)
-            handoffPlayer.playbackParameters = player.playbackParameters
-            handoffPlayer.playWhenReady = true
-            val targetVolume = player.volume
-            handoffPlayer.volume = targetVolume
-            handoffPlayer.play()
-
-            isQualityUpgradeSwapInProgress = true
-            player.volume = 0f
             player.replaceMediaItem(currentIdx, seamlessItem)
-            player.seekTo(currentIdx, syncPos)
-            player.playWhenReady = true
-
-            val primaryDeadline = SystemClock.elapsedRealtime() + 4000L
-            while (kotlinx.coroutines.currentCoroutineContext().isActive && SystemClock.elapsedRealtime() < primaryDeadline) {
-                if (player.playbackState == Player.STATE_READY) {
-                    break
-                }
-                delay(20L)
-            }
-
-            val finalPos = handoffPlayer.currentPosition.coerceAtLeast(0L)
-            player.seekTo(currentIdx, finalPos)
-            player.volume = targetVolume
-            player.play()
-            safeLastPlaybackPositionMs = finalPos
+            player.seekTo(currentIdx, swapPos)
+            player.prepare()
+            player.playWhenReady = playWhenReady
+            safeLastPlaybackPositionMs = swapPos
             safeLastPlaybackPositionElapsedRealtime = SystemClock.elapsedRealtime()
-
-            handoffPlayer.stop()
-            handoffPlayer.release()
-
             updateFormatInDatabase(mediaId, seamlessItem, bitrateBps, sampleRateHz)
-            Timber.tag("MusicService").i("[QualityUpgrade] Seamless handoff completed for %s at %d ms", mediaId, finalPos)
+            Timber.tag("MusicService").i("[QualityUpgrade] Seamless direct swap completed for %s at %d ms", mediaId, swapPos)
             return@withContext true
         } catch (e: Exception) {
-            Timber.tag("MusicService").e(e, "[QualityUpgrade] Seamless handoff error for %s", mediaId)
-            handoffPlayer?.release()
+            Timber.tag("MusicService").e(e, "[QualityUpgrade] Seamless direct swap error for %s", mediaId)
             return@withContext false
         } finally {
             android.os.Handler(mainLooper).postDelayed({

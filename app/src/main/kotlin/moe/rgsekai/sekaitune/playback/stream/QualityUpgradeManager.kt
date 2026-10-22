@@ -18,7 +18,11 @@ import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.Cache
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheWriter
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,11 +33,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.firstOrNull
 import moe.rgsekai.sekaitune.db.MusicDatabase
+import moe.rgsekai.sekaitune.di.PlayerCache
 import moe.rgsekai.sekaitune.playback.sources.AudioPipelineStatus
 import moe.rgsekai.sekaitune.playback.sources.AudioQualityManager
 import moe.rgsekai.sekaitune.playback.sources.CandidateQualityRank
@@ -54,6 +60,7 @@ class QualityUpgradeManager @Inject constructor(
     private val sourceRegistry: SourceRegistry,
     private val resolveAudioStreamUseCase: ResolveAudioStreamUseCase,
     private val database: MusicDatabase,
+    @PlayerCache private val playerCache: Cache,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var currentUpgradeJob: Job? = null
@@ -268,6 +275,7 @@ class QualityUpgradeManager @Inject constructor(
                 val auditionResult = auditionCandidate(
                     mediaId = mediaId,
                     candidate = candidate,
+                    targetPositionMs = curPosBeforeAudition,
                     playingDurationMs = totalDur,
                     generation = generation,
                     timeoutMs = remainingForAuditionMs,
@@ -369,6 +377,7 @@ class QualityUpgradeManager @Inject constructor(
     private suspend fun auditionCandidate(
         mediaId: String,
         candidate: AddonStreamResult,
+        targetPositionMs: Long,
         playingDurationMs: Long,
         generation: Long,
         timeoutMs: Long,
@@ -377,6 +386,50 @@ class QualityUpgradeManager @Inject constructor(
             return@withContext AuditionResult(false, null, "Cancelled before audition")
         }
 
+        val customCacheKey = "upgraded:${candidate.sourceName}:$mediaId"
+        runCatching { playerCache.removeResource(customCacheKey) }
+
+        // 1. Pre-warm container header into playerCache using CacheWriter (BitChord approach)
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val httpFactory = DefaultHttpDataSource.Factory()
+                    .setConnectTimeoutMs(10000)
+                    .setReadTimeoutMs(10000)
+                    .setAllowCrossProtocolRedirects(true)
+                if (candidate.sourceStream.headers.isNotEmpty()) {
+                    httpFactory.setDefaultRequestProperties(candidate.sourceStream.headers)
+                }
+                val upstream = httpFactory.createDataSource()
+                val warmDataSource = CacheDataSource.Factory()
+                    .setCache(playerCache)
+                    .setUpstreamDataSourceFactory { upstream }
+                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                    .createDataSource()
+
+                val headerLength = 512L * 1024L
+                val spec = DataSpec.Builder()
+                    .setUri(candidate.resolvedStream.url.toUri())
+                    .setKey(customCacheKey)
+                    .setPosition(0L)
+                    .setLength(headerLength)
+                    .build()
+                val writer = CacheWriter(warmDataSource, spec, null, null)
+                val handle = coroutineContext.job.invokeOnCompletion { writer.cancel() }
+                try {
+                    writer.cache()
+                } finally {
+                    handle.dispose()
+                }
+            }.onFailure {
+                Timber.tag(TAG).d("[QualityUpgrade] Header pre-warm notice for %s: %s", mediaId, it.message)
+            }
+        }
+
+        if (currentGenerationToken.get() != generation) {
+            return@withContext AuditionResult(false, null, "Cancelled after header pre-warm")
+        }
+
+        // 2. Headless player with CacheDataSource backed by playerCache (BitChord approach)
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setConnectTimeoutMs(15000)
             .setReadTimeoutMs(15000)
@@ -384,25 +437,32 @@ class QualityUpgradeManager @Inject constructor(
         if (candidate.sourceStream.headers.isNotEmpty()) {
             httpDataSourceFactory.setDefaultRequestProperties(candidate.sourceStream.headers)
         }
-        val mediaSourceFactory = DefaultMediaSourceFactory(httpDataSourceFactory)
+        val cacheDataSourceFactory = CacheDataSource.Factory()
+            .setCache(playerCache)
+            .setUpstreamDataSourceFactory(httpDataSourceFactory)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+
+        val mediaSourceFactory = DefaultMediaSourceFactory(cacheDataSourceFactory)
 
         val headlessPlayer = ExoPlayer.Builder(context)
             .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(AudioAttributes.DEFAULT, false)
             .build().apply {
                 volume = 0f
-                playWhenReady = true
+                playWhenReady = false // Silent by construction: decoders initialize, no AudioTrack opened
             }
         activeAuditionPlayer = headlessPlayer
 
-        val auditionKey = "audition:${candidate.sourceName}:$mediaId"
         val auditionItem = MediaItem.Builder()
             .setMediaId("audition:$mediaId")
             .setUri(candidate.resolvedStream.url.toUri())
-            .setCustomCacheKey(auditionKey)
+            .setCustomCacheKey(customCacheKey)
             .build()
 
         headlessPlayer.setMediaItem(auditionItem)
+        if (targetPositionMs > 0) {
+            headlessPlayer.seekTo(targetPositionMs)
+        }
         headlessPlayer.prepare()
 
         val deferred = CompletableDeferred<AuditionResult>()
@@ -459,6 +519,8 @@ class QualityUpgradeManager @Inject constructor(
             if (activeAuditionPlayer == headlessPlayer) {
                 activeAuditionPlayer = null
             }
+            // Give Media3 ~50ms to release the lock on playerCache entry before main player attaches to it
+            delay(50L)
         }
     }
 
