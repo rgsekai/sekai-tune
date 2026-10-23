@@ -92,8 +92,6 @@ import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
@@ -320,71 +318,79 @@ fun Thumbnail(
     val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
     val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
 
-    var userWasDragging by remember { mutableStateOf(false) }
+    // A swipe counts as "user initiated" from the first drag event until the grid is idle again.
+    // Only user swipes may change the song; programmatic scrolls (auto-advance, buttons, re-centering)
+    // must NEVER trigger seekToNext/seekToPrevious (that caused 0:00 restart ping-pong loops).
+    var swipeInProgress by remember { mutableStateOf(false) }
+    var fingerDown by remember { mutableStateOf(false) }
 
     LaunchedEffect(thumbnailLazyGridState.interactionSource) {
         thumbnailLazyGridState.interactionSource.interactions.collect { interaction ->
-            if (interaction is DragInteraction.Start) {
-                userWasDragging = true
+            when (interaction) {
+                is DragInteraction.Start -> {
+                    swipeInProgress = true
+                    fingerDown = true
+                }
+                is DragInteraction.Stop, is DragInteraction.Cancel -> fingerDown = false
+                else -> Unit
             }
         }
     }
 
-    // Handle swipe to change song.
-    // FIX: Only trigger a song skip if the user actually initiated a drag gesture on the thumbnail.
-    // Internal/programmatic scrolls (track auto-advancing, next button click, layout recomposition)
-    // must NEVER trigger seekToNext/seekToPrevious, preventing rapid 0:00 restart ping-pong loops.
     val latestPages by rememberUpdatedState(thumbnailPages)
     val latestCanSkipNext by rememberUpdatedState(canSkipNext)
     val latestCanSkipPrevious by rememberUpdatedState(canSkipPrevious)
 
+    // 1) Commit the skip as soon as the finger is up and the page nearest to the centre is not the
+    //    playing one, instead of waiting for the fling to finish.
+    //    The grid only has 3 pages (previous/current/next). Waiting for it to become fully idle meant a
+    //    quick second swipe hit the end of the list (no page beyond "next") and was rejected until the
+    //    first skip had been applied. Committing mid-fling lets the pages shift (stable keys keep the
+    //    scroll position) so the next page is already there for the following swipe.
+    //    The target is read from the page that is really laid out in the middle (its key starts with the
+    //    window index), so it can never disagree with what is on screen even if recomposition lags.
     LaunchedEffect(swipeThumbnail) {
         if (!swipeThumbnail) return@LaunchedEffect
+        snapshotFlow {
+            if (!swipeInProgress || fingerDown) {
+                -1
+            } else {
+                val info = thumbnailLazyGridState.layoutInfo
+                val viewportCenter = info.viewportSize.width / 2
+                info.visibleItemsInfo
+                    .minByOrNull { kotlin.math.abs(it.offset.x + it.size.width / 2 - viewportCenter) }
+                    ?.key
+                    ?.toString()
+                    ?.substringBefore(':')
+                    ?.toIntOrNull() ?: -1
+            }
+        }.collect { centredWindow ->
+            if (centredWindow < 0) return@collect
+            val player = playerConnection.player
+            if (centredWindow == player.currentMediaItemIndex) return@collect
+            when {
+                centredWindow == player.nextMediaItemIndex && latestCanSkipNext -> player.seekToNext()
+                centredWindow == player.previousMediaItemIndex && latestCanSkipPrevious -> player.seekToPreviousMediaItem()
+                else -> Unit
+            }
+        }
+    }
+
+    // 2) Once the grid is idle: end the swipe and make sure it rests on the page that is really playing
+    //    (also covers a skip that was ignored and any programmatic scroll).
+    LaunchedEffect(swipeThumbnail) {
         snapshotFlow { thumbnailLazyGridState.isScrollInProgress }.collectLatest { scrolling ->
             if (scrolling) return@collectLatest
-
-            val wasDragged = userWasDragging
-            userWasDragging = false
-
+            swipeInProgress = false
+            delay(120L) // let a pending skip reach the UI
             val pages = latestPages
             val playingPage = pages.indexOfFirst { it.slotKey == "current" }
-
-            if (!wasDragged) {
-                // Not a physical user swipe (e.g. track change, auto advance, button click, programmatic scroll).
-                // Ensure the grid stays aligned with the current playing page without triggering any seek.
-                if (playingPage >= 0 && thumbnailLazyGridState.firstVisibleItemIndex != playingPage) {
-                    thumbnailLazyGridState.scrollToItem(playingPage)
-                }
-                return@collectLatest
-            }
-
-            if (playingPage < 0) return@collectLatest
-
-            val layout = thumbnailLazyGridState.layoutInfo
-            val settledPage =
-                thumbnailLazyGridState.firstVisibleItemIndex +
-                    if (thumbnailLazyGridState.firstVisibleItemScrollOffset > layout.viewportSize.width / 2) 1 else 0
-
-            if (settledPage != playingPage) {
-                val startIndex = playerConnection.player.currentMediaItemIndex
-                val startId = playerConnection.mediaMetadata.value?.id
-                if (settledPage > playingPage && latestCanSkipNext) {
-                    playerConnection.player.seekToNext()
-                } else if (settledPage < playingPage && latestCanSkipPrevious) {
-                    playerConnection.player.seekToPreviousMediaItem()
-                }
-                // Wait for the player to actually transition (or give up).
-                withTimeoutOrNull(1500L) {
-                    playerConnection.currentMediaItemIndex.first { it != startIndex }
-                }
-                delay(80L) // let the new pages compose
-                if (playerConnection.mediaMetadata.value?.id == startId &&
-                    playerConnection.player.currentMediaItemIndex == startIndex
-                ) {
-                    // Skip was ignored/failed -> never leave the UI on a page that isn't playing.
-                    val back = latestPages.indexOfFirst { it.slotKey == "current" }
-                    if (back >= 0) thumbnailLazyGridState.animateScrollToItem(back)
-                }
+            if (playingPage >= 0 &&
+                !thumbnailLazyGridState.isScrollInProgress &&
+                pages[playingPage].windowIndex == playerConnection.player.currentMediaItemIndex &&
+                thumbnailLazyGridState.firstVisibleItemIndex != playingPage
+            ) {
+                thumbnailLazyGridState.animateScrollToItem(playingPage)
             }
         }
     }
