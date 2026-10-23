@@ -5950,12 +5950,20 @@ class MusicService :
         customStreamHeaders.remove(mediaId)
         ResolveAudioStreamUseCase.clearWinningSource(mediaId)
 
+        runCatching {
+            playerCache.keys.filter { it.contains(mediaId) && it.startsWith("upgraded:") }.forEach { key ->
+                playerCache.removeResource(key)
+                customStreamHeaders.remove(key)
+            }
+        }
+
         val fallbackYt = ResolveAudioStreamUseCase.getFallbackYouTubeStream(mediaId)
         if (fallbackYt != null) {
+            val fallbackFormat = fallbackYt.format
             val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
-                mimeType = fallbackYt.format.mimeType,
-                bitrateBps = fallbackYt.format.bitrate,
-                sampleRateHz = fallbackYt.format.audioSampleRate,
+                mimeType = fallbackFormat.mimeType,
+                bitrateBps = fallbackFormat.bitrate,
+                sampleRateHz = fallbackFormat.audioSampleRate,
             )
             audioQualityManager.setFinal(
                 mediaId = mediaId,
@@ -5964,12 +5972,32 @@ class MusicService :
                 isHiRes = false,
                 details = "",
                 sourceName = "YouTube",
-                format = fallbackYt.format.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
+                format = fallbackFormat.mimeType?.substringAfter("audio/")?.uppercase() ?: "Opus",
                 bitDepth = "16-bit",
-                sampleRate = fallbackYt.format.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
-                bitrate = fallbackYt.format.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
+                sampleRate = fallbackFormat.audioSampleRate?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "48.0 kHz",
+                bitrate = fallbackFormat.bitrate?.let { "${it / 1000} kbps" } ?: "149 kbps",
                 pipelineStatus = AudioPipelineStatus.SETTLED_NO_MATCH,
             )
+            val resolvedCodecs = fallbackFormat.mimeType
+                ?.substringAfter("codecs=", "")
+                ?.removeSurrounding("\"")
+                ?.substringBefore("\"")
+                .orEmpty()
+            val formatEntity = FormatEntity(
+                id = mediaId,
+                itag = fallbackFormat.itag ?: 251,
+                mimeType = fallbackFormat.mimeType?.split(";")?.get(0) ?: "audio/webm",
+                codecs = resolvedCodecs,
+                bitrate = fallbackFormat.bitrate ?: 160000,
+                sampleRate = fallbackFormat.audioSampleRate ?: 48000,
+                contentLength = fallbackFormat.contentLength ?: 0L,
+                loudnessDb = null,
+                perceptualLoudnessDb = null,
+                playbackUrl = fallbackYt.url,
+            )
+            database.query {
+                upsert(formatEntity)
+            }
         } else {
             audioQualityManager.setFinal(
                 mediaId = mediaId,
@@ -6003,9 +6031,6 @@ class MusicService :
         } finally {
             android.os.Handler(mainLooper).postDelayed({
                 isQualityUpgradeSwapInProgress = false
-                if (player.isPlaying || player.playWhenReady) {
-                    checkAndTriggerQualityUpgrade()
-                }
             }, 1000L)
         }
     }
@@ -6224,43 +6249,7 @@ class MusicService :
             val artists = meta?.artists?.map { it.name } ?: emptyList()
             val durationMs = meta?.duration?.toLong()?.times(1000L) ?: player.duration.takeIf { it > 0 } ?: 0L
             if (!mediaId.startsWith("addon:")) {
-                val winning = if (audioQuality == AudioQuality.MAX && audioQualityManager.isMaxAllowed() && !isLowDataModeActive()) {
-                    ResolveAudioStreamUseCase.getWinningSource(mediaId)?.takeIf {
-                        ResolveAudioStreamUseCase.isFresh(it.resolvedStream)
-                    }
-                } else null
-
-                if (winning != null && !qualityUpgradeManager.isBlacklisted(mediaId, winning.sourceName)) {
-                    // Rule 1: winning addon already preloaded & fresh!
-                    // Direct start: no YouTube start, no "Upgrading" state, show FINAL quality badge immediately
-                    val (label, isLossless) = CandidateQualityRank.computeFinalQualityLabel(
-                        mimeType = winning.sourceStream.format.name,
-                        bitrateBps = (winning.sourceStream.bitrateKbps ?: 1411) * 1000,
-                        sampleRateHz = winning.sourceStream.sampleRateHz,
-                        bitDepth = winning.sourceStream.bitDepth,
-                        addonFormat = winning.sourceStream.format,
-                    )
-                    val isHiRes = isLossless && ((winning.sourceStream.bitDepth ?: 16) > 16 || (winning.sourceStream.sampleRateHz ?: 44100) > 48000)
-                    val bitDepthStr = winning.sourceStream.bitDepth?.let { "${it}-bit" } ?: if (isHiRes) "24-bit" else "16-bit"
-                    val sampleRateStr = winning.sourceStream.sampleRateHz?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) } ?: "44.1 kHz"
-                    val bitrateStr = winning.sourceStream.bitrateKbps?.let { "${it} kbps" } ?: "1411 kbps"
-                    audioQualityManager.setFinal(
-                        mediaId = mediaId,
-                        label = label,
-                        isLossless = isLossless,
-                        isHiRes = isHiRes,
-                        details = winning.formatDescription,
-                        sourceName = winning.sourceName,
-                        format = winning.sourceStream.format.name,
-                        bitDepth = bitDepthStr,
-                        sampleRate = sampleRateStr,
-                        bitrate = bitrateStr,
-                        pipelineStatus = AudioPipelineStatus.PRELOADED_INSTANT,
-                    )
-                    qualityUpgradeManager.onDirectAddonStarted(mediaId, winning.sourceName)
-                } else {
-                    // Starts immediately on fastest YouTube client; background upgrade will trigger when isPlaying == true
-                }
+                // Starts immediately on fastest YouTube baseline stream; background audition and mid-song swap will trigger via checkAndTriggerQualityUpgrade()
             } else {
                 handleAddonTrackPlayback(
                     mediaId = mediaId,
@@ -7189,8 +7178,7 @@ class MusicService :
                     scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
                     return dataSpec
                 }
-                val cachedUrl = ResolveAudioStreamUseCase.getWinningSource(mediaId)?.takeIf { ResolveAudioStreamUseCase.isFresh(it.resolvedStream) }?.resolvedStream?.url
-                    ?: ResolveAudioStreamUseCase.getFallbackYouTubeStream(mediaId)?.url
+                val cachedUrl = ResolveAudioStreamUseCase.getFallbackYouTubeStream(mediaId)?.url
                     ?: playbackUrlCache[mediaId]?.takeIf { it.isValidFor(authFingerprint, YTPlayerUtils.STREAM_URL_EXPIRY_SAFETY_MS) }?.url
                     ?: if (downloadCache.isCached(mediaId, dataSpec.position, requiredCachedLength)) {
                         "https://music.youtube.com/watch?v=$mediaId"
@@ -7202,38 +7190,6 @@ class MusicService :
                     return dataSpec.withUri(cachedUrl.toUri())
                 }
             }
-        }
-
-        // Rule 1: Check if winning addon stream is already preloaded and fresh
-        val winningAddon = if (!lowDataModeActive && audioQuality == AudioQuality.MAX && audioQualityManager.isMaxAllowed()) {
-            ResolveAudioStreamUseCase.getWinningSource(mediaId)?.takeIf {
-                ResolveAudioStreamUseCase.isFresh(it.resolvedStream) && !qualityUpgradeManager.isBlacklisted(mediaId, it.sourceName)
-            }
-        } else null
-
-        if (winningAddon != null) {
-            qualityUpgradeManager.onDirectAddonStarted(mediaId, winningAddon.sourceName)
-            winningAddon.sourceStream.headers.takeIf { it.isNotEmpty() }?.let {
-                customStreamHeaders[mediaId] = it
-            }
-            scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
-            val resolvedDataSpec = dataSpec.withUri(winningAddon.resolvedStream.url.toUri())
-                .let { spec ->
-                    if (winningAddon.sourceStream.headers.isNotEmpty()) {
-                        spec.buildUpon().setHttpRequestHeaders(winningAddon.sourceStream.headers).build()
-                    } else spec
-                }
-            val length =
-                resolveStreamChunkLength(
-                    requestedLength = dataSpec.length,
-                    position = dataSpec.position,
-                    knownContentLength = knownContentLength,
-                    chunkLength = CHUNK_LENGTH,
-                    mimeType = storedFormat?.mimeType,
-                )
-            return length?.let { nonNullLength ->
-                resolvedDataSpec.subrange(0L, nonNullLength)
-            } ?: resolvedDataSpec
         }
 
         // Rule 2 & 4: Check if fallback YouTube stream was preloaded
