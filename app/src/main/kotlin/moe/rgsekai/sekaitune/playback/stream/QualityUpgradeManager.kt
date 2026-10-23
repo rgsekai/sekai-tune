@@ -407,7 +407,7 @@ class QualityUpgradeManager @Inject constructor(
                     .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                     .createDataSource()
 
-                val headerLength = 512L * 1024L
+                val headerLength = 2L * 1024L * 1024L
                 val spec = DataSpec.Builder()
                     .setUri(candidate.resolvedStream.url.toUri())
                     .setKey(customCacheKey)
@@ -466,53 +466,64 @@ class QualityUpgradeManager @Inject constructor(
         }
         headlessPlayer.prepare()
 
-        val deferred = CompletableDeferred<AuditionResult>()
         val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_READY) {
+            override fun onPlayerError(error: PlaybackException) {
+                // Handled in polling loop via headlessPlayer.playerError
+            }
+        }
+        headlessPlayer.addListener(listener)
+
+        val auditionResult = withTimeoutOrNull(timeoutMs) {
+            while (true) {
+                if (currentGenerationToken.get() != generation) {
+                    return@withTimeoutOrNull AuditionResult(false, null, "Cancelled during audition loop")
+                }
+                val error = headlessPlayer.playerError
+                if (error != null) {
+                    return@withTimeoutOrNull AuditionResult(false, null, "ExoPlayer audition error: ${error.message}")
+                }
+                if (headlessPlayer.playbackState == Player.STATE_ENDED) {
+                    return@withTimeoutOrNull AuditionResult(false, null, "Replacement ended immediately")
+                }
+                if (headlessPlayer.playbackState == Player.STATE_READY) {
                     val duration = headlessPlayer.duration
-                    // Removed rigid 3.5s tolerance gate so legitimate FLAC files with slight intro/outro differences match.
-                    // Only reject severe mismatch (>45s or >50% discrepancy).
                     if (playingDurationMs > 0 && duration > 0) {
                         val deltaMs = abs(duration - playingDurationMs)
-                        // Never accept candidate tracks that are significantly truncated (>15s shorter)
-                        // or have severe discrepancy (>25s difference).
                         if (duration < playingDurationMs - 15_000L || deltaMs > 25_000L) {
-                            deferred.complete(
-                                AuditionResult(
-                                    isSuccess = false,
-                                    failureReason = "Duration mismatch ${deltaMs}ms (playing: ${playingDurationMs}ms, candidate: ${duration}ms)",
-                                )
+                            return@withTimeoutOrNull AuditionResult(
+                                isSuccess = false,
+                                failureReason = "Duration mismatch ${deltaMs}ms (playing: ${playingDurationMs}ms, candidate: ${duration}ms)",
                             )
-                            return
                         }
                     }
+
                     val format = headlessPlayer.audioFormat
-                    deferred.complete(
-                        AuditionResult(
+                    val livePos = (playerCurrentPosition?.invoke() ?: targetPositionMs).coerceAtLeast(0L)
+                    val wantedThrough = livePos + UPGRADE_PREBUFFER_MS
+                    val buffered = headlessPlayer.bufferedPosition
+
+                    // BitChord approach: buffer 12 seconds ahead of the moving playback point or to the end of track
+                    if (buffered >= wantedThrough || headlessPlayer.bufferedPercentage >= 100 || (duration > 0 && buffered >= duration - 1000L)) {
+                        Timber.tag(TAG).i(
+                            "[QualityUpgrade] Audition buffered through %d ms (wanted %d ms, duration %d ms). Ready for swap.",
+                            buffered,
+                            wantedThrough,
+                            duration,
+                        )
+                        return@withTimeoutOrNull AuditionResult(
                             isSuccess = true,
                             decodedFormat = format,
                         )
-                    )
+                    }
                 }
+                delay(UPGRADE_PROVE_STEP_MS)
             }
-
-            override fun onPlayerError(error: PlaybackException) {
-                deferred.complete(
-                    AuditionResult(
-                        isSuccess = false,
-                        failureReason = "ExoPlayer audition error: ${error.message}",
-                    )
-                )
-            }
-        }
-
-        headlessPlayer.addListener(listener)
+            @Suppress("UNREACHABLE_CODE")
+            null
+        } ?: AuditionResult(false, null, "Audition timed out buffering ahead after ${timeoutMs}ms")
 
         try {
-            withTimeoutOrNull(timeoutMs) {
-                deferred.await()
-            } ?: AuditionResult(false, null, "Audition timed out after ${timeoutMs}ms")
+            return@withContext auditionResult
         } finally {
             headlessPlayer.removeListener(listener)
             headlessPlayer.stop()
@@ -632,5 +643,7 @@ class QualityUpgradeManager @Inject constructor(
         const val BACKGROUND_QUERY_TIMEOUT_MS = 10_000L
         const val WATCHDOG_DURATION_MS = 30_000L
         const val MIN_REMAINING_DURATION_FOR_SWAP_MS = 15_000L
+        const val UPGRADE_PREBUFFER_MS = 12_000L
+        const val UPGRADE_PROVE_STEP_MS = 200L
     }
 }

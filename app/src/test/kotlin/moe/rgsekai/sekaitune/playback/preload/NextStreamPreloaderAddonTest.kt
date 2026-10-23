@@ -108,7 +108,6 @@ class NextStreamPreloaderAddonTest {
 
         assertEquals(NextStreamPreloader.MAX_QUEUE_PRELOAD_ITEMS, window.size)
         assertEquals("track1", window[0].mediaId)
-        assertEquals("track2", window[1].mediaId)
     }
 
     @Test

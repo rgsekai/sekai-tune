@@ -33,6 +33,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import moe.rgsekai.sekaitune.constants.AudioQuality
 import moe.rgsekai.sekaitune.db.MusicDatabase
@@ -651,30 +652,27 @@ class ResolveAudioStreamUseCase
                     val ytBaselineBitrate = runCatching { ytStream.format.bitrate / 1000 }.getOrDefault(160)
 
                     val addonDeferred = scope.async(Dispatchers.IO) {
-                        val collectedResults = CopyOnWriteArrayList<AddonStreamResult>()
-                        val addonJobs = enabledAddons.map { registeredSource ->
-                            launch(Dispatchers.IO) {
-                                val source = registeredSource.instance as? AddonMusicSource ?: return@launch
-                                val result = querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
-                                if (result != null) {
-                                    collectedResults.add(result)
-                                }
+                        var best: AddonStreamResult? = null
+                        for (registeredSource in enabledAddons) {
+                            val source = registeredSource.instance as? AddonMusicSource ?: continue
+                            if (isAddonBackingOff(source.configId)) {
+                                Timber.tag(TAG).d("[StreamResolution] Skipping %s (backing off)", registeredSource.displayName)
+                                continue
+                            }
+                            val result = querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
+                            if (result != null && CandidateQualityRank.isStrictlyBetterThanYouTube(result.rank, ytBaselineBitrate)) {
+                                Timber.tag(TAG).i(
+                                    "[StreamResolution] Early addon match found from %s (%s). Stopping remaining addon queries.",
+                                    result.sourceName,
+                                    result.formatDescription,
+                                )
+                                best = result
+                                winningSourceCache[request.mediaId] = result
+                                pendingAddonResults[request.mediaId] = result
+                                break
                             }
                         }
-                        addonJobs.forEach { runCatching { it.join() } }
-                        val best = collectedResults
-                            .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
-                            .maxByOrNull { it.rank }
-
-                        if (best != null) {
-                            Timber.tag(TAG).i(
-                                "[StreamResolution] Background parallel addon query found strictly better stream: %s (%s)",
-                                best.sourceName,
-                                best.formatDescription,
-                            )
-                            winningSourceCache[request.mediaId] = best
-                            pendingAddonResults[request.mediaId] = best
-                        } else {
+                        if (best == null) {
                             if (audioQualityManager.qualityBadgeFlow.value.mediaId == request.mediaId &&
                                 !audioQualityManager.qualityBadgeFlow.value.isLossless
                             ) {
@@ -741,25 +739,39 @@ class ResolveAudioStreamUseCase
 
             val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
             val query = TrackMatcher.buildAddonSearchQuery(effectiveTarget.title, effectiveTarget.artists)
-            val queryResults = CopyOnWriteArrayList<AddonQueryResult>()
-            val addonJobs = enabledAddons.map { registeredSource ->
-                scope.launch(Dispatchers.IO) {
-                    val source = registeredSource.instance as? AddonMusicSource ?: return@launch
-                    val result = querySingleAddonDetailed(source, registeredSource.displayName, effectiveTarget, query, toleranceSec)
-                    queryResults.add(result)
+            val completedReports = mutableListOf<AddonQueryResult>()
+            var bestAddon: AddonStreamResult? = null
+
+            for (registeredSource in enabledAddons) {
+                val source = registeredSource.instance as? AddonMusicSource ?: continue
+                if (isAddonBackingOff(source.configId)) {
+                    Timber.tag(TAG).d("[StreamResolution] Skipping %s (backing off)", registeredSource.displayName)
+                    continue
+                }
+                val result = withContext(Dispatchers.IO) {
+                    querySingleAddonDetailed(source, registeredSource.displayName, effectiveTarget, query, toleranceSec)
+                }
+                completedReports.add(result)
+                val streamResult = result.streamResult
+                if (streamResult != null && CandidateQualityRank.isStrictlyBetterThanYouTube(streamResult.rank, 160)) {
+                    bestAddon = streamResult
+                    Timber.tag(TAG).i(
+                        "[StreamResolution] Early winner found from %s (%s) for %s. Stopping remaining addon queries.",
+                        registeredSource.displayName,
+                        streamResult.formatDescription,
+                        request.mediaId,
+                    )
+                    break
                 }
             }
 
-            addonJobs.forEach { runCatching { it.join() } }
             val ytStream = ytDeferred.await()
             fallbackYouTubeCache[request.mediaId] = ytStream
 
             val ytBaselineBitrate = runCatching { ytStream.format.bitrate / 1000 }.getOrDefault(160)
-            val completedReports = queryResults.toList()
-            val bestAddon = completedReports
-                .mapNotNull { it.streamResult }
-                .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, ytBaselineBitrate) }
-                .maxByOrNull { it.rank }
+            if (bestAddon != null && !CandidateQualityRank.isStrictlyBetterThanYouTube(bestAddon.rank, ytBaselineBitrate)) {
+                bestAddon = null
+            }
 
             if (bestAddon != null) {
                 winningSourceCache[request.mediaId] = bestAddon
@@ -847,25 +859,29 @@ class ResolveAudioStreamUseCase
             targetTrack: MatchTarget,
             enabledAddons: List<RegisteredSource>,
             youtubeBitrateKbps: Int = 160,
-        ): AddonStreamResult? = coroutineScope {
+        ): AddonStreamResult? {
             val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
             val query = TrackMatcher.buildAddonSearchQuery(targetTrack.title, targetTrack.artists)
 
-            val collectedResults = CopyOnWriteArrayList<AddonStreamResult>()
-            val jobs = enabledAddons.map { registeredSource ->
-                launch(Dispatchers.IO) {
-                    val source = registeredSource.instance as? AddonMusicSource ?: return@launch
-                    val result = querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
-                    if (result != null) {
-                        collectedResults.add(result)
-                    }
+            for (registeredSource in enabledAddons) {
+                val source = registeredSource.instance as? AddonMusicSource ?: continue
+                if (isAddonBackingOff(source.configId)) {
+                    Timber.tag(TAG).d("[StreamResolution] Skipping %s for upgrade (backing off)", registeredSource.displayName)
+                    continue
+                }
+                val result = withContext(Dispatchers.IO) {
+                    querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
+                }
+                if (result != null && CandidateQualityRank.isStrictlyBetterThanYouTube(result.rank, youtubeBitrateKbps)) {
+                    Timber.tag(TAG).i(
+                        "[StreamResolution] Early upgrade winner found from %s (%s). Stopping further addon queries.",
+                        registeredSource.displayName,
+                        result.formatDescription,
+                    )
+                    return result
                 }
             }
-            jobs.forEach { runCatching { it.join() } }
-
-            collectedResults
-                .filter { CandidateQualityRank.isStrictlyBetterThanYouTube(it.rank, youtubeBitrateKbps) }
-                .maxByOrNull { it.rank }
+            return null
         }
 
         internal suspend fun querySingleAddon(

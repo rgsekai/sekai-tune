@@ -179,6 +179,6 @@ class NextStreamPreloader @Inject constructor(
 
     companion object {
         private const val TAG = "NextStreamPreloader"
-        const val MAX_QUEUE_PRELOAD_ITEMS = 2
+        const val MAX_QUEUE_PRELOAD_ITEMS = 1
     }
 }
