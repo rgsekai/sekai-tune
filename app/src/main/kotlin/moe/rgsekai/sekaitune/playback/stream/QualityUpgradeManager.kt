@@ -30,6 +30,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -515,12 +516,15 @@ class QualityUpgradeManager @Inject constructor(
         } finally {
             headlessPlayer.removeListener(listener)
             headlessPlayer.stop()
-            headlessPlayer.release()
+            headlessPlayer.clearMediaItems()
+            withContext(NonCancellable + Dispatchers.Main) {
+                headlessPlayer.release()
+            }
             if (activeAuditionPlayer == headlessPlayer) {
                 activeAuditionPlayer = null
             }
-            // Give Media3 ~50ms to release the lock on playerCache entry before main player attaches to it
-            delay(50L)
+            // Give Media3 ~100ms to release the lock on playerCache entry and decoders before main player attaches (BitChord AUDITION_RELEASE_MS)
+            delay(100L)
         }
     }
 
@@ -588,10 +592,12 @@ class QualityUpgradeManager @Inject constructor(
         activeAuditionPlayer = null
         if (Looper.myLooper() == Looper.getMainLooper()) {
             playerToRelease.stop()
+            playerToRelease.clearMediaItems()
             playerToRelease.release()
         } else {
             Handler(Looper.getMainLooper()).post {
                 playerToRelease.stop()
+                playerToRelease.clearMediaItems()
                 playerToRelease.release()
             }
         }

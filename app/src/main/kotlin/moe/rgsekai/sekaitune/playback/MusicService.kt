@@ -683,6 +683,7 @@ class MusicService :
                 player: Player,
                 events: Player.Events,
             ) {
+                if (isQualityUpgradeSwapInProgress) return
                 if (events.containsAny(
                         Player.EVENT_AUDIO_SESSION_ID,
                         Player.EVENT_PLAYBACK_STATE_CHANGED,
@@ -5469,6 +5470,7 @@ class MusicService :
     }
 
     private fun reconcileAudioEffectSession() {
+        if (isQualityUpgradeSwapInProgress) return
         if (!shouldKeepAudioEffectSessionOpen()) {
             closeAudioEffectSession()
             return
@@ -5495,7 +5497,6 @@ class MusicService :
         isAudioEffectSessionOpened = false
         val sessionId = openedAudioSessionId ?: localPlayer.audioSessionId
         openedAudioSessionId = null
-        releaseAudioEffects()
         if (sessionId <= 0) return
         sendCloseAudioEffectSessionBroadcast(sessionId)
     }
@@ -5514,6 +5515,7 @@ class MusicService :
 
         if (oldSessionId != null && oldSessionId > 0) {
             sendCloseAudioEffectSessionBroadcast(oldSessionId)
+            releaseAudioEffects()
         }
         openedAudioSessionId = newSessionId
         ensureAudioEffects(newSessionId)
@@ -6019,7 +6021,7 @@ class MusicService :
         if (audioQuality != moe.rgsekai.sekaitune.constants.AudioQuality.MAX || !audioQualityManager.isMaxAllowed() || isLowDataModeActive()) {
             return
         }
-        if (qualityUpgradeManager.isActiveUpgraded(mediaId) || qualityUpgradeManager.isUpgradeRunning(mediaId)) {
+        if (isQualityUpgradeSwapInProgress || qualityUpgradeManager.isActiveUpgraded(mediaId) || qualityUpgradeManager.isUpgradeRunning(mediaId)) {
             return
         }
         val durationMs = player.duration.takeIf { it > 0 }
@@ -6357,7 +6359,7 @@ class MusicService :
                 }
             }
         }
-        if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
+        if (!isQualityUpgradeSwapInProgress && (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE)) {
             enqueueCurrentHistorySessionForFinalization()
             if (!isCrossfading || playbackState == Player.STATE_IDLE) {
                 cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
