@@ -1808,8 +1808,8 @@ private fun V7PlayerBackdrop(
             Box(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                if (canvasRenderMode !is CanvasRenderMode.None) {
-                    // Fullscreen Live Canvas Video with subtle soft blur
+                if (canvasRenderMode !is CanvasRenderMode.None && canvasRenderMode !is CanvasRenderMode.Video) {
+                    // Fullscreen Procedural / KenBurns Canvas with subtle soft blur
                     CanvasArtworkPlayer(
                         renderMode = canvasRenderMode,
                         isPlaying = isPlaying,

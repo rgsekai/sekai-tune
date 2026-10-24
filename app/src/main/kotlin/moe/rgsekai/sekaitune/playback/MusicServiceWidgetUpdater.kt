@@ -61,11 +61,15 @@ internal class MusicServiceWidgetUpdater(
     private val loadWidgetShortcuts: LoadWidgetShortcutsUseCase,
 ) {
     private var progressJob: Job? = null
+    private var updateJob: Job? = null
+    private var bufferingJob: Job? = null
     private val updateMutex = Mutex()
     private val dominantColorCache = LruCache<String, Int>(50)
 
     fun update() {
-        scope.launch(SilentHandler) {
+        updateJob?.cancel()
+        updateJob = scope.launch(SilentHandler) {
+            delay(150)
             updateMutex.withLock {
                 pushState()
             }
@@ -74,7 +78,9 @@ internal class MusicServiceWidgetUpdater(
 
     fun setBuffering(buffering: Boolean) {
         ColdStartTimer.addStage("Widget: setBuffering($buffering)")
-        scope.launch(SilentHandler) {
+        bufferingJob?.cancel()
+        bufferingJob = scope.launch(SilentHandler) {
+            delay(100)
             updateMutex.withLock {
                 playbackWidgets.forEach { target ->
                     val ids = GlanceAppWidgetManager(service).getGlanceIds(target.widgetClass)

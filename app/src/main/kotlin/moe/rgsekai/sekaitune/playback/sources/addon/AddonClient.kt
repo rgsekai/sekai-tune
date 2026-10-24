@@ -309,6 +309,13 @@ class AddonClient(
         isSearch: Boolean = false,
         parser: (String) -> T,
     ): AddonResponse<T> {
+        val now = System.currentTimeMillis()
+        if (now < quietUntilMs) {
+            val remainingSec = ((quietUntilMs - now) / 1000L).coerceAtLeast(1L)
+            Timber.d("AddonClient in quiet period for %s (%ds remaining), failing fast", redact(url), remainingSec)
+            return AddonResponse.RateLimited(remainingSec)
+        }
+
         val maxAttempts = if (isSearch) 2 else MAX_RETRIES
         var attempt = 0
         while (attempt < maxAttempts) {

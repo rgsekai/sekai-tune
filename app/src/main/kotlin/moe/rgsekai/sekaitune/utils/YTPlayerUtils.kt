@@ -148,23 +148,23 @@ object YTPlayerUtils {
      */
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> =
         arrayOf(
-            WEB_REMIX,
-            YouTubeClient.ANDROID_VR_1_43_32,
-            YouTubeClient.ANDROID_VR_1_61_48,
-            YouTubeClient.ANDROID_VR_NO_AUTH,
             VISIONOS,
-            IPADOS,
             IOS,
+            IPADOS,
             IOS_MUSIC,
             ANDROID_MUSIC,
+            TVHTML5_SIMPLY_EMBEDDED_PLAYER,
+            TVHTML5,
+            WEB_REMIX,
             ANDROID_CREATOR,
             ANDROID_TESTSUITE,
             ANDROID_UNPLUGGED,
-            TVHTML5,
-            TVHTML5_SIMPLY_EMBEDDED_PLAYER,
             WEB,
             WEB_CREATOR,
             MOBILE,
+            YouTubeClient.ANDROID_VR_1_43_32,
+            YouTubeClient.ANDROID_VR_1_61_48,
+            YouTubeClient.ANDROID_VR_NO_AUTH,
         )
 
     private data class StreamResolutionResult(
@@ -203,6 +203,7 @@ object YTPlayerUtils {
     private val recentResolutionsCache = ConcurrentHashMap<RecentResolutionKey, Pair<Result<PlaybackData>, Long>>()
     private val playbackDataResolutionMutexes = Array(PLAYBACK_DATA_RESOLUTION_MUTEX_COUNT) { Mutex() }
     private val failedStreamClientsUntil = ConcurrentHashMap<String, Long>()
+    private val globalFailedClientsUntil = ConcurrentHashMap<String, Long>()
     private val simpMusicFailedUntil = ConcurrentHashMap<String, Long>()
 
     @Volatile private var lastSuccessfulClientKey: String? = null
@@ -212,6 +213,7 @@ object YTPlayerUtils {
         playbackDataCache.clear()
         recentResolutionsCache.clear()
         failedStreamClientsUntil.clear()
+        globalFailedClientsUntil.clear()
         simpMusicFailedUntil.clear()
         lastSuccessfulClientKey = null
     }
@@ -225,7 +227,6 @@ object YTPlayerUtils {
             coroutineScope {
                 launch { YouTube.player("dQw4w9WgXcQ", client = WEB_REMIX) }
                 launch { YouTube.player("dQw4w9WgXcQ", client = VISIONOS) }
-                launch { YouTube.player("dQw4w9WgXcQ", client = YouTubeClient.ANDROID_VR_1_43_32) }
             }
             Timber.tag(logTag).i("InnerTube player session pre-warmed in %d ms", System.currentTimeMillis() - t0)
         }.onFailure {
@@ -408,9 +409,15 @@ object YTPlayerUtils {
     ): Boolean {
         val normalizedClientKey = normalizeStreamClientKey(clientKey)
         if (normalizedClientKey.isEmpty()) return false
+        val now = System.currentTimeMillis()
+        val globalUntil = globalFailedClientsUntil[normalizedClientKey]
+        if (globalUntil != null) {
+            if (globalUntil > now) return true
+            globalFailedClientsUntil.remove(normalizedClientKey)
+        }
         val key = buildFailedClientKey(videoId, normalizedClientKey, authFingerprint)
         val until = failedStreamClientsUntil[key] ?: return false
-        if (until <= System.currentTimeMillis()) {
+        if (until <= now) {
             failedStreamClientsUntil.remove(key)
             return false
         }
@@ -492,6 +499,8 @@ object YTPlayerUtils {
 
         return buildList {
             winningClient?.let { add(it) }
+            // Direct unciphered client first (Prism & BitChord pattern: ~200ms cold start)
+            add(VISIONOS)
             lastSuccessfulClient?.let { add(it) }
             if (authState.hasPlaybackLoginContext && hasCompleteWebPlaybackPoToken(authState)) {
                 add(WEB_REMIX)
@@ -1184,6 +1193,15 @@ object YTPlayerUtils {
             Timber.tag(logTag).w(
                 "Player response status not OK for ${describeClient(client)}: ${playabilityStatus.status}, reason: ${playabilityStatus.reason.orEmpty()}",
             )
+            val isBot = playabilityStatus.reason?.contains("bot", ignoreCase = true) == true ||
+                playabilityStatus.reason?.contains("robot", ignoreCase = true) == true
+            if (isBot) {
+                val clientKey = normalizeStreamClientKey(StreamClientUtils.buildClientKey(client))
+                if (clientKey.isNotEmpty()) {
+                    Timber.tag(logTag).w("Flagging client $clientKey with global bot backoff for 5 minutes")
+                    globalFailedClientsUntil[clientKey] = System.currentTimeMillis() + 300_000L
+                }
+            }
             return null
         }
 
@@ -1205,7 +1223,12 @@ object YTPlayerUtils {
                 }
             val candidateUrl = candidateResult.getOrNull()
             if (candidateUrl == null) {
-                Timber.tag(logTag).w("probeStreamClient: candidate itag=${candidate.itag} failed for ${describeClient(client)}: ${candidateResult.exceptionOrNull()?.message}")
+                val failure = candidateResult.exceptionOrNull()
+                Timber.tag(logTag).w("probeStreamClient: candidate itag=${candidate.itag} failed for ${describeClient(client)}: ${failure?.message}")
+                if (failure?.isJavaScriptPlayerExtractorFailure() == true) {
+                    Timber.tag(logTag).w("probeStreamClient: Fast-failing remaining candidates for ${describeClient(client)} due to JavaScript deobfuscation failure")
+                    break
+                }
                 continue
             }
             val expireSecs = resolveExpireSeconds(
