@@ -1249,7 +1249,7 @@ class MediaLibrarySessionCallback
                                     playlistEntity.isEditable &&
                                     currentSongId != null &&
                                     database.checkInPlaylist(playlistId, currentSongId) == 0 &&
-                                    (playlistEntity.browseId == null || !currentSongId.isLocalMediaId())
+                                    (playlistEntity.browseId == null || (!currentSongId.isLocalMediaId() && !currentSongId.startsWith("webdav:")))
                             if (canAddCurrentSong) {
                                 add(
                                     queueMediaItem(
@@ -1685,7 +1685,7 @@ class MediaLibrarySessionCallback
                 val browseId = playlist.playlist.browseId
                 val setVideoId =
                     if (browseId != null) {
-                        if (songId.isLocalMediaId()) return@withContext false
+                        if (songId.isLocalMediaId() || songId.startsWith("webdav:")) return@withContext false
                         YouTube.addToPlaylist(browseId, songId).getOrNull() ?: return@withContext false
                     } else {
                         null

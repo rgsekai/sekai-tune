@@ -11,6 +11,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import moe.rgsekai.sekaitune.db.entities.Song
+import moe.rgsekai.sekaitune.webdav.WebDavAuth
 import androidx.media3.common.C
 import androidx.media3.database.DatabaseProvider
 import androidx.media3.datasource.DataSource
@@ -121,7 +122,8 @@ class DownloadUtil
                         DOWNLOAD_CONNECTION_KEEP_ALIVE_MINUTES,
                         TimeUnit.MINUTES,
                     ),
-                ).addInterceptor { chain ->
+                ).addInterceptor(WebDavAuth.authInterceptor)
+                .addInterceptor { chain ->
                     val request = chain.request()
                     val host = request.url.host
                     val isYouTubeMediaHost =
@@ -142,9 +144,19 @@ class DownloadUtil
 
         val downloads = MutableStateFlow<Map<String, Download>>(emptyMap())
 
+        private val downloadCallFactory = okhttp3.Call.Factory { request ->
+            val host = request.url.host
+            val client = if (WebDavAuth.trustSelfSigned && host.equals(WebDavAuth.host, ignoreCase = true)) {
+                WebDavAuth.createWebDavHttpClient(mediaOkHttpClient)
+            } else {
+                mediaOkHttpClient
+            }
+            client.newCall(request)
+        }
+
         private val resolvedNetworkDataSourceFactory =
             ResolvingDataSource.Factory(
-                OkHttpDataSource.Factory(mediaOkHttpClient),
+                OkHttpDataSource.Factory(downloadCallFactory),
                 ::resolveDownloadDataSpec,
             )
 

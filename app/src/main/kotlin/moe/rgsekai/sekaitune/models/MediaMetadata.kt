@@ -95,7 +95,7 @@ fun Song.toMediaMetadata() =
                 )
             },
         duration = song.duration,
-        thumbnailUrl = song.thumbnailUrl ?: if (!song.id.isLocalMediaId()) buildYTThumbnailUrl(song.id, YTThumbQuality.HQ) else null,
+        thumbnailUrl = song.thumbnailUrl ?: if (!song.id.isLocalMediaId() && !song.id.startsWith("webdav:")) buildYTThumbnailUrl(song.id, YTThumbQuality.HQ) else null,
         album =
             album?.let {
                 MediaMetadata.Album(

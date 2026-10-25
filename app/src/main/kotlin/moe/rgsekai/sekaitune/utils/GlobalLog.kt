@@ -66,7 +66,12 @@ class GlobalLogTree : Timber.DebugTree() {
         t: Throwable?,
     ) {
         try {
-            val final = if (t != null) "$message\n$t" else message
+            val sanitizedMsg = moe.rgsekai.sekaitune.webdav.WebDavConfig.sanitizeForLogging(message)
+            val final = if (t != null) {
+                "$sanitizedMsg\n${moe.rgsekai.sekaitune.webdav.WebDavConfig.sanitizeForLogging(t.stackTraceToString())}"
+            } else {
+                sanitizedMsg
+            }
             GlobalLog.append(priority, tag, final)
         } catch (_: Exception) {
             // swallow

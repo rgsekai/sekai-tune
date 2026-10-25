@@ -24,6 +24,7 @@ import moe.rgsekai.sekaitune.db.entities.Artist
 import moe.rgsekai.sekaitune.db.entities.LocalItem
 import moe.rgsekai.sekaitune.db.entities.Playlist
 import moe.rgsekai.sekaitune.db.entities.Song
+import moe.rgsekai.sekaitune.playback.sources.webdav.toSong
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -50,8 +51,10 @@ class LocalSearchViewModel
                                 database.searchAlbums(query, PREVIEW_SIZE),
                                 database.searchArtists(query, PREVIEW_SIZE),
                                 database.searchPlaylists(query, PREVIEW_SIZE),
-                            ) { songs, albums, artists, playlists ->
+                                database.webDavSongDao.search(query, PREVIEW_SIZE),
+                            ) { songs, albums, artists, playlists, webDavSongs ->
                                 songs.filter { song -> song.artists.none { it.blockedAt != null } } +
+                                    webDavSongs.map { it.toSong() } +
                                     albums.filter { album -> album.artists.none { it.blockedAt != null } } +
                                     artists.filter { artist -> artist.artist.blockedAt == null } +
                                     playlists
@@ -59,8 +62,12 @@ class LocalSearchViewModel
                         }
 
                         LocalFilter.SONG -> {
-                            database.searchSongs(query).map { songs ->
-                                songs.filter { song -> song.artists.none { it.blockedAt != null } }
+                            combine(
+                                database.searchSongs(query),
+                                database.webDavSongDao.search(query),
+                            ) { songs, webDavSongs ->
+                                songs.filter { song -> song.artists.none { it.blockedAt != null } } +
+                                    webDavSongs.map { it.toSong() }
                             }
                         }
 

@@ -24,6 +24,9 @@ object YouTubeLyricsProvider : LyricsProvider {
         duration: Int,
     ): Result<String> =
         runCatching {
+            if (id.startsWith("webdav:") || id.startsWith("content://") || id.startsWith("file://")) {
+                throw IllegalArgumentException("Not a YouTube video ID: $id")
+            }
             val nextResult = YouTube.next(WatchEndpoint(videoId = id)).getOrThrow()
             YouTube
                 .lyrics(

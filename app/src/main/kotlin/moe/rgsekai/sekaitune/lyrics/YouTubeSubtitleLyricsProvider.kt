@@ -21,7 +21,12 @@ object YouTubeSubtitleLyricsProvider : LyricsProvider {
         artist: String,
         album: String?,
         duration: Int,
-    ): Result<String> = YouTube.transcript(id)
+    ): Result<String> {
+        if (id.startsWith("webdav:") || id.startsWith("content://") || id.startsWith("file://")) {
+            return Result.failure(IllegalArgumentException("Not a YouTube video ID: $id"))
+        }
+        return YouTube.transcript(id)
+    }
 
     override suspend fun getAllLyrics(
         id: String,

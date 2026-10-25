@@ -131,6 +131,7 @@ class App :
         moe.rgsekai.sekaitune.canvas.AndroidPersistentTokenStore.initialize(this)
         moe.rgsekai.sekaitune.playback.stream.PersistentVideoClientCache.initialize(this)
         moe.rgsekai.sekaitune.buddy.BuddyNotificationManager.createNotificationChannel(this)
+        runCatching { moe.rgsekai.sekaitune.playback.sources.webdav.WebDavCredentialStore(this).refreshAuth() }
 
         PaxsenixLyrics.setUserAgent("SekaiTune", BuildConfig.VERSION_NAME)
 
@@ -337,7 +338,7 @@ class App :
                     val sw = StringWriter()
                     val pw = PrintWriter(sw)
                     throwable.printStackTrace(pw)
-                    val stack = sw.toString()
+                    val stack = moe.rgsekai.sekaitune.webdav.WebDavConfig.sanitizeForLogging(sw.toString())
                     val safeStack = if (stack.length > 30000) stack.take(30000) + "\n...[truncated]" else stack
 
                     val intent =
@@ -377,8 +378,19 @@ class App :
             applicationScope.launch(Dispatchers.IO) { trimImageDiskCache(diskCache) }
         }
 
+        val baseOkHttpClient = okhttp3.OkHttpClient.Builder()
+            .build()
+
+        val coilCallFactory = okhttp3.Call.Factory { request ->
+            val client = moe.rgsekai.sekaitune.webdav.WebDavAuth.createWebDavHttpClient(baseOkHttpClient)
+            client.newCall(request)
+        }
+
         return ImageLoader
             .Builder(this)
+            .components {
+                add(coil3.network.okhttp.OkHttpNetworkFetcherFactory(callFactory = { coilCallFactory }))
+            }
             .crossfade(true)
             .allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
             .diskCache(diskCache)

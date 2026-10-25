@@ -428,7 +428,7 @@ fun SongMenu(
     Spacer(modifier = Modifier.height(16.dp))
 
     val bottomSheetPageState = LocalBottomSheetPageState.current
-    val isLocalSong = song.song.isLocal
+    val isLocalSong = song.song.isLocal || song.id.startsWith("webdav:")
 
     val startRadioText = stringResource(R.string.start_radio)
     val playNextText = stringResource(R.string.play_next)
@@ -584,7 +584,15 @@ fun SongMenu(
                         text = shareText,
                         onClick = {
                             onDismiss()
-                            if (isLocalSong) {
+                            if (song.id.startsWith("webdav:")) {
+                                val intent =
+                                    Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, "${song.song.title} - ${song.artists.joinToString { it.name }}")
+                                    }
+                                context.startActivity(Intent.createChooser(intent, null))
+                            } else if (isLocalSong) {
                                 shareLocalAudio(context, song.id, song.format?.mimeType)
                             } else {
                                 val intent =

@@ -36,6 +36,8 @@ import moe.rgsekai.sekaitune.ui.screens.artist.ArtistScreen
 import moe.rgsekai.sekaitune.ui.screens.artist.ArtistSongsScreen
 import moe.rgsekai.sekaitune.ui.screens.library.LibraryScreen
 import moe.rgsekai.sekaitune.ui.screens.library.LocalSongScreen
+import moe.rgsekai.sekaitune.ui.screens.library.SpotifyPlaylistsScreen
+import moe.rgsekai.sekaitune.ui.screens.library.WebDavSongScreen
 import moe.rgsekai.sekaitune.ui.screens.musicrecognition.MusicRecognitionScreen
 import moe.rgsekai.sekaitune.ui.screens.playlist.AutoPlaylistScreen
 import moe.rgsekai.sekaitune.ui.screens.playlist.CachePlaylistScreen
@@ -113,6 +115,12 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("local_songs") {
         LocalSongScreen(navController)
+    }
+    composable("webdav_songs") {
+        WebDavSongScreen(navController)
+    }
+    composable("spotify_playlists") {
+        SpotifyPlaylistsScreen(navController)
     }
     composable("history") {
         HistoryScreen(navController)

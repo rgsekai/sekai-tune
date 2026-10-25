@@ -209,7 +209,7 @@ fun PlayerMenu(
         }
     val isLocalMedia =
         remember(librarySong?.song?.isLocal, mediaMetadata.id) {
-            librarySong?.song?.isLocal == true || mediaMetadata.id.isLocalMediaId()
+            librarySong?.song?.isLocal == true || mediaMetadata.id.isLocalMediaId() || mediaMetadata.id.startsWith("webdav:")
         }
     val castPlayerMenuAction = rememberCastPlayerMenuAction()
 

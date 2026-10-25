@@ -230,7 +230,7 @@ class SyncUtils
                 val gen = syncGeneration.get()
                 if (!isSyncStillEnabled(gen)) return@launch
                 val targetId = s.matchedCatalogId ?: s.id
-                if (targetId.startsWith("addon:") || targetId.startsWith("content://") || targetId.startsWith("file://")) {
+                if (targetId.startsWith("addon:") || targetId.startsWith("content://") || targetId.startsWith("file://") || targetId.startsWith("webdav:")) {
                     Timber.d("Skipping YTM like sync for non-catalog track: %s", targetId)
                     return@launch
                 }
@@ -262,7 +262,7 @@ class SyncUtils
                                 async {
                                     if (!isSyncStillEnabled(gen)) return@async
                                     val targetId = song.matchedCatalogId ?: song.id
-                                    if (targetId.startsWith("addon:") || targetId.startsWith("content://") || targetId.startsWith("file://")) {
+                                    if (targetId.startsWith("addon:") || targetId.startsWith("content://") || targetId.startsWith("file://") || targetId.startsWith("webdav:")) {
                                         return@async
                                     }
                                     YouTube

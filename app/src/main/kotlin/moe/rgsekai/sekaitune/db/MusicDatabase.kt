@@ -62,13 +62,26 @@ import java.util.Date
 import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 
+import moe.rgsekai.sekaitune.db.dao.WebDavSongDao
+import moe.rgsekai.sekaitune.db.entities.WebDavSongEntity
+
 private const val TAG = "MusicDatabase"
-private const val CURRENT_VERSION = 34
+private const val CURRENT_VERSION = 37
 
 class MusicDatabase(
     private val delegate: InternalDatabase,
     private val initializer: (() -> Unit)? = null,
 ) : DatabaseDao by delegate.dao {
+    val webDavSongDao: WebDavSongDao
+        get() {
+            ensureWarmedUp()
+            return delegate.webDavSongDao
+        }
+
+    fun webDavSongs() = webDavSongDao.getAll()
+    fun webDavSongsCount() = webDavSongDao.count()
+    fun webDavFirstArtUrl() = webDavSongDao.getFirstArtUrl()
+
     val openHelper: SupportSQLiteOpenHelper
         get() {
             ensureWarmedUp()
@@ -164,6 +177,7 @@ class MusicDatabase(
         PlaylistTagMap::class,
         LibraryTopMixEntity::class,
         LibraryTopMixSongMap::class,
+        WebDavSongEntity::class,
     ],
     views = [
         SortedSongArtistMap::class,
@@ -198,6 +212,7 @@ class MusicDatabase(
 @TypeConverters(Converters::class)
 abstract class InternalDatabase : RoomDatabase() {
     abstract val dao: DatabaseDao
+    abstract val webDavSongDao: WebDavSongDao
 
     companion object {
         const val DB_NAME = "song.db"
@@ -213,6 +228,9 @@ abstract class InternalDatabase : RoomDatabase() {
                     .databaseBuilder(context, InternalDatabase::class.java, DB_NAME)
                     .addMigrations(
                         MIGRATION_1_2,
+                        MIGRATION_34_35,
+                        MIGRATION_35_36,
+                        MIGRATION_36_37,
                         *universalMigrations,
                     ).addCallback(DatabaseCallback())
                     .fallbackToDestructiveMigration()
@@ -282,9 +300,37 @@ private class DatabaseCallback : RoomDatabase.Callback() {
 
                 cleanupDuplicatePlaylistsOnOpen(db)
                 ensurePlaylistBrowseIdIndex(db)
+                syncWebDavThumbnailsOnOpen(db)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set PRAGMA settings", e)
             }
+        }
+    }
+
+    private fun syncWebDavThumbnailsOnOpen(db: SupportSQLiteDatabase) {
+        try {
+            db.execSQL(
+                """
+                UPDATE song 
+                SET thumbnailUrl = (
+                    SELECT artUrl 
+                    FROM webdav_song 
+                    WHERE webdav_song.path = SUBSTR(song.id, 8) 
+                    LIMIT 1
+                ) 
+                WHERE song.id LIKE 'webdav:%' 
+                  AND (song.thumbnailUrl IS NULL OR song.thumbnailUrl = '') 
+                  AND EXISTS (
+                      SELECT 1 
+                      FROM webdav_song 
+                      WHERE webdav_song.path = SUBSTR(song.id, 8) 
+                        AND webdav_song.artUrl IS NOT NULL 
+                        AND webdav_song.artUrl != ''
+                  )
+                """,
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "WebDAV thumbnail sync on open skipped", e)
         }
     }
 
@@ -940,6 +986,48 @@ class Migration19To20 : AutoMigrationSpec {
 
 @DeleteColumn.Entries(DeleteColumn(tableName = "song", columnName = "artistName"))
 class Migration20To21 : AutoMigrationSpec
+
+val MIGRATION_34_35 = object : Migration(34, 35) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `webdav_song` (
+                `path` TEXT NOT NULL,
+                `serverId` TEXT NOT NULL,
+                `title` TEXT NOT NULL,
+                `artist` TEXT NOT NULL,
+                `album` TEXT NOT NULL,
+                `durationMs` INTEGER,
+                `etag` TEXT,
+                `lastModified` INTEGER,
+                `contentLength` INTEGER NOT NULL,
+                `artUrl` TEXT,
+                `scannedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`path`)
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_webdav_song_album` ON `webdav_song` (`album`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_webdav_song_artist` ON `webdav_song` (`artist`)")
+    }
+}
+
+val MIGRATION_35_36 = object : Migration(35, 36) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `webdav_song` ADD COLUMN `tagsRead` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `webdav_song` ADD COLUMN `albumArtist` TEXT")
+        db.execSQL("ALTER TABLE `webdav_song` ADD COLUMN `trackNumber` INTEGER")
+        db.execSQL("ALTER TABLE `webdav_song` ADD COLUMN `discNumber` INTEGER")
+    }
+}
+
+val MIGRATION_36_37 = object : Migration(36, 37) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `webdav_song` ADD COLUMN `art_checked` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `webdav_song` ADD COLUMN `matched_catalog_id` TEXT")
+    }
+}
+
 
 
 

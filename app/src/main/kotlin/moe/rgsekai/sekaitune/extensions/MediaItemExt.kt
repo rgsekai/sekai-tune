@@ -59,11 +59,30 @@ private fun MediaItem.Builder.setCacheKeyIfRemote(mediaId: String): MediaItem.Bu
 
 fun Song.toMediaItem(streamMediaId: String? = null): MediaItem {
     val actualMediaId = streamMediaId ?: song.matchedCatalogId ?: song.id
-    return MediaItem
+    val isWebDav = actualMediaId.startsWith("webdav:")
+    val playUri = if (isWebDav) {
+        val path = actualMediaId.removePrefix("webdav:")
+        path.toUri()
+    } else {
+        actualMediaId.toUri()
+    }
+    val customCacheKey = if (isWebDav) {
+        val path = actualMediaId.removePrefix("webdav:")
+        moe.rgsekai.sekaitune.playback.sources.webdav.WebDavMediaItemSpec.buildCustomCacheKey(path)
+    } else null
+
+    val builder = MediaItem
         .Builder()
         .setMediaId(actualMediaId)
-        .setUri(actualMediaId)
-        .setCacheKeyIfRemote(actualMediaId)
+        .setUri(playUri)
+
+    if (customCacheKey != null) {
+        builder.setCustomCacheKey(customCacheKey)
+    } else {
+        builder.setCacheKeyIfRemote(actualMediaId)
+    }
+
+    return builder
         .setTag(toMediaMetadata())
         .setMediaMetadata(
             androidx.media3.common.MediaMetadata
@@ -73,7 +92,7 @@ fun Song.toMediaItem(streamMediaId: String? = null): MediaItem {
                 .setArtist(artists.joinToString { it.name })
                 .setArtworkUri(
                     song.thumbnailUrl.toNotificationArtworkUri()
-                        ?: if (!song.id.isLocalMediaId()) buildYTThumbnailUrl(song.id, YTThumbQuality.HQ).toUri() else null,
+                        ?: if (!song.id.isLocalMediaId() && !isWebDav) buildYTThumbnailUrl(song.id, YTThumbQuality.HQ).toUri() else null,
                 )
                 .setAlbumTitle(song.albumName)
                 .setIsPlayable(true)
@@ -83,6 +102,9 @@ fun Song.toMediaItem(streamMediaId: String? = null): MediaItem {
                         putBoolean(ExtraIsMusicVideo, false)
                         putBoolean(ExtraIsUploaded, song.isUploaded || song.thumbnailUrl?.contains("vi_locker") == true)
                         putString(ExtraUploadEntityId, song.uploadEntityId)
+                        if (isWebDav) {
+                            putBoolean("moe.rgsekai.sekaitune.extra.IS_WEBDAV", true)
+                        }
                     },
                 ).build(),
         ).build()
@@ -120,8 +142,37 @@ fun SongItem.toMediaItem() =
                 ).build(),
         ).build()
 
-fun MediaMetadata.toMediaItem() =
-    MediaItem
+fun MediaMetadata.toMediaItem(): MediaItem {
+    if (id.startsWith("webdav:")) {
+        val path = id.removePrefix("webdav:")
+        val cleanUrl = moe.rgsekai.sekaitune.webdav.WebDavConfig.cleanUrl(path)
+        val cacheKey = "webdav:$cleanUrl"
+        val artUri = thumbnailUrl?.takeIf { it.isNotBlank() }?.toUri()
+        return MediaItem
+            .Builder()
+            .setMediaId(id)
+            .setUri(path.toUri())
+            .setCustomCacheKey(cacheKey)
+            .setTag(this)
+            .setMediaMetadata(
+                androidx.media3.common.MediaMetadata
+                    .Builder()
+                    .setTitle(title)
+                    .setSubtitle(artists.joinToString { it.name })
+                    .setArtist(artists.joinToString { it.name })
+                    .setArtworkUri(artUri)
+                    .setAlbumTitle(album?.title)
+                    .setIsPlayable(true)
+                    .setMediaType(MEDIA_TYPE_MUSIC)
+                    .setExtras(
+                        Bundle().apply {
+                            putBoolean("moe.rgsekai.sekaitune.extra.IS_WEBDAV", true)
+                        },
+                    ).build(),
+            ).build()
+    }
+
+    return MediaItem
         .Builder()
         .setMediaId(id)
         .setUri(id)
@@ -138,7 +189,7 @@ fun MediaMetadata.toMediaItem() =
                         buildYTThumbnailUrl(id, YTThumbQuality.HQ).toUri()
                     } else {
                         thumbnailUrl.toNotificationArtworkUri()
-                            ?: if (!id.isLocalMediaId()) buildYTThumbnailUrl(id, YTThumbQuality.HQ).toUri() else null
+                            ?: if (!id.isLocalMediaId() && !id.startsWith("webdav:")) buildYTThumbnailUrl(id, YTThumbQuality.HQ).toUri() else null
                     },
                 ).setAlbumTitle(album?.title)
                 .setIsPlayable(true)
@@ -151,6 +202,7 @@ fun MediaMetadata.toMediaItem() =
                     },
                 ).build(),
         ).build()
+}
 
 private fun SongItem.isMusicVideo(): Boolean {
     val musicVideoType = endpoint?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig?.musicVideoType

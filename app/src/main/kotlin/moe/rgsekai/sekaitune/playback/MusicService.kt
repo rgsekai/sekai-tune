@@ -10,6 +10,7 @@
 package moe.rgsekai.sekaitune.playback
 
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants
+import moe.rgsekai.sekaitune.webdav.WebDavAuth
 import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -324,6 +325,9 @@ class MusicService :
     @Inject
     lateinit var addonCatalogMatcher: moe.rgsekai.sekaitune.playback.sources.AddonCatalogMatcher
 
+    @Inject
+    lateinit var sourceRegistry: moe.rgsekai.sekaitune.playback.sources.SourceRegistry
+
     @Volatile
     var isQualityUpgradeSwapInProgress = false
     private val customStreamHeaders = ConcurrentHashMap<String, Map<String, String>>()
@@ -405,6 +409,7 @@ class MusicService :
             .followSslRedirects(true)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(WebDavAuth.authInterceptor)
             .addInterceptor { chain ->
                 val request = chain.request()
                 val host = request.url.host
@@ -3096,8 +3101,8 @@ class MusicService :
                     meta?.id?.trim().orEmpty().ifBlank {
                         targetItem?.mediaId?.trim().orEmpty()
                     }
-                if (trackId.isBlank()) {
-                    showTogetherNotice(getString(R.string.not_allowed), key = "GUEST_PLAYQUEUE_NO_TRACK")
+                if (trackId.isBlank() || trackId.startsWith("webdav:") || trackId.isLocalMediaId()) {
+                    showTogetherNotice("WebDAV songs cannot be shared in Together sessions", key = "GUEST_PLAYQUEUE_NO_TRACK")
                     return@launch
                 }
 
@@ -3415,8 +3420,18 @@ class MusicService :
     }
 
     fun onInfiniteQueueEnabled(seedVideoIdOverride: String? = null) {
-        val currentMeta = player.currentMetadata ?: return
-        if (isCurrentPlaybackItemLocal(currentMeta) && seedVideoIdOverride == null) return
+        val currentMeta = player.currentMetadata ?: currentMediaMetadata.value ?: return
+        timber.log.Timber.tag("MusicService").i("onInfiniteQueueEnabled: metaId=%s, seedOverride=%s", currentMeta.id, seedVideoIdOverride)
+        if (isCurrentPlaybackItemLocal(currentMeta) && seedVideoIdOverride == null) {
+            if (currentMeta.id.startsWith("webdav:")) {
+                val mediaId = currentMeta.id
+                val title = currentMeta.title
+                val artist = currentMeta.artists.firstOrNull()?.name.orEmpty()
+                val durationSec = currentMeta.duration.takeIf { it > 0 }
+                handleWebDavTrackAutoPlay(mediaId, title, artist, durationSec)
+            }
+            return
+        }
         if (infiniteQueueJob?.isActive == true) return
 
         val generation = ++infiniteQueueGeneration
@@ -3624,8 +3639,13 @@ class MusicService :
             if (!joined.roomState.settings.allowGuestsToAddTracks) {
                 return
             }
+            val nonWebDavItems = items.filterNot { it.mediaId.startsWith("webdav:") || it.metadata?.id?.startsWith("webdav:") == true }
+            if (items.any { it.mediaId.startsWith("webdav:") || it.metadata?.id?.startsWith("webdav:") == true }) {
+                showTogetherNotice("WebDAV songs cannot be shared in Together sessions", key = "GUEST_ADD_WEBDAV")
+            }
+            if (nonWebDavItems.isEmpty()) return
             val tracks =
-                items.mapNotNull { it.metadata }.map { meta ->
+                nonWebDavItems.mapNotNull { it.metadata }.map { meta ->
                     moe.rgsekai.sekaitune.together.TogetherTrack(
                         id = meta.id,
                         title = meta.title,
@@ -3663,8 +3683,13 @@ class MusicService :
             if (!joined.roomState.settings.allowGuestsToAddTracks) {
                 return
             }
+            val nonWebDavItems = items.filterNot { it.mediaId.startsWith("webdav:") || it.metadata?.id?.startsWith("webdav:") == true }
+            if (items.any { it.mediaId.startsWith("webdav:") || it.metadata?.id?.startsWith("webdav:") == true }) {
+                showTogetherNotice("WebDAV songs cannot be shared in Together sessions", key = "GUEST_ADD_WEBDAV")
+            }
+            if (nonWebDavItems.isEmpty()) return
             val tracks =
-                items.mapNotNull { it.metadata }.map { meta ->
+                nonWebDavItems.mapNotNull { it.metadata }.map { meta ->
                     moe.rgsekai.sekaitune.together.TogetherTrack(
                         id = meta.id,
                         title = meta.title,
@@ -4720,15 +4745,17 @@ class MusicService :
     ): moe.rgsekai.sekaitune.together.TogetherRoomState =
         withContext(Dispatchers.Main) {
             val tracks =
-                player.mediaItems.mapNotNull { it.metadata }.map { meta ->
-                    moe.rgsekai.sekaitune.together.TogetherTrack(
-                        id = meta.id,
-                        title = meta.title,
-                        artists = meta.artists.map { it.name },
-                        durationSec = meta.duration,
-                        thumbnailUrl = meta.thumbnailUrl,
-                    )
-                }
+                player.mediaItems.mapNotNull { it.metadata }
+                    .filterNot { it.id.startsWith("webdav:") || it.id.isLocalMediaId() }
+                    .map { meta ->
+                        moe.rgsekai.sekaitune.together.TogetherTrack(
+                            id = meta.id,
+                            title = meta.title,
+                            artists = meta.artists.map { it.name },
+                            durationSec = meta.duration,
+                            thumbnailUrl = meta.thumbnailUrl,
+                        )
+                    }
 
             val queueHash =
                 moe.rgsekai.sekaitune.utils
@@ -5174,7 +5201,7 @@ class MusicService :
                                 getSongById(mediaMetadata.id)
                                     ?: run {
                                         insert(mediaMetadata) {
-                                            it.copy(isLocal = mediaMetadata.id.isLocalMediaId())
+                                            it.copy(isLocal = mediaMetadata.id.isLocalMediaId() || mediaMetadata.id.startsWith("webdav:"))
                                         }
                                         getSongById(mediaMetadata.id)
                                     }
@@ -5745,8 +5772,27 @@ class MusicService :
     ): Long? =
         try {
             database.withTransaction {
-                if (song(mediaId).first() == null && mediaMetadata != null) {
-                    insert(mediaMetadata)
+                val existing = song(mediaId).first()
+                if (existing == null && mediaMetadata != null) {
+                    var thumb = mediaMetadata.thumbnailUrl
+                    if (thumb.isNullOrBlank() && mediaId.startsWith("webdav:")) {
+                        val path = mediaId.removePrefix("webdav:")
+                        thumb = database.webDavSongDao.getByPath(path)?.artUrl
+                    }
+                    val metaToInsert = if (thumb != mediaMetadata.thumbnailUrl) {
+                        mediaMetadata.copy(thumbnailUrl = thumb)
+                    } else {
+                        mediaMetadata
+                    }
+                    insert(metaToInsert) {
+                        it.copy(isLocal = mediaMetadata.id.isLocalMediaId() || mediaMetadata.id.startsWith("webdav:"))
+                    }
+                } else if (existing != null && existing.song.thumbnailUrl.isNullOrBlank() && mediaId.startsWith("webdav:")) {
+                    val path = mediaId.removePrefix("webdav:")
+                    val artUrl = database.webDavSongDao.getByPath(path)?.artUrl ?: mediaMetadata?.thumbnailUrl
+                    if (!artUrl.isNullOrBlank()) {
+                        update(existing.song.copy(thumbnailUrl = artUrl))
+                    }
                 }
 
                 insert(
@@ -5788,7 +5834,7 @@ class MusicService :
             })
             ?: database.song(mediaId).firstOrNull()?.song?.matchedCatalogId
             ?: mediaId
-        if (targetId.startsWith("addon:") || targetId.isLocalMediaId()) {
+        if (targetId.startsWith("addon:") || targetId.isLocalMediaId() || targetId.startsWith("webdav:")) {
             return false
         }
 
@@ -6248,7 +6294,14 @@ class MusicService :
             val title = meta?.title?.toString()
             val artists = meta?.artists?.map { it.name } ?: emptyList()
             val durationMs = meta?.duration?.toLong()?.times(1000L) ?: player.duration.takeIf { it > 0 } ?: 0L
-            if (!mediaId.startsWith("addon:")) {
+            if (mediaId.startsWith("webdav:")) {
+                handleWebDavTrackAutoPlay(
+                    mediaId = mediaId,
+                    title = title.orEmpty(),
+                    artist = artists.firstOrNull().orEmpty(),
+                    durationSec = (durationMs / 1000L).toInt().takeIf { it > 0 },
+                )
+            } else if (!mediaId.startsWith("addon:")) {
                 // Starts immediately on fastest YouTube baseline stream; background audition and mid-song swap will trigger via checkAndTriggerQualityUpgrade()
             } else {
                 handleAddonTrackPlayback(
@@ -6257,6 +6310,51 @@ class MusicService :
                     artists = artists,
                     durationSec = (durationMs / 1000L).toInt().takeIf { it > 0 },
                 )
+            }
+        }
+    }
+
+    private var webDavAutoPlayJob: Job? = null
+
+    private fun handleWebDavTrackAutoPlay(
+        mediaId: String,
+        title: String,
+        artist: String,
+        durationSec: Int?,
+    ) {
+        val autoPlayEnabled = dataStore.get(AutoLoadMoreKey, true)
+        val tracksRemaining = player.mediaItemCount - player.currentMediaItemIndex
+        timber.log.Timber.tag("MusicService").i("handleWebDavTrackAutoPlay entry: mediaId=%s, autoPlay=%b, repeatMode=%d, remaining=%d", mediaId, autoPlayEnabled, player.repeatMode, tracksRemaining)
+        if (!autoPlayEnabled || player.repeatMode != REPEAT_MODE_OFF) return
+        if (tracksRemaining > 2) return
+
+        if (currentQueue.hasNextPage()) return
+        if (infiniteQueueJob?.isActive == true || webDavAutoPlayJob?.isActive == true) return
+
+        webDavAutoPlayJob?.cancel()
+        webDavAutoPlayJob = scope.launch(Dispatchers.IO) {
+            database.webDavSongDao.clearFailedMatches()
+            val path = mediaId.removePrefix("webdav:")
+            val tolerance = if (::sourceRegistry.isInitialized) sourceRegistry.toleranceSecondsFlow.value else 3
+            val seedVideoId = moe.rgsekai.sekaitune.playback.sources.webdav.WebDavAutoPlaySeedFinder.findSeedVideoId(
+                webdavPath = path,
+                title = title,
+                artist = artist,
+                durationSec = durationSec,
+                toleranceSec = tolerance,
+                database = database,
+            )
+
+            timber.log.Timber.tag("MusicService").i("handleWebDavTrackAutoPlay: seedVideoId for %s resolved as %s", mediaId, seedVideoId)
+
+            if (!seedVideoId.isNullOrBlank()) {
+                withContext(Dispatchers.Main) {
+                    val currentId = player.currentMediaItem?.mediaId?.trim()
+                    val stillAutoPlay = dataStore.get(AutoLoadMoreKey, true)
+                    if (stillAutoPlay && currentId == mediaId && player.repeatMode == REPEAT_MODE_OFF) {
+                        onInfiniteQueueEnabled(seedVideoIdOverride = seedVideoId)
+                    }
+                }
             }
         }
     }
@@ -6305,6 +6403,7 @@ class MusicService :
     private fun isCurrentPlaybackItemLocal(currentMediaMetadata: MediaMetadata): Boolean =
         currentSong.value?.song?.isLocal == true ||
             currentMediaMetadata.id.trim().isLocalMediaId() ||
+            currentMediaMetadata.id.trim().startsWith("webdav:") ||
             player.currentMediaItem
                 ?.localConfiguration
                 ?.uri
@@ -6314,6 +6413,16 @@ class MusicService :
         @Player.State playbackState: Int,
     ) {
         if (playbackState == Player.STATE_READY) {
+            val curId = player.currentMediaItem?.mediaId
+            if (curId != null && curId.startsWith("webdav:")) {
+                val durationMs = player.duration
+                if (durationMs > 0 && durationMs != C.TIME_UNSET) {
+                    val path = curId.removePrefix("webdav:")
+                    scope.launch(Dispatchers.IO) {
+                        database.webDavSongDao.updateDurationIfNull(path, durationMs)
+                    }
+                }
+            }
             ColdStartTimer.addStage("Player State: READY")
             if (lastTransitionTimeMs > 0L) {
                 val elapsedMs = android.os.SystemClock.elapsedRealtime() - lastTransitionTimeMs
@@ -6775,6 +6884,31 @@ class MusicService :
         }
         val isLocalMedia = currentMediaId.isLocalMediaId()
 
+        if (currentMediaId.startsWith("webdav:")) {
+            val isConnectionError = (error.cause?.cause is PlaybackException &&
+                (error.cause?.cause as PlaybackException).errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED) ||
+                error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
+            val httpEx = (error.cause as? HttpDataSource.InvalidResponseCodeException)
+                ?: (error.cause?.cause as? HttpDataSource.InvalidResponseCodeException)
+            val msg = when (httpEx?.responseCode) {
+                401 -> "WebDAV error: 401 Unauthorized"
+                403 -> "WebDAV error: 403 Forbidden"
+                404 -> "WebDAV error: 404 Not Found"
+                else -> if (!isNetworkConnected.value || isConnectionError) "WebDAV unreachable: network error" else "WebDAV error: ${error.message ?: "playback failed"}"
+            }
+            Toast.makeText(this@MusicService, msg, Toast.LENGTH_SHORT).show()
+            if (player.hasNextMediaItem()) {
+                player.seekToNextMediaItem()
+                player.prepare()
+                if (player.playWhenReady) {
+                    player.play()
+                }
+            } else {
+                player.stop()
+            }
+            return
+        }
+
         if (isLocalMedia) {
             val currentItem = player.currentMediaItem
             val currentUri = currentItem?.localConfiguration?.uri
@@ -7021,9 +7155,18 @@ class MusicService :
     }
 
     private fun createDirectUpstreamDataSourceFactory(): DataSource.Factory {
+        val playerCallFactory = okhttp3.Call.Factory { request ->
+            val host = request.url.host
+            val client = if (WebDavAuth.trustSelfSigned && host.equals(WebDavAuth.host, ignoreCase = true)) {
+                WebDavAuth.createWebDavHttpClient(mediaOkHttpClient)
+            } else {
+                mediaOkHttpClient
+            }
+            client.newCall(request)
+        }
         val chunkedOkHttpFactory =
             ChunkedDataSource.Factory(
-                OkHttpDataSource.Factory(mediaOkHttpClient),
+                OkHttpDataSource.Factory(playerCallFactory),
                 ChunkedDataSource.DEFAULT_CHUNK_BYTES,
             )
         return DefaultDataSource.Factory(this, chunkedOkHttpFactory)
@@ -7121,7 +7264,10 @@ class MusicService :
         } else {
             dataSpec
         }
-        if (specWithHeaders.uri.shouldBypassYouTubeResolver()) {
+        if (specWithHeaders.key?.startsWith("webdav:") == true ||
+            dataSpec.key?.startsWith("webdav:") == true ||
+            specWithHeaders.uri.shouldBypassYouTubeResolver()
+        ) {
             return specWithHeaders
         }
         val mediaId = specWithHeaders.key ?: return specWithHeaders
@@ -8179,7 +8325,7 @@ class MusicService :
                 }
             }
         } else {
-            if (currentMeta != null && currentMeta.thumbnailUrl.isNullOrBlank()) {
+            if (currentMeta != null && currentMeta.thumbnailUrl.isNullOrBlank() && !trackId.startsWith("webdav:") && !trackId.isLocalMediaId()) {
                 val fallbackThumb = buildYTThumbnailUrl(trackId, YTThumbQuality.HQ)
                 currentMediaMetadata.value = currentMeta.copy(thumbnailUrl = fallbackThumb)
                 widgetUpdater.update()
@@ -8207,7 +8353,7 @@ class MusicService :
             val resolvedThumb = tagged.thumbnailUrl
                 ?: liveThumb
                 ?: mediaMetadata.artworkUri?.toString()
-                ?: if (!tagged.id.isLocalMediaId()) buildYTThumbnailUrl(tagged.id, YTThumbQuality.HQ) else null
+                ?: if (!tagged.id.isLocalMediaId() && !tagged.id.startsWith("webdav:")) buildYTThumbnailUrl(tagged.id, YTThumbQuality.HQ) else null
             return if (resolvedThumb != tagged.thumbnailUrl && !resolvedThumb.isNullOrBlank()) {
                 tagged.copy(thumbnailUrl = resolvedThumb)
             } else {
@@ -8255,7 +8401,7 @@ class MusicService :
         val thumbnailUrl =
             mediaMetadata.artworkUri?.toString()
                 ?: liveThumb
-                ?: if (!id.isLocalMediaId()) buildYTThumbnailUrl(id, YTThumbQuality.HQ) else null
+                ?: if (!id.isLocalMediaId() && !id.startsWith("webdav:")) buildYTThumbnailUrl(id, YTThumbQuality.HQ) else null
 
         val albumTitle =
             mediaMetadata.albumTitle
@@ -8787,7 +8933,7 @@ class MusicService :
     }
 
     private fun preResolveAudioStream(mediaId: String) {
-        if (mediaId.isBlank() || mediaId.isLocalMediaId() || mediaId.startsWith("content://") || mediaId.startsWith("file://") || mediaId.startsWith("addon:")) return
+        if (mediaId.isBlank() || mediaId.isLocalMediaId() || mediaId.startsWith("content://") || mediaId.startsWith("file://") || mediaId.startsWith("addon:") || mediaId.startsWith("webdav:")) return
         if (!::resolveAudioStreamUseCase.isInitialized) return
         val isMain = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
         val initialRequest = if (isMain) buildPlaybackAudioStreamRequest(mediaId) else null

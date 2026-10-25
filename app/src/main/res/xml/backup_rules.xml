@@ -4,6 +4,15 @@
         domain="sharedpref"
         path="." />
     <exclude
+        domain="sharedpref"
+        path="sekaitune_webdav_auth.xml" />
+    <exclude
+        domain="sharedpref"
+        path="sekaitune_webdav_auth_fallback.xml" />
+    <exclude
+        domain="sharedpref"
+        path="sekaitune_webdav_config.xml" />
+    <exclude
         domain="file"
         path="datastore" />
     <exclude

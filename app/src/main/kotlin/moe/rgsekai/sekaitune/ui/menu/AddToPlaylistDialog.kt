@@ -79,6 +79,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -212,6 +213,7 @@ fun AddToPlaylistDialog(
     onAddComplete: ((songCount: Int, playlistNames: List<String>) -> Unit)? = null,
 ) {
     val database = LocalDatabase.current
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val allPlaylists by database.playlistsByCreateDateAsc().collectAsStateWithLifecycle(initialValue = emptyList())
     val playlistPlayCounts by database.playlistPlayCounts().collectAsStateWithLifecycle(initialValue = emptyList())
@@ -249,8 +251,17 @@ fun AddToPlaylistDialog(
 
         val browseId = playlist.playlist.browseId
         if (isLoggedIn && browseId != null) {
+            val webDavSongs = requestedSongIds.filter { it.startsWith("webdav:") }
+            if (webDavSongs.isNotEmpty()) {
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "WebDAV songs can only be added to local playlists", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+            val syncableSongIds = requestedSongIds.filterNot { it.startsWith("webdav:") }
+            if (syncableSongIds.isEmpty()) return 0
+
             val acceptedSongEntries = mutableListOf<Pair<String, String?>>()
-            requestedSongIds.forEach { songId ->
+            syncableSongIds.forEach { songId ->
                 var remoteAdded = false
                 var addedSetVideoId: String? = null
                 for (attempt in 0 until 3) {

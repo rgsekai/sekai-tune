@@ -645,6 +645,14 @@ fun deriveDisplayBadge(
                                 pipelineStatus = trueStatus,
                             )
                         }
+                    } else if (currentMediaId.startsWith("webdav:")) {
+                        if (badgeInfo.sourceName.isBlank() || badgeInfo.sourceName.equals("YouTube", ignoreCase = true)) {
+                            return badgeInfo.copy(
+                                sourceName = "WebDAV",
+                                pipelineStatus = null,
+                                statusText = "Playing from WebDAV server",
+                            )
+                        }
                     } else if (currentMediaId.isLocalMediaId() || currentMediaId.startsWith("content://") || currentMediaId.startsWith("file://")) {
                         if (badgeInfo.sourceName.isBlank() || badgeInfo.sourceName.equals("YouTube", ignoreCase = true)) {
                             return badgeInfo.copy(
@@ -702,6 +710,9 @@ fun deriveDisplayBadge(
         val winningSource = currentMediaId?.let { ResolveAudioStreamUseCase.getWinningSource(it) }
 
         val (resolvedSource, resolvedStatus, resolvedStatusText) = when {
+            currentMediaId?.startsWith("webdav:") == true -> {
+                Triple("WebDAV", null, "Playing from WebDAV server")
+            }
             currentMediaId != null && (currentMediaId.isLocalMediaId() || currentMediaId.startsWith("content://") || currentMediaId.startsWith("file://")) -> {
                 Triple("Local Storage", null, "Playing from local device storage")
             }
@@ -721,7 +732,8 @@ fun deriveDisplayBadge(
                 Triple(sourceRecord.sourceName, sourceRecord.pipelineStatus, sourceRecord.statusText)
             }
             winningSource != null -> {
-                Triple(winningSource.sourceName, AudioPipelineStatus.UPGRADED_FROM_OPUS, "")
+                val statusText = if (winningSource.sourceName == "WebDAV") "From WebDAV" else ""
+                Triple(winningSource.sourceName, AudioPipelineStatus.UPGRADED_FROM_OPUS, statusText)
             }
             isLossless || formatStr == "FLAC" || formatStr == "ALAC" || formatStr == "WAV" -> {
                 val defaultAddon = AudioQualityManager.getDefaultAddonName() ?: "Lossless Source"

@@ -302,6 +302,15 @@ class PlayerConnection(
         }
     }
 
+    fun switchToYouTube(mediaId: String) {
+        val currentPos = player.currentPosition.coerceAtLeast(0L)
+        service.qualityUpgradeManager.onPlaybackFailedOrStalled(
+            mediaId = mediaId,
+            currentPositionMs = currentPos,
+            reason = "User switched back to YouTube",
+        )
+    }
+
     fun dispose() {
         player.removeListener(this)
     }

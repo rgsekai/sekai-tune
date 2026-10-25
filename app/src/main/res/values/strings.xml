@@ -1063,6 +1063,67 @@
     <string name="status_settled_lower_quality">Settled for YouTube: addon stream was lower quality</string>
     <string name="status_settled_metered">Settled for YouTube: metered network</string>
     <string name="status_settled_rate_limited">Settled for YouTube: rate-limited by addon (HTTP 429)</string>
+
+    <!-- WebDAV -->
+    <string name="webdav_title">WebDAV</string>
+    <string name="webdav_subtitle">Stream and sync music directly from your personal cloud</string>
+    <string name="webdav_add_server">Add WebDAV server</string>
+    <string name="webdav_edit_server">Edit WebDAV server</string>
+    <string name="webdav_server_url">Server URL</string>
+    <string name="webdav_server_url_hint">https://example.com/remote.php/dav/files/user/</string>
+    <string name="webdav_username">Username</string>
+    <string name="webdav_password">Password</string>
+    <string name="webdav_trust_cert">Trust self-signed certificate</string>
+    <string name="webdav_trust_cert_desc">Allow self-signed or untrusted SSL/TLS certificates for this server only</string>
+    <string name="webdav_http_warning">Cleartext HTTP transmits your credentials and music unencrypted over the network.</string>
+    <string name="webdav_test">Test</string>
+    <string name="webdav_testing">Testing…</string>
+    <string name="webdav_connected">Connected</string>
+    <string name="webdav_auth_failed">Authentication failed: Invalid username or password (401/403)</string>
+    <string name="webdav_not_found">WebDAV endpoint not found (404). Check the path.</string>
+    <string name="webdav_ssl_error">SSL/TLS error. Enable \"Trust self-signed certificate\" if using a private certificate.</string>
+    <string name="webdav_network_error">Network connection failed. Check server address and connection.</string>
+    <string name="webdav_cleartext_blocked">Cleartext HTTP was blocked by the system.</string>
+    <string name="webdav_error_other">Connection failed: %1$s</string>
+    <string name="webdav_disconnect">Disconnect</string>
+    <string name="webdav_disconnect_confirm_title">Disconnect WebDAV server?</string>
+    <string name="webdav_disconnect_confirm_desc">This will remove saved credentials and disconnect from the server.</string>
+    <string name="webdav_save">Save</string>
+
+    <!-- WebDAV Phase 2 -->
+    <string name="webdav_music_on_your_server">Music on your server</string>
+    <string name="webdav_tab_songs">Songs</string>
+    <string name="webdav_tab_artists">Artists</string>
+    <string name="webdav_tab_albums">Albums</string>
+    <string name="webdav_rescan">Rescan</string>
+    <string name="webdav_scanning">Scanning…</string>
+    <string name="webdav_scanning_count">Scanning… (%1$d tracks found)</string>
+    <string name="webdav_empty_title">No tracks found yet</string>
+    <string name="webdav_empty_desc">Tap Rescan to search for music on your WebDAV server</string>
+    <string name="webdav_scan_server">Scan Server</string>
+    <string name="webdav_hard_cap_notice">Showing first 10,000 tracks</string>
+    <string name="webdav_offline_warning">Server unreachable — showing cached tracks</string>
+    <string name="webdav_playback_coming_soon">Coming in the next update</string>
+    <string name="webdav_disconnect_delete_tracks_label">Also delete scanned tracks and cached art</string>
+    <string name="webdav_play">Play</string>
+    <string name="webdav_shuffle">Shuffle</string>
+    <string name="webdav_retry">Retry</string>
+    <string name="webdav_all_artists">All Artists</string>
+    <string name="webdav_all_albums">All Albums</string>
+    <string name="webdav_tab_folders">Folders</string>
+    <string name="webdav_wifi_only_tags">Read tags on Wi-Fi only</string>
+    <string name="webdav_wifi_only_tags_desc">Read audio metadata and embedded artwork only when connected to Wi-Fi</string>
+    <string name="webdav_reading_tags">Reading tags… (%1$d/%2$d)</string>
+    <string name="webdav_use_webdav_matching">Use my WebDAV files when they match a YouTube song</string>
+    <string name="webdav_use_webdav_matching_desc">Prefer high-quality local WebDAV tracks over YouTube Music when available</string>
+    <string name="webdav_from_webdav">From WebDAV</string>
+    <string name="webdav_switch_to_youtube">Switch to YouTube Music</string>
+    <string name="webdav_source_header">Sources</string>
+    <string name="webdav_track_count">%1$d songs</string>
+    <string name="webdav_offline">Offline</string>
+    <string name="webdav_offline_cached">Offline, showing cached</string>
+    <string name="webdav_sign_in_needed">Sign-in needed</string>
+    <string name="webdav_scanning_found">Scanning… %1$d found</string>
 </resources>
 
 

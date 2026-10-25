@@ -646,30 +646,48 @@ class ResolveAudioStreamUseCase
                         )
                     }
 
-                if (targetTrack != null && enabledAddons.isNotEmpty()) {
+                val webDavStore = moe.rgsekai.sekaitune.playback.sources.webdav.WebDavCredentialStore(context)
+                val isWebDavMatchingEnabled = webDavStore.isConfigured && webDavStore.resolveMatching
+                if (targetTrack != null && (enabledAddons.isNotEmpty() || isWebDavMatchingEnabled)) {
                     val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
                     val query = TrackMatcher.buildAddonSearchQuery(targetTrack.title, targetTrack.artists)
                     val ytBaselineBitrate = runCatching { ytStream.format.bitrate / 1000 }.getOrDefault(160)
 
                     val addonDeferred = scope.async(Dispatchers.IO) {
                         var best: AddonStreamResult? = null
-                        for (registeredSource in enabledAddons) {
-                            val source = registeredSource.instance as? AddonMusicSource ?: continue
-                            if (isAddonBackingOff(source.configId)) {
-                                Timber.tag(TAG).d("[StreamResolution] Skipping %s (backing off)", registeredSource.displayName)
-                                continue
-                            }
-                            val result = querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
-                            if (result != null && CandidateQualityRank.isStrictlyBetterThanYouTube(result.rank, ytBaselineBitrate)) {
+
+                        if (isWebDavMatchingEnabled) {
+                            val webDavMatch = checkWebDavMatch(targetTrack)
+                            if (webDavMatch != null && CandidateQualityRank.isStrictlyBetterThanYouTube(webDavMatch.rank, ytBaselineBitrate)) {
                                 Timber.tag(TAG).i(
-                                    "[StreamResolution] Early addon match found from %s (%s). Stopping remaining addon queries.",
-                                    result.sourceName,
-                                    result.formatDescription,
+                                    "[StreamResolution] WebDAV match found (%s). Prioritizing over external addons.",
+                                    webDavMatch.formatDescription,
                                 )
-                                best = result
-                                winningSourceCache[request.mediaId] = result
-                                pendingAddonResults[request.mediaId] = result
-                                break
+                                best = webDavMatch
+                                winningSourceCache[request.mediaId] = webDavMatch
+                                pendingAddonResults[request.mediaId] = webDavMatch
+                            }
+                        }
+
+                        if (best == null) {
+                            for (registeredSource in enabledAddons) {
+                                val source = registeredSource.instance as? AddonMusicSource ?: continue
+                                if (isAddonBackingOff(source.configId)) {
+                                    Timber.tag(TAG).d("[StreamResolution] Skipping %s (backing off)", registeredSource.displayName)
+                                    continue
+                                }
+                                val result = querySingleAddon(source, registeredSource.displayName, targetTrack, query, toleranceSec)
+                                if (result != null && CandidateQualityRank.isStrictlyBetterThanYouTube(result.rank, ytBaselineBitrate)) {
+                                    Timber.tag(TAG).i(
+                                        "[StreamResolution] Early addon match found from %s (%s). Stopping remaining addon queries.",
+                                        result.sourceName,
+                                        result.formatDescription,
+                                    )
+                                    best = result
+                                    winningSourceCache[request.mediaId] = result
+                                    pendingAddonResults[request.mediaId] = result
+                                    break
+                                }
                             }
                         }
                         if (best == null) {
@@ -742,26 +760,41 @@ class ResolveAudioStreamUseCase
             val completedReports = mutableListOf<AddonQueryResult>()
             var bestAddon: AddonStreamResult? = null
 
-            for (registeredSource in enabledAddons) {
-                val source = registeredSource.instance as? AddonMusicSource ?: continue
-                if (isAddonBackingOff(source.configId)) {
-                    Timber.tag(TAG).d("[StreamResolution] Skipping %s (backing off)", registeredSource.displayName)
-                    continue
-                }
-                val result = withContext(Dispatchers.IO) {
-                    querySingleAddonDetailed(source, registeredSource.displayName, effectiveTarget, query, toleranceSec)
-                }
-                completedReports.add(result)
-                val streamResult = result.streamResult
-                if (streamResult != null && CandidateQualityRank.isStrictlyBetterThanYouTube(streamResult.rank, 160)) {
-                    bestAddon = streamResult
+            val webDavStorePreload = moe.rgsekai.sekaitune.playback.sources.webdav.WebDavCredentialStore(context)
+            if (webDavStorePreload.isConfigured && webDavStorePreload.resolveMatching) {
+                val webDavMatch = checkWebDavMatch(effectiveTarget)
+                if (webDavMatch != null && CandidateQualityRank.isStrictlyBetterThanYouTube(webDavMatch.rank, 160)) {
+                    bestAddon = webDavMatch
                     Timber.tag(TAG).i(
-                        "[StreamResolution] Early winner found from %s (%s) for %s. Stopping remaining addon queries.",
-                        registeredSource.displayName,
-                        streamResult.formatDescription,
+                        "[StreamResolution] WebDAV winner found for %s (%s).",
                         request.mediaId,
+                        webDavMatch.formatDescription,
                     )
-                    break
+                }
+            }
+
+            if (bestAddon == null) {
+                for (registeredSource in enabledAddons) {
+                    val source = registeredSource.instance as? AddonMusicSource ?: continue
+                    if (isAddonBackingOff(source.configId)) {
+                        Timber.tag(TAG).d("[StreamResolution] Skipping %s (backing off)", registeredSource.displayName)
+                        continue
+                    }
+                    val result = withContext(Dispatchers.IO) {
+                        querySingleAddonDetailed(source, registeredSource.displayName, effectiveTarget, query, toleranceSec)
+                    }
+                    completedReports.add(result)
+                    val streamResult = result.streamResult
+                    if (streamResult != null && CandidateQualityRank.isStrictlyBetterThanYouTube(streamResult.rank, 160)) {
+                        bestAddon = streamResult
+                        Timber.tag(TAG).i(
+                            "[StreamResolution] Early winner found from %s (%s) for %s. Stopping remaining addon queries.",
+                            registeredSource.displayName,
+                            streamResult.formatDescription,
+                            request.mediaId,
+                        )
+                        break
+                    }
                 }
             }
 
@@ -855,11 +888,101 @@ class ResolveAudioStreamUseCase
             return null
         }
 
+        private suspend fun checkWebDavMatch(targetTrack: MatchTarget): AddonStreamResult? {
+            val webDavStore = moe.rgsekai.sekaitune.playback.sources.webdav.WebDavCredentialStore(context)
+            if (!webDavStore.isConfigured || !webDavStore.resolveMatching) {
+                return null
+            }
+            val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
+            val matchedSong = moe.rgsekai.sekaitune.playback.sources.webdav.WebDavSongMatcher.findMatch(
+                target = targetTrack,
+                database = database,
+                toleranceSec = toleranceSec,
+            ) ?: return null
+
+            val headers = moe.rgsekai.sekaitune.webdav.WebDavAuth.authHeader?.let { mapOf("Authorization" to it) } ?: emptyMap()
+            val ext = matchedSong.path.substringAfterLast('.', "").lowercase()
+            val format = when (ext) {
+                "flac" -> StreamFormat.FLAC
+                "wav" -> StreamFormat.WAV
+                "alac", "m4a" -> StreamFormat.AAC
+                "mp3" -> StreamFormat.MP3
+                "ogg", "opus" -> StreamFormat.OPUS
+                else -> StreamFormat.FLAC
+            }
+            val isLossless = format == StreamFormat.FLAC || format == StreamFormat.WAV
+            val bitrateBps = if (isLossless) 1411000 else 320000
+            val formatDesc = "WebDAV ${format.name}"
+
+            val streamingFormat = PlayerResponse.StreamingData.Format(
+                itag = 9999,
+                url = matchedSong.path,
+                mimeType = when (format) {
+                    StreamFormat.FLAC -> "audio/flac"
+                    StreamFormat.WAV -> "audio/wav"
+                    StreamFormat.AAC -> "audio/mp4"
+                    StreamFormat.MP3 -> "audio/mpeg"
+                    StreamFormat.OPUS -> "audio/opus"
+                    else -> "audio/flac"
+                },
+                bitrate = bitrateBps,
+                width = null,
+                height = null,
+                contentLength = matchedSong.contentLength.takeIf { it > 0 },
+                quality = "hd",
+                fps = null,
+                qualityLabel = null,
+                averageBitrate = bitrateBps,
+                audioQuality = "AUDIO_QUALITY_HIGH",
+                approxDurationMs = matchedSong.durationMs?.toString(),
+                audioSampleRate = 44100,
+                audioChannels = 2,
+                loudnessDb = null,
+                lastModified = null,
+                signatureCipher = null,
+                cipher = null,
+            )
+
+            val resolved = ResolvedAudioStream(
+                url = matchedSong.path,
+                format = streamingFormat,
+                audioConfig = null,
+                videoDetails = null,
+                playbackTracking = null,
+                expiresAtMs = System.currentTimeMillis() + 24L * 3600 * 1000L,
+                authFingerprint = "webdav",
+            )
+
+            val sourceStream = SourceStream(
+                url = matchedSong.path,
+                format = format,
+                bitrateKbps = if (isLossless) 1411 else 320,
+                sampleRateHz = 44100,
+                bitDepth = if (isLossless) 16 else null,
+                headers = headers,
+                durationSec = matchedSong.durationMs?.let { (it / 1000).toInt() },
+            )
+
+            return AddonStreamResult(
+                resolvedStream = resolved,
+                sourceName = "WebDAV",
+                formatDescription = formatDesc,
+                rank = CandidateQualityRank.from(sourceStream),
+                sourceStream = sourceStream,
+            )
+        }
+
         internal suspend fun resolveAddonStream(
             targetTrack: MatchTarget,
             enabledAddons: List<RegisteredSource>,
             youtubeBitrateKbps: Int = 160,
         ): AddonStreamResult? {
+            val webDavResult = checkWebDavMatch(targetTrack)
+            if (webDavResult != null && CandidateQualityRank.isStrictlyBetterThanYouTube(webDavResult.rank, youtubeBitrateKbps)) {
+                Timber.tag(TAG).i("[StreamResolution] WebDAV matching file found for upgrade: %s (%s)", webDavResult.sourceName, webDavResult.formatDescription)
+                return webDavResult
+            }
+
             val toleranceSec = sourceRegistry.toleranceSecondsFlow.value
             val query = TrackMatcher.buildAddonSearchQuery(targetTrack.title, targetTrack.artists)
 

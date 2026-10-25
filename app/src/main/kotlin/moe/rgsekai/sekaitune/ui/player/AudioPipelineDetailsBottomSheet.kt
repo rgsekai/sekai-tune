@@ -20,6 +20,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -42,7 +43,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import moe.rgsekai.sekaitune.LocalPlayerConnection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -163,6 +168,7 @@ fun resolveAudioPipelineDetails(
     val winning = badgeInfo.mediaId?.let { ResolveAudioStreamUseCase.getWinningSource(it) }
 
     val source = when {
+        badgeInfo.mediaId?.startsWith("webdav:") == true -> "WebDAV"
         badgeInfo.mediaId != null && (badgeInfo.mediaId.isLocalMediaId() || badgeInfo.mediaId.startsWith("content://") || badgeInfo.mediaId.startsWith("file://")) -> "Local Storage"
         badgeInfo.mediaId?.startsWith("addon:") == true -> AudioQualityManager.resolveAddonDisplayName(badgeInfo.mediaId) ?: "External Addon"
         !isFormatFlacOrLossless -> "YouTube"
@@ -264,11 +270,13 @@ fun resolveAudioPipelineDetails(
         isFormatFlacOrLossless && badgeInfo.pipelineStatus == AudioPipelineStatus.SETTLED_NO_MATCH -> {
             sourceRecord?.pipelineStatus ?: AudioPipelineStatus.UPGRADED_FROM_OPUS
         }
+        badgeInfo.mediaId?.startsWith("webdav:") == true -> null
         badgeInfo.mediaId != null && (badgeInfo.mediaId.isLocalMediaId() || badgeInfo.mediaId.startsWith("content://") || badgeInfo.mediaId.startsWith("file://")) -> null
         else -> badgeInfo.pipelineStatus ?: sourceRecord?.pipelineStatus
     }
 
     val effectiveStatusText = when {
+        badgeInfo.mediaId?.startsWith("webdav:") == true -> "Playing from WebDAV server"
         badgeInfo.mediaId != null && (badgeInfo.mediaId.isLocalMediaId() || badgeInfo.mediaId.startsWith("content://") || badgeInfo.mediaId.startsWith("file://")) -> "Playing from local device storage"
         isFormatFlacOrLossless && badgeInfo.statusText.contains("YouTube", ignoreCase = true) -> ""
         badgeInfo.statusText.isNotBlank() -> badgeInfo.statusText
@@ -626,6 +634,53 @@ fun AudioPipelineDetailsBottomSheet(
                             PipelineField(label = stringResource(R.string.audio_pipeline_size), value = details.transferSize)
                         }
                         PipelineField(label = stringResource(R.string.audio_pipeline_channels), value = details.channels)
+
+                        if (details.source == "WebDAV" && badgeInfo.mediaId != null && !badgeInfo.mediaId.startsWith("webdav:")) {
+                            val playerConnection = LocalPlayerConnection.current
+                            Spacer(Modifier.height(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.cloud_upload),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.webdav_from_webdav),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                    TextButton(
+                                        onClick = {
+                                            playerConnection?.switchToYouTube(badgeInfo.mediaId)
+                                            onDismiss()
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.webdav_switch_to_youtube),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // Step 2: DECODER (Stage 1)
