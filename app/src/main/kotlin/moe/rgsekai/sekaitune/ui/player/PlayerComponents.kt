@@ -116,6 +116,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.Backdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.layerBackdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -2524,6 +2535,11 @@ fun PlayerBackground(
                     label = "liquidGlassSlowRotation",
                 )
 
+                // The blurred cover is recorded into its own layer so a few slow-moving glass lenses can
+                // refract it (the lenses are siblings, so they never sample themselves).
+                val glassBackdrop = rememberLayerBackdrop()
+                Box(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize().layerBackdrop(glassBackdrop)) {
                 AnimatedContent(
                     targetState = backgroundThumbnailUrl,
                     transitionSpec = {
@@ -2631,6 +2647,11 @@ fun PlayerBackground(
                         }
                     }
                 }
+                }
+                if (isGlassSupported()) {
+                    LiquidGlassBackgroundLenses(backdrop = glassBackdrop)
+                }
+                }
             }
 
             else -> {
@@ -2655,5 +2676,75 @@ internal fun Modifier.playerGlass(shape: androidx.compose.ui.graphics.Shape): Mo
         this.liquidGlass(config = config, shape = shape)
     } else {
         this
+    }
+}
+
+private class GlassLensSpec(
+    val widthFraction: Float,
+    val aspect: Float,
+    val centerX: Float,
+    val centerY: Float,
+    val driftX: Float,
+    val driftY: Float,
+    val speedX: Int,
+    val speedY: Int,
+    val phaseX: Float,
+    val phaseY: Float,
+)
+
+// Integer speeds + a 90 s phase make the motion loop seamlessly.
+private val GlassLenses =
+    listOf(
+        GlassLensSpec(0.78f, 1.00f, 0.30f, 0.30f, 0.22f, 0.12f, 1, 2, 0.00f, 0.15f),
+        GlassLensSpec(0.62f, 0.55f, 0.70f, 0.62f, 0.20f, 0.14f, 2, 1, 0.30f, 0.60f),
+        GlassLensSpec(0.38f, 1.00f, 0.50f, 0.85f, 0.30f, 0.07f, 3, 1, 0.70f, 0.10f),
+    )
+
+/**
+ * Slow-moving liquid glass lenses for the "Liquid Glass" player background. They refract/blur [backdrop]
+ * (the blurred cover) using the regular glass settings (blur, lens, tint, ...). The style itself asks for
+ * the effect, so it does not depend on the global glass switch (same as the mini player style).
+ */
+@Composable
+private fun LiquidGlassBackgroundLenses(
+    backdrop: Backdrop,
+    modifier: Modifier = Modifier,
+) {
+    val config = LocalGlassEffectConfig.current
+    val transition = rememberInfiniteTransition(label = "LiquidGlassLenses")
+    val phase =
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(90000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "liquidGlassLensPhase",
+        )
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val screenWidthPx = constraints.maxWidth.toFloat()
+        val screenHeightPx = constraints.maxHeight.toFloat()
+
+        CompositionLocalProvider(LocalAppBackdrop provides backdrop) {
+            GlassLenses.forEach { lens ->
+                val widthPx = screenWidthPx * lens.widthFraction
+                val heightPx = widthPx * lens.aspect
+                Box(
+                    modifier =
+                        Modifier
+                            .offset {
+                                val t = phase.value
+                                val x = screenWidthPx * (lens.centerX + lens.driftX * sin(2f * PI.toFloat() * (lens.speedX * t + lens.phaseX)))
+                                val y = screenHeightPx * (lens.centerY + lens.driftY * cos(2f * PI.toFloat() * (lens.speedY * t + lens.phaseY)))
+                                IntOffset((x - widthPx / 2f).roundToInt(), (y - heightPx / 2f).roundToInt())
+                            }
+                            .size(maxWidth * lens.widthFraction, maxWidth * lens.widthFraction * lens.aspect)
+                            .liquidGlass(config = config, shape = RoundedCornerShape(percent = 50)),
+                )
+            }
+        }
     }
 }
