@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -89,10 +90,15 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import coil3.compose.AsyncImagePainter
+import coil3.request.transformations
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -132,6 +138,8 @@ import moe.rgsekai.sekaitune.constants.CONTENT_TYPE_LIST
 import moe.rgsekai.sekaitune.constants.CONTENT_TYPE_PLAYLIST
 import moe.rgsekai.sekaitune.constants.CONTENT_TYPE_SONG
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
+import moe.rgsekai.sekaitune.constants.ArtistSignaturesApiUrlKey
+import moe.rgsekai.sekaitune.constants.ArtistSignaturesEnabledKey
 import moe.rgsekai.sekaitune.db.entities.ArtistEntity
 import moe.rgsekai.sekaitune.extensions.toMediaItem
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
@@ -198,6 +206,11 @@ fun ArtistScreen(
     val loadedLibraryAlbums by viewModel.libraryAlbums.collectAsStateWithLifecycle()
     val blockState by viewModel.blockState.collectAsStateWithLifecycle()
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
+    val artistSignaturesEnabled by rememberPreference(key = ArtistSignaturesEnabledKey, defaultValue = true)
+    val artistSignaturesApiUrl by rememberPreference(key = ArtistSignaturesApiUrlKey, defaultValue = "")
+    val effectiveSignatureBaseUrl = remember(artistSignaturesEnabled, artistSignaturesApiUrl) {
+        ArtistSignatureRepository.effectiveBaseUrl(artistSignaturesEnabled, artistSignaturesApiUrl)
+    }
     val isArtistBlocked = (blockState as? ArtistBlockState.Success)?.isBlocked == true
     val artistPage =
         remember(loadedArtistPage, isArtistBlocked) {
@@ -571,6 +584,17 @@ fun ArtistScreen(
                 // Hero Header
                 item(key = "header") {
                     val artistName = artistPage?.artist?.title ?: libraryArtist?.artist?.name
+                    var signature by remember(artistName, effectiveSignatureBaseUrl) {
+                        mutableStateOf(ArtistSignatureRepository.cached(artistName.orEmpty(), effectiveSignatureBaseUrl))
+                    }
+
+                    LaunchedEffect(artistName, effectiveSignatureBaseUrl) {
+                        if (!artistName.isNullOrBlank() && effectiveSignatureBaseUrl != null) {
+                            signature = ArtistSignatureRepository.signatureFor(artistName, effectiveSignatureBaseUrl)
+                        } else {
+                            signature = null
+                        }
+                    }
 
                     Column(
                         modifier =
@@ -615,16 +639,89 @@ fun ArtistScreen(
                             }
                         }
 
-                        // Artist Name
-                        Text(
-                            text = artistName ?: stringResource(R.string.unknown_artist),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 24.dp),
-                        )
+                        // Artist Signature / Name
+                        val currentSignature = signature
+                        if (artistSignaturesEnabled && currentSignature != null) {
+                            val isSvg = currentSignature.format == "svg"
+                            val aspect = currentSignature.aspect.coerceIn(0.5f, 5.0f)
+                            var imageLoaded by remember(currentSignature.imageUrl) { mutableStateOf(false) }
+
+                            val request = remember(currentSignature.imageUrl, isSvg) {
+                                coil3.request.ImageRequest.Builder(context)
+                                    .data(currentSignature.imageUrl)
+                                    .apply {
+                                        if (isSvg) {
+                                            size(600, (600 / aspect).toInt().coerceAtLeast(100))
+                                        } else {
+                                            size(coil3.size.Size.ORIGINAL)
+                                            transformations(SignatureInkTransformation)
+                                        }
+                                    }
+                                    .build()
+                            }
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(horizontal = 24.dp),
+                            ) {
+                                AsyncImage(
+                                    model = request,
+                                    contentDescription = artistName,
+                                    contentScale = ContentScale.Fit,
+                                    colorFilter = if (isSvg) ColorFilter.tint(MaterialTheme.colorScheme.onSurface) else null,
+                                    onState = { state ->
+                                        if (state is AsyncImagePainter.State.Success) {
+                                            imageLoaded = true
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .heightIn(max = 64.dp)
+                                        .fillMaxWidth(0.65f)
+                                        .aspectRatio(aspect),
+                                )
+                                if (imageLoaded) {
+                                    val signedByTemplate = stringResource(R.string.signed_by, artistName.orEmpty())
+                                    val nameIndex = signedByTemplate.indexOf(artistName.orEmpty())
+                                    Text(
+                                        text = buildAnnotatedString {
+                                            append(signedByTemplate)
+                                            if (nameIndex >= 0 && !artistName.isNullOrEmpty()) {
+                                                addStyle(
+                                                    SpanStyle(fontWeight = FontWeight.Bold),
+                                                    nameIndex,
+                                                    nameIndex + artistName.length,
+                                                )
+                                            }
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(top = 4.dp),
+                                    )
+                                } else {
+                                    Text(
+                                        text = artistName ?: stringResource(R.string.unknown_artist),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = artistName ?: stringResource(R.string.unknown_artist),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 24.dp),
+                            )
+                        }
 
                         // Artist Description (expandable)
                         val description = artistPage?.description

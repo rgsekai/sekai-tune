@@ -390,6 +390,7 @@ class App :
             .Builder(this)
             .components {
                 add(coil3.network.okhttp.OkHttpNetworkFetcherFactory(callFactory = { coilCallFactory }))
+                add(coil3.svg.SvgDecoder.Factory())
             }
             .crossfade(true)
             .allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)

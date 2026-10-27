@@ -45,6 +45,7 @@ import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.playback.stream.PersistentVideoClientCache
 import moe.rgsekai.sekaitune.utils.YTPlayerUtils
 import moe.rgsekai.sekaitune.constants.ArtistSeparatorsKey
+import moe.rgsekai.sekaitune.constants.ArtistSignaturesEnabledKey
 import moe.rgsekai.sekaitune.constants.AudioNormalizationKey
 import moe.rgsekai.sekaitune.constants.AudioOffload
 import moe.rgsekai.sekaitune.constants.AudioQuality
@@ -123,6 +124,11 @@ fun PlayerSettings(navController: NavController) {
         rememberPreference(
             DontRepeatSongsInSessionKey,
             defaultValue = false,
+        )
+    val (artistSignaturesEnabled, onArtistSignaturesEnabledChange) =
+        rememberPreference(
+            ArtistSignaturesEnabledKey,
+            defaultValue = true,
         )
     val (skipSilence, onSkipSilenceChange) =
         rememberPreference(
@@ -593,6 +599,16 @@ fun PlayerSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.history), null) },
                         checked = dontRepeatSongsInSession,
                         onCheckedChange = onDontRepeatSongsInSessionChange,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.artist_signatures_title)) },
+                        description = stringResource(R.string.artist_signatures_desc),
+                        icon = { Icon(painterResource(R.drawable.artist), null) },
+                        checked = artistSignaturesEnabled,
+                        onCheckedChange = onArtistSignaturesEnabledChange,
                     )
                 }
 

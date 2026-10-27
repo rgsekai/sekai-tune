@@ -420,6 +420,11 @@
     <string name="spatial_audio_disable_speaker_description">Keep spatial effect off when using built-in speakers</string>
     <string name="dont_repeat_songs_in_session_title">Don’t repeat songs in current session</string>
     <string name="dont_repeat_songs_in_session_desc">AutoPlay won’t suggest songs already played or queued this session</string>
+    <string name="artist_signatures_title">Artist signatures</string>
+    <string name="artist_signatures_desc">Show handwritten artist signatures in artist headers</string>
+    <string name="artist_signatures_url_title">Signature API URL</string>
+    <string name="artist_signatures_url_desc">Base URL for artist signature lookups</string>
+    <string name="signed_by">Signed by %s</string>
     <string name="player_stream_client">Playback client (Debug Override)</string>
     <string name="player_stream_client_desc">Forces a specific playback client (overriding automatic per-track detection)</string>
     <string name="player_stream_client_android_vr">Android VR</string>
