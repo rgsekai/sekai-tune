@@ -9,6 +9,7 @@ package moe.rgsekai.sekaitune.ui.component
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -62,6 +64,9 @@ import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.reportException
 import timber.log.Timber
 
+/** 48.dp lyrics row + 22.dp gap below it (callers used to add the gap as bottom padding). */
+private val OneLineLyricsSlotHeight = 70.dp
+
 @Composable
 fun OneLineLyrics(
     mediaMetadata: MediaMetadata?,
@@ -75,8 +80,6 @@ fun OneLineLyrics(
     textAlign: TextAlign = TextAlign.Start,
 ) {
     if (!showOneLineLyrics || mediaMetadata == null) return
-
-    val currentPositionState = rememberUpdatedState(sliderPosition ?: position)
 
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyricsEntity by playerConnection.currentLyrics.collectAsState(initial = null)
@@ -95,7 +98,55 @@ fun OneLineLyrics(
                 (LyricsUtils.isLineSyncedLrc(lyrics) || LyricsUtils.isTtml(lyrics))
         }
 
-    if (!isSynced || lyrics == null) return
+    val hasSyncedLyrics = isSynced && lyrics != null
+
+    // The row used to be part of the layout only while the current song had synced lyrics. The album
+    // art is centred in whatever space is left, so every song change (new song's lyrics not loaded
+    // yet / song without lyrics) moved the cover for a frame or made it jump. Animate the slot height
+    // instead of adding/removing the row instantly.
+    val slotHeight by animateDpAsState(
+        targetValue = if (hasSyncedLyrics) OneLineLyricsSlotHeight else 0.dp,
+        animationSpec = tween(durationMillis = 250),
+        label = "oneLineLyricsSlot",
+    )
+    if (!hasSyncedLyrics && slotHeight == 0.dp) return
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(slotHeight)
+                .clipToBounds(),
+    ) {
+        if (lyrics != null && isSynced) {
+            OneLineLyricsContent(
+                mediaMetadata = mediaMetadata,
+                lyrics = lyrics,
+                position = position,
+                sliderPosition = sliderPosition,
+                lyricsSyncOffset = lyricsSyncOffset,
+                onShowLyrics = onShowLyrics,
+                modifier = Modifier.fillMaxWidth(),
+                textColor = textColor,
+                textAlign = textAlign,
+            )
+        }
+    }
+}
+
+@Composable
+private fun OneLineLyricsContent(
+    mediaMetadata: MediaMetadata,
+    lyrics: String,
+    position: Long,
+    sliderPosition: Long?,
+    lyricsSyncOffset: Int,
+    onShowLyrics: () -> Unit,
+    modifier: Modifier,
+    textColor: Color,
+    textAlign: TextAlign,
+) {
+    val currentPositionState = rememberUpdatedState(sliderPosition ?: position)
 
     val isTtmlLyrics = remember(lyrics, mediaMetadata.id) { LyricsUtils.isTtml(lyrics) }
     val leadMs = if (isTtmlLyrics) 0L else 300L
@@ -220,7 +271,7 @@ fun OneLineLyrics(
         )
     }
 
-    LaunchedEffect(mediaMetadata.id, showOneLineLyrics) {
+    LaunchedEffect(mediaMetadata.id) {
         while (isActive) {
             delay(1000L)
             Timber.tag("OneLineLyrics").d(

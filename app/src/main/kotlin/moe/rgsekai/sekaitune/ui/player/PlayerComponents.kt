@@ -1100,8 +1100,7 @@ fun PlayerControlsContent(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = PlayerHorizontalPadding)
-                .padding(bottom = 22.dp),
+                .padding(horizontal = PlayerHorizontalPadding),
     )
 
     Row(
@@ -1334,8 +1333,7 @@ fun V8PlayerControlsContent(
                 textColor = foreground,
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 22.dp),
+                        .fillMaxWidth(),
             )
 
             V8MetadataActions(
