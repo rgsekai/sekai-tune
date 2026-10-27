@@ -86,10 +86,7 @@ import moe.rgsekai.sekaitune.playback.sources.RegisteredSource
 import moe.rgsekai.sekaitune.playback.sources.SourceHealth
 import moe.rgsekai.sekaitune.playback.sources.SourceKind
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
-import moe.rgsekai.sekaitune.ui.component.GlassComponent
-import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroupTitle
-import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import moe.rgsekai.sekaitune.ui.screens.settings.SettingsDimensions
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import sh.calvin.reorderable.ReorderableItem
@@ -172,9 +169,6 @@ fun SourcesScreen(
         },
     ) { innerPadding ->
         val playerInsets = LocalPlayerAwareWindowInsets.current
-        val glassConfig = LocalGlassEffectConfig.current
-        val isGlass = glassConfig.isEnabledFor(GlassComponent.QUEUE)
-        val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
 
         LazyColumn(
             state = lazyListState,
@@ -192,23 +186,11 @@ fun SourcesScreen(
                 Card(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isGlass) {
-                            if (isLight) Color.White.copy(alpha = 0.40f) else Color.White.copy(alpha = 0.06f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        },
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ),
-                    border = if (isGlass) {
-                        BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f))
-                    } else null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .then(
-                            if (isGlass) {
-                                Modifier.liquidGlass(glassConfig, RoundedCornerShape(20.dp), applyEdgeEffects = true)
-                            } else Modifier
-                        ),
+                        .padding(horizontal = 24.dp),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -255,9 +237,6 @@ fun SourcesScreen(
                         onToggle = { viewModel.toggleSource(source.id, it) },
                         onTest = { viewModel.testSource(source.id) },
                         onDelete = { sourceToDelete = source },
-                        isGlass = isGlass,
-                        isLight = isLight,
-                        glassConfig = glassConfig,
                         modifier = Modifier.padding(horizontal = 24.dp),
                     )
                 }
@@ -306,9 +285,6 @@ fun SourcesScreen(
                 ToleranceSliderCard(
                     toleranceSeconds = toleranceSeconds,
                     onToleranceChange = { viewModel.setTolerance(it) },
-                    isGlass = isGlass,
-                    isLight = isLight,
-                    glassConfig = glassConfig,
                     modifier = Modifier.padding(horizontal = 24.dp),
                 )
             }
@@ -335,9 +311,6 @@ fun SourcesScreen(
                             showWebDavEditor = true
                         },
                         onDisconnect = { showDisconnectDialog = true },
-                        isGlass = isGlass,
-                        isLight = isLight,
-                        glassConfig = glassConfig,
                         modifier = Modifier.padding(horizontal = 24.dp),
                     )
                 }
@@ -349,9 +322,6 @@ fun SourcesScreen(
                         description = stringResource(R.string.webdav_wifi_only_tags_desc),
                         checked = webDavWifiOnlyTags,
                         onCheckedChange = { viewModel.setWebDavWifiOnlyTags(it) },
-                        isGlass = isGlass,
-                        isLight = isLight,
-                        glassConfig = glassConfig,
                         modifier = Modifier.padding(horizontal = 24.dp),
                     )
                 }
@@ -363,9 +333,6 @@ fun SourcesScreen(
                         description = stringResource(R.string.webdav_use_webdav_matching_desc),
                         checked = webDavResolveMatching,
                         onCheckedChange = { viewModel.setWebDavResolveMatching(it) },
-                        isGlass = isGlass,
-                        isLight = isLight,
-                        glassConfig = glassConfig,
                         modifier = Modifier.padding(horizontal = 24.dp),
                     )
                 }
@@ -824,9 +791,6 @@ private fun SourceRowItem(
     onToggle: (Boolean) -> Unit,
     onTest: () -> Unit,
     onDelete: () -> Unit,
-    isGlass: Boolean,
-    isLight: Boolean,
-    glassConfig: moe.rgsekai.sekaitune.ui.component.GlassEffectConfig,
     modifier: Modifier = Modifier,
 ) {
     val isYouTube = source.kind == SourceKind.YOUTUBE
@@ -835,22 +799,9 @@ private fun SourceRowItem(
     Card(
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isGlass) {
-                if (isLight) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.08f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        border = if (isGlass) {
-            BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f))
-        } else null,
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (isGlass) {
-                    Modifier.liquidGlass(glassConfig, shape, applyEdgeEffects = true)
-                } else Modifier
-            ),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
@@ -1001,9 +952,6 @@ private fun SourceRowItem(
 private fun ToleranceSliderCard(
     toleranceSeconds: Int,
     onToleranceChange: (Int) -> Unit,
-    isGlass: Boolean,
-    isLight: Boolean,
-    glassConfig: moe.rgsekai.sekaitune.ui.component.GlassEffectConfig,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(20.dp)
@@ -1012,22 +960,9 @@ private fun ToleranceSliderCard(
     Card(
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isGlass) {
-                if (isLight) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.08f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        border = if (isGlass) {
-            BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f))
-        } else null,
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (isGlass) {
-                    Modifier.liquidGlass(glassConfig, shape, applyEdgeEffects = true)
-                } else Modifier
-            ),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier
@@ -1095,9 +1030,6 @@ private fun WebDavServerCard(
     onTest: () -> Unit,
     onEdit: () -> Unit,
     onDisconnect: () -> Unit,
-    isGlass: Boolean,
-    isLight: Boolean,
-    glassConfig: moe.rgsekai.sekaitune.ui.component.GlassEffectConfig,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(18.dp)
@@ -1105,22 +1037,9 @@ private fun WebDavServerCard(
     Card(
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isGlass) {
-                if (isLight) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.08f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        border = if (isGlass) {
-            BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f))
-        } else null,
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (isGlass) {
-                    Modifier.liquidGlass(glassConfig, shape, applyEdgeEffects = true)
-                } else Modifier
-            ),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier
@@ -1231,31 +1150,15 @@ private fun WebDavToggleCard(
     description: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    isGlass: Boolean,
-    isLight: Boolean,
-    glassConfig: moe.rgsekai.sekaitune.ui.component.GlassEffectConfig,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(20.dp)
     Card(
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isGlass) {
-                if (isLight) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.08f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        border = if (isGlass) {
-            BorderStroke(1.dp, if (isLight) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f))
-        } else null,
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (isGlass) {
-                    Modifier.liquidGlass(glassConfig, shape, applyEdgeEffects = true)
-                } else Modifier
-            ),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier

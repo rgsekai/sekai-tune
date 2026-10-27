@@ -62,7 +62,12 @@ private class LayerBackdropNode(var backdrop: LayerBackdrop) :
   override fun ContentDrawScope.draw() {
     drawContent()
     if (size.width > 0f && size.height > 0f) {
-      recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) { backdrop.onDraw(this@draw) }
+      backdrop.isRecording = true
+      try {
+        recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) { backdrop.onDraw(this@draw) }
+      } finally {
+        backdrop.isRecording = false
+      }
     }
   }
 

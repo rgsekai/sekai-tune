@@ -49,6 +49,8 @@ internal constructor(
 
   internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
 
+  internal var isRecording: Boolean = false
+
   private var inverseLayerScope: InverseLayerScope? = null
 
   override fun DrawScope.drawBackdrop(
@@ -56,6 +58,11 @@ internal constructor(
     coordinates: LayoutCoordinates?,
     layerBlock: (GraphicsLayerScope.() -> Unit)?
   ) {
+    if (isRecording) {
+      // Prevent cyclic recursion: a descendant composable must not sample the layer
+      // that is currently recording it.
+      return
+    }
     val coordinates = coordinates ?: return
     val layerCoordinates = layerCoordinates ?: return
     withTransform({
