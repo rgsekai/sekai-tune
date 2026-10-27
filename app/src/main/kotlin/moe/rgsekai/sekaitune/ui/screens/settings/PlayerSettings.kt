@@ -59,6 +59,7 @@ import moe.rgsekai.sekaitune.constants.SpatialAudioEnabledKey
 import moe.rgsekai.sekaitune.constants.CrossfadeDurationKey
 import moe.rgsekai.sekaitune.constants.CrossfadeEnabledKey
 import moe.rgsekai.sekaitune.constants.DeviceMutePlaybackRecoveryVolumeKey
+import moe.rgsekai.sekaitune.constants.DontRepeatSongsInSessionKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderEnabledKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_DEFAULT
@@ -116,6 +117,11 @@ fun PlayerSettings(navController: NavController) {
     val (permanentShuffle, onPermanentShuffleChange) =
         rememberPreference(
             PermanentShuffleKey,
+            defaultValue = false,
+        )
+    val (dontRepeatSongsInSession, onDontRepeatSongsInSessionChange) =
+        rememberPreference(
+            DontRepeatSongsInSessionKey,
             defaultValue = false,
         )
     val (skipSilence, onSkipSilenceChange) =
@@ -577,6 +583,16 @@ fun PlayerSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.shuffle), null) },
                         checked = permanentShuffle,
                         onCheckedChange = onPermanentShuffleChange,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.dont_repeat_songs_in_session_title)) },
+                        description = stringResource(R.string.dont_repeat_songs_in_session_desc),
+                        icon = { Icon(painterResource(R.drawable.history), null) },
+                        checked = dontRepeatSongsInSession,
+                        onCheckedChange = onDontRepeatSongsInSessionChange,
                     )
                 }
 

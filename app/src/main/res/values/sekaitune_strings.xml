@@ -418,6 +418,8 @@
     <string name="spatial_audio_description">Widens stereo tracks for a more immersive feel</string>
     <string name="spatial_audio_disable_speaker_title">Disable on Phone Speaker</string>
     <string name="spatial_audio_disable_speaker_description">Keep spatial effect off when using built-in speakers</string>
+    <string name="dont_repeat_songs_in_session_title">Don’t repeat songs in current session</string>
+    <string name="dont_repeat_songs_in_session_desc">AutoPlay won’t suggest songs already played or queued this session</string>
     <string name="player_stream_client">Playback client (Debug Override)</string>
     <string name="player_stream_client_desc">Forces a specific playback client (overriding automatic per-track detection)</string>
     <string name="player_stream_client_android_vr">Android VR</string>

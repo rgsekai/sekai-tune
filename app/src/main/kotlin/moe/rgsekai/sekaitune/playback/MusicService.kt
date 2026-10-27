@@ -148,6 +148,7 @@ import moe.rgsekai.sekaitune.constants.CrossfadeDurationKey
 import moe.rgsekai.sekaitune.constants.CrossfadeEnabledKey
 import moe.rgsekai.sekaitune.constants.CrossfadeGaplessKey
 import moe.rgsekai.sekaitune.constants.DeviceMutePlaybackRecoveryVolumeKey
+import moe.rgsekai.sekaitune.constants.DontRepeatSongsInSessionKey
 import moe.rgsekai.sekaitune.constants.EqualizerBandLevelsMbKey
 import moe.rgsekai.sekaitune.constants.EqualizerBassBoostEnabledKey
 import moe.rgsekai.sekaitune.constants.EqualizerBassBoostStrengthKey
@@ -718,6 +719,7 @@ class MusicService :
     fun isCurrentSongLiked(): Boolean = currentSong.value?.song?.liked == true
 
     val autoAddedMediaIds: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
+    val sessionDeduplicator = SessionDeduplicator()
 
     private var consecutivePlaybackErr = 0
 
@@ -3702,6 +3704,7 @@ class MusicService :
                             hideVideo = hideVideo,
                         )
 
+                    val dontRepeatInSession = dataStore.get(DontRepeatSongsInSessionKey, false)
                     val currentNormTitle = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.normalizeTitle(currentMeta.title)
                     val currentArtistWords = moe.rgsekai.sekaitune.playback.sources.TrackMatcher.tokenizeArtistWords(currentMeta.artists.map { it.name })
 
@@ -3724,6 +3727,17 @@ class MusicService :
                             ) {
                                 return true
                             }
+                        }
+                        if (dontRepeatInSession && sessionDeduplicator.isDuplicate(
+                                candidateId = itemId,
+                                candidateTitle = meta.title,
+                                candidateArtists = meta.artists.map { it.name },
+                                candidateMatchedCatalogId = meta.matchedCatalogId,
+                                knownIds = knownIds,
+                                checkSessionHistory = true,
+                            )
+                        ) {
+                            return true
                         }
                         return false
                     }
@@ -3754,7 +3768,12 @@ class MusicService :
 
                     if (newItems.isNotEmpty()) {
                         player.addMediaItems(newItems)
-                        newItems.forEach { autoAddedMediaIds.add(it.mediaId) }
+                        newItems.forEach {
+                            autoAddedMediaIds.add(it.mediaId)
+                            if (dontRepeatInSession) {
+                                it.metadata?.let { m -> sessionDeduplicator.record(m) }
+                            }
+                        }
                     }
 
                     currentQueue = radioQueue
@@ -6471,7 +6490,11 @@ class MusicService :
         }
 
         val timelineEmpty = player.currentTimeline.isEmpty || player.mediaItemCount == 0 || player.currentMediaItem == null
-        currentMediaMetadata.value = if (timelineEmpty) null else (mediaItem?.metadata ?: player.currentMetadata)
+        val activeMeta = if (timelineEmpty) null else (mediaItem?.metadata ?: player.currentMetadata)
+        currentMediaMetadata.value = activeMeta
+        if (activeMeta != null) {
+            sessionDeduplicator.record(activeMeta)
+        }
 
         widgetUpdater.update()
 
@@ -8862,6 +8885,7 @@ class MusicService :
 
     override fun onDestroy() {
         super.onDestroy()
+        sessionDeduplicator.clear()
         qualityUpgradeManager.cancelUpgrade("MusicService destroyed")
         customStreamHeaders.clear()
         effectiveVolumeRampJob?.cancel()
