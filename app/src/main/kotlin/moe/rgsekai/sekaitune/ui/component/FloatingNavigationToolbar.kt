@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -122,25 +123,21 @@ fun FloatingNavigationToolbar(
 ) {
     val isLight = isLightPalette(pureBlack)
     val glassConfig = LocalGlassEffectConfig.current
-
-    // Always enable liquid glass blur for the floating navigation bar when supported on device
-    val effectiveGlassConfig = remember(glassConfig) {
-        glassConfig.copy(
-            globalEnabled = true,
-            navBarEnabled = true,
-            blurRadius = if (glassConfig.blurRadius > 0f) glassConfig.blurRadius else 16f,
-            vibrancy = if (glassConfig.vibrancy > 0f) glassConfig.vibrancy else 95f,
-            lensHeight = 35f,
-            lensAmount = 25f,
-            surfaceOpacity = 20f,
-        )
-    }
+    val useGlass = glassConfig.isEnabledFor(GlassComponent.NAV_BAR) && isGlassSupported()
 
     val barShape = RoundedCornerShape(percent = 50)
-    val containerColor = when {
-        pureBlack -> Color(0xFF000000).copy(alpha = 0.85f)
-        isLight -> Color(0xFFF7F7F9).copy(alpha = 0.78f)
-        else -> Color(0xFF101014).copy(alpha = 0.74f)
+    val searchButtonShape = CircleShape
+
+    val glassTextColor = if (glassConfig.textColor.isSpecified) {
+        glassConfig.textColor
+    } else {
+        if (isLight) Color.Black else Color.White
+    }
+
+    val pillHighlightColor = if (useGlass) {
+        glassTextColor.copy(alpha = if (isLight) 0.10f else 0.16f)
+    } else {
+        floatingToolbarSelectedItemContainerColor(pureBlack)
     }
 
     // Specular light sheen across top of the curved glass
@@ -152,12 +149,10 @@ fun FloatingNavigationToolbar(
 
     // 3D glass border with specular highlight at the top edge
     val glassBorderBrush = Brush.verticalGradient(
-        0.0f to (if (isLight) Color.White.copy(alpha = 0.75f) else Color.White.copy(alpha = 0.32f)),
-        0.4f to (if (isLight) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.12f)),
-        1.0f to (if (isLight) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.08f)),
+        0.0f to glassTextColor.copy(alpha = if (isLight) 0.35f else 0.28f),
+        0.4f to glassTextColor.copy(alpha = if (isLight) 0.08f else 0.12f),
+        1.0f to glassTextColor.copy(alpha = if (isLight) 0.04f else 0.06f),
     )
-
-    val pillHighlightColor = if (isLight) Color.Black.copy(alpha = 0.09f) else Color.White.copy(alpha = 0.15f)
 
     val mainItems = remember(items) { items.filterNot { it == Screens.Search } }
     val isSearchSelected = isSelected(Screens.Search)
@@ -182,12 +177,20 @@ fun FloatingNavigationToolbar(
                     animationSpec = spring(dampingRatio = 0.72f, stiffness = 320f),
                     label = "searchGlyphScale",
                 )
-                val searchContentColor = if (isSearchSelected) {
-                    if (isLight) Color.Black else Color.White
+                val searchContainerColor = if (useGlass) {
+                    Color.Transparent
+                } else if (isSearchSelected) {
+                    floatingToolbarFabContainerColor()
                 } else {
-                    if (isLight) Color(0xFF6E6E73) else Color(0xFF8E8E93)
+                    floatingToolbarContainerColor(pureBlack)
                 }
-                val searchButtonShape = CircleShape
+                val searchContentColor = if (useGlass) {
+                    if (isSearchSelected) glassTextColor else glassTextColor.copy(alpha = 0.72f)
+                } else if (isSearchSelected) {
+                    floatingToolbarFabContentColor()
+                } else {
+                    floatingToolbarItemContentColor(pureBlack)
+                }
 
                 Box(
                     modifier = Modifier
@@ -195,25 +198,25 @@ fun FloatingNavigationToolbar(
                         .scale(searchPressScale)
                         .clip(searchButtonShape)
                         .then(
-                            if (isGlassSupported()) {
-                                Modifier.liquidGlass(
-                                    config = effectiveGlassConfig,
-                                    shape = searchButtonShape,
-                                    applyEdgeEffects = true,
-                                )
-                            } else {
+                            if (useGlass) {
                                 Modifier
+                                    .liquidGlass(
+                                        config = glassConfig,
+                                        shape = searchButtonShape,
+                                        applyEdgeEffects = true,
+                                    )
+                                    .drawBehind {
+                                        drawRect(glossBrush)
+                                        drawRect(FrostedGrain.brush)
+                                        if (isSearchSelected) {
+                                            drawRect(pillHighlightColor)
+                                        }
+                                    }
+                                    .border(0.5.dp, glassBorderBrush, searchButtonShape)
+                            } else {
+                                Modifier.background(searchContainerColor, searchButtonShape)
                             }
                         )
-                        .background(containerColor, searchButtonShape)
-                        .drawBehind {
-                            drawRect(glossBrush)
-                            drawRect(FrostedGrain.brush)
-                            if (isSearchSelected) {
-                                drawRect(pillHighlightColor)
-                            }
-                        }
-                        .border(0.5.dp, glassBorderBrush, searchButtonShape)
                         .combinedClickable(
                             interactionSource = searchInteractionSource,
                             indication = null,
@@ -256,28 +259,30 @@ fun FloatingNavigationToolbar(
                 modifier = Modifier
                     .clip(barShape)
                     .then(
-                        if (isGlassSupported()) {
-                            Modifier.liquidGlass(
-                                config = effectiveGlassConfig,
-                                shape = barShape,
-                                applyEdgeEffects = true,
-                            )
-                        } else {
+                        if (useGlass) {
                             Modifier
+                                .liquidGlass(
+                                    config = glassConfig,
+                                    shape = barShape,
+                                    applyEdgeEffects = true,
+                                )
+                                .drawBehind {
+                                    drawRect(glossBrush)
+                                    drawRect(FrostedGrain.brush)
+                                }
+                                .border(0.5.dp, glassBorderBrush, barShape)
+                        } else {
+                            Modifier.background(floatingToolbarContainerColor(pureBlack), barShape)
                         }
                     )
-                    .background(containerColor, barShape)
-                    .drawBehind {
-                        drawRect(glossBrush)
-                        drawRect(FrostedGrain.brush)
-                    }
-                    .border(0.5.dp, glassBorderBrush, barShape)
                     .padding(vertical = 4.dp, horizontal = 5.dp),
             ) {
                 ToolbarItemsContainer(
                     items = mainItems,
                     isLight = isLight,
                     pureBlack = pureBlack,
+                    useGlass = useGlass,
+                    glassTextColor = glassTextColor,
                     pillHighlightColor = pillHighlightColor,
                     isSelected = isSelected,
                     onItemClick = onItemClick,
@@ -293,6 +298,8 @@ private fun ToolbarItemsContainer(
     items: List<Screens>,
     isLight: Boolean,
     pureBlack: Boolean,
+    useGlass: Boolean,
+    glassTextColor: Color,
     pillHighlightColor: Color,
     isSelected: (Screens) -> Boolean,
     onItemClick: (Screens, Boolean) -> Unit,
@@ -368,6 +375,8 @@ private fun ToolbarItemsContainer(
                     selected = selected,
                     isLight = isLight,
                     pureBlack = pureBlack,
+                    useGlass = useGlass,
+                    glassTextColor = glassTextColor,
                     onClick = onClick,
                     onDoubleClick = onDoubleClick,
                     modifier = Modifier.width(tabWidth),
@@ -383,6 +392,8 @@ private fun FloatingNavigationToolbarItem(
     selected: Boolean,
     isLight: Boolean,
     pureBlack: Boolean,
+    useGlass: Boolean,
+    glassTextColor: Color,
     onClick: () -> Unit,
     onDoubleClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -407,10 +418,14 @@ private fun FloatingNavigationToolbarItem(
         label = "tabGlyph",
     )
 
-    val contentColor = if (selected) {
-        if (isLight) Color.Black else Color.White
+    val contentColor = if (useGlass) {
+        if (selected) glassTextColor else glassTextColor.copy(alpha = 0.72f)
     } else {
-        if (isLight) Color(0xFF6E6E73) else Color(0xFF8E8E93)
+        if (selected) {
+            floatingToolbarSelectedItemContentColor(pureBlack)
+        } else {
+            floatingToolbarItemContentColor(pureBlack)
+        }
     }
     val haptic = LocalHapticFeedback.current
 
@@ -590,9 +605,36 @@ private fun FloatingToolbarOverflowAction(
 }
 
 @Composable
+private fun floatingToolbarContainerColor(pureBlack: Boolean): Color =
+    if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+
+@Composable
+private fun floatingToolbarFabContainerColor(): Color = MaterialTheme.colorScheme.primary
+
+@Composable
+private fun floatingToolbarFabContentColor(): Color = MaterialTheme.colorScheme.onPrimary
+
+@Composable
+private fun floatingToolbarSelectedItemContainerColor(pureBlack: Boolean): Color =
+    if (pureBlack) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.secondaryContainer
+
+@Composable
+private fun floatingToolbarSelectedItemContentColor(pureBlack: Boolean): Color =
+    if (pureBlack) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
+
+@Composable
+private fun floatingToolbarItemContentColor(pureBlack: Boolean): Color =
+    if (pureBlack) {
+        Color.White.copy(alpha = 0.82f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+@Composable
 private fun floatingToolbarMenuIconContainerColor(pureBlack: Boolean): Color =
     if (pureBlack) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.secondaryContainer
 
 @Composable
 private fun floatingToolbarMenuIconContentColor(pureBlack: Boolean): Color =
     if (pureBlack) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
+
