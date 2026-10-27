@@ -54,6 +54,8 @@ import moe.rgsekai.sekaitune.constants.AutoSkipNextOnErrorKey
 import moe.rgsekai.sekaitune.constants.AutoStartOnBluetoothKey
 import moe.rgsekai.sekaitune.constants.AutomixEnabledKey
 import moe.rgsekai.sekaitune.constants.AutomixStyleKey
+import moe.rgsekai.sekaitune.constants.SpatialAudioDisableOnPhoneSpeakerKey
+import moe.rgsekai.sekaitune.constants.SpatialAudioEnabledKey
 import moe.rgsekai.sekaitune.constants.CrossfadeDurationKey
 import moe.rgsekai.sekaitune.constants.CrossfadeEnabledKey
 import moe.rgsekai.sekaitune.constants.DeviceMutePlaybackRecoveryVolumeKey
@@ -140,6 +142,16 @@ fun PlayerSettings(navController: NavController) {
         rememberEnumPreference(
             AutomixStyleKey,
             defaultValue = moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP,
+        )
+    val (spatialAudioEnabled, onSpatialAudioEnabledChange) =
+        rememberPreference(
+            SpatialAudioEnabledKey,
+            defaultValue = false,
+        )
+    val (spatialAudioDisableOnPhoneSpeaker, onSpatialAudioDisableOnPhoneSpeakerChange) =
+        rememberPreference(
+            SpatialAudioDisableOnPhoneSpeakerKey,
+            defaultValue = true,
         )
 
     val (autoDownloadOnLike, onAutoDownloadOnLikeChange) =
@@ -437,6 +449,34 @@ fun PlayerSettings(navController: NavController) {
 
                 item {
                     SwitchPreference(
+                        title = { Text(stringResource(R.string.spatial_audio_title)) },
+                        description = stringResource(R.string.spatial_audio_description),
+                        icon = { Icon(painterResource(R.drawable.waves), null) },
+                        checked = spatialAudioEnabled,
+                        onCheckedChange = { enabled ->
+                            onSpatialAudioEnabledChange(enabled)
+                            if (enabled) {
+                                onAudioOffloadChange(false)
+                            }
+                        },
+                        isEnabled = !audioOffload,
+                    )
+                }
+
+                if (spatialAudioEnabled) {
+                    item {
+                        SwitchPreference(
+                            title = { Text(stringResource(R.string.spatial_audio_disable_speaker_title)) },
+                            description = stringResource(R.string.spatial_audio_disable_speaker_description),
+                            icon = { Icon(painterResource(R.drawable.volume_off), null) },
+                            checked = spatialAudioDisableOnPhoneSpeaker,
+                            onCheckedChange = onSpatialAudioDisableOnPhoneSpeakerChange,
+                        )
+                    }
+                }
+
+                item {
+                    SwitchPreference(
                         title = { Text(stringResource(R.string.audio_offload)) },
                         description = stringResource(R.string.audio_offload_desc),
                         icon = { Icon(painterResource(R.drawable.speed), null) },
@@ -446,6 +486,7 @@ fun PlayerSettings(navController: NavController) {
                             if (enabled) {
                                 onSkipSilenceChange(false)
                                 onCrossfadeEnabledChange(false)
+                                onSpatialAudioEnabledChange(false)
                             }
                         },
                     )

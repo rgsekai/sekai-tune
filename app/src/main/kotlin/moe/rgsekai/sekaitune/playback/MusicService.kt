@@ -187,6 +187,10 @@ import moe.rgsekai.sekaitune.playback.stream.ResolveAudioStreamUseCase
 import moe.rgsekai.sekaitune.playback.stream.AddonStreamResult
 import moe.rgsekai.sekaitune.constants.ShowLyricsKey
 import moe.rgsekai.sekaitune.constants.SkipSilenceKey
+import moe.rgsekai.sekaitune.constants.SpatialAudioDisableOnPhoneSpeakerKey
+import moe.rgsekai.sekaitune.constants.SpatialAudioEnabledKey
+import moe.rgsekai.sekaitune.playback.audio.AudioOutputDetector
+import moe.rgsekai.sekaitune.playback.audio.SpatialAudioProcessor
 import moe.rgsekai.sekaitune.constants.SmartTrimmerKey
 import moe.rgsekai.sekaitune.utils.isTvDevice
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
@@ -663,6 +667,8 @@ class MusicService :
         private set
     lateinit var player: Player
         private set
+    val spatialAudioProcessorPrimary = SpatialAudioProcessor()
+    val spatialAudioProcessorSecondary = SpatialAudioProcessor()
     private lateinit var castPlaybackRepository: CastPlaybackRepository
     private lateinit var mediaSession: MediaLibrarySession
 
@@ -1097,7 +1103,7 @@ class MusicService :
             ExoPlayer
                 .Builder(this)
                 .setMediaSourceFactory(createMediaSourceFactory())
-                .setRenderersFactory(createRenderersFactory())
+                .setRenderersFactory(createRenderersFactory(spatialAudioProcessorPrimary))
                 .setLoadControl(createPrimaryLoadControl())
                 .setTrackSelector(DefaultTrackSelector(this, SafeTrackSelectionFactory()))
                 .setHandleAudioBecomingNoisy(true)
@@ -1370,11 +1376,12 @@ class MusicService :
         combine(
             dataStore.data.map { it[AudioOffload] ?: false },
             dataStore.data.map { it[CrossfadeEnabledKey] ?: true },
-        ) { offloadEnabled, crossfadeEnabled ->
-            offloadEnabled to crossfadeEnabled
+            dataStore.data.map { it[SpatialAudioEnabledKey] ?: false },
+        ) { offloadEnabled, crossfadeEnabled, spatialAudioEnabled ->
+            Triple(offloadEnabled, crossfadeEnabled, spatialAudioEnabled)
         }.distinctUntilChanged()
-            .collectLatest(scope) { (offloadEnabled, crossfadeEnabled) ->
-                val effectiveOffload = offloadEnabled && !crossfadeEnabled
+            .collectLatest(scope) { (offloadEnabled, crossfadeEnabled, spatialAudioEnabled) ->
+                val effectiveOffload = offloadEnabled && !crossfadeEnabled && !spatialAudioEnabled
                 updateAudioOffload(effectiveOffload)
                 if (effectiveOffload) {
                     val skipSilenceEnabled = dataStore.get(SkipSilenceKey, false)
@@ -1383,6 +1390,16 @@ class MusicService :
                         localPlayer.skipSilenceEnabled = false
                     }
                 }
+            }
+
+        combine(
+            dataStore.data.map { it[SpatialAudioEnabledKey] ?: false },
+            dataStore.data.map { it[SpatialAudioDisableOnPhoneSpeakerKey] ?: true },
+        ) { enabled, disableOnSpeaker ->
+            enabled to disableOnSpeaker
+        }.distinctUntilChanged()
+            .collectLatest(scope) { (enabled, disableOnSpeaker) ->
+                updateSpatialAudioState(enabled, disableOnSpeaker)
             }
 
         combine(dataStore.data, togetherSessionState) { prefs, togetherState ->
@@ -1762,6 +1779,7 @@ class MusicService :
         if (outputSignature == lastAudioOutputDeviceSignature) return
         lastAudioOutputDeviceSignature = outputSignature
         audioOutputResolver.refresh()
+        updateSpatialAudioState()
         cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
         player.setAudioAttributes(playbackAudioAttributes(), false)
         audioRouteRecoveryJob?.cancel()
@@ -2169,7 +2187,7 @@ class MusicService :
         ExoPlayer
             .Builder(this)
             .setMediaSourceFactory(createMediaSourceFactory())
-            .setRenderersFactory(createRenderersFactory())
+            .setRenderersFactory(createRenderersFactory(spatialAudioProcessorSecondary))
             .setLoadControl(createCrossfadeLoadControl())
             .setTrackSelector(DefaultTrackSelector(this, SafeTrackSelectionFactory()))
             .setHandleAudioBecomingNoisy(false)
@@ -8281,7 +8299,7 @@ class MusicService :
             ).setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
-    private fun createRenderersFactory() =
+    private fun createRenderersFactory(spatialAudioProcessor: SpatialAudioProcessor) =
         object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(
                 context: Context,
@@ -8301,9 +8319,20 @@ class MusicService :
                             150.toShort(),
                         ),
                         SonicAudioProcessor(),
+                        spatialAudioProcessor,
                     ),
                 ).build()
         }
+
+    fun updateSpatialAudioState(
+        userEnabled: Boolean = dataStore.get(SpatialAudioEnabledKey, false),
+        disableOnSpeaker: Boolean = dataStore.get(SpatialAudioDisableOnPhoneSpeakerKey, true),
+    ) {
+        val isHeadphonesOrExternal = AudioOutputDetector.isHeadphonesOrExternal(this)
+        val effective = userEnabled && (!disableOnSpeaker || isHeadphonesOrExternal)
+        spatialAudioProcessorPrimary.enabled = effective
+        spatialAudioProcessorSecondary.enabled = effective
+    }
 
     override fun onPlaybackStatsReady(
         eventTime: AnalyticsListener.EventTime,

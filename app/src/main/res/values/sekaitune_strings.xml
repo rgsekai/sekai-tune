@@ -414,6 +414,10 @@
     <string name="automix_style_title">Automix style</string>
     <string name="automix_style_smooth">Smooth blend</string>
     <string name="automix_style_bass_swap">DJ Bass Swap</string>
+    <string name="spatial_audio_title">Spatial audio</string>
+    <string name="spatial_audio_description">Widens stereo tracks for a more immersive feel</string>
+    <string name="spatial_audio_disable_speaker_title">Disable on Phone Speaker</string>
+    <string name="spatial_audio_disable_speaker_description">Keep spatial effect off when using built-in speakers</string>
     <string name="player_stream_client">Playback client (Debug Override)</string>
     <string name="player_stream_client_desc">Forces a specific playback client (overriding automatic per-track detection)</string>
     <string name="player_stream_client_android_vr">Android VR</string>
