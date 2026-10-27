@@ -52,6 +52,8 @@ import moe.rgsekai.sekaitune.constants.AudioQualityKey
 import moe.rgsekai.sekaitune.constants.AutoDownloadOnLikeKey
 import moe.rgsekai.sekaitune.constants.AutoSkipNextOnErrorKey
 import moe.rgsekai.sekaitune.constants.AutoStartOnBluetoothKey
+import moe.rgsekai.sekaitune.constants.AutomixEnabledKey
+import moe.rgsekai.sekaitune.constants.AutomixStyleKey
 import moe.rgsekai.sekaitune.constants.CrossfadeDurationKey
 import moe.rgsekai.sekaitune.constants.CrossfadeEnabledKey
 import moe.rgsekai.sekaitune.constants.DeviceMutePlaybackRecoveryVolumeKey
@@ -128,6 +130,16 @@ fun PlayerSettings(navController: NavController) {
         rememberPreference(
             AudioOffload,
             defaultValue = false,
+        )
+    val (automixEnabled, onAutomixEnabledChange) =
+        rememberPreference(
+            AutomixEnabledKey,
+            defaultValue = false,
+        )
+    val (automixStyle, onAutomixStyleChange) =
+        rememberEnumPreference(
+            AutomixStyleKey,
+            defaultValue = moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP,
         )
 
     val (autoDownloadOnLike, onAutoDownloadOnLikeChange) =
@@ -372,6 +384,36 @@ fun PlayerSettings(navController: NavController) {
                         onValueChange = onCrossfadeDurationSecondsChange,
                         isEnabled = crossfadeEnabled,
                     )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.automix_title)) },
+                        description = stringResource(R.string.automix_description),
+                        icon = { Icon(painterResource(R.drawable.auto_awesome), null) },
+                        checked = automixEnabled,
+                        onCheckedChange = onAutomixEnabledChange,
+                        isEnabled = crossfadeEnabled,
+                    )
+                }
+
+                if (automixEnabled && crossfadeEnabled) {
+                    item {
+                        EnumListPreference(
+                            title = { Text(stringResource(R.string.automix_style_title)) },
+                            icon = { Icon(painterResource(R.drawable.tune), null) },
+                            selectedValue = automixStyle,
+                            onValueSelected = onAutomixStyleChange,
+                            valueText = {
+                                when (it) {
+                                    moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP -> stringResource(R.string.automix_style_bass_swap)
+                                    moe.rgsekai.sekaitune.playback.smart.AutomixStyle.STANDARD_FADE -> stringResource(R.string.automix_style_smooth)
+                                    moe.rgsekai.sekaitune.playback.smart.AutomixStyle.GAPLESS -> stringResource(R.string.crossfade_gapless_title)
+                                }
+                            },
+                            isEnabled = true,
+                        )
+                    }
                 }
 
                 item {

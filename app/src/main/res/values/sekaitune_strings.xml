@@ -409,6 +409,11 @@
     <string name="audio_crossfade_seconds">%1$s s</string>
     <string name="crossfade_gapless_title">Skip gapless albums</string>
     <string name="crossfade_gapless_description">Do not crossfade consecutive songs from the same album.</string>
+    <string name="automix_title">Automix (beta)</string>
+    <string name="automix_description">Seamless overlap handoff with standby preloading</string>
+    <string name="automix_style_title">Automix style</string>
+    <string name="automix_style_smooth">Smooth blend</string>
+    <string name="automix_style_bass_swap">DJ Bass Swap</string>
     <string name="player_stream_client">Playback client (Debug Override)</string>
     <string name="player_stream_client_desc">Forces a specific playback client (overriding automatic per-track detection)</string>
     <string name="player_stream_client_android_vr">Android VR</string>

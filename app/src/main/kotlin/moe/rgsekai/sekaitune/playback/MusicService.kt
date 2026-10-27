@@ -142,6 +142,8 @@ import moe.rgsekai.sekaitune.constants.AutoDownloadOnLikeKey
 import moe.rgsekai.sekaitune.constants.AutoLoadMoreKey
 import moe.rgsekai.sekaitune.constants.AutoSkipNextOnErrorKey
 import moe.rgsekai.sekaitune.constants.AutoStartOnBluetoothKey
+import moe.rgsekai.sekaitune.constants.AutomixEnabledKey
+import moe.rgsekai.sekaitune.constants.AutomixStyleKey
 import moe.rgsekai.sekaitune.constants.CrossfadeDurationKey
 import moe.rgsekai.sekaitune.constants.CrossfadeEnabledKey
 import moe.rgsekai.sekaitune.constants.CrossfadeGaplessKey
@@ -530,10 +532,13 @@ class MusicService :
     private var crossfadeEnabled = false
     private var crossfadeDurationMs = 0L
     private var crossfadeGapless = false
+    private var automixEnabled = false
+    private var automixStyle = moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP
     private var crossfadeTriggerJob: Job? = null
     private var crossfadeJob: Job? = null
     private var secondaryCrossfadePlayer: ExoPlayer? = null
     private var secondaryCrossfadeTarget: CrossfadeTarget? = null
+    private var automixBassSwapController: moe.rgsekai.sekaitune.playback.smart.BassSwapController? = null
     private var isCrossfading = false
     private var crossfadeHandoffInProgress = false
     private var crossfadeBaseVolume = 1f
@@ -557,6 +562,8 @@ class MusicService :
         val enabled: Boolean,
         val durationSeconds: Float,
         val gapless: Boolean,
+        val automix: Boolean,
+        val style: moe.rgsekai.sekaitune.playback.smart.AutomixStyle = moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP,
     )
 
     private data class Quadruple<A, B, C, D>(
@@ -1382,10 +1389,18 @@ class MusicService :
             val enabled = prefs[CrossfadeEnabledKey] ?: true
             val durationSeconds = prefs[CrossfadeDurationKey] ?: 3f
             val gapless = prefs[CrossfadeGaplessKey] ?: false
+            val automix = prefs[AutomixEnabledKey] ?: false
+            val styleStr = prefs[AutomixStyleKey]
+            val style = runCatching {
+                if (styleStr != null) moe.rgsekai.sekaitune.playback.smart.AutomixStyle.valueOf(styleStr)
+                else moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP
+            }.getOrDefault(moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP)
             CrossfadeConfig(
                 enabled = enabled && togetherState is moe.rgsekai.sekaitune.together.TogetherSessionState.Idle,
                 durationSeconds = durationSeconds,
                 gapless = gapless,
+                automix = automix,
+                style = style,
             )
         }.distinctUntilChanged()
             .collectLatest(scope) { config ->
@@ -1395,6 +1410,8 @@ class MusicService :
                         .roundToLong()
                         .coerceAtLeast(0L)
                 crossfadeGapless = config.gapless
+                automixEnabled = config.automix
+                automixStyle = config.style
                 if (crossfadeEnabled && crossfadeDurationMs > 0L) {
                     scheduleCrossfade()
                 } else {
@@ -1999,9 +2016,20 @@ class MusicService :
             return
         }
 
+        val automixSupported = isAutomixSupported()
+        val plan = if (automixSupported) {
+            moe.rgsekai.sekaitune.playback.smart.AutomixPlanner.planTransition(
+                outgoingDurationMs = duration,
+                configuredFadeDurationMs = effectiveDuration,
+                isAutomixEnabled = true
+            )
+        } else null
+
         val currentMediaId = player.currentMediaItem?.mediaId ?: return
         val currentIndex = player.currentMediaItemIndex
-        val triggerAt = duration - effectiveDuration - CROSSFADE_END_GUARD_MS
+        val triggerAt = plan?.transitionStartMs ?: (duration - effectiveDuration - CROSSFADE_END_GUARD_MS)
+        val plannedFadeDuration = plan?.fadeDurationMs ?: effectiveDuration
+        val cueInMs = plan?.cueInMs ?: 0L
 
         crossfadeTriggerJob =
             scope.launch {
@@ -2017,13 +2045,14 @@ class MusicService :
 
                     val remainingToTrigger = triggerAt - player.currentPosition
                     if (!hasPreparedSecondaryPlayer && remainingToTrigger <= CROSSFADE_PREPARE_AHEAD_MS) {
-                        prepareSecondaryCrossfadePlayer(target)
+                        prepareSecondaryCrossfadePlayer(target, cueInMs)
                         hasPreparedSecondaryPlayer = true
                     }
                     if (remainingToTrigger <= 0L) {
+                        val maxTargetEnd = plan?.transitionEndMs ?: duration
                         val adjustedDuration =
-                            (duration - player.currentPosition - CROSSFADE_END_GUARD_MS)
-                                .coerceAtMost(effectiveDuration)
+                            (maxTargetEnd - player.currentPosition - CROSSFADE_END_GUARD_MS)
+                                .coerceAtMost(plannedFadeDuration)
                         if (adjustedDuration >= MIN_CROSSFADE_DURATION_MS) {
                             startCrossfade(target, adjustedDuration)
                         }
@@ -2104,7 +2133,7 @@ class MusicService :
         return currentAlbum != null && currentAlbum == targetAlbum
     }
 
-    private fun prepareSecondaryCrossfadePlayer(target: CrossfadeTarget): ExoPlayer? {
+    private fun prepareSecondaryCrossfadePlayer(target: CrossfadeTarget, cueInMs: Long = 0L): ExoPlayer? {
         val existingPlayer = secondaryCrossfadePlayer
         if (existingPlayer != null && secondaryCrossfadeTarget == target) {
             return existingPlayer
@@ -2125,6 +2154,9 @@ class MusicService :
                 secondaryPlayer.setMediaItem(targetItem)
                 secondaryPlayer.playbackParameters = player.playbackParameters
                 secondaryPlayer.volume = 0f
+                if (cueInMs > 0L) {
+                    secondaryPlayer.seekTo(cueInMs)
+                }
                 secondaryPlayer.prepare()
             }
         }.onFailure { error ->
@@ -2151,6 +2183,26 @@ class MusicService :
                 setOffloadEnabled(false)
                 skipSilenceEnabled = localPlayer.skipSilenceEnabled
             }
+
+    private fun isAutomixSupported(): Boolean {
+        if (!::player.isInitialized) return false
+        val context = moe.rgsekai.sekaitune.playback.smart.AutomixContext(
+            automixEnabled = automixEnabled,
+            crossfadeEnabled = crossfadeEnabled,
+            isTogetherActive = togetherSessionState.value !is moe.rgsekai.sekaitune.together.TogetherSessionState.Idle,
+            isCasting = isCastingActive(),
+            repeatMode = player.repeatMode,
+            currentDurationMs = if (player.duration != C.TIME_UNSET) player.duration else Long.MAX_VALUE,
+            isSameAlbum = false
+        )
+        return moe.rgsekai.sekaitune.playback.smart.AutomixPolicy.isAutomixSupported(context)
+    }
+
+    private fun isCastingActive(): Boolean {
+        if (!::castPlaybackRepository.isInitialized) return false
+        return (castPlaybackRepository.screenState.value as? moe.rgsekai.sekaitune.cast.CastScreenState.Success)
+            ?.uiState?.isConnected == true
+    }
 
     private fun startCrossfade(
         target: CrossfadeTarget,
@@ -2187,8 +2239,16 @@ class MusicService :
                         incomingPlayer.play()
                     }
 
+                    if (isAutomixSupported() && automixStyle == moe.rgsekai.sekaitune.playback.smart.AutomixStyle.BASS_SWAP) {
+                        automixBassSwapController?.release()
+                        automixBassSwapController = moe.rgsekai.sekaitune.playback.smart.BassSwapController().apply {
+                            attach(localPlayer.audioSessionId, incomingPlayer.audioSessionId)
+                        }
+                    }
+
                     var elapsedMs = 0L
                     var lastTickMs = android.os.SystemClock.elapsedRealtime()
+                    var hasSwitchedMetadataAtMidpoint = false
                     while (isActive && elapsedMs < durationMs) {
                         if (player.currentMediaItem?.mediaId != outgoingMediaId) {
                             cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
@@ -2207,6 +2267,16 @@ class MusicService :
                                 localPlayer,
                                 incomingPlayer,
                             )
+                            automixBassSwapController?.updateProgress(crossfadeProgress)
+                            if (isAutomixSupported() && !hasSwitchedMetadataAtMidpoint && crossfadeProgress >= 0.5f) {
+                                hasSwitchedMetadataAtMidpoint = true
+                                runCatching {
+                                    val targetItem = player.getMediaItemAt(target.index)
+                                    if (targetItem.mediaId == target.mediaId) {
+                                        currentMediaMetadata.value = targetItem.metadata
+                                    }
+                                }
+                            }
                         } else {
                             incomingPlayer.pause()
                         }
@@ -2214,7 +2284,11 @@ class MusicService :
                         delay(CROSSFADE_FRAME_MS)
                     }
 
-                    finishCrossfade(target, incomingPlayer)
+                    if (isAutomixSupported()) {
+                        finishAutomixHandoff(target, incomingPlayer)
+                    } else {
+                        finishCrossfade(target, incomingPlayer)
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
@@ -2316,6 +2390,154 @@ class MusicService :
         return player.playbackState == Player.STATE_READY && canHandoffWithoutRebuffer(incomingPlayer)
     }
 
+    private suspend fun finishAutomixHandoff(
+        target: CrossfadeTarget,
+        incomingPlayer: ExoPlayer,
+    ) {
+        val targetIndex = resolveCrossfadeTargetIndex(target)
+        if (targetIndex == C.INDEX_UNSET) {
+            cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
+            return
+        }
+
+        val deadlineMs = android.os.SystemClock.elapsedRealtime() + AUTOMIX_HANDOFF_TIMEOUT_MS
+        var handoffCompleted = false
+        try {
+            localPlayer.pauseAtEndOfMediaItems = false
+            player.volume = 0f
+            crossfadeHandoffInProgress = true
+
+            val shouldContinuePlayback = crossfadePlaybackRequested
+            val initialIncomingPos = incomingPlayer.currentPosition.coerceAtLeast(0L)
+            val seekStartNs = System.nanoTime()
+
+            // 1. Initial seek on primary player while volume is strictly 0f
+            player.seekTo(targetIndex, initialIncomingPos)
+            player.playWhenReady = shouldContinuePlayback
+
+            if (!shouldContinuePlayback) {
+                Timber.tag(TAG_AUTOMIX).d("Playback paused during fade; finalizing directly")
+                currentMediaMetadata.value = player.getMediaItemAt(targetIndex).metadata
+                handoffCompleted = true
+                return
+            }
+
+            // Await primary player STATE_READY while secondary is still playing aloud
+            val primaryReady = awaitPrimaryPlayerReady(deadlineMs)
+            if (!primaryReady) {
+                Timber.tag(TAG_AUTOMIX).w("AutomixHandoff fallback: primary player not ready before timeout")
+                finishCrossfade(target, incomingPlayer)
+                return
+            }
+
+            val seekDurationMs = ((System.nanoTime() - seekStartNs) / 1_000_000L).coerceAtLeast(1L)
+            var currentIncomingPos = incomingPlayer.currentPosition.coerceAtLeast(0L)
+            var currentPrimaryPos = player.currentPosition.coerceAtLeast(0L)
+            var gap = currentIncomingPos - currentPrimaryPos
+            Timber.tag(TAG_AUTOMIX).i(
+                "Initial sync: incomingPos=%d playerPos=%d gap=%d ms (seekTook=%d ms)",
+                currentIncomingPos,
+                currentPrimaryPos,
+                gap,
+                seekDurationMs,
+            )
+
+            // 2. If gap exceeds target (15 ms), execute a single seek correction while STILL silent
+            if (kotlin.math.abs(gap) > AUTOMIX_MAX_ACCEPTABLE_GAP_MS) {
+                val correctedTargetPos = incomingPlayer.currentPosition + seekDurationMs
+                Timber.tag(TAG_AUTOMIX).d(
+                    "Executing single seek correction to %d ms (gap was %d ms)",
+                    correctedTargetPos,
+                    gap,
+                )
+                player.seekTo(targetIndex, correctedTargetPos)
+                val correctionReady = awaitPrimaryPlayerReady(deadlineMs)
+                if (!correctionReady) {
+                    Timber.tag(TAG_AUTOMIX).w("AutomixHandoff fallback: timeout during seek correction")
+                    finishCrossfade(target, incomingPlayer)
+                    return
+                }
+                currentIncomingPos = incomingPlayer.currentPosition.coerceAtLeast(0L)
+                currentPrimaryPos = player.currentPosition.coerceAtLeast(0L)
+                gap = currentIncomingPos - currentPrimaryPos
+                Timber.tag(TAG_AUTOMIX).i(
+                    "Post-correction sync: incomingPos=%d playerPos=%d gap=%d ms",
+                    currentIncomingPos,
+                    currentPrimaryPos,
+                    gap,
+                )
+            }
+
+            // 3. Fallback check: if gap is still too large or deadline passed
+            if (kotlin.math.abs(gap) > AUTOMIX_MAX_ACCEPTABLE_GAP_MS && android.os.SystemClock.elapsedRealtime() >= deadlineMs) {
+                Timber.tag(TAG_AUTOMIX).w("AutomixHandoff fallback: gap %d ms exceeds threshold at deadline", gap)
+                finishCrossfade(target, incomingPlayer)
+                return
+            }
+
+            // 4. Equal-power handoff ramp based on measured gap
+            val overlapDurationMs = (kotlin.math.abs(gap) * 2L).coerceIn(20L, 50L)
+            val effectiveTargetVolume = currentEffectivePlayerVolumeForMediaId(target.mediaId)
+            val incomingStartVolume = incomingPlayer.volume
+
+            val rampSteps = (overlapDurationMs / 10L).toInt().coerceAtLeast(3)
+            val stepDelayMs = overlapDurationMs / rampSteps
+
+            for (step in 1..rampSteps) {
+                val progress = step.toFloat() / rampSteps.toFloat()
+                val radians = progress.toDouble() * (Math.PI / 2.0)
+                val outFactor = kotlin.math.cos(radians).toFloat()
+                val inFactor = kotlin.math.sin(radians).toFloat()
+
+                incomingPlayer.volume = (incomingStartVolume * outFactor).coerceIn(0f, maxSafeGainFactor)
+                player.volume = (effectiveTargetVolume * inFactor).coerceIn(0f, maxSafeGainFactor)
+                delay(stepDelayMs)
+            }
+
+            currentMediaMetadata.value = player.getMediaItemAt(targetIndex).metadata
+            handoffCompleted = true
+            Timber.tag(TAG_AUTOMIX).i(
+                "AutomixHandoff completed successfully: final gap=%d ms overlap=%d ms",
+                gap,
+                overlapDurationMs,
+            )
+        } finally {
+            if (!handoffCompleted) {
+                crossfadeHandoffInProgress = false
+                isCrossfading = false
+                crossfadeProgress = 0f
+                crossfadePlaybackRequested = false
+                releaseSecondaryCrossfadePlayer()
+                applyEffectiveVolumeImmediately()
+            }
+        }
+
+        automixBassSwapController?.release()
+        automixBassSwapController = null
+        isCrossfading = false
+        crossfadeHandoffInProgress = false
+        crossfadeProgress = 0f
+        crossfadeIncomingBaseVolume = 1f
+        crossfadePlaybackRequested = false
+        releaseSecondaryCrossfadePlayer()
+        applyEffectiveVolumeImmediately()
+        updateAudiblePlaybackRecovery()
+        scheduleCrossfade()
+    }
+
+    private suspend fun awaitPrimaryPlayerReady(deadlineMs: Long): Boolean {
+        while (kotlinx.coroutines.currentCoroutineContext().isActive && android.os.SystemClock.elapsedRealtime() < deadlineMs) {
+            if (player.playbackState == Player.STATE_READY) {
+                return true
+            }
+            if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
+                return false
+            }
+            delay(15L)
+        }
+        return player.playbackState == Player.STATE_READY
+    }
+
     private fun canHandoffWithoutRebuffer(incomingPlayer: ExoPlayer): Boolean {
         if (player.currentMediaItem
                 ?.localConfiguration
@@ -2397,6 +2619,8 @@ class MusicService :
         crossfadeProgress = 0f
         crossfadeIncomingBaseVolume = 1f
         crossfadePlaybackRequested = false
+        automixBassSwapController?.release()
+        automixBassSwapController = null
         if (::player.isInitialized && resetPauseAtEnd) {
             localPlayer.pauseAtEndOfMediaItems = false
         }
@@ -9041,6 +9265,9 @@ class MusicService :
         const val MIN_AUDIBLE_EFFECTIVE_VOLUME = 0.01f
         const val STUCK_MUTED_VOLUME_EPSILON = 0.001f
         const val AUDIBLE_PLAYBACK_VOLUME_CHECK_MS = 2_000L
+        private const val TAG_AUTOMIX = "AutomixHandoff"
+        private const val AUTOMIX_HANDOFF_TIMEOUT_MS = 1500L
+        private const val AUTOMIX_MAX_ACCEPTABLE_GAP_MS = 15L
 
         private val matchedCatalogIds = ConcurrentHashMap<String, String>()
 
