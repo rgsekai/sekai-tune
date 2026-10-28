@@ -789,6 +789,14 @@
     <string name="max_quality_network_wifi_only">Wi-Fi only</string>
     <string name="max_quality_network_mobile_data_only">Mobile data only</string>
     <string name="max_quality_network_wifi_and_mobile_data">Wi-Fi and mobile data</string>
+    <string name="recent_single">Recent Single</string>
+    <string name="recent_ep">Recent EP</string>
+    <string name="recent_album">Recent Album</string>
+    <string name="recent_release">Recent Release</string>
+    <string name="about_the_artist">About the artist</string>
+    <string name="artist_motion_video">Animated artist header</string>
+    <string name="artist_motion_video_desc">Play looping video on the artist screen when available</string>
+    <string name="less">less</string>
 </resources>
 
 

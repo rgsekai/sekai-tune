@@ -15,13 +15,18 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.annotation.StringRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -35,6 +40,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -86,6 +92,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -110,10 +117,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
@@ -126,6 +135,7 @@ import com.valentinilk.shimmer.shimmer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import moe.rgsekai.sekaitune.LocalDatabase
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
@@ -140,20 +150,25 @@ import moe.rgsekai.sekaitune.constants.CONTENT_TYPE_SONG
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
 import moe.rgsekai.sekaitune.constants.ArtistSignaturesApiUrlKey
 import moe.rgsekai.sekaitune.constants.ArtistSignaturesEnabledKey
+import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.db.entities.ArtistEntity
 import moe.rgsekai.sekaitune.extensions.toMediaItem
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.innertube.models.AlbumItem
+import moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType
 import moe.rgsekai.sekaitune.innertube.models.ArtistItem
 import moe.rgsekai.sekaitune.innertube.models.BrowseEndpoint
 import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
 import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint
 import moe.rgsekai.sekaitune.innertube.pages.ArtistPage
+import moe.rgsekai.sekaitune.innertube.pages.ArtistSection
 import moe.rgsekai.sekaitune.innertube.pages.ArtistSectionLayout
 import moe.rgsekai.sekaitune.models.toMediaMetadata
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
+import moe.rgsekai.sekaitune.ui.player.CanvasArtworkPlayer
+import timber.log.Timber
 import moe.rgsekai.sekaitune.ui.component.AlbumGridItem
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import moe.rgsekai.sekaitune.ui.component.HideOnScrollFAB
@@ -315,6 +330,75 @@ fun ArtistScreen(
         }
     }
 
+    val artistName = artistPage?.artist?.title ?: libraryArtist?.artist?.name
+    val sekaiTuneCanvasEnabled by rememberPreference(key = SekaiTuneCanvasKey, defaultValue = true)
+
+    var appleArt by remember(artistName) {
+        mutableStateOf(AppleArtistArtRepository.cached(artistName.orEmpty()))
+    }
+    LaunchedEffect(artistName) {
+        if (!artistName.isNullOrBlank()) {
+            appleArt = AppleArtistArtRepository.artFor(artistName)
+        } else {
+            appleArt = null
+        }
+    }
+
+    var signature by remember(artistName, effectiveSignatureBaseUrl) {
+        mutableStateOf(ArtistSignatureRepository.cached(artistName.orEmpty(), effectiveSignatureBaseUrl))
+    }
+    LaunchedEffect(artistName, effectiveSignatureBaseUrl) {
+        if (!artistName.isNullOrBlank() && effectiveSignatureBaseUrl != null) {
+            signature = ArtistSignatureRepository.signatureFor(artistName, effectiveSignatureBaseUrl)
+        } else {
+            signature = null
+        }
+    }
+
+    val songsLabel = stringResource(R.string.songs)
+    val albumsLabel = stringResource(R.string.albums)
+    val monthlyListenersLabel = stringResource(R.string.monthly_listeners)
+    val subscribersLabel = stringResource(R.string.subscribers)
+    val artistStats =
+        remember(
+            showLocal,
+            artistPage,
+            librarySongs.size,
+            libraryAlbums.size,
+            songsLabel,
+            albumsLabel,
+            monthlyListenersLabel,
+            subscribersLabel,
+        ) {
+            buildArtistStats(
+                showLocal = showLocal,
+                artistPage = artistPage,
+                librarySongCount = librarySongs.size,
+                libraryAlbumCount = libraryAlbums.size,
+                songsLabel = songsLabel,
+                albumsLabel = albumsLabel,
+                monthlyListenersLabel = monthlyListenersLabel,
+                subscribersLabel = subscribersLabel,
+            )
+        }
+
+    val topRelease =
+        remember(artistPage, showLocal) {
+            if (!showLocal) artistPage?.sections?.topRelease() else null
+        }
+
+    val pageTargetColor =
+        remember(appleArt, gradientColors, surfaceColor) {
+            appleArt?.backgroundColor
+                ?: gradientColors.firstOrNull()?.copy(alpha = 1f)
+                ?: surfaceColor
+        }
+    val pageBgColor by animateColorAsState(
+        targetValue = pageTargetColor,
+        animationSpec = tween(500),
+        label = "artistPageBgColor",
+    )
+
     // Calculate gradient opacity based on scroll position
     val gradientAlpha by remember {
         derivedStateOf {
@@ -329,7 +413,7 @@ fun ArtistScreen(
 
     val transparentAppBar by remember {
         derivedStateOf {
-            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset < 100
+            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset < 180
         }
     }
 
@@ -337,14 +421,69 @@ fun ArtistScreen(
         showLocal = libraryArtist?.artist?.isLocal == true
     }
 
-    Box(
+    BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(surfaceColor),
+                .background(pageBgColor),
     ) {
-        // Gradient background layer
-        if (gradientColors.isNotEmpty() && gradientAlpha > 0f) {
+        val artHeight = (maxWidth / 0.95f).coerceAtMost(maxHeight * 0.55f)
+        val heroUrl = appleArt?.heroUrl ?: thumbnail
+
+        // Photographic Hero Background & Motion Canvas Video
+        if (heroUrl != null) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(artHeight)
+                        .clipToBounds()
+                        .offset {
+                            IntOffset(
+                                0,
+                                if (lazyListState.firstVisibleItemIndex == 0) {
+                                    -lazyListState.firstVisibleItemScrollOffset
+                                } else {
+                                    (-artHeight.toPx() * 2f).roundToInt()
+                                },
+                            )
+                        },
+            ) {
+                AsyncImage(
+                    model = heroUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize(),
+                )
+
+                if (sekaiTuneCanvasEnabled && !appleArt?.videoUrl.isNullOrBlank()) {
+                    CanvasArtworkPlayer(
+                        primaryUrl = appleArt?.videoUrl,
+                        fallbackUrl = null,
+                        isPlaying = true,
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                }
+
+                // Vertical gradient scrim dissolving foot into pageBgColor
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    0.00f to Color.Transparent,
+                                    0.45f to Color.Transparent,
+                                    0.65f to pageBgColor.copy(alpha = 0.35f),
+                                    0.82f to pageBgColor.copy(alpha = 0.75f),
+                                    0.94f to pageBgColor.copy(alpha = 0.95f),
+                                    1.00f to pageBgColor,
+                                ),
+                            ),
+                )
+            }
+        } else if (gradientColors.isNotEmpty() && gradientAlpha > 0f) {
             Box(
                 modifier =
                     Modifier
@@ -470,111 +609,76 @@ fun ArtistScreen(
                 // Shimmer loading state
                 item(key = "shimmer") {
                     ShimmerHost {
-                        // Hero section placeholder
                         Column(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(top = systemBarsTopPadding + AppBarHeight),
                         ) {
-                            // Artist image placeholder - circular
                             Box(
                                 modifier =
                                     Modifier
-                                        .padding(top = 8.dp)
-                                        .size(210.dp)
-                                        .align(Alignment.CenterHorizontally)
+                                        .fillMaxWidth()
+                                        .height(260.dp)
                                         .shimmer()
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.onSurface),
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
                             )
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            // Artist name placeholder
                             TextPlaceholder(
-                                height = 32.dp,
+                                height = 36.dp,
                                 modifier =
                                     Modifier
-                                        .fillMaxWidth(0.5f)
+                                        .fillMaxWidth(0.6f)
                                         .align(Alignment.CenterHorizontally),
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
-                            // Stats placeholder
                             Row(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 48.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                        .padding(horizontal = 24.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                repeat(3) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        TextPlaceholder(
-                                            height = 20.dp,
-                                            modifier = Modifier.width(40.dp),
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        TextPlaceholder(
-                                            height = 14.dp,
-                                            modifier = Modifier.width(50.dp),
-                                        )
-                                    }
-                                }
+                                ButtonPlaceholder(
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .height(48.dp),
+                                )
+                                ButtonPlaceholder(
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .height(48.dp),
+                                )
+                                ButtonPlaceholder(
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .height(48.dp),
+                                )
                             }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(108.dp)
+                                        .padding(horizontal = 16.dp)
+                                        .shimmer()
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                            )
 
                             Spacer(modifier = Modifier.height(24.dp))
-
-                            // Buttons placeholder
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                            ) {
-                                ButtonPlaceholder(
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .height(48.dp),
-                                )
-                                ButtonPlaceholder(
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .height(48.dp),
-                                )
-                            }
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                            ) {
-                                ButtonPlaceholder(
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .height(48.dp),
-                                )
-                                ButtonPlaceholder(
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .height(48.dp),
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(32.dp))
                         }
 
-                        // Songs list placeholder
                         repeat(5) {
                             ListItemPlaceHolder()
                         }
@@ -583,116 +687,94 @@ fun ArtistScreen(
             } else {
                 // Hero Header
                 item(key = "header") {
-                    val artistName = artistPage?.artist?.title ?: libraryArtist?.artist?.name
-                    var signature by remember(artistName, effectiveSignatureBaseUrl) {
-                        mutableStateOf(ArtistSignatureRepository.cached(artistName.orEmpty(), effectiveSignatureBaseUrl))
-                    }
-
-                    LaunchedEffect(artistName, effectiveSignatureBaseUrl) {
-                        if (!artistName.isNullOrBlank() && effectiveSignatureBaseUrl != null) {
-                            signature = ArtistSignatureRepository.signatureFor(artistName, effectiveSignatureBaseUrl)
-                        } else {
-                            signature = null
-                        }
-                    }
-
                     Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(top = systemBarsTopPadding + AppBarHeight),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // Artist Image - Circular with shadow
-                        Box(
+                        Spacer(
                             modifier =
                                 Modifier
-                                    .padding(top = 8.dp, bottom = 16.dp),
-                        ) {
-                            if (thumbnail != null) {
-                                AsyncImage(
-                                    model = thumbnail.resize(600, 600),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier =
-                                        Modifier
-                                            .size(210.dp)
-                                            .clip(CircleShape),
-                                )
-                            } else {
-                                // Placeholder when no image
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(200.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.person),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(80.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    .fillMaxWidth()
+                                    .height((artHeight - 32.dp).coerceAtLeast(systemBarsTopPadding + AppBarHeight)),
+                        )
+
+                        // Artist title logo or handwritten signature or title text
+                        val logoUrl = appleArt?.logoUrl
+                        val signatureUrl = signature?.imageUrl.takeIf { logoUrl == null }
+                        val imageUrl = logoUrl ?: signatureUrl
+
+                        var logoShown by remember(imageUrl) { mutableStateOf(false) }
+
+                        if (imageUrl != null) {
+                            val isSignatureSvg = logoUrl == null && signature?.format == "svg"
+                            val isSignatureScan = logoUrl == null && signature != null && !isSignatureSvg
+                            val aspect =
+                                (if (logoUrl != null) appleArt?.logoAspect else signature?.aspect)
+                                    ?.coerceIn(0.4f, 6f) ?: 1f
+                            val isSignature = logoUrl == null && signature != null
+                            val maxLogoHeight = (artHeight * (if (isSignature) 0.22f else 0.30f)).coerceAtLeast(48.dp)
+
+                            val request =
+                                remember(imageUrl, isSignatureSvg, isSignatureScan) {
+                                    ImageRequest
+                                        .Builder(context)
+                                        .data(imageUrl)
+                                        .apply {
+                                            if (isSignatureSvg) {
+                                                size(1600, (1600 / aspect).roundToInt().coerceAtLeast(100))
+                                            } else {
+                                                size(coil3.size.Size.ORIGINAL)
+                                            }
+                                            if (isSignatureScan) {
+                                                transformations(SignatureInkTransformation)
+                                            }
+                                        }.build()
                                 }
-                            }
-                        }
-
-                        // Artist Signature / Name
-                        val currentSignature = signature
-                        if (artistSignaturesEnabled && currentSignature != null) {
-                            val isSvg = currentSignature.format == "svg"
-                            val aspect = currentSignature.aspect.coerceIn(0.5f, 5.0f)
-                            var imageLoaded by remember(currentSignature.imageUrl) { mutableStateOf(false) }
-
-                            val request = remember(currentSignature.imageUrl, isSvg) {
-                                coil3.request.ImageRequest.Builder(context)
-                                    .data(currentSignature.imageUrl)
-                                    .apply {
-                                        if (isSvg) {
-                                            size(600, (600 / aspect).toInt().coerceAtLeast(100))
-                                        } else {
-                                            size(coil3.size.Size.ORIGINAL)
-                                            transformations(SignatureInkTransformation)
-                                        }
-                                    }
-                                    .build()
-                            }
 
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(horizontal = 24.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp)
+                                        .padding(bottom = 12.dp),
                             ) {
                                 AsyncImage(
                                     model = request,
                                     contentDescription = artistName,
                                     contentScale = ContentScale.Fit,
-                                    colorFilter = if (isSvg) ColorFilter.tint(MaterialTheme.colorScheme.onSurface) else null,
+                                    colorFilter = if (isSignatureSvg) ColorFilter.tint(Color.White) else null,
                                     onState = { state ->
-                                        if (state is AsyncImagePainter.State.Success) {
-                                            imageLoaded = true
+                                        when (state) {
+                                            is AsyncImagePainter.State.Success -> logoShown = true
+                                            is AsyncImagePainter.State.Error -> {
+                                                Timber.w("ArtistHeader: image load failed for $imageUrl")
+                                            }
+                                            else -> Unit
                                         }
                                     },
-                                    modifier = Modifier
-                                        .heightIn(max = 64.dp)
-                                        .fillMaxWidth(0.65f)
-                                        .aspectRatio(aspect),
+                                    modifier =
+                                        Modifier
+                                            .heightIn(max = maxLogoHeight)
+                                            .fillMaxWidth(if (isSignature) 0.65f else 0.82f)
+                                            .aspectRatio(aspect),
                                 )
-                                if (imageLoaded) {
+
+                                if (isSignature && logoShown) {
                                     val signedByTemplate = stringResource(R.string.signed_by, artistName.orEmpty())
                                     val nameIndex = signedByTemplate.indexOf(artistName.orEmpty())
                                     Text(
-                                        text = buildAnnotatedString {
-                                            append(signedByTemplate)
-                                            if (nameIndex >= 0 && !artistName.isNullOrEmpty()) {
-                                                addStyle(
-                                                    SpanStyle(fontWeight = FontWeight.Bold),
-                                                    nameIndex,
-                                                    nameIndex + artistName.length,
-                                                )
-                                            }
-                                        },
+                                        text =
+                                            buildAnnotatedString {
+                                                append(signedByTemplate)
+                                                if (nameIndex >= 0 && !artistName.isNullOrEmpty()) {
+                                                    addStyle(
+                                                        SpanStyle(fontWeight = FontWeight.Bold),
+                                                        nameIndex,
+                                                        nameIndex + artistName.length,
+                                                    )
+                                                }
+                                            },
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                                         textAlign = TextAlign.Center,
@@ -700,96 +782,23 @@ fun ArtistScreen(
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(top = 4.dp),
                                     )
-                                } else {
-                                    Text(
-                                        text = artistName ?: stringResource(R.string.unknown_artist),
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
                                 }
                             }
-                        } else {
+                        }
+
+                        if (!logoShown) {
                             Text(
                                 text = artistName ?: stringResource(R.string.unknown_artist),
-                                style = MaterialTheme.typography.headlineMedium,
+                                style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 24.dp),
-                            )
-                        }
-
-                        // Artist Description (expandable)
-                        val description = artistPage?.description
-                        if (!description.isNullOrBlank()) {
-                            var isExpanded by rememberSaveable { mutableStateOf(false) }
-                            val maxLines = if (isExpanded) Int.MAX_VALUE else 4
-
-                            Column(
                                 modifier =
                                     Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                                        .combinedClickable(
-                                            onClick = { isExpanded = !isExpanded },
-                                            onLongClick = {},
-                                        ),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text(
-                                    text = description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = maxLines,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-
-                                if (!isExpanded) {
-                                    Text(
-                                        text = stringResource(R.string.more),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(top = 4.dp),
-                                    )
-                                }
-                            }
-                        }
-
-                        val songsLabel = stringResource(R.string.songs)
-                        val albumsLabel = stringResource(R.string.albums)
-                        val monthlyListenersLabel = stringResource(R.string.monthly_listeners)
-                        val subscribersLabel = stringResource(R.string.subscribers)
-                        val artistStats =
-                            remember(
-                                showLocal,
-                                artistPage,
-                                librarySongs.size,
-                                libraryAlbums.size,
-                                songsLabel,
-                                albumsLabel,
-                                monthlyListenersLabel,
-                                subscribersLabel,
-                            ) {
-                                buildArtistStats(
-                                    showLocal = showLocal,
-                                    artistPage = artistPage,
-                                    librarySongCount = librarySongs.size,
-                                    libraryAlbumCount = libraryAlbums.size,
-                                    songsLabel = songsLabel,
-                                    albumsLabel = albumsLabel,
-                                    monthlyListenersLabel = monthlyListenersLabel,
-                                    subscribersLabel = subscribersLabel,
-                                )
-                            }
-
-                        if (artistStats.isNotEmpty()) {
-                            ArtistStatsButtonGroup(stats = artistStats)
+                                        .padding(horizontal = 24.dp)
+                                        .padding(bottom = 12.dp),
+                            )
                         }
 
                         // Action Buttons (Subscribe, Shuffle, Radio)
@@ -1051,6 +1060,28 @@ fun ArtistScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                // Top Release Card (Recent Single / Album)
+                if (topRelease != null) {
+                    item(key = "top_release") {
+                        TopReleaseCard(
+                            item = topRelease,
+                            onClick = {
+                                navController.navigate("album/${topRelease.id}")
+                            },
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                menuState.show {
+                                    YouTubeAlbumMenu(
+                                        albumItem = topRelease,
+                                        navController = navController,
+                                        onDismiss = menuState::dismiss,
+                                    )
+                                }
+                            },
+                        )
                     }
                 }
 
@@ -1410,6 +1441,27 @@ fun ArtistScreen(
                     }
                 }
 
+                // Artist About & Listener Stats at the very bottom
+                val hasDescription = !artistPage?.description.isNullOrBlank()
+                val hasStats = artistStats.isNotEmpty()
+                val aboutSignature = if (appleArt?.logoUrl != null && artistSignaturesEnabled) signature else null
+                val showAboutSection = !showLocal && (hasDescription || hasStats || aboutSignature != null)
+
+                if (showAboutSection) {
+                    item(key = "artist_about_bottom") {
+                        ArtistAboutSection(
+                            description = artistPage?.description,
+                            artistName = artistName,
+                            signature = aboutSignature,
+                            stats = artistStats,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp, bottom = 16.dp),
+                        )
+                    }
+                }
+
                 // Bottom spacing
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -1502,9 +1554,16 @@ fun ArtistScreen(
         },
         colors =
             if (transparentAppBar) {
-                TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White,
+                )
             } else {
-                TopAppBarDefaults.topAppBarColors()
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = pageBgColor.copy(alpha = 0.95f),
+                )
             },
     )
 }
@@ -1776,6 +1835,216 @@ private fun buildArtistItemsRoute(
         if (encodedParams != null) {
             append("&params=")
             append(encodedParams)
+        }
+    }
+}
+
+@Composable
+private fun TopReleaseCard(
+    item: AlbumItem,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(24.dp)
+    val coverShape = RoundedCornerShape(12.dp)
+    val typeString =
+        when (item.releaseType) {
+            AlbumReleaseType.SINGLE -> "Single"
+            AlbumReleaseType.EP -> "EP"
+            AlbumReleaseType.ALBUM -> "Album"
+        }
+    val subtitle = if (item.year != null) "$typeString • ${item.year}" else typeString
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clip(shape)
+                .background(Color.White.copy(alpha = 0.08f), shape)
+                .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                ).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(
+            model = item.thumbnail.resize(300, 300),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier =
+                Modifier
+                    .size(88.dp)
+                    .clip(coverShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 2.dp),
+            )
+            Text(
+                text = stringResource(item.recentLabel()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private fun List<ArtistSection>.topRelease(): AlbumItem? =
+    asSequence()
+        .flatMap { it.items.asSequence() }
+        .filterIsInstance<AlbumItem>()
+        .withIndex()
+        .maxWithOrNull(
+            compareBy<IndexedValue<AlbumItem>> { it.value.year ?: 0 }
+                .thenByDescending { it.index },
+        )?.value
+
+@StringRes
+private fun AlbumItem.recentLabel(): Int =
+    when (releaseType) {
+        AlbumReleaseType.SINGLE -> R.string.recent_single
+        AlbumReleaseType.EP -> R.string.recent_ep
+        AlbumReleaseType.ALBUM -> R.string.recent_album
+    }
+
+@Composable
+private fun ArtistAboutSection(
+    description: String?,
+    artistName: String?,
+    signature: ArtistSignature?,
+    stats: List<ArtistStatItemUiModel>,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.about_the_artist),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+        )
+
+        if (!description.isNullOrBlank()) {
+            var isExpanded by rememberSaveable { mutableStateOf(false) }
+            val maxLines = if (isExpanded) Int.MAX_VALUE else 3
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 4.dp)
+                        .combinedClickable(
+                            onClick = { isExpanded = !isExpanded },
+                            onLongClick = {},
+                        ),
+            ) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = maxLines,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.animateContentSize(),
+                )
+                Text(
+                    text = stringResource(if (isExpanded) R.string.less else R.string.more),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
+
+        if (signature != null) {
+            val isSvg = signature.format == "svg"
+            val aspect = signature.aspect.coerceIn(0.4f, 6f)
+            val context = LocalContext.current
+            val request =
+                remember(signature.imageUrl) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(signature.imageUrl)
+                        .apply {
+                            if (isSvg) {
+                                size(1600, (1600 / aspect).roundToInt().coerceAtLeast(100))
+                            } else {
+                                size(coil3.size.Size.ORIGINAL)
+                                transformations(SignatureInkTransformation)
+                            }
+                        }.build()
+                }
+            var loaded by remember(signature.imageUrl) { mutableStateOf(false) }
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                AsyncImage(
+                    model = request,
+                    contentDescription = artistName,
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (isSvg) ColorFilter.tint(MaterialTheme.colorScheme.onSurface) else null,
+                    onState = { if (it is AsyncImagePainter.State.Success) loaded = true },
+                    modifier =
+                        Modifier
+                            .height(48.dp)
+                            .aspectRatio(aspect),
+                )
+                if (loaded && !artistName.isNullOrBlank()) {
+                    val signedByTemplate = stringResource(R.string.signed_by, artistName)
+                    val nameIndex = signedByTemplate.indexOf(artistName)
+                    Text(
+                        text =
+                            buildAnnotatedString {
+                                append(signedByTemplate)
+                                if (nameIndex >= 0) {
+                                    addStyle(
+                                        SpanStyle(fontWeight = FontWeight.Bold),
+                                        nameIndex,
+                                        nameIndex + artistName.length,
+                                    )
+                                }
+                            },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
+        }
+
+        if (stats.isNotEmpty()) {
+            ArtistStatsButtonGroup(
+                stats = stats,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
