@@ -20,6 +20,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -357,30 +358,30 @@ fun ArtistScreen(
         }
     }
 
-    val songsLabel = stringResource(R.string.songs)
-    val albumsLabel = stringResource(R.string.albums)
-    val monthlyListenersLabel = stringResource(R.string.monthly_listeners)
-    val subscribersLabel = stringResource(R.string.subscribers)
+    val songsFormat = stringResource(R.string.artist_songs)
+    val albumsFormat = stringResource(R.string.artist_albums)
+    val monthlyListenersFormat = stringResource(R.string.artist_monthly_listeners)
+    val subscribersFormat = stringResource(R.string.artist_subscribers)
     val artistStats =
         remember(
             showLocal,
             artistPage,
             librarySongs.size,
             libraryAlbums.size,
-            songsLabel,
-            albumsLabel,
-            monthlyListenersLabel,
-            subscribersLabel,
+            songsFormat,
+            albumsFormat,
+            monthlyListenersFormat,
+            subscribersFormat,
         ) {
             buildArtistStats(
                 showLocal = showLocal,
                 artistPage = artistPage,
                 librarySongCount = librarySongs.size,
                 libraryAlbumCount = libraryAlbums.size,
-                songsLabel = songsLabel,
-                albumsLabel = albumsLabel,
-                monthlyListenersLabel = monthlyListenersLabel,
-                subscribersLabel = subscribersLabel,
+                songsFormat = songsFormat,
+                albumsFormat = albumsFormat,
+                monthlyListenersFormat = monthlyListenersFormat,
+                subscribersFormat = subscribersFormat,
             )
         }
 
@@ -1665,51 +1666,66 @@ private const val ArtistOverflowMenuItemCount = 3
 @Immutable
 private data class ArtistStatItemUiModel(
     val icon: ImageVector,
-    val value: String,
+    val text: String,
     val contentDescription: String,
 )
 
 @Composable
-private fun ArtistStatsButtonGroup(
+private fun ArtistStatsRow(
     stats: List<ArtistStatItemUiModel>,
     modifier: Modifier = Modifier,
 ) {
-    val buttonShapes = ButtonDefaults.shapes()
-
     FlowRow(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp, horizontal = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         stats.fastForEach { stat ->
-            FilledTonalButton(
-                onClick = NoOpStatButtonClick,
-                shapes = buttonShapes,
-                contentPadding = PaddingValues(horizontal = 14.dp),
-                modifier =
-                    Modifier
-                        .heightIn(min = 48.dp)
-                        .widthIn(min = 72.dp)
-                        .semantics(mergeDescendants = true) {
-                            contentDescription = stat.contentDescription
-                        },
-            ) {
-                Icon(
-                    imageVector = stat.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = stat.value,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
-            }
+            StatChip(
+                icon = stat.icon,
+                text = stat.text,
+                contentDescription = stat.contentDescription,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatChip(
+    icon: ImageVector,
+    text: String,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                this.contentDescription = contentDescription
+            },
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
         }
     }
 }
@@ -1719,10 +1735,10 @@ private fun buildArtistStats(
     artistPage: ArtistPage?,
     librarySongCount: Int,
     libraryAlbumCount: Int,
-    songsLabel: String,
-    albumsLabel: String,
-    monthlyListenersLabel: String,
-    subscribersLabel: String,
+    songsFormat: String,
+    albumsFormat: String,
+    monthlyListenersFormat: String,
+    subscribersFormat: String,
 ): List<ArtistStatItemUiModel> {
     val songSections =
         artistPage?.sections?.filter { section ->
@@ -1759,44 +1775,48 @@ private fun buildArtistStats(
     val hasMoreAlbums = !showLocal && albumSections?.any { it.moreEndpoint != null } == true
 
     return buildList {
+        artistPage?.artist?.subscriberCountText?.toArtistCompactCountText()?.let { value ->
+            val text = String.format(subscribersFormat, value)
+            add(
+                ArtistStatItemUiModel(
+                    icon = Icons.Outlined.PersonAdd,
+                    text = text,
+                    contentDescription = text,
+                ),
+            )
+        }
+
+        artistPage?.artist?.monthlyListenerCountText?.toArtistCompactCountText()?.let { value ->
+            val text = String.format(monthlyListenersFormat, value)
+            add(
+                ArtistStatItemUiModel(
+                    icon = Icons.Outlined.Hearing,
+                    text = text,
+                    contentDescription = text,
+                ),
+            )
+        }
+
         if (songCount > 0) {
             val value = compactCountText(songCount, hasMoreSongs)
+            val text = String.format(songsFormat, value)
             add(
                 ArtistStatItemUiModel(
                     icon = Icons.Outlined.MusicNote,
-                    value = value,
-                    contentDescription = "$songsLabel $value",
+                    text = text,
+                    contentDescription = text,
                 ),
             )
         }
 
         if (albumCount > 0) {
             val value = compactCountText(albumCount, hasMoreAlbums)
+            val text = String.format(albumsFormat, value)
             add(
                 ArtistStatItemUiModel(
                     icon = Icons.Outlined.Album,
-                    value = value,
-                    contentDescription = "$albumsLabel $value",
-                ),
-            )
-        }
-
-        artistPage?.artist?.monthlyListenerCountText?.toArtistCompactCountText()?.let { value ->
-            add(
-                ArtistStatItemUiModel(
-                    icon = Icons.Outlined.Hearing,
-                    value = value,
-                    contentDescription = "$monthlyListenersLabel $value",
-                ),
-            )
-        }
-
-        artistPage?.artist?.subscriberCountText?.toArtistCompactCountText()?.let { value ->
-            add(
-                ArtistStatItemUiModel(
-                    icon = Icons.Outlined.PersonAdd,
-                    value = value,
-                    contentDescription = "$subscribersLabel $value",
+                    text = text,
+                    contentDescription = text,
                 ),
             )
         }
@@ -1996,6 +2016,13 @@ private fun ArtistAboutSection(
             }
         }
 
+        if (stats.isNotEmpty()) {
+            ArtistStatsRow(
+                stats = stats,
+                modifier = Modifier.padding(top = if (!description.isNullOrBlank()) 10.dp else 4.dp),
+            )
+        }
+
         if (signature != null) {
             val isSvg = signature.format == "svg"
             val aspect = signature.aspect.coerceIn(0.4f, 6f)
@@ -2057,13 +2084,6 @@ private fun ArtistAboutSection(
                     )
                 }
             }
-        }
-
-        if (stats.isNotEmpty()) {
-            ArtistStatsButtonGroup(
-                stats = stats,
-                modifier = Modifier.padding(top = 8.dp),
-            )
         }
     }
 }

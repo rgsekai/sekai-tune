@@ -797,6 +797,10 @@
     <string name="artist_motion_video">Animated artist header</string>
     <string name="artist_motion_video_desc">Play looping video on the artist screen when available</string>
     <string name="less">less</string>
+    <string name="artist_subscribers">%1$s subscribers</string>
+    <string name="artist_monthly_listeners">%1$s monthly listeners</string>
+    <string name="artist_songs">%1$s songs</string>
+    <string name="artist_albums">%1$s albums</string>
 </resources>
 
 
