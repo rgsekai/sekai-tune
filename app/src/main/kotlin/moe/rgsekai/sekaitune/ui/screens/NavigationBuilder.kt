@@ -126,7 +126,7 @@ fun NavGraphBuilder.navigationBuilder(
         HistoryScreen(navController)
     }
     composable("stats") {
-        StatsScreen(navController)
+        ReplayStatsScreen(navController)
     }
     composable(MusicRecognitionRoute) {
         MusicRecognitionScreen(navController)

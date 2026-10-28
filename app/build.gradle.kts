@@ -286,6 +286,7 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.hilt)
     implementation(libs.re2j)

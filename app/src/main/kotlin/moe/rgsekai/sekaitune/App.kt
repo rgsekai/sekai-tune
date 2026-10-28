@@ -101,6 +101,8 @@ class App :
         }
         BotGuardTokenGenerator.initialize(this)
         PreferenceStore.start(this)
+        moe.rgsekai.sekaitune.data.stats.ListeningStats.init(this)
+        moe.rgsekai.sekaitune.data.stats.ArtistFacts.init(this)
         Timber.plant(Timber.DebugTree())
         try {
             Timber.plant(
