@@ -2,7 +2,12 @@ package moe.rgsekai.sekaitune.ui.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -14,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
+import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.data.model.Song
 import moe.rgsekai.sekaitune.data.model.durationMillis
@@ -37,6 +43,10 @@ fun ReplayStatsScreen(
     var replayStory by remember { mutableStateOf<ReplayStoryPage?>(null) }
     var showReplayShare by remember { mutableStateOf(false) }
     var replaySharePage by remember { mutableStateOf<ReplayStoryPage?>(null) }
+
+    val systemBarsTop = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+    val playerAwareInsets = LocalPlayerAwareWindowInsets.current
+    val bottomPadding = playerAwareInsets.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
 
     Box(modifier = Modifier.fillMaxSize()) {
         ReplayScreen(
@@ -73,7 +83,7 @@ fun ReplayStatsScreen(
                 replaySharePage = null
                 showReplayShare = true
             },
-            contentPadding = PaddingValues(),
+            contentPadding = PaddingValues(top = systemBarsTop, bottom = bottomPadding),
         )
 
         // Story Showcase overlay

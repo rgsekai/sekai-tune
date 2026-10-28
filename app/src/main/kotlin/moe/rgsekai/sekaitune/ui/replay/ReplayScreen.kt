@@ -273,7 +273,7 @@ private fun Heading(state: ReplayState, onPeriodChange: (ReplayPeriod) -> Unit, 
     val textColor = if (dark) Color.White else Color.Black
     Column(Modifier.padding(horizontal = PAGE_GUTTER + 4.dp)) {
         if (onBack != null) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -286,9 +286,9 @@ private fun Heading(state: ReplayState, onPeriodChange: (ReplayPeriod) -> Unit, 
                     Icon(painterResource(R.drawable.arrow_back), contentDescription = null, tint = textColor)
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
         } else {
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(24.dp))
         }
         Text(
             text = stringResource(R.string.replay),
