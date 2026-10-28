@@ -105,4 +105,44 @@ class AppleArtistArtTest {
     fun parse_missingMarker_returnsNull() {
         assertNull(AppleArtistArtRepository.parse("<html><body>No marker here</body></html>"))
     }
+
+    @Test
+    fun toArtistWash_lightSourceColor_producesDarkToneMappedWash() {
+        // One Direction Apple Music background: #D8DCDB (86% lightness, ~5.5% saturation)
+        val oneDirectionBg = androidx.compose.ui.graphics.Color(0xFFD8DCDB)
+        val wash = oneDirectionBg.toArtistWash(dark = true)
+
+        val hsl = FloatArray(3)
+        rgbToHsl(wash.red, wash.green, wash.blue, hsl)
+
+        // Lightness must be clamped into the dark range (0.14..0.24) with 8-bit RGB quantisation tolerance (<= 0.25f)
+        assertTrue("Wash lightness must be <= 0.25f but was ${hsl[2]}", hsl[2] <= 0.25f)
+        assertTrue("Wash lightness must be >= 0.13f but was ${hsl[2]}", hsl[2] >= 0.13f)
+
+        // Neutral saturation (< 0.12f) must remain neutral without manufacturing red noise
+        assertTrue("Wash saturation must remain near original (~0.055) but was ${hsl[1]}", hsl[1] < 0.12f)
+    }
+
+    @Test
+    fun toArtistWash_vibrantColor_clampsSaturationAndLightness() {
+        val vibrantRed = androidx.compose.ui.graphics.Color(0xFFFF0000)
+        val wash = vibrantRed.toArtistWash(dark = true)
+
+        val hsl = FloatArray(3)
+        rgbToHsl(wash.red, wash.green, wash.blue, hsl)
+
+        assertTrue("Lightness must be in 0.13..0.25 but was ${hsl[2]}", hsl[2] in 0.13f..0.25f)
+        assertTrue("Saturation must be clamped to 0.17..0.59 but was ${hsl[1]}", hsl[1] in 0.17f..0.59f)
+    }
+
+    @Test
+    fun toArtistWash_lightMode_producesLightWash() {
+        val darkBg = androidx.compose.ui.graphics.Color(0xFF101010)
+        val wash = darkBg.toArtistWash(dark = false)
+
+        val hsl = FloatArray(3)
+        rgbToHsl(wash.red, wash.green, wash.blue, hsl)
+
+        assertTrue("Light mode wash lightness must be in 0.77..0.91 but was ${hsl[2]}", hsl[2] in 0.77f..0.91f)
+    }
 }

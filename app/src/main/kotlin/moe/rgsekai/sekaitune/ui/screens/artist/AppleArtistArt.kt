@@ -45,6 +45,129 @@ data class AppleArtistArt(
     val backgroundColor: Color get() = Color(background)
     val accentColor: Color get() = Color(accent)
     val playColor: Color? get() = keyColor?.let { Color(it) }
+
+    fun washColor(dark: Boolean = true): Color = backgroundColor.toArtistWash(dark)
+    fun elevatedColor(dark: Boolean = true): Color = backgroundColor.toArtistElevated(dark)
+}
+
+private const val CHROMATIC_SATURATION_THRESHOLD = 0.12f
+
+/**
+ * Keeps neutral artwork neutral instead of inventing a hue for it (which would
+ * manufacture red/brown once lightness is lowered).
+ */
+internal fun adaptedArtworkSaturation(source: Float, minimum: Float, maximum: Float): Float {
+    val saturation = source.coerceIn(0f, 1f)
+    return if (saturation < CHROMATIC_SATURATION_THRESHOLD) {
+        saturation
+    } else {
+        saturation.coerceIn(minimum, maximum)
+    }
+}
+
+/**
+ * Converts RGB components (0..1) to HSL components:
+ * outHsl[0] in 0..360 (hue)
+ * outHsl[1] in 0..1 (saturation)
+ * outHsl[2] in 0..1 (lightness)
+ */
+internal fun rgbToHsl(r: Float, g: Float, b: Float, outHsl: FloatArray) {
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val delta = max - min
+    val lightness = (max + min) / 2f
+
+    val saturation = if (delta == 0f) {
+        0f
+    } else {
+        val denom = 1f - kotlin.math.abs(2f * lightness - 1f)
+        if (denom == 0f) 0f else delta / denom
+    }
+
+    val hue = when {
+        delta == 0f -> 0f
+        max == r -> (((g - b) / delta) % 6f) * 60f
+        max == g -> (((b - r) / delta) + 2f) * 60f
+        else -> (((r - g) / delta) + 4f) * 60f
+    }.let { if (it < 0f) it + 360f else it }
+
+    outHsl[0] = hue
+    outHsl[1] = saturation.coerceIn(0f, 1f)
+    outHsl[2] = lightness.coerceIn(0f, 1f)
+}
+
+/**
+ * Converts HSL components to Compose Color.
+ */
+internal fun hslToColor(hue: Float, saturation: Float, lightness: Float, alpha: Float = 1f): Color {
+    val h = (hue % 360f + 360f) % 360f
+    val s = saturation.coerceIn(0f, 1f)
+    val l = lightness.coerceIn(0f, 1f)
+
+    val c = (1f - kotlin.math.abs(2f * l - 1f)) * s
+    val x = c * (1f - kotlin.math.abs((h / 60f) % 2f - 1f))
+    val m = l - c / 2f
+
+    val (r1, g1, b1) = when ((h / 60f).toInt()) {
+        0 -> Triple(c, x, 0f)
+        1 -> Triple(x, c, 0f)
+        2 -> Triple(0f, c, x)
+        3 -> Triple(0f, x, c)
+        4 -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+
+    return Color(
+        red = (r1 + m).coerceIn(0f, 1f),
+        green = (g1 + m).coerceIn(0f, 1f),
+        blue = (b1 + m).coerceIn(0f, 1f),
+        alpha = alpha,
+    )
+}
+
+internal fun Color.withHsl(
+    saturation: (Float) -> Float = { it },
+    lightness: (Float) -> Float = { it },
+): Color {
+    val hsl = FloatArray(3)
+    rgbToHsl(red, green, blue, hsl)
+    val newSat = saturation(hsl[1]).coerceIn(0f, 1f)
+    val newLight = lightness(hsl[2]).coerceIn(0f, 1f)
+    return hslToColor(hsl[0], newSat, newLight, alpha)
+}
+
+/**
+ * Tone-maps a raw artwork/header background color into a cohesive wash that
+ * guarantees WCAG text contrast while preserving the artist's unique hue/tint.
+ *
+ * In dark mode, lightness is clamped to 0.14f..0.24f (preventing the pure white
+ * / washed-out background seen when artists like One Direction have light photos),
+ * so white text is always sharp and clear.
+ *
+ * In light mode, lightness is clamped to 0.78f..0.90f for dark text.
+ */
+fun Color.toArtistWash(dark: Boolean = true): Color = if (dark) {
+    withHsl(
+        saturation = { adaptedArtworkSaturation(it, minimum = 0.18f, maximum = 0.58f) },
+        lightness = { it.coerceIn(0.14f, 0.24f) },
+    )
+} else {
+    withHsl(
+        saturation = { adaptedArtworkSaturation(it, minimum = 0.12f, maximum = 0.46f) },
+        lightness = { it.coerceIn(0.78f, 0.90f) },
+    )
+}
+
+fun Color.toArtistElevated(dark: Boolean = true): Color = if (dark) {
+    withHsl(
+        saturation = { adaptedArtworkSaturation(it, minimum = 0.20f, maximum = 0.62f) },
+        lightness = { 0.22f },
+    )
+} else {
+    withHsl(
+        saturation = { adaptedArtworkSaturation(it, minimum = 0.14f, maximum = 0.50f) },
+        lightness = { 0.83f },
+    )
 }
 
 /**

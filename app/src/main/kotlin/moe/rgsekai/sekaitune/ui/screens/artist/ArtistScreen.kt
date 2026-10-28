@@ -14,6 +14,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
@@ -92,13 +93,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -390,11 +397,13 @@ fun ArtistScreen(
             if (!showLocal) artistPage?.sections?.topRelease() else null
         }
 
+    val isDarkTheme = surfaceColor.red * 0.2126f + surfaceColor.green * 0.7152f + surfaceColor.blue * 0.0722f < 0.5f
     val pageTargetColor =
-        remember(appleArt, gradientColors, surfaceColor) {
-            appleArt?.backgroundColor
-                ?: gradientColors.firstOrNull()?.copy(alpha = 1f)
-                ?: surfaceColor
+        remember(appleArt, gradientColors, surfaceColor, isDarkTheme) {
+            val rawColor =
+                appleArt?.backgroundColor
+                    ?: gradientColors.firstOrNull()?.copy(alpha = 1f)
+            rawColor?.toArtistWash(dark = isDarkTheme) ?: surfaceColor
         }
     val pageBgColor by animateColorAsState(
         targetValue = pageTargetColor,
@@ -466,6 +475,32 @@ fun ArtistScreen(
                         isPlaying = true,
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                         modifier = Modifier.matchParentSize(),
+                    )
+                }
+
+                // Softened foot blur (fades in blurred copy over lower portion so picture loses detail before dissolving into wash)
+                val isCanvasPlaying = sekaiTuneCanvasEnabled && !appleArt?.videoUrl.isNullOrBlank()
+                val softenFoot = !isCanvasPlaying && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                if (softenFoot) {
+                    AsyncImage(
+                        model = heroUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(
+                                        brush =
+                                            Brush.verticalGradient(
+                                                0.35f to Color.Transparent,
+                                                0.75f to Color.Black,
+                                            ),
+                                        blendMode = BlendMode.DstIn,
+                                    )
+                                }.blur(48.dp, BlurredEdgeTreatment.Rectangle),
                     )
                 }
 
@@ -800,6 +835,7 @@ fun ArtistScreen(
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
+                                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier =
@@ -1917,6 +1953,7 @@ private fun TopReleaseCard(
                 Modifier
                     .size(88.dp)
                     .clip(coverShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), coverShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
         )
 
@@ -1926,7 +1963,7 @@ private fun TopReleaseCard(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.72f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1934,7 +1971,7 @@ private fun TopReleaseCard(
                 text = item.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(vertical = 2.dp),
@@ -1942,7 +1979,7 @@ private fun TopReleaseCard(
             Text(
                 text = stringResource(item.recentLabel()),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.72f),
                 maxLines = 1,
             )
         }
