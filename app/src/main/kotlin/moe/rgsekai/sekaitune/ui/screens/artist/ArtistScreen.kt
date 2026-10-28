@@ -102,6 +102,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import coil3.compose.AsyncImagePainter
@@ -755,9 +757,14 @@ fun ArtistScreen(
                                     },
                                     modifier =
                                         Modifier
-                                            .heightIn(max = maxLogoHeight)
-                                            .fillMaxWidth(if (isSignature) 0.65f else 0.82f)
-                                            .aspectRatio(aspect),
+                                            .padding(top = 14.dp, bottom = if (isSignature) 6.dp else 16.dp)
+                                            .layout { measurable, constraints ->
+                                                val widest = constraints.maxWidth * (if (isSignature) 0.65f else 0.82f)
+                                                val height = minOf(widest / aspect, maxLogoHeight.toPx()).roundToInt()
+                                                val width = (height * aspect).roundToInt()
+                                                val placeable = measurable.measure(Constraints.fixed(width, height))
+                                                layout(width, height) { placeable.place(0, 0) }
+                                            },
                                 )
 
                                 if (isSignature && logoShown) {
@@ -797,20 +804,54 @@ fun ArtistScreen(
                                 modifier =
                                     Modifier
                                         .padding(horizontal = 24.dp)
-                                        .padding(bottom = 12.dp),
+                                        .padding(top = 14.dp, bottom = 16.dp),
                             )
                         }
 
-                        // Action Buttons (Subscribe, Shuffle, Radio)
-                        val hasRadio = !showLocal && artistPage?.artist?.radioEndpoint != null
-                        val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
-                        val showSpotifyButton = spotifyFollowState !is SpotifyFollowState.Hidden
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
 
+                // Top Release Card (Recent Single / Album)
+                if (topRelease != null) {
+                    item(key = "top_release") {
+                        TopReleaseCard(
+                            item = topRelease,
+                            onClick = {
+                                navController.navigate("album/${topRelease.id}")
+                            },
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                menuState.show {
+                                    YouTubeAlbumMenu(
+                                        albumItem = topRelease,
+                                        navController = navController,
+                                        onDismiss = menuState::dismiss,
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+
+                // Action Buttons Row (Subscribe, Shuffle, Radio, and Spotify follow)
+                item(key = "artist_actions") {
+                    val hasRadio = !showLocal && artistPage?.artist?.radioEndpoint != null
+                    val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
+                    val showSpotifyButton = spotifyFollowState !is SpotifyFollowState.Hidden
+
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = if (topRelease == null) 8.dp else 4.dp, bottom = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
                         Row(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                                    .padding(horizontal = 24.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             ToggleButton(
@@ -1059,29 +1100,7 @@ fun ArtistScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
-
-                // Top Release Card (Recent Single / Album)
-                if (topRelease != null) {
-                    item(key = "top_release") {
-                        TopReleaseCard(
-                            item = topRelease,
-                            onClick = {
-                                navController.navigate("album/${topRelease.id}")
-                            },
-                            onLongClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                menuState.show {
-                                    YouTubeAlbumMenu(
-                                        albumItem = topRelease,
-                                        navController = navController,
-                                        onDismiss = menuState::dismiss,
-                                    )
-                                }
-                            },
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 
