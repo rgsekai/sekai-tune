@@ -1977,11 +1977,11 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     }
                                                     TranslucentTopAppBarIconButton(
-                                                        onClick = { navController.navigate("history") },
+                                                        onClick = { navController.navigate("stats") },
                                                     ) {
                                                         Icon(
-                                                            painter = painterResource(R.drawable.history),
-                                                            contentDescription = stringResource(R.string.history),
+                                                            painter = painterResource(R.drawable.stats),
+                                                            contentDescription = stringResource(R.string.settings_stats_title),
                                                         )
                                                     }
                                                     TranslucentTopAppBarIconButton(

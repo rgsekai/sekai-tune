@@ -109,6 +109,7 @@ data class LibraryRowItem(
  */
 fun buildLibraryRowItems(
     stringProvider: LibraryStringProvider,
+    historyEventsCount: Int,
     likedSongsCount: Int,
     uploadedSongsCount: Int,
     webDavSongsCount: Int,
@@ -124,7 +125,25 @@ fun buildLibraryRowItems(
     errorColor: Color,
     onNavigate: (String) -> Unit,
 ): List<LibraryRowItem> = buildList {
-    // 1. Liked songs
+    // 1. History
+    add(
+        LibraryRowItem(
+            id = "history",
+            title = stringProvider.getString(R.string.history),
+            subtitle = if (historyEventsCount > 0) {
+                "$historyEventsCount ${stringProvider.getString(R.string.tracks_label)}"
+            } else {
+                stringProvider.getString(R.string.history_local_summary)
+            },
+            iconRes = R.drawable.history,
+            iconTint = tertiaryColor,
+            contentDescription = "${stringProvider.getString(R.string.history)}, ${stringProvider.getString(R.string.history_local_summary)}",
+            destination = "history",
+            onClick = { onNavigate("history") },
+        ),
+    )
+
+    // 2. Liked songs
     add(
         LibraryRowItem(
             id = "liked",
@@ -262,6 +281,7 @@ fun buildLibraryRowItems(
 
 fun buildLibraryRowItems(
     context: Context,
+    historyEventsCount: Int,
     likedSongsCount: Int,
     uploadedSongsCount: Int,
     webDavSongsCount: Int,
@@ -278,6 +298,7 @@ fun buildLibraryRowItems(
     onNavigate: (String) -> Unit,
 ): List<LibraryRowItem> = buildLibraryRowItems(
     stringProvider = ContextStringProvider(context),
+    historyEventsCount = historyEventsCount,
     likedSongsCount = likedSongsCount,
     uploadedSongsCount = uploadedSongsCount,
     webDavSongsCount = webDavSongsCount,
@@ -321,9 +342,9 @@ fun LibraryMixScreen(
     val (spotifySpDc) = rememberPreference(SpotifySpDcKey, defaultValue = "")
     val isSpotifyConnected = remember(spotifySpDc) { spotifySpDc.isNotBlank() }
 
+    val historyEventsCount by database.eventsCount().collectAsState(initial = 0)
     val likedSongsCount by database.likedSongsCount().collectAsState(initial = 0)
     val uploadedSongsCount by database.uploadedSongsCount().collectAsState(initial = 0)
-    val recentSongs by database.recentSongs(15).collectAsState(initial = emptyList())
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -332,6 +353,7 @@ fun LibraryMixScreen(
     val errorColor = MaterialTheme.colorScheme.error
 
     val rowItems = remember(
+        historyEventsCount,
         likedSongsCount,
         uploadedSongsCount,
         webDavSongsCount,
@@ -348,6 +370,7 @@ fun LibraryMixScreen(
     ) {
         buildLibraryRowItems(
             context = context,
+            historyEventsCount = historyEventsCount,
             likedSongsCount = likedSongsCount,
             uploadedSongsCount = uploadedSongsCount,
             webDavSongsCount = webDavSongsCount,
@@ -402,90 +425,7 @@ fun LibraryMixScreen(
                 }
             }
 
-            // 2. Recently Played Horizontal Row
-            if (recentSongs.isNotEmpty()) {
-                item(key = "recently_played") {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.recently_played),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 24.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            items(recentSongs) { song ->
-                                Column(
-                                    modifier =
-                                        Modifier
-                                            .width(110.dp)
-                                            .clickable {
-                                                playerConnection.playQueue(ListQueue(items = listOf(song.toMediaItem())))
-                                            },
-                                ) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .size(110.dp)
-                                                .clip(RoundedCornerShape(28.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.music_note),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-                                            modifier = Modifier.size(32.dp),
-                                        )
-                                        AsyncImage(
-                                            model = song.song.thumbnailUrl,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize(),
-                                        )
-                                        // Play Overlay button
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .align(Alignment.BottomEnd)
-                                                    .padding(8.dp)
-                                                    .size(28.dp)
-                                                    .clip(CircleShape)
-                                                    .background(MaterialTheme.colorScheme.primary),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.play),
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimary,
-                                                modifier = Modifier.size(14.dp),
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = song.song.title,
-                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onBackground,
-                                    )
-                                    Text(
-                                        text = song.artists.joinToString(", ") { it.name },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+
         }
     }
 }

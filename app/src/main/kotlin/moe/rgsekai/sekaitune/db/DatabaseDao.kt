@@ -1463,6 +1463,9 @@ interface DatabaseDao {
     @Query("SELECT * FROM event ORDER BY rowId DESC")
     fun events(): Flow<List<EventWithSong>>
 
+    @Query("SELECT COUNT(1) FROM event")
+    fun eventsCount(): Flow<Int>
+
     @Transaction
     @Query(
         """
