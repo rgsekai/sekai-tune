@@ -62,6 +62,7 @@ import moe.rgsekai.sekaitune.LocalDatabase
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.AccountNameKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
 import moe.rgsekai.sekaitune.extensions.toMediaItem
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
@@ -71,6 +72,10 @@ import moe.rgsekai.sekaitune.playback.sources.webdav.WebDavScanState
 import moe.rgsekai.sekaitune.playback.sources.webdav.WebDavTagScanner
 import moe.rgsekai.sekaitune.playback.sources.webdav.WebDavTagScanState
 import moe.rgsekai.sekaitune.ui.component.ExpressivePullToRefreshBox
+import moe.rgsekai.sekaitune.ui.replay.PAGE_GUTTER
+import moe.rgsekai.sekaitune.ui.replay.ReplayCardRow
+import moe.rgsekai.sekaitune.ui.replay.cards
+import moe.rgsekai.sekaitune.ui.replay.rememberReplayState
 import moe.rgsekai.sekaitune.utils.NetworkConnectivityObserver
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.viewmodels.LibraryMixViewModel
@@ -341,6 +346,12 @@ fun LibraryMixScreen(
 
     val (spotifySpDc) = rememberPreference(SpotifySpDcKey, defaultValue = "")
     val isSpotifyConnected = remember(spotifySpDc) { spotifySpDc.isNotBlank() }
+    val (accountName) = rememberPreference(AccountNameKey, defaultValue = "")
+
+    val (replayState) = rememberReplayState(active = true)
+    val replayCards = remember(replayState.summary, context) {
+        replayState.summary?.takeUnless { it.isEmpty }?.cards(context).orEmpty()
+    }
 
     val historyEventsCount by database.eventsCount().collectAsState(initial = 0)
     val likedSongsCount by database.likedSongsCount().collectAsState(initial = 0)
@@ -422,6 +433,22 @@ fun LibraryMixScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // 2. Listening Experience Cards at the bottom
+            if (replayCards.isNotEmpty()) {
+                item(key = "library_replay_cards") {
+                    ReplayCardRow(
+                        cards = replayCards,
+                        holder = accountName,
+                        memberSince = replayState.memberSince,
+                        onCardClick = { page ->
+                            navController.navigate("stats")
+                        },
+                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                        contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
+                    )
                 }
             }
 

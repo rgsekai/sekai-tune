@@ -367,7 +367,7 @@ private fun PeriodPicker(selected: ReplayPeriod, onSelect: (ReplayPeriod) -> Uni
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun ReplayCardRow(
+fun ReplayCardRow(
     cards: List<ReplayHeroCard>,
     holder: String,
     memberSince: String?,
