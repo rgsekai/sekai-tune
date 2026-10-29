@@ -146,10 +146,10 @@ fun ReplayCreditCard(
                 )
                 Spacer(Modifier.width(10.dp))
                 Icon(
-                    painter = painterResource(R.drawable.ic_replay_logo),
+                    painter = painterResource(R.drawable.app_icon_small),
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(width = 34.dp, height = 22.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
 
