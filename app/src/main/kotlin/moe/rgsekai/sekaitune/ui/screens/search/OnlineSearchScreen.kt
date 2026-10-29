@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.drop
+import moe.rgsekai.sekaitune.ui.utils.navigateToArtist
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
@@ -296,7 +297,7 @@ fun OnlineSearchScreen(
                                         }
 
                                         is ArtistItem -> {
-                                            navController.navigate("artist/${item.id}")
+                                            navController.navigateToArtist(item.id, item.title, item.thumbnail)
                                             onDismiss()
                                         }
 

@@ -59,6 +59,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import moe.rgsekai.sekaitune.ui.utils.navigateToArtist
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
@@ -241,7 +242,7 @@ fun OnlineSearchResult(
                                 }
 
                                 is ArtistItem -> {
-                                    navController.navigate("artist/${item.id}")
+                                    navController.navigateToArtist(item.id, item.title, item.thumbnail)
                                 }
 
                                 is PlaylistItem -> {

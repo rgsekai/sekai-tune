@@ -75,6 +75,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import moe.rgsekai.sekaitune.ui.utils.navigateToArtist
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
@@ -729,7 +730,7 @@ private fun SuggestedArtistsSection(
                     Modifier
                         .combinedClickable(
                             onClick = {
-                                navController.navigate("artist/${artist.id}")
+                                navController.navigateToArtist(artist.id, artist.title, artist.thumbnail)
                             },
                             onLongClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)

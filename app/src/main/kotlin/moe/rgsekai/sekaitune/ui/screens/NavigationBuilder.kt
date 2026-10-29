@@ -213,11 +213,21 @@ fun NavGraphBuilder.navigationBuilder(
         AlbumScreen(navController, scrollBehavior)
     }
     composable(
-        route = "artist/{artistId}",
+        route = "artist/{artistId}?name={name}&thumbnail={thumbnail}",
         arguments =
             listOf(
                 navArgument("artistId") {
                     type = NavType.StringType
+                },
+                navArgument("name") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("thumbnail") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 },
             ),
     ) {

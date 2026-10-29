@@ -125,6 +125,8 @@ class ArtistViewModel
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         val artistId = savedStateHandle.get<String>("artistId")!!
+        val initialArtistName: String? = savedStateHandle.get<String>("name")?.takeIf { it.isNotBlank() }
+        val initialThumbnail: String? = savedStateHandle.get<String>("thumbnail")?.takeIf { it.isNotBlank() }
         var artistPage by mutableStateOf<ArtistPage?>(null)
         private val eventChannel = Channel<ArtistEvent>(capacity = Channel.BUFFERED)
         val events = eventChannel.receiveAsFlow()

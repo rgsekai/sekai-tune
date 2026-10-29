@@ -75,6 +75,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.work.WorkManager
+import moe.rgsekai.sekaitune.ui.utils.navigateToArtist
 import moe.rgsekai.sekaitune.LocalDatabase
 import moe.rgsekai.sekaitune.LocalDownloadUtil
 import moe.rgsekai.sekaitune.LocalPlayerConnection
@@ -386,7 +387,7 @@ fun SongMenu(
                             .fillMaxWidth()
                             .clickable {
                                 splitArtist.originalArtist?.let { artist ->
-                                    navController.navigate("artist/${artist.id}")
+                                    navController.navigateToArtist(artist.id, artist.name, null)
                                     showSelectArtistDialog = false
                                     onDismiss()
                                 }
