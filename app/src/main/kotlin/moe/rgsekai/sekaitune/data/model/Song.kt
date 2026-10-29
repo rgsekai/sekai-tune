@@ -24,7 +24,26 @@ data class Song(
     val isVideo: Boolean = false,
     val isVideoOrigin: Boolean = isVideo,
     val setVideoId: String? = null,
+    val durationSeconds: Int? = null,
 )
+
+fun moe.rgsekai.sekaitune.models.MediaMetadata.toStatsSong(): Song {
+    return Song(
+        videoId = id,
+        title = title,
+        artist = artists.joinToString { it.name },
+        thumbnailUrl = thumbnailUrl,
+        durationText = if (duration > 0) "${duration / 60}:${(duration % 60).toString().padStart(2, '0')}" else null,
+        artistId = artists.firstOrNull()?.id,
+        artists = artists.map { ArtistRef(name = it.name, browseId = it.id) },
+        albumId = album?.id,
+        albumName = album?.title,
+        isVideo = isMusicVideo,
+        isVideoOrigin = isMusicVideo,
+        setVideoId = setVideoId,
+        durationSeconds = duration,
+    )
+}
 
 fun Song.artworkAt(px: Int): String? = thumbnailUrl.artworkAt(px)
 

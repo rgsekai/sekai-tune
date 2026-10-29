@@ -9,6 +9,9 @@
 
 package moe.rgsekai.sekaitune.playback
 
+import moe.rgsekai.sekaitune.data.model.toStatsSong
+import moe.rgsekai.sekaitune.data.stats.ListeningRecorder
+
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants
 import moe.rgsekai.sekaitune.webdav.WebDavAuth
 import android.app.ActivityManager
@@ -478,6 +481,7 @@ class MusicService :
     private var currentHistoryImmediateAttempted = false
     private var currentHistorySessionQueued = false
     private var historyThresholdJob: Job? = null
+    private var statsProgressJob: Job? = null
     private val pendingHistoryFinalizations = mutableMapOf<String, MutableList<PendingHistoryFinalization>>()
     private val historyRecordingJobs = ConcurrentHashMap<Long, kotlinx.coroutines.Deferred<ImmediateHistoryResult>>()
 
@@ -1262,6 +1266,7 @@ class MusicService :
 
         updateNotification()
         player.repeatMode = REPEAT_MODE_OFF
+        startStatsProgressTicker()
 
         ColdStartTimer.addStage("MusicService onCreate End")
         scope.launch(Dispatchers.IO) {
@@ -5827,6 +5832,26 @@ class MusicService :
                 putExtra(AudioEffect.EXTRA_PACKAGE_NAME, packageName)
             },
         )
+    }
+
+    private fun startStatsProgressTicker() {
+        if (statsProgressJob != null) return
+        statsProgressJob = scope.launch(Dispatchers.Main) {
+            while (isActive) {
+                if (player.isPlaying) {
+                    val meta = player.currentMetadata ?: currentMediaMetadata.value
+                    if (meta != null) {
+                        val durationMs = try {
+                            player.duration.takeIf { it > 0 } ?: (meta.duration.toLong() * 1000L)
+                        } catch (_: Exception) {
+                            meta.duration.toLong() * 1000L
+                        }
+                        ListeningRecorder.onSample(meta.toStatsSong(), durationMs)
+                    }
+                }
+                delay(5_000L)
+            }
+        }
     }
 
     private fun historyThresholdMs(): Long =
