@@ -439,7 +439,7 @@ fun ArtistScreen(
                 .fillMaxSize()
                 .background(pageBgColor),
     ) {
-        val artHeight = (maxWidth / 0.95f).coerceAtMost(maxHeight * 0.55f)
+        val artHeight = (maxWidth / 0.95f).coerceAtMost(maxHeight * 0.6f)
         val heroUrl = appleArt?.heroUrl ?: thumbnail
 
         // Photographic Hero Background & Motion Canvas Video
@@ -641,7 +641,7 @@ fun ArtistScreen(
 
         LazyColumn(
             state = lazyListState,
-            contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+            contentPadding = PaddingValues(bottom = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()),
         ) {
             if (artistPage == null && !showLocal) {
                 // Shimmer loading state
@@ -725,15 +725,14 @@ fun ArtistScreen(
             } else {
                 // Hero Header
                 item(key = "header") {
-                    Column(
+                    Box(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Spacer(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .height((artHeight - 32.dp).coerceAtLeast(systemBarsTopPadding + AppBarHeight)),
+                                    .height((artHeight - 20.dp).coerceAtLeast(systemBarsTopPadding + AppBarHeight)),
                         )
 
                         // Artist title logo or handwritten signature or title text
@@ -770,12 +769,8 @@ fun ArtistScreen(
                                 }
 
                             Column(
+                                modifier = Modifier.align(Alignment.BottomCenter),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 24.dp)
-                                        .padding(bottom = 12.dp),
                             ) {
                                 AsyncImage(
                                     model = request,
@@ -793,9 +788,9 @@ fun ArtistScreen(
                                     },
                                     modifier =
                                         Modifier
-                                            .padding(top = 14.dp, bottom = if (isSignature) 6.dp else 16.dp)
+                                            .padding(top = 14.dp, bottom = if (isSignature) 6.dp else 20.dp)
                                             .layout { measurable, constraints ->
-                                                val widest = constraints.maxWidth * (if (isSignature) 0.65f else 0.82f)
+                                                val widest = constraints.maxWidth * (if (isSignature) 0.574f else 0.82f)
                                                 val height = minOf(widest / aspect, maxLogoHeight.toPx()).roundToInt()
                                                 val width = (height * aspect).roundToInt()
                                                 val placeable = measurable.measure(Constraints.fixed(width, height))
@@ -819,11 +814,11 @@ fun ArtistScreen(
                                                 }
                                             },
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                        color = Color.White.copy(alpha = 0.85f),
                                         textAlign = TextAlign.Center,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(top = 4.dp),
+                                        modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 20.dp),
                                     )
                                 }
                             }
@@ -832,20 +827,18 @@ fun ArtistScreen(
                         if (!logoShown) {
                             Text(
                                 text = artistName ?: stringResource(R.string.unknown_artist),
-                                style = MaterialTheme.typography.headlineLarge,
+                                style = MaterialTheme.typography.displayLarge,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
-                                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
+                                color = Color.White,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
-                                        .padding(horizontal = 24.dp)
-                                        .padding(top = 14.dp, bottom = 16.dp),
+                                        .align(Alignment.BottomCenter)
+                                        .padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 7.dp),
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
 
@@ -867,11 +860,12 @@ fun ArtistScreen(
                                     )
                                 }
                             },
+                            modifier = Modifier.padding(bottom = 22.dp),
                         )
                     }
                 }
 
-                // Action Buttons Row (Subscribe, Shuffle, Radio, and Spotify follow)
+                // Action Buttons Row (Subscribe, Shuffle, Radio, and Spotify follow) - Below Latest Song Banner
                 item(key = "artist_actions") {
                     val hasRadio = !showLocal && artistPage?.artist?.radioEndpoint != null
                     val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
@@ -881,7 +875,7 @@ fun ArtistScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(top = if (topRelease == null) 8.dp else 4.dp, bottom = 8.dp),
+                                .padding(bottom = 22.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Row(
@@ -1593,6 +1587,13 @@ fun ArtistScreen(
                                                 .orEmpty()
                                                 .isNotBlank()
                                     ),
+                            hasRadio = !showLocal && artistPage?.artist?.radioEndpoint != null,
+                            onStartRadio = {
+                                artistPage?.artist?.radioEndpoint?.let { radioEndpoint ->
+                                    playerConnection.playQueue(YouTubeQueue(radioEndpoint))
+                                }
+                                menuState.dismiss()
+                            },
                             onAction = { action ->
                                 viewModel.onAction(action)
                                 menuState.dismiss()
@@ -1629,8 +1630,12 @@ private fun ArtistOverflowMenu(
     isBlocked: Boolean,
     blockActionEnabled: Boolean,
     onAction: (ArtistAction) -> Unit,
+    hasRadio: Boolean = false,
+    onStartRadio: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val totalCount = ArtistOverflowMenuItemCount + (if (hasRadio && onStartRadio != null) 1 else 0)
+    var currentIndex = 0
     Column(
         modifier =
             modifier
@@ -1638,25 +1643,34 @@ private fun ArtistOverflowMenu(
                 .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
+        if (hasRadio && onStartRadio != null) {
+            ArtistOverflowMenuItem(
+                text = stringResource(R.string.radio),
+                iconRes = R.drawable.radio,
+                index = currentIndex++,
+                count = totalCount,
+                onClick = onStartRadio,
+            )
+        }
         ArtistOverflowMenuItem(
             text = stringResource(R.string.share),
             iconRes = R.drawable.share,
-            index = 0,
-            count = ArtistOverflowMenuItemCount,
+            index = currentIndex++,
+            count = totalCount,
             onClick = { onAction(ArtistAction.Share) },
         )
         ArtistOverflowMenuItem(
             text = stringResource(R.string.copy_link),
             iconRes = R.drawable.copy,
-            index = 1,
-            count = ArtistOverflowMenuItemCount,
+            index = currentIndex++,
+            count = totalCount,
             onClick = { onAction(ArtistAction.CopyLink) },
         )
         ArtistOverflowMenuItem(
             text = stringResource(if (isBlocked) R.string.unblock_artist else R.string.block_artist),
             iconRes = R.drawable.block,
-            index = 2,
-            count = ArtistOverflowMenuItemCount,
+            index = currentIndex++,
+            count = totalCount,
             enabled = blockActionEnabled,
             onClick = { onAction(ArtistAction.ToggleBlock) },
         )
@@ -1935,7 +1949,7 @@ private fun TopReleaseCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .padding(horizontal = 16.dp)
                 .clip(shape)
                 .background(Color.White.copy(alpha = 0.08f), shape)
                 .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
@@ -2117,7 +2131,7 @@ private fun ArtistAboutSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp),
+                        modifier = Modifier.padding(top = 6.dp),
                     )
                 }
             }
