@@ -704,10 +704,10 @@ private fun drawRuns(
  */
 internal fun drawLogo(canvas: Canvas, context: Context, right: Float, baseline: Float) {
     val logo = runCatching {
-        ResourcesCompat.getDrawable(context.resources, R.drawable.ic_replay_logo, null)
+        ResourcesCompat.getDrawable(context.resources, R.drawable.app_icon_small, null)
     }.getOrNull() ?: return
     val left = right - LOGO_W
-    val top = baseline - LOGO_H
+    val top = baseline - LOGO_H + 4f
     logo.setTint(0xE6FFFFFF.toInt())
     logo.setBounds(left.toInt(), top.toInt(), (left + LOGO_W).toInt(), (top + LOGO_H).toInt())
     logo.draw(canvas)
@@ -771,8 +771,8 @@ private const val POSTER_H = 1920
 private const val MARGIN = 72f
 
 /** The mark's drawn size. 730×484 in the vector, so this keeps its proportions. */
-private const val LOGO_W = 66f
-private const val LOGO_H = 44f
+private const val LOGO_W = 46f
+private const val LOGO_H = 46f
 private const val LOGO_GAP = 20f
 
 /** The width type and artwork are laid out in. */
