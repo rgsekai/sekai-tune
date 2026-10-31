@@ -1973,7 +1973,7 @@ private fun V7PlayerBackdrop(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
-                        .fillMaxHeight(0.55f)
+                        .fillMaxHeight(0.68f)
                         .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                         .drawWithContent {
                             drawContent()
@@ -1981,9 +1981,13 @@ private fun V7PlayerBackdrop(
                                 brush = Brush.verticalGradient(
                                     colorStops = arrayOf(
                                         0.00f to Color.Black,
-                                        0.40f to Color.Black,
-                                        0.65f to Color.Black.copy(alpha = 0.70f),
-                                        0.85f to Color.Black.copy(alpha = 0.25f),
+                                        0.25f to Color.Black,
+                                        0.40f to Color.Black.copy(alpha = 0.94f),
+                                        0.55f to Color.Black.copy(alpha = 0.80f),
+                                        0.70f to Color.Black.copy(alpha = 0.55f),
+                                        0.82f to Color.Black.copy(alpha = 0.30f),
+                                        0.92f to Color.Black.copy(alpha = 0.12f),
+                                        0.97f to Color.Black.copy(alpha = 0.04f),
                                         1.00f to Color.Transparent,
                                     ),
                                 ),
