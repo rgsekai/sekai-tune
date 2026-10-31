@@ -24,6 +24,9 @@ import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.LayerBackdrop
 import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
 import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.layerBackdrop
 import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.rememberLayerBackdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.drawPlainBackdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.effects.blur
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -1812,7 +1815,7 @@ private fun V7PlayerBackdrop(
         }
     val shouldApplyBlur = !disableBlur
 
-    val isZeroBlur = themeBackdropBlurEnabled && themeBackdropBlurStrength == 0
+    val v7LiveBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
         modifier =
@@ -1846,212 +1849,172 @@ private fun V7PlayerBackdrop(
                         Box(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // 1. Theme Backdrop: Blur OR Glow Animated OR Static Color
-                if (themeBackdropBlurEnabled) {
-                    if (themeBackdropBlurStrength > 0) {
-                        val backdropBlurRadiusDp = if (shouldApplyBlur) {
-                            (45f + themeBackdropBlurStrength * 0.75f).coerceIn(45f, 120f).dp
-                        } else {
-                            0.dp
-                        }
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            if (canvasRenderMode !is CanvasRenderMode.None) {
-                                CanvasArtworkPlayer(
-                                    renderMode = canvasRenderMode,
-                                    isPlaying = isPlaying,
-                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .graphicsLayer {
-                                            scaleX = 1.20f
-                                            scaleY = 1.20f
-                                        }
-                                        .let {
-                                            if (backdropBlurRadiusDp > 0.dp) it.blur(backdropBlurRadiusDp) else it
-                                        },
+                // 1. Theme Backdrop: Glow Animated OR Static Color (Disabled when Blur mode is active)
+                if (!themeBackdropBlurEnabled) {
+                    if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
+                        AnimatedContent(
+                            targetState = effectiveColors,
+                            transitionSpec = {
+                                fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                            },
+                            label = "GlowAnimatedBackdrop",
+                        ) { colors ->
+                            if (colors.isNotEmpty()) {
+                                val infiniteTransition = rememberInfiniteTransition(label = "BackdropGlowAnim")
+                                val progress by infiniteTransition.animateFloat(
+                                    initialValue = 0f,
+                                    targetValue = 1f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(22000, easing = LinearEasing),
+                                        repeatMode = RepeatMode.Restart,
+                                    ),
+                                    label = "glowProgress",
                                 )
-                            } else if (sharpArtworkModel != null) {
-                                AsyncImage(
-                                    model = sharpArtworkRequest,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    alignment = Alignment.TopCenter,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .graphicsLayer {
-                                            scaleX = 1.15f
-                                            scaleY = 1.15f
-                                        }
-                                        .let {
-                                            if (backdropBlurRadiusDp > 0.dp) it.blur(backdropBlurRadiusDp) else it
-                                        },
-                                )
-                            }
-                        }
-                    }
-                } else if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
-                    AnimatedContent(
-                        targetState = effectiveColors,
-                        transitionSpec = {
-                            fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
-                        },
-                        label = "GlowAnimatedBackdrop",
-                    ) { colors ->
-                        if (colors.isNotEmpty()) {
-                            val infiniteTransition = rememberInfiniteTransition(label = "BackdropGlowAnim")
-                            val progress by infiniteTransition.animateFloat(
-                                initialValue = 0f,
-                                targetValue = 1f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(22000, easing = LinearEasing),
-                                    repeatMode = RepeatMode.Restart,
-                                ),
-                                label = "glowProgress",
-                            )
 
-                            fun rotatedColorAt(index: Int): Color {
-                                val size = colors.size
-                                val idx = index.toFloat() + progress * size
-                                val a = kotlin.math.floor(idx).toInt() % size
-                                val b = (a + 1) % size
-                                val frac = idx - kotlin.math.floor(idx)
-                                return androidx.compose.ui.graphics.lerp(
-                                    colors.getOrElse(a) { Color.DarkGray },
-                                    colors.getOrElse(b) { Color.DarkGray },
-                                    frac,
-                                )
-                            }
+                                fun rotatedColorAt(index: Int): Color {
+                                    val size = colors.size
+                                    val idx = index.toFloat() + progress * size
+                                    val a = kotlin.math.floor(idx).toInt() % size
+                                    val b = (a + 1) % size
+                                    val frac = idx - kotlin.math.floor(idx)
+                                    return androidx.compose.ui.graphics.lerp(
+                                        colors.getOrElse(a) { Color.DarkGray },
+                                        colors.getOrElse(b) { Color.DarkGray },
+                                        frac,
+                                    )
+                                }
 
-                            fun oscillate(
-                                min: Float,
-                                max: Float,
-                                phase: Float,
-                                speed: Float = 1f,
-                            ): Float {
-                                val v = kotlin.math.sin(2f * kotlin.math.PI.toFloat() * (progress * speed + phase)).toFloat()
-                                return min + (max - min) * ((v + 1f) * 0.5f)
-                            }
+                                fun oscillate(
+                                    min: Float,
+                                    max: Float,
+                                    phase: Float,
+                                    speed: Float = 1f,
+                                ): Float {
+                                    val v = kotlin.math.sin(2f * kotlin.math.PI.toFloat() * (progress * speed + phase)).toFloat()
+                                    return min + (max - min) * ((v + 1f) * 0.5f)
+                                }
 
-                            val color1 = rotatedColorAt(0)
-                            val color2 = rotatedColorAt(1)
-                            val color3 = rotatedColorAt(2)
-                            val color4 = rotatedColorAt(3)
-                            val color5 = rotatedColorAt(4)
-                            val color6 = rotatedColorAt(5)
+                                val color1 = rotatedColorAt(0)
+                                val color2 = rotatedColorAt(1)
+                                val color3 = rotatedColorAt(2)
+                                val color4 = rotatedColorAt(3)
+                                val color5 = rotatedColorAt(4)
+                                val color6 = rotatedColorAt(5)
 
-                            val o1x = oscillate(0.0f, 1.0f, 0.00f, 1.0f)
-                            val o1y = oscillate(0.2f, 0.7f, 0.07f, 1.0f)
-                            val r1 = oscillate(0.8f, 1.6f, 0.12f, 1.0f)
+                                val o1x = oscillate(0.0f, 1.0f, 0.00f, 1.0f)
+                                val o1y = oscillate(0.2f, 0.7f, 0.07f, 1.0f)
+                                val r1 = oscillate(0.8f, 1.6f, 0.12f, 1.0f)
 
-                            val o2x = oscillate(1.0f, 0.0f, 0.20f, 1.0f)
-                            val o2y = oscillate(0.4f, 1.0f, 0.25f, 1.0f)
-                            val r2 = oscillate(0.7f, 1.5f, 0.18f, 1.0f)
+                                val o2x = oscillate(1.0f, 0.0f, 0.20f, 1.0f)
+                                val o2y = oscillate(0.4f, 1.0f, 0.25f, 1.0f)
+                                val r2 = oscillate(0.7f, 1.5f, 0.18f, 1.0f)
 
-                            val o3x = oscillate(0.2f, 0.8f, 0.33f, 1.0f)
-                            val o3y = oscillate(0.7f, 0.3f, 0.36f, 1.0f)
-                            val r3 = oscillate(0.6f, 1.4f, 0.29f, 1.0f)
+                                val o3x = oscillate(0.2f, 0.8f, 0.33f, 1.0f)
+                                val o3y = oscillate(0.7f, 0.3f, 0.36f, 1.0f)
+                                val r3 = oscillate(0.6f, 1.4f, 0.29f, 1.0f)
 
-                            val o4x = oscillate(0.3f, 0.7f, 0.44f, 1.0f)
-                            val o4y = oscillate(0.3f, 0.9f, 0.41f, 1.0f)
-                            val r4 = oscillate(0.9f, 1.7f, 0.47f, 1.0f)
+                                val o4x = oscillate(0.3f, 0.7f, 0.44f, 1.0f)
+                                val o4y = oscillate(0.3f, 0.9f, 0.41f, 1.0f)
+                                val r4 = oscillate(0.9f, 1.7f, 0.47f, 1.0f)
 
-                            val o5x = oscillate(0.5f, 0.2f, 0.55f, 1.0f)
-                            val o5y = oscillate(0.5f, 1.0f, 0.51f, 1.0f)
-                            val r5 = oscillate(0.7f, 1.5f, 0.58f, 1.0f)
+                                val o5x = oscillate(0.5f, 0.2f, 0.55f, 1.0f)
+                                val o5y = oscillate(0.5f, 1.0f, 0.51f, 1.0f)
+                                val r5 = oscillate(0.7f, 1.5f, 0.58f, 1.0f)
 
-                            val o6x = oscillate(0.1f, 0.9f, 0.66f, 1.0f)
-                            val o6y = oscillate(0.6f, 0.9f, 0.62f, 1.0f)
-                            val r6 = oscillate(0.8f, 1.8f, 0.69f, 1.0f)
+                                val o6x = oscillate(0.1f, 0.9f, 0.66f, 1.0f)
+                                val o6y = oscillate(0.6f, 0.9f, 0.62f, 1.0f)
+                                val r6 = oscillate(0.8f, 1.8f, 0.69f, 1.0f)
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .drawWithContent {
-                                        val width = size.width
-                                        val height = size.height
-                                        val baseColor = Color(0xFF070707)
-
-                                        val brush1 = Brush.radialGradient(
-                                            colors = listOf(color1.copy(alpha = 0.85f), color1.copy(alpha = 0.45f), Color.Transparent),
-                                            center = Offset(width * o1x, height * o1y),
-                                            radius = width * r1,
-                                        )
-                                        val brush2 = Brush.radialGradient(
-                                            colors = listOf(color2.copy(alpha = 0.80f), color2.copy(alpha = 0.40f), Color.Transparent),
-                                            center = Offset(width * o2x, height * o2y),
-                                            radius = width * r2,
-                                        )
-                                        val brush3 = Brush.radialGradient(
-                                            colors = listOf(color3.copy(alpha = 0.75f), color3.copy(alpha = 0.35f), Color.Transparent),
-                                            center = Offset(width * o3x, height * o3y),
-                                            radius = width * r3,
-                                        )
-                                        val brush4 = Brush.radialGradient(
-                                            colors = listOf(color4.copy(alpha = 0.70f), color4.copy(alpha = 0.30f), Color.Transparent),
-                                            center = Offset(width * o4x, height * o4y),
-                                            radius = width * r4,
-                                        )
-                                        val brush5 = Brush.radialGradient(
-                                            colors = listOf(color5.copy(alpha = 0.65f), color5.copy(alpha = 0.25f), Color.Transparent),
-                                            center = Offset(width * o5x, height * o5y),
-                                            radius = width * r5,
-                                        )
-                                        val brush6 = Brush.radialGradient(
-                                            colors = listOf(color6.copy(alpha = 0.60f), color6.copy(alpha = 0.20f), Color.Transparent),
-                                            center = Offset(width * o6x, height * o6y),
-                                            radius = width * r6,
-                                        )
-
-                                        drawRect(color = baseColor)
-                                        drawRect(brush = brush1)
-                                        drawRect(brush = brush2)
-                                        drawRect(brush = brush3)
-                                        drawRect(brush = brush4)
-                                        drawRect(brush = brush5)
-                                        drawRect(brush = brush6)
-                                    },
-                            )
-                        }
-                    }
-                } else {
-                    // Static Backdrop Effect (using Color Extraction from album art & comfortable Coloring logic)
-                    AnimatedContent(
-                        targetState = effectiveColors,
-                        transitionSpec = {
-                            fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
-                        },
-                        label = "StaticColoringBackdrop",
-                    ) { colors ->
-                        if (colors.isNotEmpty()) {
-                            val baseColor = PlayerBackgroundColorUtils.ensureComfortableColor(colors.first(), minBrightness = 0.35f, maxBrightness = 0.75f)
-                            val gradientStops = PlayerBackgroundColorUtils.buildColoringStops(baseColor)
-                            Box(modifier = Modifier.fillMaxSize()) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(baseColor),
+                                        .drawWithContent {
+                                            val width = size.width
+                                            val height = size.height
+                                            val baseColor = Color(0xFF070707)
+
+                                            val brush1 = Brush.radialGradient(
+                                                colors = listOf(color1.copy(alpha = 0.85f), color1.copy(alpha = 0.45f), Color.Transparent),
+                                                center = Offset(width * o1x, height * o1y),
+                                                radius = width * r1,
+                                            )
+                                            val brush2 = Brush.radialGradient(
+                                                colors = listOf(color2.copy(alpha = 0.80f), color2.copy(alpha = 0.40f), Color.Transparent),
+                                                center = Offset(width * o2x, height * o2y),
+                                                radius = width * r2,
+                                            )
+                                            val brush3 = Brush.radialGradient(
+                                                colors = listOf(color3.copy(alpha = 0.75f), color3.copy(alpha = 0.35f), Color.Transparent),
+                                                center = Offset(width * o3x, height * o3y),
+                                                radius = width * r3,
+                                            )
+                                            val brush4 = Brush.radialGradient(
+                                                colors = listOf(color4.copy(alpha = 0.70f), color4.copy(alpha = 0.30f), Color.Transparent),
+                                                center = Offset(width * o4x, height * o4y),
+                                                radius = width * r4,
+                                            )
+                                            val brush5 = Brush.radialGradient(
+                                                colors = listOf(color5.copy(alpha = 0.65f), color5.copy(alpha = 0.25f), Color.Transparent),
+                                                center = Offset(width * o5x, height * o5y),
+                                                radius = width * r5,
+                                            )
+                                            val brush6 = Brush.radialGradient(
+                                                colors = listOf(color6.copy(alpha = 0.60f), color6.copy(alpha = 0.20f), Color.Transparent),
+                                                center = Offset(width * o6x, height * o6y),
+                                                radius = width * r6,
+                                            )
+
+                                            drawRect(color = baseColor)
+                                            drawRect(brush = brush1)
+                                            drawRect(brush = brush2)
+                                            drawRect(brush = brush3)
+                                            drawRect(brush = brush4)
+                                            drawRect(brush = brush5)
+                                            drawRect(brush = brush6)
+                                        },
                                 )
+                            }
+                        }
+                    } else {
+                        // Static Backdrop Effect (using Color Extraction from album art & comfortable Coloring logic)
+                        AnimatedContent(
+                            targetState = effectiveColors,
+                            transitionSpec = {
+                                fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                            },
+                            label = "StaticColoringBackdrop",
+                        ) { colors ->
+                            if (colors.isNotEmpty()) {
+                                val baseColor = PlayerBackgroundColorUtils.ensureComfortableColor(colors.first(), minBrightness = 0.35f, maxBrightness = 0.75f)
+                                val gradientStops = PlayerBackgroundColorUtils.buildColoringStops(baseColor)
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(baseColor),
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Brush.verticalGradient(colorStops = gradientStops)),
+                                    )
+                                }
+                            } else {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Brush.verticalGradient(colorStops = gradientStops)),
+                                        .background(Color.Black),
                                 )
                             }
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black),
-                            )
                         }
                     }
                 }
 
-                // 2. Banner Live Canvas Video or Top Banner Artwork with smooth blend endings
-                val bannerModifier = if (isZeroBlur) {
-                    Modifier.fillMaxSize()
+                // 2. Banner Live Canvas Video or Top Banner Artwork
+                val bannerModifier = if (themeBackdropBlurEnabled) {
+                    Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(v7LiveBackdrop)
                 } else {
                     Modifier
                         .align(Alignment.TopCenter)
@@ -2086,11 +2049,7 @@ private fun V7PlayerBackdrop(
                             renderMode = canvasRenderMode,
                             isPlaying = isPlaying,
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .let {
-                                    if (shouldApplyBlur && !isZeroBlur) it.blur(3.dp) else it
-                                },
+                            modifier = Modifier.fillMaxSize(),
                         )
                     } else {
                         AnimatedContent(
@@ -2106,6 +2065,7 @@ private fun V7PlayerBackdrop(
                                     model = sharpArtworkRequest,
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
+                                    alignment = Alignment.TopCenter,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
@@ -2113,8 +2073,44 @@ private fun V7PlayerBackdrop(
                     }
                 }
 
-                // 3. Subtle scrim overlay: gives clean contrast for white buttons and text while preserving rich background colors
-                if (!isZeroBlur) {
+                // 3. Real-Time Backdrop Blur Overlay (Sampled directly from the single live layer via Liquid Glass logic)
+                if (themeBackdropBlurEnabled && themeBackdropBlurStrength > 0) {
+                    val blurRadiusPx = with(LocalDensity.current) {
+                        (themeBackdropBlurStrength * 0.8f).coerceIn(4f, 80f).dp.toPx()
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        colorStops = arrayOf(
+                                            0.00f to Color.Transparent,
+                                            0.40f to Color.Transparent,
+                                            0.52f to Color.Black.copy(alpha = 0.25f),
+                                            0.64f to Color.Black.copy(alpha = 0.65f),
+                                            0.76f to Color.Black.copy(alpha = 0.90f),
+                                            0.85f to Color.Black,
+                                            1.00f to Color.Black,
+                                        ),
+                                    ),
+                                    blendMode = BlendMode.DstIn,
+                                )
+                            }
+                            .drawPlainBackdrop(
+                                backdrop = v7LiveBackdrop,
+                                shape = { RectangleShape },
+                                effects = {
+                                    blur(blurRadiusPx)
+                                },
+                            ),
+                    )
+                }
+
+                // 4. Subtle scrim overlay: only for Glow/Static to ensure button readability without tinting blur
+                if (!themeBackdropBlurEnabled) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
