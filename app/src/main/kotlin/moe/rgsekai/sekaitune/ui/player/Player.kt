@@ -1816,7 +1816,7 @@ private fun V7PlayerBackdrop(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(backdropPalette.bottom),
+                .background(if (themeBackdropBlurEnabled) Color.Black else backdropPalette.bottom),
     ) {
         AnimatedContent(
             targetState = backdropState,
@@ -1846,61 +1846,34 @@ private fun V7PlayerBackdrop(
             ) {
                 // 1. Theme Backdrop: Blur mode OR Glow Animated / Static Color mode
                 if (themeBackdropBlurEnabled) {
-                    // Backdrop Blur Effect with smooth endings (fading out smoothly at the exact same boundary)
-                    val blurRadiusDp = (themeBackdropBlurStrength * 0.8f).coerceIn(8f, 90f).dp
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.68f)
-                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                            .drawWithContent {
-                                drawContent()
-                                drawRect(
-                                    brush = Brush.verticalGradient(
-                                        colorStops = arrayOf(
-                                            0.00f to Color.Black,
-                                            0.25f to Color.Black,
-                                            0.40f to Color.Black.copy(alpha = 0.94f),
-                                            0.55f to Color.Black.copy(alpha = 0.80f),
-                                            0.70f to Color.Black.copy(alpha = 0.55f),
-                                            0.82f to Color.Black.copy(alpha = 0.30f),
-                                            0.92f to Color.Black.copy(alpha = 0.12f),
-                                            0.97f to Color.Black.copy(alpha = 0.04f),
-                                            1.00f to Color.Transparent,
-                                        ),
-                                    ),
-                                    blendMode = BlendMode.DstIn,
-                                )
-                            },
-                    ) {
-                        AnimatedContent(
-                            targetState = backdropState,
-                            transitionSpec = {
-                                fadeIn(tween(900)) togetherWith fadeOut(tween(900))
-                            },
-                            label = "BackdropBlurArtwork",
-                            modifier = Modifier.fillMaxSize(),
-                        ) { targetBackdrop ->
-                            if (sharpArtworkModel != null) {
-                                val blurModifier = if (shouldApplyBlur) {
-                                    Modifier
-                                        .fillMaxSize()
-                                        .graphicsLayer {
-                                            scaleX = 1.15f
-                                            scaleY = 1.15f
-                                        }
-                                        .blur(blurRadiusDp)
-                                } else {
-                                    Modifier.fillMaxSize()
-                                }
-                                AsyncImage(
-                                    model = sharpArtworkRequest,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = blurModifier,
-                                )
+                    // Fullscreen real blurred album artwork backdrop
+                    val blurRadiusDp = (themeBackdropBlurStrength * 0.9f).coerceIn(10f, 100f).dp
+                    AnimatedContent(
+                        targetState = backdropState,
+                        transitionSpec = {
+                            fadeIn(tween(900)) togetherWith fadeOut(tween(900))
+                        },
+                        label = "BackdropBlurArtwork",
+                        modifier = Modifier.fillMaxSize(),
+                    ) { targetBackdrop ->
+                        if (sharpArtworkModel != null) {
+                            val blurModifier = if (shouldApplyBlur) {
+                                Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleX = 1.25f
+                                        scaleY = 1.25f
+                                    }
+                                    .blur(blurRadiusDp)
+                            } else {
+                                Modifier.fillMaxSize()
                             }
+                            AsyncImage(
+                                model = sharpArtworkRequest,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = blurModifier,
+                            )
                         }
                     }
                 } else if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
