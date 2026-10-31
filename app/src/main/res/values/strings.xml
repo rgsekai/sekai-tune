@@ -463,6 +463,10 @@
     <string name="max_supported_refresh_rate">Max supported: %1$d Hz</string>
     <string name="blur_intensity">Blur intensity</string>
     <string name="blur_intensity_value">%1$d dp</string>
+    <string name="theme_backdrop">Theme backdrop</string>
+    <string name="theme_backdrop_desc">Choose the background effect for the immersive player</string>
+    <string name="theme_backdrop_glow_animated">Glow Animated</string>
+    <string name="theme_backdrop_static">Static</string>
     <string name="album_backdrop">Backdrop blur</string>
     <string name="album_backdrop_desc">Show artwork as blurred backdrop on the player</string>
     <string name="backdrop_blur_amount">Backdrop blur amount</string>

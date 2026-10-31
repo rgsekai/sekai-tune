@@ -83,6 +83,13 @@ val BlurRadiusKey = floatPreferencesKey("blurRadius")
 // Backdrop blur for detail pages
 val BackdropEnabledKey = booleanPreferencesKey("backdropEnabled")
 val BackdropBlurAmountKey = intPreferencesKey("backdropBlurAmount")
+
+enum class ThemeBackdropMode {
+    GLOW_ANIMATED,
+    STATIC,
+}
+
+val ThemeBackdropModeKey = stringPreferencesKey("themeBackdropMode")
 val MiniPlayerLastAnchorKey = intPreferencesKey("miniPlayerLastAnchor")
 val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
 

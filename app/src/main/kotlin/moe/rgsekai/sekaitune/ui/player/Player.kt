@@ -200,6 +200,9 @@ import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
 import moe.rgsekai.sekaitune.constants.SliderStyle
 import moe.rgsekai.sekaitune.constants.SliderStyleKey
+import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
+import moe.rgsekai.sekaitune.constants.ThemeBackdropModeKey
+import moe.rgsekai.sekaitune.ui.theme.PlayerBackgroundColorUtils
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadiusKey
 import moe.rgsekai.sekaitune.di.LyricsHelperEntryPoint
 import moe.rgsekai.sekaitune.lyrics.LyricsFetchManager
@@ -356,8 +359,7 @@ fun BottomSheetPlayer(
 
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
     val (blurRadius) = rememberPreference(BlurRadiusKey, 48f)
-    val (backdropEnabled) = rememberPreference(BackdropEnabledKey, defaultValue = true)
-    val (backdropBlurAmount) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
+    val (themeBackdropMode) = rememberEnumPreference(ThemeBackdropModeKey, defaultValue = ThemeBackdropMode.GLOW_ANIMATED)
     val (showCodecOnPlayer) = rememberPreference(booleanPreferencesKey("show_codec_on_player"), false)
 
     val playerButtonsStyle by rememberEnumPreference(
@@ -1236,7 +1238,7 @@ fun BottomSheetPlayer(
                                     canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
                                     isPlaying = isPlaying,
                                     disableBlur = disableBlur,
-                                    backdropBlurAmount = backdropBlurAmount,
+                                    themeBackdropMode = themeBackdropMode,
                                     gradientColors = gradientColors,
                                     label = "v7BackdropLandscape",
                                 )
@@ -1343,7 +1345,7 @@ fun BottomSheetPlayer(
                                     canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
                                     isPlaying = isPlaying,
                                     disableBlur = disableBlur,
-                                    backdropBlurAmount = backdropBlurAmount,
+                                    themeBackdropMode = themeBackdropMode,
                                     gradientColors = gradientColors,
                                     label = "v7BackdropPortrait",
                                 )
@@ -1638,7 +1640,7 @@ private fun V7PlayerBackdrop(
     canvasFallbackUrl: String?,
     isPlaying: Boolean,
     disableBlur: Boolean,
-    backdropBlurAmount: Int,
+    themeBackdropMode: ThemeBackdropMode = ThemeBackdropMode.GLOW_ANIMATED,
     gradientColors: List<Color> = emptyList(),
     label: String,
     modifier: Modifier = Modifier,
@@ -1833,13 +1835,14 @@ private fun V7PlayerBackdrop(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 // 1. Ambient Glow Animated Colorful Backdrop (Powered by Sekai Tune's native palette & animation)
-                AnimatedContent(
-                    targetState = effectiveColors,
-                    transitionSpec = {
-                        fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
-                    },
-                    label = "GlowAnimatedBackdrop",
-                ) { colors ->
+                if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
+                    AnimatedContent(
+                        targetState = effectiveColors,
+                        transitionSpec = {
+                            fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                        },
+                        label = "GlowAnimatedBackdrop",
+                    ) { colors ->
                     if (colors.isNotEmpty()) {
                         val infiniteTransition = rememberInfiniteTransition(label = "BackdropGlowAnim")
                         val progress by infiniteTransition.animateFloat(
@@ -1952,19 +1955,41 @@ private fun V7PlayerBackdrop(
                                     drawRect(brush = brush4)
                                     drawRect(brush = brush5)
                                     drawRect(brush = brush6)
-
-                                    // Soft overall darkening for text & controls readability
-                                    drawRect(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.Black.copy(alpha = 0.15f),
-                                                Color.Black.copy(alpha = 0.35f),
-                                                Color.Black.copy(alpha = 0.55f),
-                                            ),
-                                        ),
-                                    )
                                 },
                         )
+                    }
+                }
+                } else {
+                    // Static Backdrop Effect (using Color Extraction from album art & comfortable Coloring logic)
+                    AnimatedContent(
+                        targetState = effectiveColors,
+                        transitionSpec = {
+                            fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                        },
+                        label = "StaticColoringBackdrop",
+                    ) { colors ->
+                        if (colors.isNotEmpty()) {
+                            val baseColor = PlayerBackgroundColorUtils.ensureComfortableColor(colors.first(), minBrightness = 0.35f, maxBrightness = 0.75f)
+                            val gradientStops = PlayerBackgroundColorUtils.buildColoringStops(baseColor)
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(baseColor),
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Brush.verticalGradient(colorStops = gradientStops)),
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black),
+                            )
+                        }
                     }
                 }
 
@@ -2027,27 +2052,18 @@ private fun V7PlayerBackdrop(
                     }
                 }
 
-                // Base uniform dimming layer
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.15f)),
-                )
-
-                // Dark gradient scrim overlay: highlights buttons and text with high contrast
+                // Subtle scrim overlay: gives clean contrast for white buttons and text while preserving rich background colors
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
                                 colorStops = arrayOf(
-                                    0.00f to Color.Black.copy(alpha = 0.45f),
-                                    0.15f to Color.Black.copy(alpha = 0.15f),
-                                    0.35f to Color.Transparent,
-                                    0.55f to Color.Transparent,
-                                    0.72f to Color.Black.copy(alpha = 0.30f),
-                                    0.88f to Color.Black.copy(alpha = 0.55f),
-                                    1.00f to Color.Black.copy(alpha = 0.75f),
+                                    0.00f to Color.Black.copy(alpha = 0.25f),
+                                    0.20f to Color.Transparent,
+                                    0.60f to Color.Transparent,
+                                    0.82f to Color.Black.copy(alpha = 0.20f),
+                                    1.00f to Color.Black.copy(alpha = 0.40f),
                                 ),
                             ),
                         ),
