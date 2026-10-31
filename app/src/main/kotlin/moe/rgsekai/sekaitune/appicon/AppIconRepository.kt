@@ -113,7 +113,7 @@ class AppIconRepository
                         }
                 }.getOrDefault(emptyList())
 
-            return buildList(generatedIcons.size + 1) {
+            return buildList(generatedIcons.size + 5) {
                 add(
                     AppIcon(
                         id = DefaultIconId,
@@ -123,6 +123,51 @@ class AppIconRepository
                         previewDrawableResId = R.drawable.sekai_tune,
                         aliasClassName = "${context.packageName}.launcher.DefaultIconAlias",
                         isDefault = true,
+                    ),
+                )
+                
+                add(
+                    AppIcon(
+                        id = "liquid_glass",
+                        name = "Liquid Glass",
+                        author = "BitChord",
+                        githubAuthorUrl = null,
+                        previewDrawableResId = R.drawable.ic_liquid_glass,
+                        aliasClassName = "${context.packageName}.launcher.LiquidGlassAlias",
+                        isDefault = false,
+                    ),
+                )
+                add(
+                    AppIcon(
+                        id = "liquid_glass_dark",
+                        name = "Liquid Glass Dark",
+                        author = "BitChord",
+                        githubAuthorUrl = null,
+                        previewDrawableResId = R.drawable.ic_liquid_glass_dark,
+                        aliasClassName = "${context.packageName}.launcher.LiquidGlassDarkAlias",
+                        isDefault = false,
+                    ),
+                )
+                add(
+                    AppIcon(
+                        id = "liquid_glass_clear_dark",
+                        name = "Liquid Glass Clear Dark",
+                        author = "BitChord",
+                        githubAuthorUrl = null,
+                        previewDrawableResId = R.drawable.ic_liquid_glass_clear_dark,
+                        aliasClassName = "${context.packageName}.launcher.LiquidGlassClearDarkAlias",
+                        isDefault = false,
+                    ),
+                )
+                add(
+                    AppIcon(
+                        id = "liquid_glass_clear",
+                        name = "Liquid Glass Clear",
+                        author = "BitChord",
+                        githubAuthorUrl = null,
+                        previewDrawableResId = R.drawable.ic_liquid_glass_clear,
+                        aliasClassName = "${context.packageName}.launcher.LiquidGlassClearAlias",
+                        isDefault = false,
                     ),
                 )
                 addAll(generatedIcons)

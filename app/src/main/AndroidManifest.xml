@@ -205,6 +205,82 @@
                 android:resource="@xml/shortcuts" />
         </activity-alias>
 
+        <activity-alias
+            android:name="moe.rgsekai.sekaitune.launcher.LiquidGlassAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_liquid_glass"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name="moe.rgsekai.sekaitune.launcher.LiquidGlassDarkAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_dark"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_liquid_glass_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name="moe.rgsekai.sekaitune.launcher.LiquidGlassClearDarkAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_clear_dark"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_liquid_glass_clear_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name="moe.rgsekai.sekaitune.launcher.LiquidGlassClearAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_clear"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_liquid_glass_clear"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
         <activity
             android:name=".PlayShortcutActivity"
             android:theme="@style/Theme.Sekai.PlayShortcut"
