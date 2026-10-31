@@ -1812,11 +1812,13 @@ private fun V7PlayerBackdrop(
         }
     val shouldApplyBlur = !disableBlur
 
+    val isZeroBlur = themeBackdropBlurEnabled && themeBackdropBlurStrength == 0
+
     BoxWithConstraints(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(if (themeBackdropBlurEnabled) Color.Black else backdropPalette.bottom),
+                .background(backdropPalette.bottom),
     ) {
         AnimatedContent(
             targetState = backdropState,
@@ -1844,16 +1846,59 @@ private fun V7PlayerBackdrop(
                         Box(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // 1. Theme Backdrop: Glow Animated OR Static Color mode (Disabled if Blur is enabled)
-                if (!themeBackdropBlurEnabled) {
-                    if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
-                        AnimatedContent(
-                            targetState = effectiveColors,
-                            transitionSpec = {
-                                fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
-                            },
-                            label = "GlowAnimatedBackdrop",
-                        ) { colors ->
+                // 1. Theme Backdrop: Blur OR Glow Animated OR Static Color
+                if (themeBackdropBlurEnabled) {
+                    if (themeBackdropBlurStrength > 0) {
+                        val backdropBlurRadiusDp = if (shouldApplyBlur) {
+                            (45f + themeBackdropBlurStrength * 0.75f).coerceIn(45f, 120f).dp
+                        } else {
+                            0.dp
+                        }
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (canvasRenderMode !is CanvasRenderMode.None) {
+                                CanvasArtworkPlayer(
+                                    renderMode = canvasRenderMode,
+                                    isPlaying = isPlaying,
+                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer {
+                                            scaleX = 1.20f
+                                            scaleY = 1.20f
+                                        }
+                                        .let {
+                                            if (backdropBlurRadiusDp > 0.dp) it.blur(backdropBlurRadiusDp) else it
+                                        },
+                                )
+                            } else if (sharpArtworkModel != null) {
+                                AsyncImage(
+                                    model = sharpArtworkRequest,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    alignment = Alignment.TopCenter,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer {
+                                            scaleX = 1.15f
+                                            scaleY = 1.15f
+                                        }
+                                        .let {
+                                            if (backdropBlurRadiusDp > 0.dp) it.blur(backdropBlurRadiusDp) else it
+                                        },
+                                )
+                            }
+                        }
+                    }
+                } else if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
+                    AnimatedContent(
+                        targetState = effectiveColors,
+                        transitionSpec = {
+                            fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                        },
+                        label = "GlowAnimatedBackdrop",
+                    ) { colors ->
                         if (colors.isNotEmpty()) {
                             val infiniteTransition = rememberInfiniteTransition(label = "BackdropGlowAnim")
                             val progress by infiniteTransition.animateFloat(
@@ -1970,45 +2015,45 @@ private fun V7PlayerBackdrop(
                             )
                         }
                     }
-                    } else {
-                        // Static Backdrop Effect (using Color Extraction from album art & comfortable Coloring logic)
-                        AnimatedContent(
-                            targetState = effectiveColors,
-                            transitionSpec = {
-                                fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
-                            },
-                            label = "StaticColoringBackdrop",
-                        ) { colors ->
-                            if (colors.isNotEmpty()) {
-                                val baseColor = PlayerBackgroundColorUtils.ensureComfortableColor(colors.first(), minBrightness = 0.35f, maxBrightness = 0.75f)
-                                val gradientStops = PlayerBackgroundColorUtils.buildColoringStops(baseColor)
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(baseColor),
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Brush.verticalGradient(colorStops = gradientStops)),
-                                    )
-                                }
-                            } else {
+                } else {
+                    // Static Backdrop Effect (using Color Extraction from album art & comfortable Coloring logic)
+                    AnimatedContent(
+                        targetState = effectiveColors,
+                        transitionSpec = {
+                            fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                        },
+                        label = "StaticColoringBackdrop",
+                    ) { colors ->
+                        if (colors.isNotEmpty()) {
+                            val baseColor = PlayerBackgroundColorUtils.ensureComfortableColor(colors.first(), minBrightness = 0.35f, maxBrightness = 0.75f)
+                            val gradientStops = PlayerBackgroundColorUtils.buildColoringStops(baseColor)
+                            Box(modifier = Modifier.fillMaxSize()) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color.Black),
+                                        .background(baseColor),
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Brush.verticalGradient(colorStops = gradientStops)),
                                 )
                             }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black),
+                            )
                         }
                     }
                 }
 
                 // 2. Banner Live Canvas Video or Top Banner Artwork with smooth blend endings
-                val backdropBlurRadiusDp = (themeBackdropBlurStrength * 0.8f).coerceIn(10f, 90f).dp
-                Box(
-                    modifier = Modifier
+                val bannerModifier = if (isZeroBlur) {
+                    Modifier.fillMaxSize()
+                } else {
+                    Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .fillMaxHeight(0.68f)
@@ -2031,7 +2076,10 @@ private fun V7PlayerBackdrop(
                                 ),
                                 blendMode = BlendMode.DstIn,
                             )
-                        },
+                        }
+                }
+                Box(
+                    modifier = bannerModifier,
                 ) {
                     if (canvasRenderMode !is CanvasRenderMode.None) {
                         CanvasArtworkPlayer(
@@ -2041,13 +2089,7 @@ private fun V7PlayerBackdrop(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .let {
-                                    if (themeBackdropBlurEnabled) {
-                                        it.blur(backdropBlurRadiusDp)
-                                    } else if (shouldApplyBlur) {
-                                        it.blur(3.dp)
-                                    } else {
-                                        it
-                                    }
+                                    if (shouldApplyBlur && !isZeroBlur) it.blur(3.dp) else it
                                 },
                         )
                     } else {
@@ -2060,41 +2102,35 @@ private fun V7PlayerBackdrop(
                             modifier = Modifier.fillMaxSize(),
                         ) {
                             if (sharpArtworkModel != null) {
-                                val imageModifier = Modifier
-                                    .fillMaxSize()
-                                    .let {
-                                        if (themeBackdropBlurEnabled) {
-                                            it.blur(backdropBlurRadiusDp)
-                                        } else {
-                                            it
-                                        }
-                                    }
                                 AsyncImage(
                                     model = sharpArtworkRequest,
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
-                                    modifier = imageModifier,
+                                    modifier = Modifier.fillMaxSize(),
                                 )
                             }
                         }
                     }
                 }
-                // Subtle scrim overlay: gives clean contrast for white buttons and text while preserving rich background colors
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.00f to Color.Black.copy(alpha = 0.25f),
-                                    0.20f to Color.Transparent,
-                                    0.60f to Color.Transparent,
-                                    0.82f to Color.Black.copy(alpha = 0.20f),
-                                    1.00f to Color.Black.copy(alpha = 0.40f),
+
+                // 3. Subtle scrim overlay: gives clean contrast for white buttons and text while preserving rich background colors
+                if (!isZeroBlur) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.00f to Color.Black.copy(alpha = 0.25f),
+                                        0.20f to Color.Transparent,
+                                        0.60f to Color.Transparent,
+                                        0.82f to Color.Black.copy(alpha = 0.20f),
+                                        1.00f to Color.Black.copy(alpha = 0.40f),
+                                    ),
                                 ),
                             ),
-                        ),
-                )
+                    )
+                }
             }
         }
     }

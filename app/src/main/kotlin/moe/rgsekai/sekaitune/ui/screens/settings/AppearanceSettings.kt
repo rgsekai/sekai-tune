@@ -573,7 +573,11 @@ fun AppearanceSettings(navController: NavController) {
                 item {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.theme_backdrop_blur_strength)) },
-                        description = stringResource(R.string.backdrop_blur_amount_value, themeBackdropBlurStrength),
+                        description = if (themeBackdropBlurStrength == 0) {
+                            stringResource(R.string.theme_backdrop_blur_transparent)
+                        } else {
+                            stringResource(R.string.backdrop_blur_amount_value, themeBackdropBlurStrength)
+                        },
                         icon = { Icon(painterResource(R.drawable.blur_on), null) },
                         isEnabled = themeBackdropBlurEnabled,
                         content = {
@@ -581,8 +585,8 @@ fun AppearanceSettings(navController: NavController) {
                             Slider(
                                 value = themeBackdropBlurStrength.toFloat(),
                                 onValueChange = { onThemeBackdropBlurStrengthChange(it.roundToInt()) },
-                                valueRange = 10f..100f,
-                                steps = 17,
+                                valueRange = 0f..100f,
+                                steps = 19,
                                 enabled = themeBackdropBlurEnabled,
                                 modifier = Modifier.fillMaxWidth(),
                             )
