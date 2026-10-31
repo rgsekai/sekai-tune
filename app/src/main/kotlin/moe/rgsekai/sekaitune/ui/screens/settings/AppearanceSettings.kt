@@ -91,6 +91,8 @@ import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
 import moe.rgsekai.sekaitune.constants.ThemeBackdropModeKey
+import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurEnabledKey
+import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurStrengthKey
 import moe.rgsekai.sekaitune.constants.PlayerButtonsStyle
 import moe.rgsekai.sekaitune.constants.PlayerButtonsStyleKey
 import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
@@ -182,6 +184,16 @@ fun AppearanceSettings(navController: NavController) {
         rememberEnumPreference(
             ThemeBackdropModeKey,
             defaultValue = ThemeBackdropMode.GLOW_ANIMATED,
+        )
+    val (themeBackdropBlurEnabled, onThemeBackdropBlurEnabledChange) =
+        rememberPreference(
+            ThemeBackdropBlurEnabledKey,
+            defaultValue = false,
+        )
+    val (themeBackdropBlurStrength, onThemeBackdropBlurStrengthChange) =
+        rememberPreference(
+            ThemeBackdropBlurStrengthKey,
+            defaultValue = 60,
         )
     val (fontPreference, onFontPreferenceChange) =
         rememberEnumPreference(
@@ -538,11 +550,42 @@ fun AppearanceSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.palette), null) },
                         selectedValue = themeBackdropMode,
                         onValueSelected = onThemeBackdropModeChange,
+                        isEnabled = !themeBackdropBlurEnabled,
                         valueText = {
                             when (it) {
                                 ThemeBackdropMode.GLOW_ANIMATED -> stringResource(R.string.theme_backdrop_glow_animated)
                                 ThemeBackdropMode.STATIC -> stringResource(R.string.theme_backdrop_static)
                             }
+                        },
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.theme_backdrop_blur)) },
+                        description = stringResource(R.string.theme_backdrop_blur_desc),
+                        icon = { Icon(painterResource(R.drawable.blur_on), null) },
+                        checked = themeBackdropBlurEnabled,
+                        onCheckedChange = onThemeBackdropBlurEnabledChange,
+                    )
+                }
+
+                item {
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.theme_backdrop_blur_strength)) },
+                        description = stringResource(R.string.backdrop_blur_amount_value, themeBackdropBlurStrength),
+                        icon = { Icon(painterResource(R.drawable.blur_on), null) },
+                        isEnabled = themeBackdropBlurEnabled,
+                        content = {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Slider(
+                                value = themeBackdropBlurStrength.toFloat(),
+                                onValueChange = { onThemeBackdropBlurStrengthChange(it.roundToInt()) },
+                                valueRange = 10f..100f,
+                                steps = 17,
+                                enabled = themeBackdropBlurEnabled,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         },
                     )
                 }

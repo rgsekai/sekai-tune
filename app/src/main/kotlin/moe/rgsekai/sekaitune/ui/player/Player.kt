@@ -202,6 +202,8 @@ import moe.rgsekai.sekaitune.constants.SliderStyle
 import moe.rgsekai.sekaitune.constants.SliderStyleKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
 import moe.rgsekai.sekaitune.constants.ThemeBackdropModeKey
+import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurEnabledKey
+import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurStrengthKey
 import moe.rgsekai.sekaitune.ui.theme.PlayerBackgroundColorUtils
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadiusKey
 import moe.rgsekai.sekaitune.di.LyricsHelperEntryPoint
@@ -360,6 +362,8 @@ fun BottomSheetPlayer(
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
     val (blurRadius) = rememberPreference(BlurRadiusKey, 48f)
     val (themeBackdropMode) = rememberEnumPreference(ThemeBackdropModeKey, defaultValue = ThemeBackdropMode.GLOW_ANIMATED)
+    val (themeBackdropBlurEnabled) = rememberPreference(ThemeBackdropBlurEnabledKey, defaultValue = false)
+    val (themeBackdropBlurStrength) = rememberPreference(ThemeBackdropBlurStrengthKey, defaultValue = 60)
     val (showCodecOnPlayer) = rememberPreference(booleanPreferencesKey("show_codec_on_player"), false)
 
     val playerButtonsStyle by rememberEnumPreference(
@@ -1239,6 +1243,8 @@ fun BottomSheetPlayer(
                                     isPlaying = isPlaying,
                                     disableBlur = disableBlur,
                                     themeBackdropMode = themeBackdropMode,
+                                    themeBackdropBlurEnabled = themeBackdropBlurEnabled,
+                                    themeBackdropBlurStrength = themeBackdropBlurStrength,
                                     gradientColors = gradientColors,
                                     label = "v7BackdropLandscape",
                                 )
@@ -1346,6 +1352,8 @@ fun BottomSheetPlayer(
                                     isPlaying = isPlaying,
                                     disableBlur = disableBlur,
                                     themeBackdropMode = themeBackdropMode,
+                                    themeBackdropBlurEnabled = themeBackdropBlurEnabled,
+                                    themeBackdropBlurStrength = themeBackdropBlurStrength,
                                     gradientColors = gradientColors,
                                     label = "v7BackdropPortrait",
                                 )
@@ -1641,6 +1649,8 @@ private fun V7PlayerBackdrop(
     isPlaying: Boolean,
     disableBlur: Boolean,
     themeBackdropMode: ThemeBackdropMode = ThemeBackdropMode.GLOW_ANIMATED,
+    themeBackdropBlurEnabled: Boolean = false,
+    themeBackdropBlurStrength: Int = 60,
     gradientColors: List<Color> = emptyList(),
     label: String,
     modifier: Modifier = Modifier,
@@ -1834,8 +1844,67 @@ private fun V7PlayerBackdrop(
             Box(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // 1. Ambient Glow Animated Colorful Backdrop (Powered by Sekai Tune's native palette & animation)
-                if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
+                // 1. Theme Backdrop: Blur mode OR Glow Animated / Static Color mode
+                if (themeBackdropBlurEnabled) {
+                    // Backdrop Blur Effect with smooth endings (fading out smoothly at the exact same boundary)
+                    val blurRadiusDp = (themeBackdropBlurStrength * 0.8f).coerceIn(8f, 90f).dp
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.68f)
+                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        colorStops = arrayOf(
+                                            0.00f to Color.Black,
+                                            0.25f to Color.Black,
+                                            0.40f to Color.Black.copy(alpha = 0.94f),
+                                            0.55f to Color.Black.copy(alpha = 0.80f),
+                                            0.70f to Color.Black.copy(alpha = 0.55f),
+                                            0.82f to Color.Black.copy(alpha = 0.30f),
+                                            0.92f to Color.Black.copy(alpha = 0.12f),
+                                            0.97f to Color.Black.copy(alpha = 0.04f),
+                                            1.00f to Color.Transparent,
+                                        ),
+                                    ),
+                                    blendMode = BlendMode.DstIn,
+                                )
+                            },
+                    ) {
+                        AnimatedContent(
+                            targetState = backdropState,
+                            transitionSpec = {
+                                fadeIn(tween(900)) togetherWith fadeOut(tween(900))
+                            },
+                            label = "BackdropBlurArtwork",
+                            modifier = Modifier.fillMaxSize(),
+                        ) { targetBackdrop ->
+                            if (sharpArtworkModel != null) {
+                                val blurModifier = if (shouldApplyBlur) {
+                                    Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer {
+                                            scaleX = 1.15f
+                                            scaleY = 1.15f
+                                        }
+                                        .blur(blurRadiusDp)
+                                } else {
+                                    Modifier.fillMaxSize()
+                                }
+                                AsyncImage(
+                                    model = sharpArtworkRequest,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = blurModifier,
+                                )
+                            }
+                        }
+                    }
+                } else if (themeBackdropMode == ThemeBackdropMode.GLOW_ANIMATED) {
+                    // Ambient Glow Animated Colorful Backdrop (Powered by Sekai Tune's native palette & animation)
                     AnimatedContent(
                         targetState = effectiveColors,
                         transitionSpec = {

@@ -90,6 +90,8 @@ enum class ThemeBackdropMode {
 }
 
 val ThemeBackdropModeKey = stringPreferencesKey("themeBackdropMode")
+val ThemeBackdropBlurEnabledKey = booleanPreferencesKey("themeBackdropBlurEnabled")
+val ThemeBackdropBlurStrengthKey = intPreferencesKey("themeBackdropBlurStrength")
 val MiniPlayerLastAnchorKey = intPreferencesKey("miniPlayerLastAnchor")
 val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
 
