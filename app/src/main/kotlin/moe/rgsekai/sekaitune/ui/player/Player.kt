@@ -1220,8 +1220,16 @@ fun BottomSheetPlayer(
             }
             }
 
+            val queueBackdrop =
+                rememberLayerBackdrop {
+                    drawRect(controlsBackdropColor)
+                    drawContent()
+                }
+
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .layerBackdrop(queueBackdrop),
             ) {
                 when (LocalConfiguration.current.orientation) {
                     Configuration.ORIENTATION_LANDSCAPE -> {
@@ -1452,7 +1460,7 @@ fun BottomSheetPlayer(
                     }
                 }
 
-            CompositionLocalProvider(LocalAppBackdrop provides controlsBackdrop) {
+            CompositionLocalProvider(LocalAppBackdrop provides queueBackdrop) {
                 Queue(
                     state = queueSheetState,
                     playerBottomSheetState = state,

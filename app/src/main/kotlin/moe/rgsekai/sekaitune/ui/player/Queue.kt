@@ -134,11 +134,29 @@ import moe.rgsekai.sekaitune.ui.menu.AddToPlaylistDialog
 import moe.rgsekai.sekaitune.ui.menu.PlayerMenu
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
 import moe.rgsekai.sekaitune.utils.oem.SystemMediaControlResolver
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Brush
+import androidx.palette.graphics.Palette
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.toBitmap
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamicColorScheme
+import moe.rgsekai.sekaitune.ui.theme.PlayerColorExtractor
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.time.LocalDateTime
+
+private const val QueuePaletteCacheSize = 24
+private val queueGradientColorsCache =
+    object : java.util.LinkedHashMap<String, List<Color>>(QueuePaletteCacheSize, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Color>>?): Boolean {
+            return size > QueuePaletteCacheSize
+        }
+    }
 
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalFoundationApi::class)
@@ -178,6 +196,98 @@ fun Queue(
     val currentFormat by playerConnection.currentFormat.collectAsState(initial = null)
     val qualityBadgeInfo by playerConnection.qualityBadgeFlow.collectAsState()
     val queueTitle by playerConnection.queueTitle.collectAsState()
+
+    val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
+    var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
+
+    LaunchedEffect(mediaMetadata?.id, isGlass) {
+        val currentMetadata = mediaMetadata
+        if (isGlass || currentMetadata == null || currentMetadata.thumbnailUrl.isNullOrBlank()) {
+            gradientColors = emptyList()
+            return@LaunchedEffect
+        }
+
+        val cachedColors = queueGradientColorsCache[currentMetadata.id]
+        if (cachedColors != null) {
+            gradientColors = cachedColors
+            return@LaunchedEffect
+        }
+
+        val request =
+            ImageRequest
+                .Builder(context)
+                .data(currentMetadata.thumbnailUrl)
+                .size(PlayerColorExtractor.Config.IMAGE_SIZE, PlayerColorExtractor.Config.IMAGE_SIZE)
+                .allowHardware(false)
+                .build()
+
+        val extractedColors =
+            runCatching {
+                val result =
+                    withContext(Dispatchers.IO) {
+                        context.imageLoader.execute(request)
+                    }
+                val bitmap = result.image?.toBitmap() ?: return@runCatching emptyList()
+                val palette =
+                    withContext(Dispatchers.Default) {
+                        Palette
+                            .from(bitmap)
+                            .maximumColorCount(PlayerColorExtractor.Config.MAX_COLOR_COUNT)
+                            .resizeBitmapArea(PlayerColorExtractor.Config.BITMAP_AREA)
+                            .generate()
+                    }
+                PlayerColorExtractor.extractGradientColors(
+                    palette = palette,
+                    fallbackColor = fallbackColor,
+                )
+            }.getOrDefault(emptyList())
+
+        if (extractedColors.isNotEmpty()) {
+            queueGradientColorsCache[currentMetadata.id] = extractedColors
+        }
+        gradientColors = extractedColors
+    }
+
+    val extractedThemeColor =
+        remember(gradientColors, isGlass) {
+            if (isGlass || gradientColors.isEmpty()) {
+                null
+            } else {
+                val seed = gradientColors.first()
+                val scheme =
+                    dynamicColorScheme(
+                        seedColor = seed,
+                        isDark = true,
+                        style = PaletteStyle.Vibrant,
+                    )
+                Color(
+                    red = (seed.red * 0.35f + scheme.surfaceVariant.red * 0.65f).coerceIn(0f, 1f),
+                    green = (seed.green * 0.35f + scheme.surfaceVariant.green * 0.65f).coerceIn(0f, 1f),
+                    blue = (seed.blue * 0.35f + scheme.surfaceVariant.blue * 0.65f).coerceIn(0f, 1f),
+                    alpha = 1f,
+                )
+            }
+        }
+
+    val effectiveQueueBackgroundColor =
+        when {
+            isGlass -> Color.Transparent
+            extractedThemeColor != null -> extractedThemeColor
+            else -> backgroundColor
+        }
+
+    val queueGradientColors =
+        remember(gradientColors, isGlass) {
+            if (isGlass || gradientColors.size < 2) {
+                emptyList()
+            } else {
+                listOf(
+                    gradientColors[0].copy(alpha = 0.50f),
+                    gradientColors[1].copy(alpha = 0.20f),
+                    Color.Transparent,
+                )
+            }
+        }
 
     val selectedSongs = remember { mutableStateListOf<MediaMetadata>() }
     val selectedItems = remember { mutableStateListOf<Timeline.Window>() }
@@ -664,7 +774,17 @@ fun Queue(
                                 applyEdgeEffects = true,
                             )
                         } else {
-                            Modifier.background(backgroundColor)
+                            Modifier
+                                .background(effectiveQueueBackgroundColor)
+                                .then(
+                                    if (queueGradientColors.isNotEmpty()) {
+                                        Modifier.background(
+                                            Brush.verticalGradient(queueGradientColors),
+                                        )
+                                    } else {
+                                        Modifier
+                                    },
+                                )
                         },
                     ),
         ) {
@@ -683,7 +803,7 @@ fun Queue(
                     infiniteQueueLoading = infiniteQueueLoading,
                     selectedFilter = currentQueueFilter,
                     activeQueueType = activeQueueType,
-                    backgroundColor = backgroundColor,
+                    backgroundColor = effectiveQueueBackgroundColor,
                     onBackgroundColor = onBackgroundColor,
                     onToggleActiveQueue = {
                         playerConnection.toggleActiveQueue()
@@ -840,7 +960,7 @@ fun Queue(
                                         isSelectedSong -> primaryColor.copy(alpha = 0.35f)
                                         isActive -> if (isGlass) Color.White.copy(alpha = 0.20f) else secondaryContainerColor
                                         isGlass -> Color.Transparent
-                                        else -> backgroundColor
+                                        else -> effectiveQueueBackgroundColor
                                     }
 
                                     val itemBorder = when {
