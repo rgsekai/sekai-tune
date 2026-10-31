@@ -26,8 +26,13 @@ import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.layerBackdrop
 import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -502,9 +507,10 @@ fun BottomSheetPlayer(
         }
     }
 
-    LaunchedEffect(mediaMetadata?.id, playerBackground) {
+    LaunchedEffect(mediaMetadata?.id, playerBackground, playerDesignStyle) {
         if (aodModeEnabled) return@LaunchedEffect
-        if (playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.COLORING ||
+        if (playerDesignStyle == PlayerDesignStyle.V7 ||
+            playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.COLORING ||
             playerBackground == PlayerBackgroundStyle.BLUR_GRADIENT ||
             playerBackground == PlayerBackgroundStyle.GLOW ||
             playerBackground == PlayerBackgroundStyle.GLOW_ANIMATED ||
@@ -1231,6 +1237,7 @@ fun BottomSheetPlayer(
                                     isPlaying = isPlaying,
                                     disableBlur = disableBlur,
                                     backdropBlurAmount = backdropBlurAmount,
+                                    gradientColors = gradientColors,
                                     label = "v7BackdropLandscape",
                                 )
 
@@ -1337,6 +1344,7 @@ fun BottomSheetPlayer(
                                     isPlaying = isPlaying,
                                     disableBlur = disableBlur,
                                     backdropBlurAmount = backdropBlurAmount,
+                                    gradientColors = gradientColors,
                                     label = "v7BackdropPortrait",
                                 )
 
@@ -1631,6 +1639,7 @@ private fun V7PlayerBackdrop(
     isPlaying: Boolean,
     disableBlur: Boolean,
     backdropBlurAmount: Int,
+    gradientColors: List<Color> = emptyList(),
     label: String,
     modifier: Modifier = Modifier,
 ) {
@@ -1669,8 +1678,10 @@ private fun V7PlayerBackdrop(
     val sharpArtworkUrl = if (hasCanvas) (canvasStatic ?: coverArtworkUrl) else (coverArtworkUrl ?: canvasStatic)
     val backdropArtworkUrl = coverArtworkUrl ?: canvasStatic
     // For palette extraction, use canvas static when canvas is active so the scrim
-    // gradient is derived from the canvas colors rather than the YTM thumbnail.
     val paletteSourceUrl = if (hasCanvas && canvasStatic != null) canvasStatic else backdropArtworkUrl
+    var canvasGradientColors by remember(paletteSourceUrl) {
+        mutableStateOf<List<Color>>(emptyList())
+    }
     var backdropPalette by remember(paletteSourceUrl, fallbackColor) {
         mutableStateOf(V7BackdropPalette.fromColors(emptyList(), fallbackColor))
     }
@@ -1719,6 +1730,7 @@ private fun V7PlayerBackdrop(
 
     LaunchedEffect(paletteSourceUrl, hasCanvas, fallbackColor) {
         backdropPalette = V7BackdropPalette.fromColors(emptyList(), fallbackColor)
+        canvasGradientColors = emptyList()
         if (paletteSourceUrl == null) return@LaunchedEffect
 
         val request =
@@ -1773,7 +1785,9 @@ private fun V7PlayerBackdrop(
                 null
             }
 
-        backdropPalette = V7BackdropPalette.fromColors(extractedColors.orEmpty(), fallbackColor)
+        val colors = extractedColors.orEmpty()
+        canvasGradientColors = colors
+        backdropPalette = V7BackdropPalette.fromColors(colors, fallbackColor)
     }
 
     val backdropState =
@@ -1805,50 +1819,207 @@ private fun V7PlayerBackdrop(
                 }
             val sharpArtworkRequest = rememberOfflineArtworkImageRequest(sharpArtworkModel)
 
+            val effectiveColors = remember(gradientColors, canvasGradientColors, backdropPalette) {
+                if (canvasGradientColors.isNotEmpty()) {
+                    canvasGradientColors
+                } else if (gradientColors.isNotEmpty()) {
+                    gradientColors
+                } else {
+                    listOf(backdropPalette.top, backdropPalette.mid, backdropPalette.bottom)
+                }
+            }
+
             Box(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                if (canvasRenderMode !is CanvasRenderMode.None) {
-                    // Fullscreen Live Canvas Video / Procedural / KenBurns Canvas
-                    CanvasArtworkPlayer(
-                        renderMode = canvasRenderMode,
-                        isPlaying = isPlaying,
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .let {
-                                if (shouldApplyBlur) it.blur(3.dp) else it
-                            },
-                    )
-                } else {
-                    // Static Artwork with subtle blur base + sharp fullscreen artwork
-                    if (shouldApplyBlur) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(backdrop.artworkUrl)
-                                .size(128, 128)
-                                .allowHardware(false)
-                                .build(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
+                // 1. Ambient Glow Animated Colorful Backdrop (Powered by Sekai Tune's native palette & animation)
+                AnimatedContent(
+                    targetState = effectiveColors,
+                    transitionSpec = {
+                        fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                    },
+                    label = "GlowAnimatedBackdrop",
+                ) { colors ->
+                    if (colors.isNotEmpty()) {
+                        val infiniteTransition = rememberInfiniteTransition(label = "BackdropGlowAnim")
+                        val progress by infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(22000, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart,
+                            ),
+                            label = "glowProgress",
+                        )
+
+                        fun rotatedColorAt(index: Int): Color {
+                            val size = colors.size
+                            val idx = index.toFloat() + progress * size
+                            val a = kotlin.math.floor(idx).toInt() % size
+                            val b = (a + 1) % size
+                            val frac = idx - kotlin.math.floor(idx)
+                            return androidx.compose.ui.graphics.lerp(
+                                colors.getOrElse(a) { Color.DarkGray },
+                                colors.getOrElse(b) { Color.DarkGray },
+                                frac,
+                            )
+                        }
+
+                        fun oscillate(
+                            min: Float,
+                            max: Float,
+                            phase: Float,
+                            speed: Float = 1f,
+                        ): Float {
+                            val v = kotlin.math.sin(2f * kotlin.math.PI.toFloat() * (progress * speed + phase)).toFloat()
+                            return min + (max - min) * ((v + 1f) * 0.5f)
+                        }
+
+                        val color1 = rotatedColorAt(0)
+                        val color2 = rotatedColorAt(1)
+                        val color3 = rotatedColorAt(2)
+                        val color4 = rotatedColorAt(3)
+                        val color5 = rotatedColorAt(4)
+                        val color6 = rotatedColorAt(5)
+
+                        val o1x = oscillate(0.0f, 1.0f, 0.00f, 1.0f)
+                        val o1y = oscillate(0.2f, 0.7f, 0.07f, 1.0f)
+                        val r1 = oscillate(0.8f, 1.6f, 0.12f, 1.0f)
+
+                        val o2x = oscillate(1.0f, 0.0f, 0.20f, 1.0f)
+                        val o2y = oscillate(0.4f, 1.0f, 0.25f, 1.0f)
+                        val r2 = oscillate(0.7f, 1.5f, 0.18f, 1.0f)
+
+                        val o3x = oscillate(0.2f, 0.8f, 0.33f, 1.0f)
+                        val o3y = oscillate(0.7f, 0.3f, 0.36f, 1.0f)
+                        val r3 = oscillate(0.6f, 1.4f, 0.29f, 1.0f)
+
+                        val o4x = oscillate(0.3f, 0.7f, 0.44f, 1.0f)
+                        val o4y = oscillate(0.3f, 0.9f, 0.41f, 1.0f)
+                        val r4 = oscillate(0.9f, 1.7f, 0.47f, 1.0f)
+
+                        val o5x = oscillate(0.5f, 0.2f, 0.55f, 1.0f)
+                        val o5y = oscillate(0.5f, 1.0f, 0.51f, 1.0f)
+                        val r5 = oscillate(0.7f, 1.5f, 0.58f, 1.0f)
+
+                        val o6x = oscillate(0.1f, 0.9f, 0.66f, 1.0f)
+                        val o6y = oscillate(0.6f, 0.9f, 0.62f, 1.0f)
+                        val r6 = oscillate(0.8f, 1.8f, 0.69f, 1.0f)
+
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .blur(40.dp)
-                                .graphicsLayer(alpha = 0.5f),
+                                .drawWithContent {
+                                    val width = size.width
+                                    val height = size.height
+                                    val baseColor = Color(0xFF070707)
+
+                                    val brush1 = Brush.radialGradient(
+                                        colors = listOf(color1.copy(alpha = 0.85f), color1.copy(alpha = 0.45f), Color.Transparent),
+                                        center = Offset(width * o1x, height * o1y),
+                                        radius = width * r1,
+                                    )
+                                    val brush2 = Brush.radialGradient(
+                                        colors = listOf(color2.copy(alpha = 0.80f), color2.copy(alpha = 0.40f), Color.Transparent),
+                                        center = Offset(width * o2x, height * o2y),
+                                        radius = width * r2,
+                                    )
+                                    val brush3 = Brush.radialGradient(
+                                        colors = listOf(color3.copy(alpha = 0.75f), color3.copy(alpha = 0.35f), Color.Transparent),
+                                        center = Offset(width * o3x, height * o3y),
+                                        radius = width * r3,
+                                    )
+                                    val brush4 = Brush.radialGradient(
+                                        colors = listOf(color4.copy(alpha = 0.70f), color4.copy(alpha = 0.30f), Color.Transparent),
+                                        center = Offset(width * o4x, height * o4y),
+                                        radius = width * r4,
+                                    )
+                                    val brush5 = Brush.radialGradient(
+                                        colors = listOf(color5.copy(alpha = 0.65f), color5.copy(alpha = 0.25f), Color.Transparent),
+                                        center = Offset(width * o5x, height * o5y),
+                                        radius = width * r5,
+                                    )
+                                    val brush6 = Brush.radialGradient(
+                                        colors = listOf(color6.copy(alpha = 0.60f), color6.copy(alpha = 0.20f), Color.Transparent),
+                                        center = Offset(width * o6x, height * o6y),
+                                        radius = width * r6,
+                                    )
+
+                                    drawRect(color = baseColor)
+                                    drawRect(brush = brush1)
+                                    drawRect(brush = brush2)
+                                    drawRect(brush = brush3)
+                                    drawRect(brush = brush4)
+                                    drawRect(brush = brush5)
+                                    drawRect(brush = brush6)
+
+                                    // Soft overall darkening for text & controls readability
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Black.copy(alpha = 0.15f),
+                                                Color.Black.copy(alpha = 0.35f),
+                                                Color.Black.copy(alpha = 0.55f),
+                                            ),
+                                        ),
+                                    )
+                                },
                         )
                     }
+                }
 
-                    if (sharpArtworkModel != null) {
-                        AsyncImage(
-                            model = sharpArtworkRequest,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
+                // 2. Banner Live Canvas Video or Top Banner Artwork fading smoothly into the animated glow
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.55f)
+                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.00f to Color.Black,
+                                        0.40f to Color.Black,
+                                        0.65f to Color.Black.copy(alpha = 0.70f),
+                                        0.85f to Color.Black.copy(alpha = 0.25f),
+                                        1.00f to Color.Transparent,
+                                    ),
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        },
+                ) {
+                    if (canvasRenderMode !is CanvasRenderMode.None) {
+                        CanvasArtworkPlayer(
+                            renderMode = canvasRenderMode,
+                            isPlaying = isPlaying,
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .let {
                                     if (shouldApplyBlur) it.blur(3.dp) else it
                                 },
                         )
+                    } else {
+                        AnimatedContent(
+                            targetState = backdropState,
+                            transitionSpec = {
+                                fadeIn(tween(900)) togetherWith fadeOut(tween(900))
+                            },
+                            label = label,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (sharpArtworkModel != null) {
+                                AsyncImage(
+                                    model = sharpArtworkRequest,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -1856,23 +2027,23 @@ private fun V7PlayerBackdrop(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.22f)),
+                        .background(Color.Black.copy(alpha = 0.15f)),
                 )
 
-                // Spotify-style dark gradient scrim overlay: highlights buttons and text with high contrast
+                // Dark gradient scrim overlay: highlights buttons and text with high contrast
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
                                 colorStops = arrayOf(
-                                    0.00f to Color.Black.copy(alpha = 0.50f),
-                                    0.15f to Color.Black.copy(alpha = 0.20f),
+                                    0.00f to Color.Black.copy(alpha = 0.45f),
+                                    0.15f to Color.Black.copy(alpha = 0.15f),
                                     0.35f to Color.Transparent,
                                     0.55f to Color.Transparent,
-                                    0.72f to Color.Black.copy(alpha = 0.35f),
-                                    0.88f to Color.Black.copy(alpha = 0.65f),
-                                    1.00f to Color.Black.copy(alpha = 0.82f),
+                                    0.72f to Color.Black.copy(alpha = 0.30f),
+                                    0.88f to Color.Black.copy(alpha = 0.55f),
+                                    1.00f to Color.Black.copy(alpha = 0.75f),
                                 ),
                             ),
                         ),
