@@ -102,10 +102,17 @@ import moe.rgsekai.sekaitune.ui.utils.tvFocusOutline
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.utils.resetAuthWebViewSession
 
-private fun cleanSpotifyUserAgent(defaultUa: String): String =
-    defaultUa
-        .replace("; wv", "")
-        .replace(Regex("Version/[0-9.]+ "), "")
+private const val SpotifyMobileUserAgent =
+    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
+
+private fun cleanSpotifyUserAgent(defaultUa: String, isTv: Boolean): String =
+    if (isTv) {
+        defaultUa
+            .replace("; wv", "")
+            .replace(Regex("Version/[0-9.]+ "), "")
+    } else {
+        SpotifyMobileUserAgent
+    }
 
 @Composable
 fun IntegrationsScreen(
@@ -649,7 +656,7 @@ private fun WebView.configureSpotifyLoginWebView(isTv: Boolean = false) {
             textZoom = 100
         }
         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        userAgentString = cleanSpotifyUserAgent(userAgentString)
+        userAgentString = cleanSpotifyUserAgent(userAgentString, isTv = isTv)
     }
 }
 
