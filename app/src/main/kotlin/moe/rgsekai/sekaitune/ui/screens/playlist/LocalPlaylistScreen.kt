@@ -110,6 +110,8 @@ import androidx.media3.exoplayer.offline.Download
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamicColorScheme
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
@@ -179,6 +181,14 @@ import java.time.LocalDateTime
 
 @SuppressLint("RememberReturnType")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+private const val LocalPlaylistPaletteCacheSize = 24
+private val localPlaylistGradientColorsCache =
+    object : java.util.LinkedHashMap<String, List<Color>>(LocalPlaylistPaletteCacheSize, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Color>>?): Boolean {
+            return size > LocalPlaylistPaletteCacheSize
+        }
+    }
+
 @Composable
 fun LocalPlaylistScreen(
     navController: NavController,
@@ -530,10 +540,20 @@ fun LocalPlaylistScreen(
     val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
     val surfaceColor = MaterialTheme.colorScheme.surface
 
-    // Extract gradient colors from playlist cover
-    LaunchedEffect(playlist?.thumbnails) {
-        val thumbnailUrl = playlist?.thumbnails?.firstOrNull()
+    val effectiveThumbnailUrl = remember(songs, playlist) {
+        songs.firstOrNull()?.song?.song?.thumbnailUrl ?: playlist?.thumbnails?.firstOrNull()
+    }
+
+    // Extract gradient colors from top/first song or playlist cover
+    LaunchedEffect(effectiveThumbnailUrl) {
+        val thumbnailUrl = effectiveThumbnailUrl
         if (thumbnailUrl != null) {
+            val cachedColors = localPlaylistGradientColorsCache[thumbnailUrl]
+            if (cachedColors != null) {
+                gradientColors = cachedColors
+                return@LaunchedEffect
+            }
+
             val request =
                 ImageRequest
                     .Builder(context)
@@ -542,14 +562,13 @@ fun LocalPlaylistScreen(
                     .allowHardware(false)
                     .build()
 
-            val result =
+            val extractedColors =
                 runCatching {
-                    context.imageLoader.execute(request)
-                }.getOrNull()
-
-            if (result != null) {
-                val bitmap = result.image?.toBitmap()
-                if (bitmap != null) {
+                    val result =
+                        withContext(Dispatchers.IO) {
+                            context.imageLoader.execute(request)
+                        }
+                    val bitmap = result.image?.toBitmap() ?: return@runCatching emptyList()
                     val palette =
                         withContext(Dispatchers.Default) {
                             Palette
@@ -558,19 +577,56 @@ fun LocalPlaylistScreen(
                                 .resizeBitmapArea(PlayerColorExtractor.Config.BITMAP_AREA)
                                 .generate()
                         }
+                    PlayerColorExtractor.extractGradientColors(
+                        palette = palette,
+                        fallbackColor = fallbackColor,
+                    )
+                }.getOrDefault(emptyList())
 
-                    val extractedColors =
-                        PlayerColorExtractor.extractGradientColors(
-                            palette = palette,
-                            fallbackColor = fallbackColor,
-                        )
-                    gradientColors = extractedColors
-                }
+            if (extractedColors.isNotEmpty()) {
+                localPlaylistGradientColorsCache[thumbnailUrl] = extractedColors
             }
+            gradientColors = extractedColors
         } else {
             gradientColors = emptyList()
         }
     }
+
+    val extractedThemeColor =
+        remember(gradientColors) {
+            if (gradientColors.isEmpty()) {
+                null
+            } else {
+                val seed = gradientColors.first()
+                val scheme =
+                    dynamicColorScheme(
+                        seedColor = seed,
+                        isDark = true,
+                        style = PaletteStyle.Vibrant,
+                    )
+                Color(
+                    red = (seed.red * 0.35f + scheme.surfaceVariant.red * 0.65f).coerceIn(0f, 1f),
+                    green = (seed.green * 0.35f + scheme.surfaceVariant.green * 0.65f).coerceIn(0f, 1f),
+                    blue = (seed.blue * 0.35f + scheme.surfaceVariant.blue * 0.65f).coerceIn(0f, 1f),
+                    alpha = 1f,
+                )
+            }
+        }
+
+    val effectivePageBackgroundColor = extractedThemeColor ?: surfaceColor
+
+    val pageGradientColors =
+        remember(gradientColors) {
+            if (gradientColors.size < 2) {
+                emptyList()
+            } else {
+                listOf(
+                    gradientColors[0].copy(alpha = 0.50f),
+                    gradientColors[1].copy(alpha = 0.20f),
+                    Color.Transparent,
+                )
+            }
+        }
 
     // Calculate gradient opacity based on scroll position
     val gradientAlpha by remember {
@@ -596,7 +652,14 @@ fun LocalPlaylistScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(surfaceColor),
+                .background(effectivePageBackgroundColor)
+                .then(
+                    if (pageGradientColors.isNotEmpty()) {
+                        Modifier.background(Brush.verticalGradient(pageGradientColors))
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         // Mesh gradient background layer
         if (!isSearching && !disableBlur && gradientColors.isNotEmpty() && gradientAlpha > 0f) {
@@ -1582,8 +1645,11 @@ fun LocalPlaylistScreen(
                 )
             } else {
                 TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = effectivePageBackgroundColor,
+                    scrolledContainerColor = effectivePageBackgroundColor,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.onBackground,
                 )
             }
 
