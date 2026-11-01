@@ -476,11 +476,7 @@ fun SongGridItem(
             shape = RoundedCornerShape(GridThumbnailCornerRadius),
             modifier = Modifier.size(GridThumbnailHeight),
         )
-        if (!isActive) {
-            OverlayPlayButton(
-                visible = true,
-            )
-        }
+        // OverlayPlayButton removed
     },
     fillMaxWidth = fillMaxWidth,
     modifier = modifier,
@@ -709,7 +705,7 @@ fun AlbumGridItem(
         )
 
         AlbumPlayButton(
-            visible = !isActive,
+            visible = false,
             onClick = {
                 coroutineScope.launch {
                     database.albumWithSongs(album.id).firstOrNull()?.let { albumWithSongs ->
@@ -1487,14 +1483,8 @@ fun YouTubeGridItem(
             thumbnailRatio = thumbnailRatio,
         )
 
-        if (item is SongItem && !isActive) {
-            OverlayPlayButton(
-                visible = true,
-            )
-        }
-
         AlbumPlayButton(
-            visible = item is AlbumItem && !isActive,
+            visible = false,
             onClick = {
                 coroutineScope?.launch(Dispatchers.IO) {
                     var albumWithSongs = database.albumWithSongs(item.id).first()
@@ -1541,7 +1531,7 @@ fun LocalSongsGrid(
             isPlaying = isPlaying,
             shape = RoundedCornerShape(GridThumbnailCornerRadius),
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
-            showCenterPlay = true,
+            showCenterPlay = false,
             playButtonVisible = false,
         )
     },
