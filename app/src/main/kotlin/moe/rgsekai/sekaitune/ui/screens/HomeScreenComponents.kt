@@ -229,7 +229,7 @@ fun HomeSectionHeader(
                 style = MaterialTheme.typography.titleLargeEmphasized,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
