@@ -138,7 +138,7 @@ fun NavGraphBuilder.navigationBuilder(
         AccountScreen(navController, scrollBehavior)
     }
     composable("new_release") {
-        NewReleaseScreen(navController, scrollBehavior)
+        NewReleaseScreen(navController)
     }
     composable("charts_screen") {
         ChartsScreen(navController)

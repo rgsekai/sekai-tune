@@ -29,11 +29,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import moe.rgsekai.sekaitune.ui.utils.appBarScrollBehavior
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Album
@@ -99,9 +101,9 @@ import moe.rgsekai.sekaitune.viewmodels.NewReleaseViewModel
 @Composable
 fun NewReleaseScreen(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
     viewModel: NewReleaseViewModel = hiltViewModel(),
 ) {
+    val scrollBehavior = appBarScrollBehavior()
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -375,9 +377,7 @@ private fun NewReleaseGridContent(
                     fillMaxWidth = true,
                     coroutineScope = coroutineScope,
                     modifier =
-                        Modifier
-                            .animateItem()
-                            .combinedClickable(
+                        Modifier.combinedClickable(
                                 onClick = { onReleaseClick(album) },
                                 onLongClick = { onReleaseLongClick(album) },
                             ),
@@ -423,14 +423,10 @@ private fun NewReleaseHorizontalSection(
     onReleaseClick: (AlbumItem) -> Unit,
     onReleaseLongClick: (AlbumItem) -> Unit,
 ) {
-    LazyHorizontalGrid(
-        rows = GridCells.Fixed(1),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(0.dp),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(216.dp),
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         items(
             items = releases,
@@ -444,12 +440,10 @@ private fun NewReleaseHorizontalSection(
                 fillMaxWidth = false,
                 coroutineScope = coroutineScope,
                 modifier =
-                    Modifier
-                        .animateItem()
-                        .combinedClickable(
-                            onClick = { onReleaseClick(album) },
-                            onLongClick = { onReleaseLongClick(album) },
-                        ),
+                    Modifier.combinedClickable(
+                        onClick = { onReleaseClick(album) },
+                        onLongClick = { onReleaseLongClick(album) },
+                    ),
             )
         }
     }
@@ -610,7 +604,6 @@ private fun NewReleaseContent.releaseSections(): List<NewReleaseSection> =
             add(NewReleaseSection(NewReleaseTab.Ep, eps))
         }
     }
-
 
 
 
