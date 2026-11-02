@@ -5,6 +5,17 @@ on:
     tags:
       - 'desktop-v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: false
+        default: 'dev'
+        type: string
+      send_telegram:
+        description: 'Send artifacts to Telegram'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -30,9 +41,18 @@ jobs:
       - name: Resolve version
         id: version
         shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#desktop-v}"
+          if [[ "${GITHUB_REF}" == refs/tags/desktop-v* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#desktop-v}"
+          elif [ -n "${INPUT_VERSION}" ] && [ "${INPUT_VERSION}" != "dev" ]; then
+            VERSION="${INPUT_VERSION}"
+          else
+            SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+            VERSION="dev-${SHORT_SHA}"
+          fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build Windows Packages
@@ -40,14 +60,89 @@ jobs:
         run: |
           .\gradlew.bat packageMsi packageExe windowsPortable --stacktrace
 
+      - name: Verify tag matches built version
+        if: startsWith(github.ref, 'refs/tags/desktop-v') && github.event_name == 'push'
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          EXE_FILE="$(ls desktop/desktopApp/build/distributions/SekaiTune-*.exe 2>/dev/null | head -n 1)"
+          if [ -z "${EXE_FILE}" ]; then
+            echo "Error: No SekaiTune-*.exe found in desktop/desktopApp/build/distributions/"
+            exit 1
+          fi
+          EXE_NAME="$(basename "${EXE_FILE}")"
+          BUILT_VERSION="${EXE_NAME#SekaiTune-}"
+          BUILT_VERSION="${BUILT_VERSION%.exe}"
+
+          echo "Tag version:   ${EXPECTED_VERSION}"
+          echo "Built version: ${BUILT_VERSION}"
+
+          if [ "${EXPECTED_VERSION}" != "${BUILT_VERSION}" ]; then
+            echo "Error: Tag version mismatch! Tag is desktop-v${EXPECTED_VERSION} but built package is SekaiTune-${BUILT_VERSION}.exe"
+            exit 1
+          fi
+          echo "Version check passed: tag desktop-v${EXPECTED_VERSION} matches built package version ${BUILT_VERSION}."
+
+      - name: Upload Windows Packages Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sekai-tune-desktop-windows-${{ steps.version.outputs.version }}
+          path: |
+            desktop/desktopApp/build/distributions/*.msi
+            desktop/desktopApp/build/distributions/*.exe
+            desktop/desktopApp/build/distributions/*-windows-portable.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        if: startsWith(github.ref, 'refs/tags/desktop-v') && github.event_name == 'push'
         with:
           name: Sekai Tune Desktop ${{ steps.version.outputs.version }}
+          draft: true
+          prerelease: true
+          body: "Windows installer and portable build"
           files: |
             desktop/desktopApp/build/distributions/*.msi
             desktop/desktopApp/build/distributions/*.exe
             desktop/desktopApp/build/distributions/*-windows-portable.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/desktop-v')) || (github.event_name == 'workflow_dispatch' && (inputs.send_telegram == true || inputs.send_telegram == 'true'))
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Telethon
+        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/desktop-v')) || (github.event_name == 'workflow_dispatch' && (inputs.send_telegram == true || inputs.send_telegram == 'true'))
+        continue-on-error: true
+        shell: bash
+        run: |
+          pip install telethon
+
+      - name: Restore Telegram session cache
+        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/desktop-v')) || (github.event_name == 'workflow_dispatch' && (inputs.send_telegram == true || inputs.send_telegram == 'true'))
+        continue-on-error: true
+        uses: actions/cache@v4
+        id: telegram_session_cache
+        with:
+          path: bot_session.session
+          key: telegram-session-${{ runner.os }}-bot_session
+
+      - name: Send Desktop Packages to Telegram
+        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/desktop-v')) || (github.event_name == 'workflow_dispatch' && (inputs.send_telegram == true || inputs.send_telegram == 'true'))
+        continue-on-error: true
+        shell: bash
+        env:
+          API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ steps.version.outputs.version }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python ./.github/workflows/deploy_desktop_artifacts.py
