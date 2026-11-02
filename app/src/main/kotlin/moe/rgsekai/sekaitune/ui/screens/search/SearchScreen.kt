@@ -175,31 +175,26 @@ fun SearchScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             item(
-                key = "search_field",
-                contentType = "search_field",
+                key = "search_field_row",
+                contentType = "search_field_row",
             ) {
-                SearchEntryField(
-                    onClick = onSearchClick,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)
+                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 6.dp)
                             .animateItem(),
-                )
-            }
-
-            item(
-                key = "music_recognition_pill",
-                contentType = "music_recognition_pill",
-            ) {
-                MusicRecognitionPill(
-                    onClick = { navController.navigate(MusicRecognitionRoute) },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 6.dp)
-                            .animateItem(),
-                )
+                ) {
+                    SearchEntryField(
+                        onClick = onSearchClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    MusicRecognitionButton(
+                        onClick = { navController.navigate(MusicRecognitionRoute) },
+                    )
+                }
             }
 
             item(
@@ -379,7 +374,7 @@ private fun SearchEntryField(
 }
 
 @Composable
-private fun MusicRecognitionPill(
+private fun MusicRecognitionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -401,36 +396,17 @@ private fun MusicRecognitionPill(
         border = pillBorder,
         modifier =
             modifier
-                .fillMaxWidth()
-                .height(56.dp),
+                .size(56.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize(),
         ) {
             Icon(
                 painter = painterResource(R.drawable.mic),
-                contentDescription = null,
+                contentDescription = stringResource(R.string.music_recognition),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = stringResource(R.string.music_recognition),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(
-                painter = painterResource(R.drawable.arrow_forward),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
             )
         }
     }
