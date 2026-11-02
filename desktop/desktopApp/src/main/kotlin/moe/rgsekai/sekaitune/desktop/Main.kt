@@ -29,6 +29,9 @@ import okio.Path.Companion.toOkioPath
 import org.jetbrains.compose.resources.painterResource
 
 fun main() {
+    if (!DesktopSingleInstance.acquireOrActivate()) {
+        return
+    }
     // Before any WebView exists, so the sign-in window can start over with an empty jar.
     DesktopWebCookies.install()
     DesktopWindowVisibility.install()

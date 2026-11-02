@@ -66,6 +66,14 @@ internal object DesktopWindowVisibility {
                 win.isVisible = true
                 win.toFront()
                 win.requestFocus()
+                if (DesktopPlatform.isWindows) {
+                    runCatching {
+                        win.isAlwaysOnTop = true
+                        win.toFront()
+                        win.requestFocus()
+                        win.isAlwaysOnTop = false
+                    }
+                }
             }
             if (DesktopPlatform.isMac) {
                 runCatching {
