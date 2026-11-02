@@ -775,11 +775,11 @@ fun LocalPlaylistScreen(
                                             listOf(
                                                 Color.Transparent,
                                                 Color.Transparent,
-                                                surfaceColor.copy(alpha = gradientAlpha * 0.22f),
-                                                surfaceColor.copy(alpha = gradientAlpha * 0.55f),
-                                                surfaceColor,
+                                                effectivePageBackgroundColor.copy(alpha = gradientAlpha * 0.22f),
+                                                effectivePageBackgroundColor.copy(alpha = gradientAlpha * 0.55f),
+                                                effectivePageBackgroundColor,
                                             ),
-                                        startY = height * 0.4f,
+                                        startY = height * 0.35f,
                                         endY = height,
                                     ),
                             )

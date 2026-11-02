@@ -617,9 +617,9 @@ fun AutoPlaylistScreen(
                                             listOf(
                                                 Color.Transparent,
                                                 Color.Transparent,
-                                                surfaceColor.copy(alpha = gradientAlpha * 0.22f),
-                                                surfaceColor.copy(alpha = gradientAlpha * 0.55f),
-                                                surfaceColor,
+                                                effectivePageBackgroundColor.copy(alpha = gradientAlpha * 0.22f),
+                                                effectivePageBackgroundColor.copy(alpha = gradientAlpha * 0.55f),
+                                                effectivePageBackgroundColor,
                                             ),
                                         startY = size.height * 0.35f,
                                         endY = size.height,

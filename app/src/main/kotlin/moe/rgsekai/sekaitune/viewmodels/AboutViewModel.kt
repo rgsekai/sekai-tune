@@ -435,7 +435,7 @@ class AboutViewModel
                             id = "website",
                             iconResId = R.drawable.language,
                             labelResId = R.string.visit_website,
-                            url = "https://rgsekai.github.io/sekai-tune/",
+                            url = "https://sekaitune.vercel.app/",
                         ),
                         AboutLinkUiModel(
                             id = "reddit",

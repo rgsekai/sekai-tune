@@ -61,7 +61,7 @@ class BuildOnboardingUiStateUseCase
                     OnboardingSocialLinkUiModel(
                         id = "website",
                         iconResId = R.drawable.ic_website_color,
-                        url = "https://rgsekai.github.io/sekai-tune/",
+                        url = "https://sekaitune.vercel.app/",
                         contentDescription = "Website",
                     ),
                     OnboardingSocialLinkUiModel(
