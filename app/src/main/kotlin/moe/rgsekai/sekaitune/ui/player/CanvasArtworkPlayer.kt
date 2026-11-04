@@ -117,6 +117,7 @@ internal fun CanvasArtworkPlayer(
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+    onReady: (() -> Unit)? = null,
 ) {
     when (renderMode) {
         is CanvasRenderMode.Video -> {
@@ -126,9 +127,13 @@ internal fun CanvasArtworkPlayer(
                 isPlaying = isPlaying,
                 modifier = modifier,
                 resizeMode = resizeMode,
+                onReady = onReady,
             )
         }
         is CanvasRenderMode.ProceduralShader -> {
+            LaunchedEffect(renderMode.bitmap) {
+                onReady?.invoke()
+            }
             when (renderMode.style) {
                 ProceduralCanvasStyle.KAWARP -> {
                     ProceduralCanvas(
@@ -151,6 +156,9 @@ internal fun CanvasArtworkPlayer(
             }
         }
         is CanvasRenderMode.KenBurns -> {
+            LaunchedEffect(renderMode.bitmap) {
+                onReady?.invoke()
+            }
             KenBurnsCanvas(
                 bitmap = renderMode.bitmap,
                 modifier = modifier,
@@ -158,6 +166,9 @@ internal fun CanvasArtworkPlayer(
             )
         }
         is CanvasRenderMode.Static -> {
+            LaunchedEffect(renderMode.bitmap, renderMode.url) {
+                onReady?.invoke()
+            }
             if (renderMode.bitmap != null) {
                 Image(
                     bitmap = renderMode.bitmap.asImageBitmap(),
@@ -207,6 +218,7 @@ private fun CanvasVideoPlayer(
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+    onReady: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -215,6 +227,7 @@ private fun CanvasVideoPlayer(
     var currentUrl by remember(initial) { mutableStateOf(initial) }
     var isVideoReady by remember(initial) { mutableStateOf(false) }
     val shouldPlay by rememberUpdatedState(isPlaying)
+    val onReadyCallback by rememberUpdatedState(onReady)
 
     val okHttpClient =
         remember {
@@ -373,6 +386,7 @@ private fun CanvasVideoPlayer(
                 override fun onRenderedFirstFrame() {
                     Timber.tag(CanvasPlaybackLogTag).d("Canvas rendered first frame for %s", currentUrl)
                     isVideoReady = true
+                    onReadyCallback?.invoke()
                     watchdog.onFirstFrameRendered()
                     if (shouldPlay) {
                         exoPlayer.setCanvasPlayback(isPlaying = true)

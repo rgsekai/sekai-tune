@@ -28,6 +28,7 @@ internal suspend fun resolveCanvasArtworkForPlayback(
     requireVertical: Boolean,
     allowNetwork: Boolean,
     canvasPolicy: CanvasRequestPolicy = CanvasRequestPolicy(),
+    awaitVideoDownload: Boolean = false,
 ): CanvasArtwork? {
     val cached = withContext(Dispatchers.IO) {
         CanvasArtworkPlaybackCache.get(
@@ -67,7 +68,7 @@ internal suspend fun resolveCanvasArtworkForPlayback(
             return@withContext cached?.takeIf { it.hasRequiredCanvasVariant(requireVertical) }
         }
 
-        CanvasArtworkPlaybackCache.put(mediaId, fetched)
+        CanvasArtworkPlaybackCache.put(mediaId, fetched, awaitDownload = awaitVideoDownload)
     }
 }
 

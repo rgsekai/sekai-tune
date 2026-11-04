@@ -1067,20 +1067,72 @@ fun BottomSheetPlayer(
                 }
             }
 
-        // Proactively preload the next track's artwork and palette into Coil DiskCache & MemoryCache
-        // so automatic song transitions dissolve instantly with 0ms pop-in and no solid background dip.
-        LaunchedEffect(nextMediaItem, currentWindowIndex, backdropArtworkSizePx) {
+        val storefront =
+            remember {
+                val country = Locale.getDefault().country
+                if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
+            }
+        val shouldUseV7Canvas =
+            SekaiTuneCanvasEnabled &&
+                (playerDesignStyle == PlayerDesignStyle.V7 || playerBackground == PlayerBackgroundStyle.APPLE_MUSIC) &&
+                !aodModeEnabled
+        val shouldFetchV7Canvas = shouldUseV7Canvas && (canvasMetered || !lowDataModeActive)
+        val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback, spotifySpDc) {
+            CanvasRequestPolicy(
+                preferredSource = canvasSource,
+                allowMetered = canvasMetered,
+                allowFallback = canvasFallback,
+                spDc = spotifySpDc.takeIf { it.isNotBlank() },
+            )
+        }
+
+        // Proactively preload the next track's artwork (both live animated video & static),
+        // caching to disk & memory so automatic song transitions dissolve instantly with 0ms pop-in and no solid background dip.
+        LaunchedEffect(
+            nextMediaItem,
+            currentWindowIndex,
+            backdropArtworkSizePx,
+            shouldUseV7Canvas,
+            shouldFetchV7Canvas,
+            canvasPolicy,
+            storefront,
+        ) {
             val nextItem = nextMediaItem ?: return@LaunchedEffect
             val meta = nextItem.metadata
-            val nextUrl = meta?.thumbnailUrl?.highRes()
+            val fallbackUrl = meta?.thumbnailUrl?.highRes()
                 ?: nextItem.mediaMetadata.artworkUri?.toString()
                 ?: nextItem.mediaId.takeIf { it.isNotBlank() }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
-            if (!nextUrl.isNullOrBlank()) {
-                withContext(Dispatchers.IO) {
+
+            withContext(Dispatchers.IO) {
+                var resolvedCanvasForNext: CanvasArtwork? = null
+                if (shouldUseV7Canvas && nextItem.mediaId.isNotBlank()) {
+                    try {
+                        val nextArtist = meta?.artists?.firstOrNull()?.name.orEmpty()
+                        val nextTitle = meta?.title.orEmpty().ifBlank { nextItem.mediaMetadata.title?.toString().orEmpty() }
+                        resolvedCanvasForNext = resolveCanvasArtworkForPlayback(
+                            mediaId = nextItem.mediaId,
+                            songTitleRaw = nextTitle,
+                            artistNameRaw = nextArtist,
+                            albumId = meta?.album?.id,
+                            albumTitleRaw = meta?.album?.title,
+                            storefront = storefront,
+                            requireVertical = true,
+                            allowNetwork = shouldFetchV7Canvas,
+                            canvasPolicy = canvasPolicy,
+                            awaitVideoDownload = true,
+                        )
+                    } catch (_: Exception) {}
+                }
+
+                // If live canvas has a static poster or standard artwork exists, preload image variants
+                val staticCanvasUrl = resolvedCanvasForNext?.static?.takeIf { it.isNotBlank() }
+                val targetArtworkUrl = staticCanvasUrl ?: fallbackUrl
+
+                if (!targetArtworkUrl.isNullOrBlank()) {
                     val urls = listOfNotNull(
-                        nextUrl,
-                        nextUrl.resize(backdropArtworkSizePx, backdropArtworkSizePx),
-                        nextUrl.highRes(),
+                        targetArtworkUrl,
+                        targetArtworkUrl.resize(backdropArtworkSizePx, backdropArtworkSizePx),
+                        targetArtworkUrl.highRes(),
                     ).distinct()
 
                     for (targetUrl in urls) {
@@ -1098,9 +1150,9 @@ fun BottomSheetPlayer(
                     val mediaId = nextItem.mediaId
                     if (mediaId.isNotBlank() && !gradientColorsCache.containsKey(mediaId)) {
                         val paletteRequest = ImageRequest.Builder(context)
-                            .data(nextUrl)
-                            .memoryCacheKey(nextUrl)
-                            .diskCacheKey(nextUrl)
+                            .data(targetArtworkUrl)
+                            .memoryCacheKey(targetArtworkUrl)
+                            .diskCacheKey(targetArtworkUrl)
                             .memoryCachePolicy(CachePolicy.ENABLED)
                             .diskCachePolicy(CachePolicy.ENABLED)
                             .networkCachePolicy(CachePolicy.ENABLED)
@@ -1176,24 +1228,6 @@ fun BottomSheetPlayer(
                     ?: (playerConnection.player.currentMediaItem?.mediaId?.takeIf { it.isNotBlank() }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" })
             }
 
-        val storefront =
-            remember {
-                val country = Locale.getDefault().country
-                if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
-            }
-        val shouldUseV7Canvas =
-            SekaiTuneCanvasEnabled &&
-                (playerDesignStyle == PlayerDesignStyle.V7 || playerBackground == PlayerBackgroundStyle.APPLE_MUSIC) &&
-                !aodModeEnabled
-        val shouldFetchV7Canvas = shouldUseV7Canvas && (canvasMetered || !lowDataModeActive)
-        val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback, spotifySpDc) {
-            CanvasRequestPolicy(
-                preferredSource = canvasSource,
-                allowMetered = canvasMetered,
-                allowFallback = canvasFallback,
-                spDc = spotifySpDc.takeIf { it.isNotBlank() },
-            )
-        }
         var v7CanvasArtwork by remember(mediaMetadata?.id) {
             mutableStateOf<CanvasArtwork?>(null)
         }
@@ -1933,11 +1967,12 @@ private fun V7PlayerBackdrop(
     }
 
     val backdropState =
-        remember(readyArtworkUrl, canvasPrimary, canvasFallback) {
+        remember(readyArtworkUrl, canvasPrimary, canvasFallback, canvasRenderMode) {
             V7PlayerBackdropState(
                 artworkUrl = readyArtworkUrl,
                 canvasPrimaryUrl = canvasPrimary,
                 canvasFallbackUrl = canvasFallback,
+                canvasRenderMode = canvasRenderMode,
             )
         }
     val shouldApplyBlur = !disableBlur
@@ -2171,9 +2206,9 @@ private fun V7PlayerBackdrop(
                 Box(
                     modifier = bannerModifier,
                 ) {
-                    if (canvasRenderMode !is CanvasRenderMode.None) {
+                    if (backdrop.canvasRenderMode !is CanvasRenderMode.None) {
                         CanvasArtworkPlayer(
-                            renderMode = canvasRenderMode,
+                            renderMode = backdrop.canvasRenderMode,
                             isPlaying = isPlaying,
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                             modifier = Modifier.fillMaxSize(),
@@ -2300,6 +2335,7 @@ private data class V7PlayerBackdropState(
     val artworkUrl: String?,
     val canvasPrimaryUrl: String?,
     val canvasFallbackUrl: String?,
+    val canvasRenderMode: CanvasRenderMode = CanvasRenderMode.None,
 )
 
 

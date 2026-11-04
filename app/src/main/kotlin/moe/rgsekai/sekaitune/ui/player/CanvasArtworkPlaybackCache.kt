@@ -138,6 +138,7 @@ object CanvasArtworkPlaybackCache {
     suspend fun put(
         mediaId: String,
         artwork: CanvasArtwork,
+        awaitDownload: Boolean = false,
     ): CanvasArtwork =
         withContext(Dispatchers.IO) {
             if (maxSizeBytes == 0L || mediaId.isBlank()) return@withContext artwork
@@ -151,13 +152,27 @@ object CanvasArtworkPlaybackCache {
                         preferCachedOnly = false,
                     )
                 }
-            cacheArtworkInBackground(
-                directory = directory,
-                mediaId = mediaId,
-                artwork = artwork,
-            )
 
-            current ?: artwork
+            if (awaitDownload) {
+                cacheArtworkVideos(
+                    directory = directory,
+                    mediaId = mediaId,
+                    artwork = artwork,
+                )
+                synchronized(this@CanvasArtworkPlaybackCache) {
+                    map[mediaId]?.toPlayableArtwork(
+                        directory = directory,
+                        preferCachedOnly = false,
+                    ) ?: current ?: artwork
+                }
+            } else {
+                cacheArtworkInBackground(
+                    directory = directory,
+                    mediaId = mediaId,
+                    artwork = artwork,
+                )
+                current ?: artwork
+            }
         }
 
     private fun cacheArtworkInBackground(
