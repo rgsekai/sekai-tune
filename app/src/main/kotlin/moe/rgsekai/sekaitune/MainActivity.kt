@@ -339,7 +339,7 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlin.random.Random
-import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -658,7 +658,7 @@ class MainActivity : ComponentActivity() {
 
                 if (
                     BuildConfig.UPDATER_AVAILABLE &&
-                    System.currentTimeMillis() - Updater.lastCheckTime > 1.days.inWholeMilliseconds
+                    System.currentTimeMillis() - Updater.lastCheckTime > 1.hours.inWholeMilliseconds
                 ) {
                     val versionResult = Updater.getLatestVersionName()
                     versionResult.onSuccess {

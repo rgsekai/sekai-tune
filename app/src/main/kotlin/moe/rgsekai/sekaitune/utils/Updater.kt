@@ -47,7 +47,7 @@ private data class ReleasesNetworkResult(
 
 object Updater {
     private val client = HttpClient()
-    private const val ReleaseCacheCheckIntervalMs: Long = 6 * 60 * 60 * 1000L
+    private const val ReleaseCacheCheckIntervalMs: Long = 1 * 60 * 60 * 1000L
     private const val StableReleaseBaseUrl = "https://github.com/rgsekai/sekai-tune/releases"
     var lastCheckTime = -1L
         private set
@@ -288,20 +288,21 @@ object Updater {
             ?: emptyList()
     }
 
-    suspend fun getLatestVersionName(): Result<String> =
-        getLatestReleaseInfo().map { latest ->
+    suspend fun getLatestVersionName(forceRefresh: Boolean = false): Result<String> =
+        getLatestReleaseInfo(forceRefresh = forceRefresh).map { latest ->
             preferredReleaseVersionNameOrNull(latest) ?: latest.name.ifBlank { latest.tagName }
         }
 
-    suspend fun getLatestReleaseNotes(): Result<String?> = getLatestReleaseInfo().map { it.body }
+    suspend fun getLatestReleaseNotes(forceRefresh: Boolean = false): Result<String?> =
+        getLatestReleaseInfo(forceRefresh = forceRefresh).map { it.body }
 
-    suspend fun getLatestReleaseInfo(): Result<ReleaseInfo> =
+    suspend fun getLatestReleaseInfo(forceRefresh: Boolean = false): Result<ReleaseInfo> =
         runCatching {
             if (!isUpdaterDistribution) {
                 throw IllegalStateException("Updater is not available for this distribution")
             }
 
-            val releases = getAllReleases().getOrThrow()
+            val releases = getAllReleases(forceRefresh = forceRefresh).getOrThrow()
             val latest =
                 findLatestRelease(releases)
                     ?: throw IllegalStateException("No releases found")

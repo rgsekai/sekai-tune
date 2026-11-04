@@ -40,7 +40,7 @@ object UpdateNotificationManager {
     private const val CHANNEL_ID = "update_notification_channel"
     private const val NOTIFICATION_ID = 9999
     private const val WORK_NAME = "update_check_work"
-    private const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
+    private const val CHECK_INTERVAL_MS = 1 * 60 * 60 * 1000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -75,9 +75,9 @@ object UpdateNotificationManager {
 
         val updateCheckRequest =
             PeriodicWorkRequestBuilder<UpdateCheckWorker>(
-                6,
+                1,
                 TimeUnit.HOURS,
-                30,
+                15,
                 TimeUnit.MINUTES,
             ).setConstraints(constraints)
                 .build()

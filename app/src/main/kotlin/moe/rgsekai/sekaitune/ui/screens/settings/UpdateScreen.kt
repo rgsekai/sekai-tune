@@ -281,10 +281,10 @@ fun UpdateScreen(
         showUpdateErrorDialog = false
 
         coroutineScope.launch {
-            Updater.getLatestReleaseNotes().onSuccess { notes ->
+            Updater.getLatestReleaseNotes(forceRefresh = true).onSuccess { notes ->
                 updateSheetNotes = notes
             }
-            val versionResult = Updater.getLatestVersionName()
+            val versionResult = Updater.getLatestVersionName(forceRefresh = true)
 
             updateSheetLoading = false
 
