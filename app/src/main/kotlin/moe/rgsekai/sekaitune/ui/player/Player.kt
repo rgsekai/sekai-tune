@@ -1991,8 +1991,7 @@ private fun V7PlayerBackdrop(
     BoxWithConstraints(
         modifier =
             modifier
-                .fillMaxSize()
-                .background(backdropPalette.bottom),
+                .fillMaxSize(),
     ) {
         // Pre-render the incoming canvas video off-screen / invisible until its first frame is decoded
         if (backdropState.canvasRenderMode is CanvasRenderMode.Video && activeBackdropState != backdropState) {

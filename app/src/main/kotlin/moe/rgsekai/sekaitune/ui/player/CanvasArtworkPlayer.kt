@@ -471,7 +471,7 @@ private fun CanvasVideoPlayer(
         player = exoPlayer,
         surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
         contentScale = resizeMode.toContentScale(),
-        keepContentOnReset = false,
+        keepContentOnReset = true,
         shutter = {},
         modifier = modifier,
     )
