@@ -467,19 +467,13 @@ private fun CanvasVideoPlayer(
         }
     }
 
-    val alpha by animateFloatAsState(
-        targetValue = if (isVideoReady) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "canvasAlpha",
-    )
-
     ContentFrame(
         player = exoPlayer,
         surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
         contentScale = resizeMode.toContentScale(),
         keepContentOnReset = false,
         shutter = {},
-        modifier = modifier.alpha(alpha),
+        modifier = modifier,
     )
 }
 
