@@ -1003,7 +1003,9 @@
     <!-- External Sources -->
     <string name="sources_title">Sources</string>
     <string name="sources_subtitle">Manage external audio providers and priority</string>
-    <string name="sources_disclaimer">You are responsible for the addons you add.</string>
+    <string name="sources_addon_banner_title">Get addons for high quality &amp; lossless audio</string>
+    <string name="sources_addon_banner_desc">You can add custom or third-party client addons (such as BitChord addons) to stream lossless audio. Read the guide in the repository README.</string>
+    <string name="sources_addon_banner_action">Learn more</string>
     <string name="sources_list_title">Audio Sources</string>
     <string name="sources_always_on">Always on</string>
     <string name="sources_add_addon">Add an addon</string>

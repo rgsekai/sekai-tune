@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="home">Omah</string>
     <string name="songs">Lagu</string>
@@ -91,7 +91,7 @@
     <string name="together_ban">Blokir</string>
     <string name="together_kick_confirm">Keluarkan %1$s?</string>
     <string name="together_ban_confirm">Blokir %1$s?</string>
-    <string name="together_requesting_song_change">Meminta host untuk mengganti laguâ€¦</string>
+    <string name="together_requesting_song_change">Meminta host untuk mengganti lagu…</string>
     <string name="together_song_change_failed">Perubahan lagu tidak diterapkan. Silakan coba lagi.</string>
     <string name="remove_from_history">Busak dari riwayat</string>
     <string name="remove_from_playlist">Busak dari playlist</string>
@@ -339,14 +339,14 @@
     <string name="proxy_username">Nama pengguna</string>
     <string name="proxy_password">Kata sandi</string>
     <string name="test_proxy_connection">Uji koneksi proksi</string>
-    <string name="testing_proxy_connection">Menguji koneksi proksiâ€¦</string>
+    <string name="testing_proxy_connection">Menguji koneksi proksi…</string>
     <string name="proxy_connection_success">Koneksi proksi berhasil!</string>
     <string name="proxy_connection_failed">Koneksi proksi gagal: %s</string>
     <string name="ip_rotation">Rotasi IP</string>
     <string name="ip_rotation_desc">Rotasikan IP saat ini ketika terjadi masalah pemutaran atau konten.</string>
     <string name="ip_rotation_active_proxies">%d proksi aktif</string>
-    <string name="ip_rotation_loading">Ngisi daftar proksiâ€¦</string>
-    <string name="ip_rotation_refreshing">Menyegarkan IPâ€¦</string>
+    <string name="ip_rotation_loading">Ngisi daftar proksi…</string>
+    <string name="ip_rotation_refreshing">Menyegarkan IP…</string>
     <string name="ip_rotation_refresh">Segarkan IP</string>
     <string name="stream_bypass_proxy">Lewati proksi untuk streaming</string>
     <string name="stream_bypass_proxy_desc">Gunakan IP langsung Kowe untuk pemutaran streaming guna menghindari ketidakcocokan IP</string>
@@ -385,12 +385,12 @@
     <string name="external_downloader_package_desc">Nama paket aplikasi pengunduh eksternal (mis. com.deniscerri.ytdl)</string>
     <string name="open_with_downloader">Buka dengan Pengunduh</string>
     <string name="external_downloader_not_installed">Aplikasi pengunduh eksternal tidak diinstal</string>
-    <string name="external_downloader_not_configured">Ora ana pengunduh eksternal yang dikonfigurasi. Tetapkan satu di Setelan â†’ Pemutar.</string>
+    <string name="external_downloader_not_configured">Ora ana pengunduh eksternal yang dikonfigurasi. Tetapkan satu di Setelan → Pemutar.</string>
     <string name="add_symbol">Tambahke simbol</string>
     <string name="enter_symbol">Masukkan simbol</string>
     <string name="equalizer">Ekualiser</string>
     <string name="tap_to_activate_equalizer">Ketuk untuk mengaktifkan ekualiser</string>
-    <string name="eq_waiting_for_audio_session">Menunggu sesi audioâ€¦</string>
+    <string name="eq_waiting_for_audio_session">Menunggu sesi audio…</string>
     <string name="eq_open_system_equalizer">Buka ekualiser sistem</string>
     <string name="eq_presets">Preset</string>
     <string name="eq_flat">Datar</string>
@@ -469,7 +469,7 @@
     <string name="preview">Pratinjau</string>
 <string name="username">Nama pengguna</string>
     <string name="password">Kata sandi</string>
-    <string name="logging_in">Lagi Mlebuâ€¦</string>
+    <string name="logging_in">Lagi Mlebu…</string>
     <string name="album_name">Nama Album</string>
     <string name="app_icon">Ikon Aplikasi</string>
     <string name="target_language">Bahasa Sasaran</string>
@@ -504,7 +504,7 @@
     <string name="unknown_sample_rate">Sample rate tidak diketahui</string>
     <string name="content_length_label">Ukuran Konten</string>
     <string name="unknown_content_length">Panjang konten tidak diketahui</string>
-    <string name="loading_format">Ngisi formatâ€¦</string>
+    <string name="loading_format">Ngisi format…</string>
     <string name="buffer_health_label">Kesehatan Buffer</string>
     <string name="playback_speed_label">Kecepatan Pemutaran</string>
     <string name="state_label">Status</string>
@@ -638,7 +638,7 @@
     <string name="tokens_generated">Token berhasil dibuat</string>
     <string name="token_generation_failed">Pembuatan token gagal</string>
     <string name="token_copied">Token disalin ke papan klip</string>
-    <string name="extracting_from_url">Mengekstrak token dari URLâ€¦</string>
+    <string name="extracting_from_url">Mengekstrak token dari URL…</string>
     <string name="po_token_account_notice_title">Gunakan akun yang sama</string>
     <string name="po_token_account_notice_body">Mlebu di sini dengan akun Google yang sama yang sudah Kowe gunakan untuk YouTube Music di dalam Sekai Tune sebelum membuat token PO.</string>
     <string name="po_token_account_notice_same_account">Jika WebView ini menggunakan akun lain, token yang dihasilkan tidak akan berfungsi dengan benar.</string>
@@ -662,7 +662,6 @@
     <!-- External Sources -->
     <string name="sources_title">Sources</string>
     <string name="sources_subtitle">Manage external audio providers and priority</string>
-    <string name="sources_disclaimer">You are responsible for the addons you add.</string>
     <string name="sources_list_title">Audio Sources</string>
     <string name="sources_always_on">Always on</string>
     <string name="sources_add_addon">Add an addon</string>
@@ -672,10 +671,10 @@
     <string name="sources_remove">Remove</string>
     <string name="sources_remove_confirm">Remove \"%1$s\"? This cannot be undone.</string>
     <string name="sources_test">Test</string>
-    <string name="sources_testing">Testing…</string>
+    <string name="sources_testing">Testing�</string>
     <string name="sources_matching_title">Track Matching</string>
     <string name="sources_tolerance_title">Length tolerance</string>
-    <string name="sources_tolerance_seconds">±%1$d s</string>
+    <string name="sources_tolerance_seconds">�%1$d s</string>
     <string name="sources_tolerance_desc">Allowable difference between track length and candidate length</string>
     <string name="sources_health_ok">Connected (%s)</string>
     <string name="sources_health_unreachable">Unreachable: %s</string>
@@ -684,7 +683,7 @@
     <string name="search_source_youtube">YouTube</string>
     <string name="search_source_library">Library</string>
     <string name="search_source_addons">Addons</string>
-    <string name="search_addons_prompt">Search addonsâ€¦</string>
+    <string name="search_addons_prompt">Search addons…</string>
     <string name="no_addons_configured_title">No addons configured</string>
     <string name="no_addons_configured_desc">Add external sources to search beyond YouTube and your local library.</string>
     <string name="quality_checking">Checking quality...</string>

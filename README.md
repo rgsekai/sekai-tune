@@ -159,6 +159,21 @@ cd sekai-tune
 
 ---
 
+## 🧩 Addons & Lossless Audio
+
+<p align="left">
+  <a href="docs/SEKAI_TUNE_ADDON_DEVELOPER_GUIDE.md"><img src="https://img.shields.io/badge/Developer-Addon_Guide-00C853?style=for-the-badge&logo=gitbook&logoColor=white" alt="Addon Developer Guide"></a>
+</p>
+
+Sekai Tune supports custom audio provider addons to stream high-quality and lossless audio (such as FLAC and Hi-Res formats). By adding custom audio sources in **Settings > Sources**, you can unlock higher fidelity playback and integrate personal or remote music libraries.
+
+Sekai Tune's addon protocol is **fully compatible with third-party client addons (such as BitChord addons)** as well as custom self-hosted REST providers.
+
+Want to build or host your own addon? Check out our complete guide:
+👉 [**Sekai Tune Addon Developer Guide**](docs/SEKAI_TUNE_ADDON_DEVELOPER_GUIDE.md)
+
+---
+
 ## 🔒 Privacy
 
 <p align="left">

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="album_backdrop">Kabus latar belakang</string>
     <string name="album_backdrop_desc">Tunjukkan karya seni sebagai latar belakang kabur pada pemain</string>
@@ -7,7 +7,6 @@
     <!-- External Sources -->
     <string name="sources_title">Sources</string>
     <string name="sources_subtitle">Manage external audio providers and priority</string>
-    <string name="sources_disclaimer">You are responsible for the addons you add.</string>
     <string name="sources_list_title">Audio Sources</string>
     <string name="sources_always_on">Always on</string>
     <string name="sources_add_addon">Add an addon</string>
@@ -17,10 +16,10 @@
     <string name="sources_remove">Remove</string>
     <string name="sources_remove_confirm">Remove \"%1$s\"? This cannot be undone.</string>
     <string name="sources_test">Test</string>
-    <string name="sources_testing">Testingâ€¦</string>
+    <string name="sources_testing">Testing…</string>
     <string name="sources_matching_title">Track Matching</string>
     <string name="sources_tolerance_title">Length tolerance</string>
-    <string name="sources_tolerance_seconds">Â±%1$d s</string>
+    <string name="sources_tolerance_seconds">±%1$d s</string>
     <string name="sources_tolerance_desc">Allowable difference between track length and candidate length</string>
     <string name="sources_health_ok">Connected (%s)</string>
     <string name="sources_health_unreachable">Unreachable: %s</string>

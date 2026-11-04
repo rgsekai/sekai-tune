@@ -70,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -99,6 +100,7 @@ fun SourcesScreen(
     navController: NavController,
     viewModel: SourcesViewModel = hiltViewModel(),
 ) {
+    val uriHandler = LocalUriHandler.current
     val sources by viewModel.sources.collectAsState()
     val toleranceSeconds by viewModel.toleranceSeconds.collectAsState()
     val testingSourceId by viewModel.testingSourceId.collectAsState()
@@ -181,8 +183,8 @@ fun SourcesScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 1. Disclaimer Card
-            item(key = "disclaimer") {
+            // 1. Addon Guide & Lossless Audio Info Card
+            item(key = "addon_banner") {
                 Card(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
@@ -192,23 +194,58 @@ fun SourcesScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.info),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp),
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Text(
-                            text = stringResource(R.string.sources_disclaimer),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Medium,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.info),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .size(24.dp),
+                            )
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.sources_addon_banner_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.sources_addon_banner_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    runCatching {
+                                        uriHandler.openUri("https://github.com/rgsekai/sekai-tune#-addons--lossless-audio")
+                                    }
+                                },
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.sources_addon_banner_action),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
                     }
                 }
             }
