@@ -33,6 +33,7 @@ import moe.rgsekai.sekaitune.about.AboutTranslationContributorCollection
 import moe.rgsekai.sekaitune.about.FetchAboutContributorsUseCase
 import moe.rgsekai.sekaitune.about.FetchAboutDependencyLicensesUseCase
 import moe.rgsekai.sekaitune.about.FetchAboutTranslationContributorsUseCase
+import moe.rgsekai.sekaitune.about.GitHubStatsRepository
 import moe.rgsekai.sekaitune.currentBuildHash
 import javax.inject.Inject
 
@@ -66,6 +67,8 @@ data class AboutUiModel(
     val activeDialog: AboutDialog,
     val translationContributorsState: AboutTranslationContributorsUiState,
     val dependencyLicensesState: AboutDependencyLicensesUiState,
+    val totalDownloadsFormatted: String? = null,
+    val totalDownloadsCount: Int? = null,
 )
 
 @Immutable
@@ -248,6 +251,7 @@ class AboutViewModel
         private val fetchAboutContributors: FetchAboutContributorsUseCase,
         private val fetchTranslationContributors: FetchAboutTranslationContributorsUseCase,
         private val fetchDependencyLicenses: FetchAboutDependencyLicensesUseCase,
+        private val gitHubStatsRepository: GitHubStatsRepository,
     ) : ViewModel() {
         private val _state = MutableStateFlow<AboutScreenState>(AboutScreenState.Loading)
         val state: StateFlow<AboutScreenState> = _state.asStateFlow()
@@ -258,15 +262,19 @@ class AboutViewModel
         private var contributorsJob: Job? = null
         private var translationContributorsJob: Job? = null
         private var dependencyLicensesJob: Job? = null
+        private var downloadsJob: Job? = null
         private var contributorsState: AboutContributorsUiState = AboutContributorsUiState.Loading
         private var translationContributorsState: AboutTranslationContributorsUiState =
             AboutTranslationContributorsUiState.Loading
         private var dependencyLicensesState: AboutDependencyLicensesUiState = AboutDependencyLicensesUiState.Loading
         private var isOverflowMenuExpanded = false
         private var activeDialog = AboutDialog.NONE
+        private var totalDownloadsFormatted: String? = null
+        private var totalDownloadsCount: Int? = null
 
         init {
             loadContributors()
+            loadDownloads()
         }
 
         fun retryContributors() {
@@ -413,6 +421,24 @@ class AboutViewModel
                 }
         }
 
+        private fun loadDownloads() {
+            downloadsJob?.cancel()
+            downloadsJob =
+                viewModelScope.launch {
+                    gitHubStatsRepository.getCachedDownloads()?.let { cached ->
+                        totalDownloadsCount = cached
+                        totalDownloadsFormatted = GitHubStatsRepository.formatCompactNumber(cached)
+                        updateState()
+                    }
+                    val fresh = gitHubStatsRepository.fetchTotalDownloads()
+                    if (fresh != null) {
+                        totalDownloadsCount = fresh
+                        totalDownloadsFormatted = GitHubStatsRepository.formatCompactNumber(fresh)
+                        updateState()
+                    }
+                }
+        }
+
         private fun updateState() {
             _state.value = AboutScreenState.Success(buildUiModel())
         }
@@ -472,6 +498,8 @@ class AboutViewModel
                 activeDialog = activeDialog,
                 translationContributorsState = translationContributorsState,
                 dependencyLicensesState = dependencyLicensesState,
+                totalDownloadsFormatted = totalDownloadsFormatted,
+                totalDownloadsCount = totalDownloadsCount,
             )
 
         private fun AboutContributorCollection.toUiCollection(): AboutContributorUiCollection {

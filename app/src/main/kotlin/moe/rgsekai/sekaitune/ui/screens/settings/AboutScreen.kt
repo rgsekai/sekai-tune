@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -799,6 +800,16 @@ private fun AboutSuccessContent(
                 )
             }
         }
+        item(key = "downloads", contentType = "about_downloads") {
+            AboutContentContainer {
+                AboutDownloadsCard(
+                    downloads = model.totalDownloadsFormatted,
+                    downloadsCount = model.totalDownloadsCount,
+                    onOpenUri = onOpenUri,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
 
@@ -882,6 +893,91 @@ private fun AboutIdentityCard(
                 links = model.primaryLinks,
                 onOpenUri = onOpenUri,
             )
+        }
+    }
+}
+
+@Composable
+private fun AboutDownloadsCard(
+    downloads: String?,
+    downloadsCount: Int?,
+    onOpenUri: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        onClick = { onOpenUri("https://github.com/rgsekai/sekai-tune/releases") },
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraLarge,
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.download),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.github_downloads_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text =
+                        if (downloadsCount != null && downloadsCount > 0) {
+                            stringResource(
+                                R.string.github_downloads_count_desc,
+                                java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(downloadsCount),
+                            )
+                        } else {
+                            stringResource(R.string.github_downloads_desc)
+                        },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (downloads != null) {
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.heightIn(min = 32.dp),
+                ) {
+                    Text(
+                        text = downloads,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
+            } else {
+                LoadingIndicator(modifier = Modifier.size(20.dp))
+            }
         }
     }
 }
@@ -1190,6 +1286,5 @@ private fun MemberLinkActions(
         }
     }
 }
-
 
 

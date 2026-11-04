@@ -674,6 +674,10 @@
     <string name="support_development_title">Support development</string>
     <string name="support_development_donate">Donate to support development</string>
     <string name="support_development_star">Star on GitHub</string>
+    <string name="support_development_star_desc">Show support by starring the repository on GitHub</string>
+    <string name="github_downloads_title">Total Downloads</string>
+    <string name="github_downloads_desc">Downloads across all GitHub releases</string>
+    <string name="github_downloads_count_desc">%s downloads from GitHub releases</string>
     <string name="support">Support</string>
     <string name="settings_support_subtitle">Support the development of Sekai Tune</string>
     <string name="buy_me_a_coffee">Buy Me a Coffee</string>

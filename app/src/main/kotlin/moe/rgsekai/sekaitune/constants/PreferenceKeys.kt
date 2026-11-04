@@ -847,6 +847,8 @@ val GitHubReleasesEtagKey = stringPreferencesKey("github_releases_etag")
 val GitHubReleasesJsonKey = stringPreferencesKey("github_releases_json")
 val GitHubReleasesLastCheckedAtKey = longPreferencesKey("github_releases_last_checked_at")
 val GitHubReleasesFingerprintKey = stringPreferencesKey("github_releases_fingerprint")
+val GitHubTotalDownloadsKey = intPreferencesKey("github_total_downloads")
+val GitHubStarsCountKey = intPreferencesKey("github_stars_count")
 
 val CleanedUserSettingsUidsKey = stringSetPreferencesKey("cleaned_user_settings_uids")
 
