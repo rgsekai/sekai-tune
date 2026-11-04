@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -1989,7 +1990,7 @@ private fun V7PlayerBackdrop(
         AnimatedContent(
             targetState = backdropState,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(900, easing = LinearEasing)) togetherWith ExitTransition.None)
+                (fadeIn(animationSpec = tween(1000, easing = FastOutSlowInEasing)) togetherWith ExitTransition.None)
                     .apply { targetContentZIndex = 1f }
             },
             label = label,
