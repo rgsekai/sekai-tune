@@ -29,6 +29,7 @@ import moe.rgsekai.sekaitune.ui.component.backdrop.effects.blur
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -1996,8 +1997,15 @@ private fun V7PlayerBackdrop(
         AnimatedContent(
             targetState = backdropState,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(1000, easing = FastOutSlowInEasing)) togetherWith ExitTransition.None)
-                    .apply { targetContentZIndex = 1f }
+                val isLiveCanvasActive = targetState.canvasRenderMode !is CanvasRenderMode.None ||
+                    initialState.canvasRenderMode !is CanvasRenderMode.None
+                if (isLiveCanvasActive) {
+                    (EnterTransition.None togetherWith ExitTransition.None)
+                        .apply { targetContentZIndex = 1f }
+                } else {
+                    (fadeIn(animationSpec = tween(1000, easing = FastOutSlowInEasing)) togetherWith ExitTransition.None)
+                        .apply { targetContentZIndex = 1f }
+                }
             },
             label = label,
         ) { backdrop ->

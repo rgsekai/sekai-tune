@@ -469,19 +469,13 @@ private fun CanvasVideoPlayer(
         }
     }
 
-    val videoAlpha by animateFloatAsState(
-        targetValue = if (isVideoReady) 1f else 0f,
-        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
-        label = "canvasVideoCrossfade",
-    )
-
     ContentFrame(
         player = exoPlayer,
         surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
         contentScale = resizeMode.toContentScale(),
         keepContentOnReset = true,
         shutter = {},
-        modifier = modifier.graphicsLayer { alpha = videoAlpha },
+        modifier = modifier,
     )
 }
 
