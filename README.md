@@ -228,11 +228,7 @@ Sekai Tune is built on the shoulders of the open-source community:
 * **[BetterLyrics](https://github.com/BetterLyrics/BetterLyrics)** — Word-by-word synced lyrics, unison, and artwork integration.
 * **[Material Color Utilities](https://github.com/material-foundation/material-color-utilities)** — Dynamic theming extraction.
 * **[Read You](https://github.com/Ashinch/ReadYou)** and **[Seal](https://github.com/JunkFood02/Seal)** — UI component design inspiration.
-* **### Desktop version
-
-The Windows desktop version in `desktop/` is based on [Laya](LAYA-REPO-LINK) by Pintu Das,
-which is a fork of [BitChord](BITCHORD-REPO-LINK) by Kushagra Singh. Both are licensed under
-GPL-3.0. Copyright notices in the source files are kept as required by the licence.
+* **[Laya](https://github.com/impin2rex/Laya)** (by Pintu Das) & **[BitChord](https://github.com/kushagrasinghx/BitChord)** (by Kushagra Singh) — The Windows desktop version in `desktop/` is based on Laya, which is a fork of BitChord (both licensed under GPL-3.0 with copyright notices preserved).
 * **Translators, beta testers, and contributors** who continue to test, translate, and improve Sekai Tune.
 
 </details>
