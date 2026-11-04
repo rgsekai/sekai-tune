@@ -1371,15 +1371,17 @@ fun BottomSheetPlayer(
                                     Modifier
                                         .fillMaxSize(),
                             ) {
+                                val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
                                 val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
                                 val v7SwapState =
                                     rememberThumbnailSwapState(
-                                        videoId = enrichedMetadata?.id ?: mediaMetadata?.id,
+                                        videoId = currentTrackId,
                                         ytmUrl = effectiveThumbnailUrl,
                                         lowDataMode = lowDataModeActive,
                                         isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
                                     )
                                 V7PlayerBackdrop(
+                                    trackId = currentTrackId,
                                     thumbnailUrl = v7SwapState.displayUrl,
                                     canvasStaticUrl = v7CanvasArtwork?.static,
                                     canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
@@ -1481,15 +1483,17 @@ fun BottomSheetPlayer(
                                     Modifier
                                         .fillMaxSize(),
                             ) {
+                                val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
                                 val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
                                 val v7SwapState =
                                     rememberThumbnailSwapState(
-                                        videoId = enrichedMetadata?.id ?: mediaMetadata?.id,
+                                        videoId = currentTrackId,
                                         ytmUrl = effectiveThumbnailUrl,
                                         lowDataMode = lowDataModeActive,
                                         isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
                                     )
                                 V7PlayerBackdrop(
+                                    trackId = currentTrackId,
                                     thumbnailUrl = v7SwapState.displayUrl,
                                     canvasStaticUrl = v7CanvasArtwork?.static,
                                     canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
@@ -1787,6 +1791,7 @@ private fun BackdropBlurApi30(
 
 @Composable
 private fun V7PlayerBackdrop(
+    trackId: String?,
     thumbnailUrl: String?,
     canvasStaticUrl: String?,
     canvasPrimaryUrl: String?,
@@ -1972,8 +1977,9 @@ private fun V7PlayerBackdrop(
     }
 
     val backdropState =
-        remember(readyArtworkUrl, canvasPrimary, canvasFallback, canvasRenderMode) {
+        remember(trackId, readyArtworkUrl, canvasPrimary, canvasFallback, canvasRenderMode) {
             V7PlayerBackdropState(
+                trackId = trackId,
                 artworkUrl = readyArtworkUrl,
                 canvasPrimaryUrl = canvasPrimary,
                 canvasFallbackUrl = canvasFallback,
@@ -2335,6 +2341,7 @@ private fun Color.v7BackdropTone(
 
 @Immutable
 private data class V7PlayerBackdropState(
+    val trackId: String?,
     val artworkUrl: String?,
     val canvasPrimaryUrl: String?,
     val canvasFallbackUrl: String?,
