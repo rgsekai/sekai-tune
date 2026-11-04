@@ -63,7 +63,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.CanvasSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.ChangelogScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.ChiperSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.ContentSettings
-import moe.rgsekai.sekaitune.ui.screens.settings.CustomizeBackground
 import moe.rgsekai.sekaitune.ui.screens.settings.DebugSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.GlassEffectSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.IconScreen
@@ -466,9 +465,6 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/advanced") {
         AdvancedSettings(navController)
-    }
-    composable("customize_background") {
-        CustomizeBackground(navController)
     }
     composable(
         route = "$LOGIN_ROUTE?$LOGIN_URL_ARGUMENT={$LOGIN_URL_ARGUMENT}",

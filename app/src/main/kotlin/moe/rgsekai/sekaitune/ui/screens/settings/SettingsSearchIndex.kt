@@ -457,39 +457,6 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
-                id = "sub_player_design_style",
-                title = "Player design style",
-                subtitle = "Choose layout and look of the full-screen player (V1, V2, V3, V4)",
-                category = appearanceCategory,
-                iconRes = R.drawable.music_note,
-                route = "settings/appearance",
-                keywords = listOf("player design style", "player layout", "v4 player", "v3 player", "now playing style"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
-                id = "sub_player_bg_style",
-                title = "Player background style",
-                subtitle = "Customize player background with blurred album art or gradients",
-                category = appearanceCategory,
-                iconRes = R.drawable.palette,
-                route = "settings/appearance",
-                keywords = listOf("player background style", "blurred art", "gradient background", "album cover blur"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
-                id = "sub_playback_slider_style",
-                title = "Playback slider style",
-                subtitle = "Select progress bar seeker appearance (Standard, Wavy, Modern)",
-                category = appearanceCategory,
-                iconRes = R.drawable.waves,
-                route = "settings/appearance",
-                keywords = listOf("playback slider style", "progress bar", "seek bar", "wavy slider", "slider style"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
                 id = "sub_spotify_canvas",
                 title = "SekaiTune Canvas",
                 subtitle = "Enable looping video artwork canvas for supported tracks",

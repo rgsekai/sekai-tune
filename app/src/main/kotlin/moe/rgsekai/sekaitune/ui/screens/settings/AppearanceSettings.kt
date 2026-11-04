@@ -87,16 +87,10 @@ import moe.rgsekai.sekaitune.constants.GridItemsSizeKey
 import moe.rgsekai.sekaitune.constants.LibraryFilter
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyleKey
-import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
-import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
 import moe.rgsekai.sekaitune.constants.ThemeBackdropModeKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurEnabledKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurStrengthKey
-import moe.rgsekai.sekaitune.constants.PlayerButtonsStyle
-import moe.rgsekai.sekaitune.constants.PlayerButtonsStyleKey
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
 import moe.rgsekai.sekaitune.constants.PureBlackKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
@@ -106,8 +100,6 @@ import moe.rgsekai.sekaitune.constants.ShowHomeCategoryChipsKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
 import moe.rgsekai.sekaitune.constants.ShowTagsInLibraryKey
-import moe.rgsekai.sekaitune.constants.SliderStyle
-import moe.rgsekai.sekaitune.constants.SliderStyleKey
 import moe.rgsekai.sekaitune.constants.SwipeThumbnailKey
 import moe.rgsekai.sekaitune.constants.SwipeToSongKey
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadiusKey
@@ -119,7 +111,6 @@ import moe.rgsekai.sekaitune.ui.component.PreferenceEntry
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
 import moe.rgsekai.sekaitune.ui.component.SwitchPreference
 import moe.rgsekai.sekaitune.ui.component.ThumbnailCornerRadiusSelectorButton
-import moe.rgsekai.sekaitune.ui.player.StyledPlaybackSlider
 import moe.rgsekai.sekaitune.ui.theme.CustomFontLoader
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
@@ -140,11 +131,6 @@ fun AppearanceSettings(navController: NavController) {
             DarkModeKey,
             defaultValue = DarkMode.AUTO,
         )
-    val (playerDesignStyle, onPlayerDesignStyleChange) =
-        rememberEnumPreference(
-            PlayerDesignStyleKey,
-            defaultValue = PlayerDesignStyle.V7,
-        )
     val (showPlayerVolumeBar, onShowPlayerVolumeBarChange) =
         rememberPreference(
             ShowPlayerVolumeBarKey,
@@ -164,11 +150,6 @@ fun AppearanceSettings(navController: NavController) {
         rememberPreference(
             CropThumbnailToSquareKey,
             defaultValue = false,
-        )
-    val (playerBackground, onPlayerBackgroundChange) =
-        rememberEnumPreference(
-            PlayerBackgroundStyleKey,
-            defaultValue = PlayerBackgroundStyle.DEFAULT,
         )
     val (miniPlayerBackground, onMiniPlayerBackgroundChange) =
         rememberEnumPreference(
@@ -206,16 +187,6 @@ fun AppearanceSettings(navController: NavController) {
         rememberEnumPreference(
             DefaultOpenTabKey,
             defaultValue = NavigationTab.HOME,
-        )
-    val (playerButtonsStyle, onPlayerButtonsStyleChange) =
-        rememberEnumPreference(
-            PlayerButtonsStyleKey,
-            defaultValue = PlayerButtonsStyle.DEFAULT,
-        )
-    val (sliderStyle, onSliderStyleChange) =
-        rememberEnumPreference(
-            SliderStyleKey,
-            defaultValue = SliderStyle.Standard,
         )
     val (swipeThumbnail, onSwipeThumbnailChange) =
         rememberPreference(
@@ -293,12 +264,6 @@ fun AppearanceSettings(navController: NavController) {
             }
         }
 
-    val availableBackgroundStyles =
-        PlayerBackgroundStyle.entries.filter {
-            it != PlayerBackgroundStyle.BLUR || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        }
-    val isPlayerStyleCustomizationEnabled = playerDesignStyle != PlayerDesignStyle.V7
-    val isVolumeBarSupported = playerDesignStyle == PlayerDesignStyle.V7
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val useDarkTheme =
         remember(darkMode, isSystemInDarkTheme) {
@@ -310,73 +275,6 @@ fun AppearanceSettings(navController: NavController) {
             key = ChipSortTypeKey,
             defaultValue = LibraryFilter.LIBRARY,
         )
-    var showSliderOptionDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(isPlayerStyleCustomizationEnabled, playerBackground) {
-        if (!isPlayerStyleCustomizationEnabled && playerBackground != PlayerBackgroundStyle.DEFAULT) {
-            onPlayerBackgroundChange(PlayerBackgroundStyle.DEFAULT)
-        }
-    }
-
-    LaunchedEffect(isPlayerStyleCustomizationEnabled) {
-        if (!isPlayerStyleCustomizationEnabled) {
-            showSliderOptionDialog = false
-        }
-    }
-
-    if (showSliderOptionDialog && isPlayerStyleCustomizationEnabled) {
-        val sliderStyles =
-            remember {
-                listOf(
-                    SliderStyle.Standard,
-                    SliderStyle.Wavy,
-                    SliderStyle.Thick,
-                    SliderStyle.Circular,
-                    SliderStyle.Simple,
-                )
-            }
-        DefaultDialog(
-            buttons = {
-                TextButton(
-                    onClick = { showSliderOptionDialog = false },
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(text = stringResource(android.R.string.cancel))
-                }
-            },
-            onDismiss = {
-                showSliderOptionDialog = false
-            },
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                sliderStyles.chunked(3).forEach { styleRow ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        styleRow.forEach { style ->
-                            SliderStyleOptionCard(
-                                sliderStyle = style,
-                                selected = sliderStyle == style,
-                                onClick = {
-                                    onSliderStyleChange(style)
-                                    showSliderOptionDialog = false
-                                },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        repeat(3 - styleRow.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -597,106 +495,11 @@ fun AppearanceSettings(navController: NavController) {
 
             PreferenceGroup(title = stringResource(R.string.player)) {
                 item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.player_design_style)) },
-                        icon = { Icon(painterResource(R.drawable.palette), null) },
-                        selectedValue = playerDesignStyle,
-                        onValueSelected = onPlayerDesignStyleChange,
-                        valueText = {
-                            when (it) {
-                                PlayerDesignStyle.V2 -> stringResource(R.string.player_design_v2)
-                                PlayerDesignStyle.V7 -> stringResource(R.string.player_design_v7)
-                            }
-                        },
-                    )
-                }
-
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.player_background_style)) },
-                        description =
-                            if (isPlayerStyleCustomizationEnabled) {
-                                null
-                            } else {
-                                stringResource(R.string.player_background_style_v8_v9_desc)
-                            },
-                        icon = { Icon(painterResource(R.drawable.gradient), null) },
-                        selectedValue = playerBackground,
-                        onValueSelected = onPlayerBackgroundChange,
-                        isEnabled = isPlayerStyleCustomizationEnabled,
-                        valueText = {
-                            when (it) {
-                                PlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
-                                PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
-                                PlayerBackgroundStyle.CUSTOM -> stringResource(R.string.custom)
-                                PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
-                                PlayerBackgroundStyle.COLORING -> stringResource(R.string.coloring)
-                                PlayerBackgroundStyle.BLUR_GRADIENT -> stringResource(R.string.blur_gradient)
-                                PlayerBackgroundStyle.GLOW -> stringResource(R.string.glow)
-                                PlayerBackgroundStyle.GLOW_ANIMATED -> stringResource(R.string.glow_animated)
-                                PlayerBackgroundStyle.APPLE_MUSIC -> stringResource(R.string.apple_music)
-                                PlayerBackgroundStyle.LIVE_MESH -> stringResource(R.string.live_mesh)
-                                PlayerBackgroundStyle.LIQUID_GLASS -> stringResource(R.string.player_background_liquid_glass)
-                            }
-                        },
-                    )
-                }
-
-                item(visible = playerBackground == PlayerBackgroundStyle.CUSTOM) {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.customized_background)) },
-                        icon = { Icon(painterResource(R.drawable.image), null) },
-                        onClick = { navController.navigate("customize_background") },
-                    )
-                }
-
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.player_buttons_style)) },
-                        description =
-                            if (isPlayerStyleCustomizationEnabled) {
-                                null
-                            } else {
-                                stringResource(R.string.player_background_style_v8_v9_desc)
-                            },
-                        icon = { Icon(painterResource(R.drawable.palette), null) },
-                        selectedValue = playerButtonsStyle,
-                        onValueSelected = onPlayerButtonsStyleChange,
-                        isEnabled = isPlayerStyleCustomizationEnabled,
-                        valueText = {
-                            when (it) {
-                                PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
-                                PlayerButtonsStyle.SECONDARY -> stringResource(R.string.secondary_color_style)
-                            }
-                        },
-                    )
-                }
-
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.player_slider_style)) },
-                        description = sliderStyleLabel(sliderStyle),
-                        icon = { Icon(painterResource(R.drawable.sliders), null) },
-                        onClick = {
-                            showSliderOptionDialog = true
-                        },
-                        isEnabled = isPlayerStyleCustomizationEnabled,
-                    )
-                }
-
-                item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.show_player_volume_bar)) },
-                        description =
-                            if (isVolumeBarSupported) {
-                                null
-                            } else {
-                                stringResource(R.string.player_volume_bar_v7_v8_only)
-                            },
                         icon = { Icon(painterResource(R.drawable.volume_up), null) },
                         checked = showPlayerVolumeBar,
                         onCheckedChange = onShowPlayerVolumeBarChange,
-                        isEnabled = isVolumeBarSupported,
                     )
                 }
 
@@ -879,61 +682,6 @@ fun AppearanceSettings(navController: NavController) {
     }
 }
 
-@Composable
-private fun SliderStyleOptionCard(
-    sliderStyle: SliderStyle,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var sliderValue by remember {
-        mutableFloatStateOf(0.5f)
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier =
-            modifier
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .border(
-                    1.dp,
-                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                    RoundedCornerShape(16.dp),
-                ).clickable(onClick = onClick)
-                .padding(16.dp),
-    ) {
-        StyledPlaybackSlider(
-            sliderStyle = sliderStyle,
-            value = sliderValue,
-            valueRange = 0f..1f,
-            onValueChange = { sliderValue = it },
-            onValueChangeFinished = {},
-            activeColor = MaterialTheme.colorScheme.primary,
-            isPlaying = true,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-        )
-
-        Text(
-            text = sliderStyleLabel(sliderStyle),
-            style = MaterialTheme.typography.labelLarge,
-        )
-    }
-}
-
-@Composable
-private fun sliderStyleLabel(sliderStyle: SliderStyle): String =
-    when (sliderStyle) {
-        SliderStyle.Standard -> stringResource(R.string.slider_style_standard)
-        SliderStyle.Wavy -> stringResource(R.string.slider_style_wavy)
-        SliderStyle.Thick -> stringResource(R.string.slider_style_thick)
-        SliderStyle.Circular -> stringResource(R.string.slider_style_circular)
-        SliderStyle.Simple -> stringResource(R.string.slider_style_simple)
-    }
 
 enum class DarkMode {
     ON,

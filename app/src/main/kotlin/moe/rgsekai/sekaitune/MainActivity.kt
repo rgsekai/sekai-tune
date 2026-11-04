@@ -238,8 +238,6 @@ import moe.rgsekai.sekaitune.constants.OnboardingCompletedKey
 import moe.rgsekai.sekaitune.constants.PauseSearchHistoryKey
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
 import moe.rgsekai.sekaitune.constants.PureBlackKey
 import moe.rgsekai.sekaitune.constants.RemindAfterKey
 import moe.rgsekai.sekaitune.constants.SYSTEM_DEFAULT
@@ -1103,10 +1101,6 @@ class MainActivity : ComponentActivity() {
                         key = PlayerBackgroundStyleKey,
                         defaultValue = PlayerBackgroundStyle.DEFAULT,
                     )
-                    val playerDesignStyle by rememberEnumPreference(
-                        key = PlayerDesignStyleKey,
-                        defaultValue = PlayerDesignStyle.V7,
-                    )
 
                     val (liquidGlassGlobalEnabled) = rememberPreference(LiquidGlassGlobalEnabledKey, defaultValue = false)
                     val (liquidGlassVibrancy) = rememberPreference(LiquidGlassVibrancyKey, defaultValue = 80f)
@@ -1250,7 +1244,7 @@ class MainActivity : ComponentActivity() {
                     val shouldHideStatusBars =
                         isYearInMusicScreen ||
                             isAmbientModeScreen ||
-                            (playerBottomSheetState.isExpanded && playerDesignStyle == PlayerDesignStyle.V7)
+                            playerBottomSheetState.isExpanded
 
                     LaunchedEffect(shouldHideStatusBars, aodModeEnabled) {
                         if (aodModeEnabled) return@LaunchedEffect

@@ -191,21 +191,9 @@ import moe.rgsekai.sekaitune.constants.DarkModeKey
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
 import moe.rgsekai.sekaitune.constants.MaxCanvasCacheSizeKey
-import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
-import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
-import moe.rgsekai.sekaitune.constants.PlayerButtonsStyle
-import moe.rgsekai.sekaitune.constants.PlayerButtonsStyleKey
-import moe.rgsekai.sekaitune.constants.PlayerCustomBlurKey
-import moe.rgsekai.sekaitune.constants.PlayerCustomBrightnessKey
-import moe.rgsekai.sekaitune.constants.PlayerCustomContrastKey
-import moe.rgsekai.sekaitune.constants.PlayerCustomImageUriKey
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
 import moe.rgsekai.sekaitune.constants.QueuePeekHeight
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
-import moe.rgsekai.sekaitune.constants.SliderStyle
-import moe.rgsekai.sekaitune.constants.SliderStyleKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
 import moe.rgsekai.sekaitune.constants.ThemeBackdropModeKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurEnabledKey
@@ -346,25 +334,12 @@ fun BottomSheetPlayer(
 
     val playerConnection = LocalPlayerConnection.current ?: return
 
-    val playerDesignStyle by rememberEnumPreference(
-        key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.V7,
-    )
     val showPlayerVolumeBar by rememberPreference(
         key = ShowPlayerVolumeBarKey,
         defaultValue = false,
     )
 
-    val playerBackground by rememberEnumPreference(
-        key = PlayerBackgroundStyleKey,
-        defaultValue = PlayerBackgroundStyle.DEFAULT,
-    )
 
-    // Custom background preferences (image + effects)
-    val (playerCustomImageUri) = rememberPreference(PlayerCustomImageUriKey, "")
-    val (playerCustomBlur) = rememberPreference(PlayerCustomBlurKey, 0f)
-    val (playerCustomContrast) = rememberPreference(PlayerCustomContrastKey, 1f)
-    val (playerCustomBrightness) = rememberPreference(PlayerCustomBrightnessKey, 1f)
 
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
     val (blurRadius) = rememberPreference(BlurRadiusKey, 48f)
@@ -373,10 +348,6 @@ fun BottomSheetPlayer(
     val (themeBackdropBlurStrength) = rememberPreference(ThemeBackdropBlurStrengthKey, defaultValue = 60)
     val (showCodecOnPlayer) = rememberPreference(booleanPreferencesKey("show_codec_on_player"), false)
 
-    val playerButtonsStyle by rememberEnumPreference(
-        key = PlayerButtonsStyleKey,
-        defaultValue = PlayerButtonsStyle.DEFAULT,
-    )
 
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
@@ -384,20 +355,7 @@ fun BottomSheetPlayer(
         remember(darkTheme, isSystemInDarkTheme) {
             if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
         }
-    val onBackgroundColor =
-        when (playerBackground) {
-            PlayerBackgroundStyle.DEFAULT -> {
-                MaterialTheme.colorScheme.secondary
-            }
 
-            else -> {
-                if (useDarkTheme) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onPrimary
-                }
-            }
-        }
     val useBlackBackground =
         remember(isSystemInDarkTheme, darkTheme, pureBlack) {
             val useDarkTheme =
@@ -474,7 +432,6 @@ fun BottomSheetPlayer(
         )
     }
 
-    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.Standard)
 
     LaunchedEffect(maxCanvasCacheSize) {
         CanvasArtworkPlaybackCache.setMaxSize(maxCanvasCacheSize)
@@ -520,17 +477,9 @@ fun BottomSheetPlayer(
         }
     }
 
-    LaunchedEffect(mediaMetadata?.id, playerBackground, playerDesignStyle) {
+    LaunchedEffect(mediaMetadata?.id) {
         if (aodModeEnabled) return@LaunchedEffect
-        if (playerDesignStyle == PlayerDesignStyle.V7 ||
-            playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.COLORING ||
-            playerBackground == PlayerBackgroundStyle.BLUR_GRADIENT ||
-            playerBackground == PlayerBackgroundStyle.GLOW ||
-            playerBackground == PlayerBackgroundStyle.GLOW_ANIMATED ||
-            playerBackground == PlayerBackgroundStyle.APPLE_MUSIC ||
-            playerBackground == PlayerBackgroundStyle.LIVE_MESH ||
-            playerBackground == PlayerBackgroundStyle.LIQUID_GLASS
-        ) {
+        if (true) {
             val currentMetadata = mediaMetadata
             if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
                 // Check cache first
@@ -594,63 +543,9 @@ fun BottomSheetPlayer(
 
     val changeBound = state.expandedBound / 3
 
-    val TextBackgroundColor =
-        if (playerDesignStyle == PlayerDesignStyle.V7) {
-            Color.White
-        } else {
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-                PlayerBackgroundStyle.BLUR,
-                PlayerBackgroundStyle.GRADIENT,
-                PlayerBackgroundStyle.COLORING,
-                PlayerBackgroundStyle.BLUR_GRADIENT,
-                PlayerBackgroundStyle.GLOW,
-                PlayerBackgroundStyle.GLOW_ANIMATED,
-                PlayerBackgroundStyle.APPLE_MUSIC,
-                PlayerBackgroundStyle.LIVE_MESH,
-                PlayerBackgroundStyle.LIQUID_GLASS,
-                PlayerBackgroundStyle.CUSTOM -> Color.White
-            }
-        }
-
-    val icBackgroundColor =
-        if (playerDesignStyle == PlayerDesignStyle.V7) {
-            Color.Black
-        } else {
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
-                PlayerBackgroundStyle.BLUR,
-                PlayerBackgroundStyle.GRADIENT,
-                PlayerBackgroundStyle.COLORING,
-                PlayerBackgroundStyle.BLUR_GRADIENT,
-                PlayerBackgroundStyle.GLOW,
-                PlayerBackgroundStyle.GLOW_ANIMATED,
-                PlayerBackgroundStyle.APPLE_MUSIC,
-                PlayerBackgroundStyle.LIVE_MESH,
-                PlayerBackgroundStyle.LIQUID_GLASS,
-                PlayerBackgroundStyle.CUSTOM -> Color.Black
-            }
-        }
-
-    val (textButtonColor, iconButtonColor) =
-        when (playerButtonsStyle) {
-            PlayerButtonsStyle.DEFAULT -> {
-                Pair(TextBackgroundColor, icBackgroundColor)
-            }
-
-            PlayerButtonsStyle.SECONDARY -> {
-                Pair(
-                    MaterialTheme.colorScheme.secondary,
-                    MaterialTheme.colorScheme.onSecondary,
-                )
-            }
-        }.let { (tb, ib) ->
-            if (playerDesignStyle == PlayerDesignStyle.V7) {
-                Pair(Color.White, Color.Black)
-            } else {
-                Pair(tb, ib)
-            }
-        }
+    val TextBackgroundColor = Color.White
+    val icBackgroundColor = Color.Black
+    val (textButtonColor, iconButtonColor) = Pair(Color.White, Color.Black)
 
     val download by LocalDownloadUtil.current
         .getDownload(mediaMetadata?.id ?: "", mediaMetadata?.matchedCatalogId)
@@ -952,62 +847,18 @@ fun BottomSheetPlayer(
                         }
                     }
                 },
-        backgroundColor =
-            if (playerDesignStyle == PlayerDesignStyle.V7) {
-                val progress =
-                    ((state.value - state.collapsedBound) / (state.expandedBound - state.collapsedBound))
-                        .coerceIn(0f, 1f)
-                val fadeProgress =
-                    if (progress < 0.2f) {
-                        ((0.2f - progress) / 0.2f).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
-                Color.Black.copy(alpha = 1f - fadeProgress)
-            } else {
-                when (playerBackground) {
-                    PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
-                        // Apply same enhanced fade logic to blur/gradient backgrounds
-                        val progress =
-                            ((state.value - state.collapsedBound) / (state.expandedBound - state.collapsedBound))
-                                .coerceIn(0f, 1f)
-
-                        // Only start fading when very close to dismissal (last 20%)
-                        val fadeProgress =
-                            if (progress < 0.2f) {
-                                ((0.2f - progress) / 0.2f).coerceIn(0f, 1f)
-                            } else {
-                                0f
-                            }
-
-                        MaterialTheme.colorScheme.surface.copy(alpha = 1f - fadeProgress)
-                    }
-
-                    else -> {
-                        // Enhanced background - stable until last 20% of drag (both normal and pure black)
-                        // Calculate progress for fade effect
-                        val progress =
-                            ((state.value - state.collapsedBound) / (state.expandedBound - state.collapsedBound))
-                                .coerceIn(0f, 1f)
-
-                        // Only start fading when very close to dismissal (last 20%)
-                        val fadeProgress =
-                            if (progress < 0.2f) {
-                                ((0.2f - progress) / 0.2f).coerceIn(0f, 1f)
-                            } else {
-                                0f
-                            }
-
-                        if (useBlackBackground) {
-                            // Apply same logic to pure black background
-                            Color.Black.copy(alpha = 1f - fadeProgress)
-                        } else {
-                            // Apply same logic to normal theme
-                            MaterialTheme.colorScheme.surface.copy(alpha = 1f - fadeProgress)
-                        }
-                    }
+        backgroundColor = run {
+            val progress =
+                ((state.value - state.collapsedBound) / (state.expandedBound - state.collapsedBound))
+                    .coerceIn(0f, 1f)
+            val fadeProgress =
+                if (progress < 0.2f) {
+                    ((0.2f - progress) / 0.2f).coerceIn(0f, 1f)
+                } else {
+                    0f
                 }
-            },
+            Color.Black.copy(alpha = 1f - fadeProgress)
+        },
         onDismiss = {
             playerConnection.service.stopAndClearPlayback(clearPersistentState = true)
         },
@@ -1075,9 +926,7 @@ fun BottomSheetPlayer(
                 if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
             }
         val shouldUseV7Canvas =
-            SekaiTuneCanvasEnabled &&
-                (playerDesignStyle == PlayerDesignStyle.V7 || playerBackground == PlayerBackgroundStyle.APPLE_MUSIC) &&
-                !aodModeEnabled
+            SekaiTuneCanvasEnabled && !aodModeEnabled
         val shouldFetchV7Canvas = shouldUseV7Canvas && (canvasMetered || !lowDataModeActive)
         val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback, spotifySpDc) {
             CanvasRequestPolicy(
@@ -1286,39 +1135,6 @@ fun BottomSheetPlayer(
                 drawContent()
             }
 
-        val controlsContent: @Composable ColumnScope.(MediaMetadata) -> Unit = { mediaMetadata ->
-            CompositionLocalProvider(LocalAppBackdrop provides controlsBackdrop) {
-            PlayerControlsContent(
-                mediaMetadata = mediaMetadata,
-                playerDesignStyle = playerDesignStyle,
-                sliderStyle = sliderStyle,
-                playbackState = playbackState,
-                isPlaying = isPlaying,
-                repeatMode = repeatMode,
-                canSkipPrevious = canSkipPrevious,
-                canSkipNext = canSkipNext,
-                textButtonColor = textButtonColor,
-                iconButtonColor = iconButtonColor,
-                textBackgroundColor = TextBackgroundColor,
-                icBackgroundColor = icBackgroundColor,
-                sliderPosition = sliderPosition,
-                position = position,
-                duration = duration,
-                playerConnection = playerConnection,
-                navController = navController,
-                state = state,
-                menuState = menuState,
-                bottomSheetPageState = bottomSheetPageState,
-                context = context,
-                onSliderValueChange = onSliderValueChange,
-                onSliderValueChangeFinished = onSliderValueChangeFinished,
-                currentFormat = currentFormat,
-                lyricsSyncOffset = lyricsSyncOffset,
-                showOneLineLyrics = showOneLineLyrics,
-                onShowLyrics = { isLyricsScreenVisible = true },
-            )
-            }
-        }
 
         Box(
             modifier =
@@ -1332,26 +1148,7 @@ fun BottomSheetPlayer(
                         },
                     ),
         ) {
-            Box(modifier = Modifier.fillMaxSize().layerBackdrop(controlsBackdrop)) {
-            if (!state.isCollapsed &&
-                !aodModeEnabled &&
-                playerDesignStyle != PlayerDesignStyle.V7
-            ) {
-                PlayerBackground(
-                    playerBackground = playerBackground,
-                    mediaMetadata = mediaMetadata,
-                    gradientColors = gradientColors,
-                    disableBlur = disableBlur,
-                    blurRadius = blurRadius,
-                    playerCustomImageUri = playerCustomImageUri,
-                    playerCustomBlur = playerCustomBlur,
-                    playerCustomContrast = playerCustomContrast,
-                    playerCustomBrightness = playerCustomBrightness,
-                    canvasArtwork = v7CanvasArtwork,
-                    isPlaying = isPlaying,
-                )
-            }
-            }
+
 
             val queueBackdrop =
                 rememberLayerBackdrop {
@@ -1366,213 +1163,146 @@ fun BottomSheetPlayer(
             ) {
                 when (LocalConfiguration.current.orientation) {
                     Configuration.ORIENTATION_LANDSCAPE -> {
-                        if (playerDesignStyle == PlayerDesignStyle.V7) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize(),
-                            ) {
-                                val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
-                                val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
-                                val v7SwapState =
-                                    rememberThumbnailSwapState(
-                                        videoId = currentTrackId,
-                                        ytmUrl = effectiveThumbnailUrl,
-                                        lowDataMode = lowDataModeActive,
-                                        isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
-                                    )
-                                V7PlayerBackdrop(
-                                    trackId = currentTrackId,
-                                    thumbnailUrl = v7SwapState.displayUrl,
-                                    canvasStaticUrl = v7CanvasArtwork?.static,
-                                    canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
-                                    canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
-                                    isPlaying = isPlaying,
-                                    disableBlur = disableBlur,
-                                    themeBackdropMode = themeBackdropMode,
-                                    themeBackdropBlurEnabled = themeBackdropBlurEnabled,
-                                    themeBackdropBlurStrength = themeBackdropBlurStrength,
-                                    gradientColors = gradientColors,
-                                    label = "v7BackdropLandscape",
-                                )
-
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier =
-                                        Modifier
-                                            .align(Alignment.BottomCenter)
-                                            .padding(bottom = queueSheetState.collapsedBound)
-                                            .windowInsetsPadding(
-                                                WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
-                                            ).nestedScroll(state.preUpPostDownNestedScrollConnection),
-                                ) {
-                                    enrichedMetadata?.let { metadata ->
-                                        V8PlayerControlsContent(
-                                            mediaMetadata = metadata,
-                                            queueTitle = "",
-                                            playbackState = playbackState,
-                                            isPlaying = isPlaying,
-                                            canSkipPrevious = canSkipPrevious,
-                                            canSkipNext = canSkipNext,
-                                            currentSongLiked = currentSongLiked,
-                                            sliderPosition = sliderPosition,
-                                            position = position,
-                                            duration = duration,
-                                            volume = deviceMusicVolumeController.volumeFraction,
-                                            showVolumeBar = showPlayerVolumeBar,
-                                            currentFormat = currentFormat,
-                                            playerConnection = playerConnection,
-                                            navController = navController,
-                                            state = state,
-                                            menuState = menuState,
-                                            bottomSheetPageState = bottomSheetPageState,
-                                            onSliderValueChange = onSliderValueChange,
-                                            onSliderValueChangeFinished = onSliderValueChangeFinished,
-                                            onVolumeChange = onPlayerVolumeChange,
-                                            landscape = true,
-                                            lyricsSyncOffset = lyricsSyncOffset,
-                                            showOneLineLyrics = showOneLineLyrics,
-                                            onShowLyrics = { isLyricsScreenVisible = true },
-                                        )
-                                    }
-
-                                    Spacer(Modifier.height(16.dp))
-                                }
-                            }
-                        } else {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                                        .padding(bottom = queueSheetState.collapsedBound + 48.dp),
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    val screenWidth = LocalConfiguration.current.screenWidthDp
-                                    val thumbnailSize = (screenWidth * 0.4).dp
-                                    Thumbnail(
-                                        sliderPositionProvider = { sliderPosition },
-                                        modifier = Modifier.size(thumbnailSize),
-                                        isPlayerExpanded = state.isExpanded,
-                                    )
-                                }
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
-                                ) {
-                                    Spacer(Modifier.weight(1f))
-
-                                    enrichedMetadata?.let {
-                                        controlsContent(it)
-                                    }
-
-                                    Spacer(Modifier.weight(1f))
-                                }
-                            }
+                        Box(
+                        modifier =
+                        Modifier
+                        .fillMaxSize(),
+                        ) {
+                        val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
+                        val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
+                        val v7SwapState =
+                        rememberThumbnailSwapState(
+                        videoId = currentTrackId,
+                        ytmUrl = effectiveThumbnailUrl,
+                        lowDataMode = lowDataModeActive,
+                        isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
+                        )
+                        V7PlayerBackdrop(
+                        trackId = currentTrackId,
+                        thumbnailUrl = v7SwapState.displayUrl,
+                        canvasStaticUrl = v7CanvasArtwork?.static,
+                        canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
+                        canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
+                        isPlaying = isPlaying,
+                        disableBlur = disableBlur,
+                        themeBackdropMode = themeBackdropMode,
+                        themeBackdropBlurEnabled = themeBackdropBlurEnabled,
+                        themeBackdropBlurStrength = themeBackdropBlurStrength,
+                        gradientColors = gradientColors,
+                        label = "v7BackdropLandscape",
+                        )
+                        
+                        Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier =
+                        Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = queueSheetState.collapsedBound)
+                        .windowInsetsPadding(
+                        WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                        ).nestedScroll(state.preUpPostDownNestedScrollConnection),
+                        ) {
+                        enrichedMetadata?.let { metadata ->
+                        V8PlayerControlsContent(
+                        mediaMetadata = metadata,
+                        queueTitle = "",
+                        playbackState = playbackState,
+                        isPlaying = isPlaying,
+                        canSkipPrevious = canSkipPrevious,
+                        canSkipNext = canSkipNext,
+                        currentSongLiked = currentSongLiked,
+                        sliderPosition = sliderPosition,
+                        position = position,
+                        duration = duration,
+                        volume = deviceMusicVolumeController.volumeFraction,
+                        showVolumeBar = showPlayerVolumeBar,
+                        currentFormat = currentFormat,
+                        playerConnection = playerConnection,
+                        navController = navController,
+                        state = state,
+                        menuState = menuState,
+                        bottomSheetPageState = bottomSheetPageState,
+                        onSliderValueChange = onSliderValueChange,
+                        onSliderValueChangeFinished = onSliderValueChangeFinished,
+                        onVolumeChange = onPlayerVolumeChange,
+                        landscape = true,
+                        lyricsSyncOffset = lyricsSyncOffset,
+                        showOneLineLyrics = showOneLineLyrics,
+                        onShowLyrics = { isLyricsScreenVisible = true },
+                        )
+                        }
+                        
+                        Spacer(Modifier.height(16.dp))
+                        }
                         }
                     }
 
                     else -> {
-                        if (playerDesignStyle == PlayerDesignStyle.V7) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize(),
-                            ) {
-                                val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
-                                val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
-                                val v7SwapState =
-                                    rememberThumbnailSwapState(
-                                        videoId = currentTrackId,
-                                        ytmUrl = effectiveThumbnailUrl,
-                                        lowDataMode = lowDataModeActive,
-                                        isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
-                                    )
-                                V7PlayerBackdrop(
-                                    trackId = currentTrackId,
-                                    thumbnailUrl = v7SwapState.displayUrl,
-                                    canvasStaticUrl = v7CanvasArtwork?.static,
-                                    canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
-                                    canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
-                                    isPlaying = isPlaying,
-                                    disableBlur = disableBlur,
-                                    themeBackdropMode = themeBackdropMode,
-                                    themeBackdropBlurEnabled = themeBackdropBlurEnabled,
-                                    themeBackdropBlurStrength = themeBackdropBlurStrength,
-                                    gradientColors = gradientColors,
-                                    label = "v7BackdropPortrait",
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize(),
+                        ) {
+                            val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
+                            val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
+                            val v7SwapState =
+                                rememberThumbnailSwapState(
+                                    videoId = currentTrackId,
+                                    ytmUrl = effectiveThumbnailUrl,
+                                    lowDataMode = lowDataModeActive,
+                                    isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
                                 )
+                            V7PlayerBackdrop(
+                                trackId = currentTrackId,
+                                thumbnailUrl = v7SwapState.displayUrl,
+                                canvasStaticUrl = v7CanvasArtwork?.static,
+                                canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
+                                canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
+                                isPlaying = isPlaying,
+                                disableBlur = disableBlur,
+                                themeBackdropMode = themeBackdropMode,
+                                themeBackdropBlurEnabled = themeBackdropBlurEnabled,
+                                themeBackdropBlurStrength = themeBackdropBlurStrength,
+                                gradientColors = gradientColors,
+                                label = "v7BackdropPortrait",
+                            )
 
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier =
-                                        Modifier
-                                            .align(Alignment.BottomCenter)
-                                            .padding(bottom = queueSheetState.collapsedBound)
-                                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                                            .nestedScroll(state.preUpPostDownNestedScrollConnection),
-                                ) {
-                                    enrichedMetadata?.let { metadata ->
-                                        V8PlayerControlsContent(
-                                            mediaMetadata = metadata,
-                                            queueTitle = "",
-                                            playbackState = playbackState,
-                                            isPlaying = isPlaying,
-                                            canSkipPrevious = canSkipPrevious,
-                                            canSkipNext = canSkipNext,
-                                            currentSongLiked = currentSongLiked,
-                                            sliderPosition = sliderPosition,
-                                            position = position,
-                                            duration = duration,
-                                            volume = deviceMusicVolumeController.volumeFraction,
-                                            showVolumeBar = showPlayerVolumeBar,
-                                            currentFormat = currentFormat,
-                                            playerConnection = playerConnection,
-                                            navController = navController,
-                                            state = state,
-                                            menuState = menuState,
-                                            bottomSheetPageState = bottomSheetPageState,
-                                            onSliderValueChange = onSliderValueChange,
-                                            onSliderValueChangeFinished = onSliderValueChangeFinished,
-                                            onVolumeChange = onPlayerVolumeChange,
-                                            lyricsSyncOffset = lyricsSyncOffset,
-                                            showOneLineLyrics = showOneLineLyrics,
-                                            onShowLyrics = { isLyricsScreenVisible = true },
-                                        )
-                                    }
-
-                                    Spacer(Modifier.height(24.dp))
-                                }
-                            }
-                        } else {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier =
                                     Modifier
-                                        .windowInsetsPadding(
-                                            WindowInsets.systemBars.only(
-                                                WindowInsetsSides.Horizontal,
-                                            ),
-                                        ).padding(bottom = queueSheetState.collapsedBound),
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = queueSheetState.collapsedBound)
+                                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                                        .nestedScroll(state.preUpPostDownNestedScrollConnection),
                             ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Thumbnail(
-                                        sliderPositionProvider = { sliderPosition },
-                                        modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
-                                        isPlayerExpanded = state.isExpanded,
+                                enrichedMetadata?.let { metadata ->
+                                    V8PlayerControlsContent(
+                                        mediaMetadata = metadata,
+                                        queueTitle = "",
+                                        playbackState = playbackState,
+                                        isPlaying = isPlaying,
+                                        canSkipPrevious = canSkipPrevious,
+                                        canSkipNext = canSkipNext,
+                                        currentSongLiked = currentSongLiked,
+                                        sliderPosition = sliderPosition,
+                                        position = position,
+                                        duration = duration,
+                                        volume = deviceMusicVolumeController.volumeFraction,
+                                        showVolumeBar = showPlayerVolumeBar,
+                                        currentFormat = currentFormat,
+                                        playerConnection = playerConnection,
+                                        navController = navController,
+                                        state = state,
+                                        menuState = menuState,
+                                        bottomSheetPageState = bottomSheetPageState,
+                                        onSliderValueChange = onSliderValueChange,
+                                        onSliderValueChangeFinished = onSliderValueChangeFinished,
+                                        onVolumeChange = onPlayerVolumeChange,
+                                        lyricsSyncOffset = lyricsSyncOffset,
+                                        showOneLineLyrics = showOneLineLyrics,
+                                        onShowLyrics = { isLyricsScreenVisible = true },
                                     )
-                                }
-
-                                enrichedMetadata?.let {
-                                    controlsContent(it)
                                 }
 
                                 Spacer(Modifier.height(24.dp))
@@ -1585,19 +1315,7 @@ fun BottomSheetPlayer(
             val queueOnBackgroundColor = if (useBlackBackground) Color.White else MaterialTheme.colorScheme.onSurface
             val queueSurfaceColor = if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surface
 
-            val (queueTextButtonColor, queueIconButtonColor) =
-                when (playerButtonsStyle) {
-                    PlayerButtonsStyle.DEFAULT -> {
-                        Pair(queueOnBackgroundColor, queueSurfaceColor)
-                    }
-
-                    PlayerButtonsStyle.SECONDARY -> {
-                        Pair(
-                            MaterialTheme.colorScheme.secondary,
-                            MaterialTheme.colorScheme.onSecondary,
-                        )
-                    }
-                }
+            val (queueTextButtonColor, queueIconButtonColor) = Pair(queueOnBackgroundColor, queueSurfaceColor)
 
             CompositionLocalProvider(LocalAppBackdrop provides queueBackdrop) {
                 Queue(

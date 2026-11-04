@@ -29,9 +29,7 @@ val CustomFontUriKey = stringPreferencesKey("customFontUri")
 val CustomFontNameKey = stringPreferencesKey("customFontName")
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
-val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SwipeToSongKey = booleanPreferencesKey("SwipeToSong")
-val PlayerDesignStyleKey = stringPreferencesKey("playerDesignStyle")
 val ShowPlayerVolumeBarKey = booleanPreferencesKey("showPlayerVolumeBar")
 val ShowOneLineLyricsKey = booleanPreferencesKey("show_one_line_lyrics")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
@@ -146,13 +144,6 @@ enum class AodControlStyle {
     MINIMAL,
 }
 
-enum class SliderStyle {
-    Standard,
-    Wavy,
-    Thick,
-    Circular,
-    Simple,
-}
 
 const val SYSTEM_DEFAULT = "SYSTEM_DEFAULT"
 
@@ -602,15 +593,7 @@ fun deserializeLyricsProviderOrder(orderStr: String?): List<PreferredLyricsProvi
     return normalized + missing
 }
 
-enum class PlayerButtonsStyle {
-    DEFAULT,
-    SECONDARY,
-}
 
-enum class PlayerDesignStyle {
-    V2,
-    V7,
-}
 
 enum class PlayerBackgroundStyle {
     DEFAULT,
@@ -634,11 +617,6 @@ enum class MiniPlayerBackgroundStyle {
     LIQUID_GLASS,
 }
 
-// Keys for customized background
-val PlayerCustomImageUriKey = stringPreferencesKey("playerCustomImageUri")
-val PlayerCustomBlurKey = floatPreferencesKey("playerCustomBlur")
-val PlayerCustomContrastKey = floatPreferencesKey("playerCustomContrast")
-val PlayerCustomBrightnessKey = floatPreferencesKey("playerCustomBrightness")
 
 val LyricsAnimationStyleKey = stringPreferencesKey("lyricsAnimationStyle")
 
@@ -665,7 +643,6 @@ val HISTORY_DURATION_RANGE = HISTORY_DURATION_MIN.toFloat()..HISTORY_DURATION_MA
 val HISTORY_DURATION_LEGACY_FLOAT_KEY = floatPreferencesKey("historyDuration")
 val HistoryDuration = intPreferencesKey("historyDuration")
 
-val PlayerButtonsStyleKey = stringPreferencesKey("player_buttons_style")
 val PlayerBackgroundStyleKey = stringPreferencesKey("playerBackgroundStyle")
 val ShowLyricsKey = booleanPreferencesKey("showLyrics")
 val LyricsTextPositionKey = stringPreferencesKey("lyricsTextPosition")

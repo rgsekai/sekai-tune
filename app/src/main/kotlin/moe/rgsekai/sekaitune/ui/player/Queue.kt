@@ -107,8 +107,6 @@ import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.AutoLoadMoreKey
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
 import moe.rgsekai.sekaitune.constants.ListItemHeight
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyle
-import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
 import moe.rgsekai.sekaitune.constants.QueueEditLockKey
 import moe.rgsekai.sekaitune.db.entities.PlaylistEntity
 import moe.rgsekai.sekaitune.db.entities.PlaylistSongMap
@@ -314,11 +312,6 @@ fun Queue(
         togetherSessionState is moe.rgsekai.sekaitune.together.TogetherSessionState.Joined &&
             (togetherSessionState as moe.rgsekai.sekaitune.together.TogetherSessionState.Joined).role is moe.rgsekai.sekaitune.together.TogetherRole.Guest
     val effectiveLocked = locked || togetherForcesLock
-
-    val playerDesignStyle by rememberEnumPreference(
-        key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.V7,
-    )
 
     val snackbarHostState = remember { SnackbarHostState() }
     var dismissJob: Job? by remember { mutableStateOf(null) }
@@ -542,83 +535,37 @@ fun Queue(
         backgroundColor = Color.Unspecified,
         modifier = modifier,
         collapsedContent = {
-            when (playerDesignStyle) {
-                PlayerDesignStyle.V2 -> {
-                    QueueCollapsedContentV2(
-                        showCodecOnPlayer = showCodecOnPlayer,
-                        currentFormat = currentFormat,
-                        qualityBadgeInfo = qualityBadgeInfo,
-                        textBackgroundColor = TextBackgroundColor,
-                        textButtonColor = textButtonColor,
-                        iconButtonColor = iconButtonColor,
-                        sleepTimerEnabled = sleepTimerEnabled,
-                        sleepTimerTimeLeft = sleepTimerTimeLeft,
-                        repeatMode = repeatMode,
-                        mediaMetadata = mediaMetadata,
-                        onExpandQueue = openQueue,
-                        onSleepTimerClick = {
-                            if (sleepTimerEnabled) {
-                                playerConnection.service.sleepTimer.clear()
-                            } else {
-                                showSleepTimerDialog = true
-                            }
-                        },
-                        onShowLyrics = onShowLyrics,
-                        onRepeatModeClick = { playerConnection.player.toggleRepeatMode() },
-                        onMenuClick = {
-                            menuState.show {
-                                PlayerMenu(
-                                    mediaMetadata = mediaMetadata,
-                                    navController = navController,
-                                    playerBottomSheetState = playerBottomSheetState,
-                                    onShowDetailsDialog = {
-                                        mediaMetadata?.id?.let {
-                                            bottomSheetPageState.show {
-                                                ShowMediaInfo(it)
-                                            }
-                                        }
-                                    },
-                                    onDismiss = menuState::dismiss,
-                                )
-                            }
-                        },
-                    )
+            val audioDevice by playerConnection.service.activeAudioDevice.collectAsStateWithLifecycle()
+
+            val view = LocalView.current
+            DisposableEffect(view) {
+                val listener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
+                    if (hasFocus) playerConnection.service.refreshActiveDevice()
                 }
-
-                PlayerDesignStyle.V7 -> {
-                    val audioDevice by playerConnection.service.activeAudioDevice.collectAsStateWithLifecycle()
-
-                    val view = LocalView.current
-                    DisposableEffect(view) {
-                        val listener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
-                            if (hasFocus) playerConnection.service.refreshActiveDevice()
-                        }
-                        view.viewTreeObserver.addOnWindowFocusChangeListener(listener)
-                        onDispose { view.viewTreeObserver.removeOnWindowFocusChangeListener(listener) }
-                    }
-
-                    QueueCollapsedContentV7(
-                        showCodecOnPlayer = showCodecOnPlayer,
-                        currentFormat = currentFormat,
-                        textBackgroundColor = TextBackgroundColor,
-                        sleepTimerEnabled = sleepTimerEnabled,
-                        sleepTimerTimeLeft = sleepTimerTimeLeft,
-                        onExpandQueue = openQueue,
-                        onShowLyrics = onShowLyrics,
-                        onSleepTimerClick = {
-                            if (sleepTimerEnabled) {
-                                playerConnection.service.sleepTimer.clear()
-                            } else {
-                                showSleepTimerDialog = true
-                            }
-                        },
-                        onDeviceClick = {
-                            SystemMediaControlResolver.openMediaOutputSwitcher(context)
-                        },
-                        device = audioDevice,
-                    )
-                }
+                view.viewTreeObserver.addOnWindowFocusChangeListener(listener)
+                onDispose { view.viewTreeObserver.removeOnWindowFocusChangeListener(listener) }
             }
+
+            QueueCollapsedContentV7(
+                showCodecOnPlayer = showCodecOnPlayer,
+                currentFormat = currentFormat,
+                textBackgroundColor = TextBackgroundColor,
+                sleepTimerEnabled = sleepTimerEnabled,
+                sleepTimerTimeLeft = sleepTimerTimeLeft,
+                onExpandQueue = openQueue,
+                onShowLyrics = onShowLyrics,
+                onSleepTimerClick = {
+                    if (sleepTimerEnabled) {
+                        playerConnection.service.sleepTimer.clear()
+                    } else {
+                        showSleepTimerDialog = true
+                    }
+                },
+                onDeviceClick = {
+                    SystemMediaControlResolver.openMediaOutputSwitcher(context)
+                },
+                device = audioDevice,
+            )
 
             if (showSleepTimerDialog) {
                 SleepTimerDialog(
