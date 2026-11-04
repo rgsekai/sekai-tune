@@ -1981,41 +1981,15 @@ private fun V7PlayerBackdrop(
         }
     val shouldApplyBlur = !disableBlur
 
-    var activeBackdropState by remember { mutableStateOf(backdropState) }
-    LaunchedEffect(backdropState) {
-        if (backdropState.canvasRenderMode !is CanvasRenderMode.Video) {
-            activeBackdropState = backdropState
-        }
-    }
-
     BoxWithConstraints(
         modifier =
             modifier
                 .fillMaxSize(),
     ) {
-        // Pre-render the incoming canvas video off-screen / invisible until its first frame is decoded
-        if (backdropState.canvasRenderMode is CanvasRenderMode.Video && activeBackdropState != backdropState) {
-            Box(
-                modifier = Modifier
-                    .size(1.dp)
-                    .alpha(0.001f),
-            ) {
-                CanvasArtworkPlayer(
-                    renderMode = backdropState.canvasRenderMode,
-                    isPlaying = isPlaying,
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-                    onReady = {
-                        activeBackdropState = backdropState
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-
         AnimatedContent(
-            targetState = activeBackdropState,
+            targetState = backdropState,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(1200, easing = LinearEasing)) togetherWith ExitTransition.None)
+                (fadeIn(animationSpec = tween(900, easing = LinearEasing)) togetherWith ExitTransition.None)
                     .apply { targetContentZIndex = 1f }
             },
             label = label,
@@ -2235,6 +2209,15 @@ private fun V7PlayerBackdrop(
                 Box(
                     modifier = bannerModifier,
                 ) {
+                    if (sharpArtworkModel != null) {
+                        AsyncImage(
+                            model = sharpArtworkRequest,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            alignment = Alignment.TopCenter,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     if (backdrop.canvasRenderMode !is CanvasRenderMode.None) {
                         CanvasArtworkPlayer(
                             renderMode = backdrop.canvasRenderMode,
@@ -2242,16 +2225,6 @@ private fun V7PlayerBackdrop(
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                             modifier = Modifier.fillMaxSize(),
                         )
-                    } else {
-                        if (sharpArtworkModel != null) {
-                            AsyncImage(
-                                model = sharpArtworkRequest,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                alignment = Alignment.TopCenter,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
                     }
                 }
 
