@@ -169,6 +169,9 @@ Sekai Tune supports custom audio provider addons to stream high-quality and loss
 
 Sekai Tune's addon protocol is **fully compatible with third-party client addons (such as BitChord addons)** as well as custom self-hosted REST providers.
 
+> [!NOTE]  
+> **Disclaimer:** Sekai Tune itself does not host, provide, distribute, or operate any media files, audio streams, or third-party addons. Users are solely responsible for any custom or external addons they choose to configure.
+
 Want to build or host your own addon? Check out our complete guide:
 👉 [**Sekai Tune Addon Developer Guide**](docs/SEKAI_TUNE_ADDON_DEVELOPER_GUIDE.md)
 
