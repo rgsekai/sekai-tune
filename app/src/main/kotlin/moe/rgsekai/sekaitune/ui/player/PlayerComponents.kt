@@ -25,6 +25,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -1788,7 +1789,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = backgroundThumbnailUrl,
                     transitionSpec = {
-                        fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                        (fadeIn(animationSpec = tween(1000, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "",
                 ) { thumbnailUrl ->
@@ -1825,7 +1826,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = gradientColors,
                     transitionSpec = {
-                        fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                        (fadeIn(animationSpec = tween(1000, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "",
                 ) { colors ->
@@ -1867,7 +1868,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = gradientColors,
                     transitionSpec = {
-                        fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                        (fadeIn(animationSpec = tween(1000, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "",
                 ) { colors ->
@@ -1897,7 +1898,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = backgroundThumbnailUrl,
                     transitionSpec = {
-                        fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                        (fadeIn(animationSpec = tween(1000, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "",
                 ) { thumbnailUrl ->
@@ -1935,7 +1936,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = playerCustomImageUri,
                     transitionSpec = {
-                        fadeIn(tween(1000)) togetherWith fadeOut(tween(1000))
+                        (fadeIn(animationSpec = tween(1000, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "",
                 ) { uri ->
@@ -1997,7 +1998,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = gradientColors,
                     transitionSpec = {
-                        fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                        (fadeIn(animationSpec = tween(1200, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "",
                 ) { colors ->
@@ -2118,7 +2119,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = gradientColors,
                     transitionSpec = {
-                        fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                        (fadeIn(animationSpec = tween(1200, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "GlowAnimatedContent",
                 ) { colors ->
@@ -2256,7 +2257,7 @@ fun PlayerBackground(
                 AnimatedContent(
                     targetState = backgroundThumbnailUrl,
                     transitionSpec = {
-                        fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                        (fadeIn(animationSpec = tween(1200, easing = LinearEasing)) togetherWith ExitTransition.None).apply { targetContentZIndex = 1f }
                     },
                     label = "AppleMusicBackground",
                 ) { thumbnailUrl ->

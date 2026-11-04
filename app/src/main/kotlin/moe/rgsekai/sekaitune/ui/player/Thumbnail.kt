@@ -11,6 +11,9 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -320,13 +323,101 @@ fun Thumbnail(
     val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
     val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
 
-    var userWasDragging by remember { mutableStateOf(false) }
+    var isUserDraggingGrid by remember { mutableStateOf(false) }
+    var userInitiatedScroll by remember { mutableStateOf(false) }
 
     LaunchedEffect(thumbnailLazyGridState.interactionSource) {
         thumbnailLazyGridState.interactionSource.interactions.collect { interaction ->
-            if (interaction is DragInteraction.Start) {
-                userWasDragging = true
+            when (interaction) {
+                is DragInteraction.Start -> {
+                    isUserDraggingGrid = true
+                    userInitiatedScroll = true
+                }
+                is DragInteraction.Stop, is DragInteraction.Cancel -> {
+                    isUserDraggingGrid = false
+                    if (!thumbnailLazyGridState.isScrollInProgress) {
+                        userInitiatedScroll = false
+                    }
+                }
             }
+        }
+    }
+
+    // Automatic song change artwork dissolve animation (1-3s crossfade)
+    var outgoingArtworkUrl by remember { mutableStateOf<String?>(null) }
+    var incomingArtworkUrl by remember { mutableStateOf<String?>(null) }
+    var isDissolving by remember { mutableStateOf(false) }
+    val dissolveAlpha = remember { Animatable(1f) }
+
+    var lastMediaId by remember { mutableStateOf<String?>(null) }
+    var lastArtworkUrl by remember { mutableStateOf<String?>(null) }
+
+    val currentArtworkUrl = remember(mediaMetadata) {
+        mediaMetadata?.thumbnailUrl?.highRes()
+            ?: mediaMetadata?.id?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+    }
+
+    // Preload next track's artwork in Coil so dissolve has zero pop-in delay
+    val imageLoader = remember(context) { context.imageLoader }
+    val nextArtworkUrl = remember(nextMediaMetadata) {
+        val meta = nextMediaMetadata?.metadata
+        meta?.thumbnailUrl?.highRes()
+            ?: nextMediaMetadata?.mediaMetadata?.artworkUri?.toString()
+            ?: nextMediaMetadata?.mediaId?.takeIf { it.isNotBlank() }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+    }
+
+    LaunchedEffect(nextArtworkUrl) {
+        if (!nextArtworkUrl.isNullOrBlank()) {
+            val request = ImageRequest.Builder(context)
+                .data(nextArtworkUrl)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .build()
+            imageLoader.enqueue(request)
+        }
+    }
+
+    LaunchedEffect(mediaMetadata?.id) {
+        val currentId = mediaMetadata?.id
+        val newUrl = currentArtworkUrl
+
+        if (currentId != null) {
+            val oldId = lastMediaId
+            val oldUrl = lastArtworkUrl
+
+            lastMediaId = currentId
+            lastArtworkUrl = newUrl
+
+            if (oldId != null && oldId != currentId && !userInitiatedScroll && !isUserDraggingGrid &&
+                !oldUrl.isNullOrBlank() && !newUrl.isNullOrBlank() && oldUrl != newUrl
+            ) {
+                outgoingArtworkUrl = oldUrl
+                incomingArtworkUrl = newUrl
+                try {
+                    isDissolving = true
+                    dissolveAlpha.snapTo(0f)
+                    dissolveAlpha.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 1500, easing = LinearEasing),
+                    )
+                } finally {
+                    isDissolving = false
+                    outgoingArtworkUrl = null
+                    incomingArtworkUrl = null
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(currentMediaItem?.mediaId) {
+        userInitiatedScroll = false
+    }
+
+    LaunchedEffect(isUserDraggingGrid) {
+        if (isUserDraggingGrid && isDissolving) {
+            isDissolving = false
+            outgoingArtworkUrl = null
+            incomingArtworkUrl = null
         }
     }
 
@@ -343,14 +434,14 @@ fun Thumbnail(
         snapshotFlow { thumbnailLazyGridState.isScrollInProgress }.collectLatest { scrolling ->
             if (scrolling) return@collectLatest
 
-            val wasDragged = userWasDragging
-            userWasDragging = false
+            val wasDragged = userInitiatedScroll
+            userInitiatedScroll = false
 
             val pages = latestPages
             val playingPage = pages.indexOfFirst { it.slotKey == "current" }
 
-            if (!wasDragged) {
-                // Not a physical user swipe (e.g. track change, auto advance, button click, programmatic scroll).
+            if (!wasDragged || isDissolving) {
+                // Not a physical user swipe (e.g. track change, auto advance, button click, programmatic scroll, or dissolving).
                 // Ensure the grid stays aligned with the current playing page without triggering any seek.
                 if (playingPage >= 0 && thumbnailLazyGridState.firstVisibleItemIndex != playingPage) {
                     thumbnailLazyGridState.scrollToItem(playingPage)
@@ -707,8 +798,89 @@ fun Thumbnail(
                             }
                         }
                     }
+
+                // Dissolve crossfade overlay for automatic song transitions (1-3s)
+                if (isDissolving && !outgoingArtworkUrl.isNullOrBlank() && !incomingArtworkUrl.isNullOrBlank()) {
+                    val shouldCropArtwork = cropThumbnailToSquare && playerDesignStyle != PlayerDesignStyle.V7
+                    val thumbnailBgBlurEnabled = backdropEnabled && backdropBlurAmount > 0
+                    val blurRadiusPx = if (thumbnailBgBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        (backdropBlurAmount * 60 / 100f).coerceAtMost(60f)
+                    } else 0f
+
+                    val outgoingUrl = outgoingArtworkUrl
+                    val incomingUrl = incomingArtworkUrl
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(thumbnailSize)
+                            .clip(RoundedCornerShape(thumbnailCornerRadius.dp)),
+                    ) {
+                        // Outgoing Track Layer (Base - solid 100% underneath)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (thumbnailBgBlurEnabled && blurRadiusPx > 0f) {
+                                AsyncImage(
+                                    model = rememberOfflineArtworkImageRequest(outgoingUrl),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.FillBounds,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .let { if (shouldCropArtwork) it.aspectRatio(1f) else it }
+                                        .graphicsLayer {
+                                            renderEffect = BlurEffect(radiusX = blurRadiusPx, radiusY = blurRadiusPx)
+                                            alpha = 0.6f
+                                        },
+                                )
+                            }
+                            AsyncImage(
+                                model = rememberOfflineArtworkImageRequest(outgoingUrl),
+                                contentDescription = null,
+                                contentScale = if (shouldCropArtwork) ContentScale.Crop else ContentScale.Fit,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let { if (shouldCropArtwork) it.aspectRatio(1f) else it },
+                            )
+                        }
+
+                        // Incoming Track Layer (Hardware alpha: 0f -> 1f)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = dissolveAlpha.value
+                                },
+                        ) {
+                            if (thumbnailBgBlurEnabled && blurRadiusPx > 0f) {
+                                AsyncImage(
+                                    model = rememberOfflineArtworkImageRequest(incomingUrl),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.FillBounds,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .let { if (shouldCropArtwork) it.aspectRatio(1f) else it }
+                                        .graphicsLayer {
+                                            renderEffect = BlurEffect(radiusX = blurRadiusPx, radiusY = blurRadiusPx)
+                                            alpha = 0.6f
+                                        },
+                                )
+                            }
+                            AsyncImage(
+                                model = rememberOfflineArtworkImageRequest(incomingUrl),
+                                contentDescription = null,
+                                contentScale = if (shouldCropArtwork) ContentScale.Crop else ContentScale.Fit,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .let { if (shouldCropArtwork) it.aspectRatio(1f) else it },
+                            )
+                        }
+                    }
                 }
             }
+        }
 
         // Seek effect
         LaunchedEffect(showSeekEffect) {

@@ -29,6 +29,7 @@ import moe.rgsekai.sekaitune.ui.component.backdrop.effects.blur
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -224,6 +225,7 @@ import moe.rgsekai.sekaitune.ui.menu.PlayerMenu
 import moe.rgsekai.sekaitune.ui.screens.settings.DarkMode
 import moe.rgsekai.sekaitune.ui.theme.PlayerColorExtractor
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
+import moe.rgsekai.sekaitune.ui.utils.highRes
 import moe.rgsekai.sekaitune.ui.utils.resize
 import moe.rgsekai.sekaitune.utils.ImageBlurUtils
 import moe.rgsekai.sekaitune.utils.makeTimeString
@@ -1043,6 +1045,86 @@ fun BottomSheetPlayer(
                 queueWindows.getOrNull(currentWindowIndex + 1)?.mediaItem?.metadata
             }
 
+        val nextMediaItem =
+            remember(queueWindows, currentWindowIndex) {
+                queueWindows.getOrNull(currentWindowIndex + 1)?.mediaItem
+            }
+
+        val configuration = LocalConfiguration.current
+        val density = LocalDensity.current
+        val backdropArtworkSizePx =
+            remember(
+                configuration.screenWidthDp,
+                configuration.screenHeightDp,
+                density.density,
+            ) {
+                with(density) {
+                    (
+                        maxOf(configuration.screenWidthDp, configuration.screenHeightDp).dp.toPx() *
+                            V7BackdropArtworkOverscanFactor
+                    ).roundToInt()
+                        .coerceIn(V7BackdropMinArtworkSizePx, V7BackdropMaxArtworkSizePx)
+                }
+            }
+
+        // Proactively preload the next track's artwork and palette into Coil DiskCache & MemoryCache
+        // so automatic song transitions dissolve instantly with 0ms pop-in and no solid background dip.
+        LaunchedEffect(nextMediaItem, currentWindowIndex, backdropArtworkSizePx) {
+            val nextItem = nextMediaItem ?: return@LaunchedEffect
+            val meta = nextItem.metadata
+            val nextUrl = meta?.thumbnailUrl?.highRes()
+                ?: nextItem.mediaMetadata.artworkUri?.toString()
+                ?: nextItem.mediaId.takeIf { it.isNotBlank() }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+            if (!nextUrl.isNullOrBlank()) {
+                withContext(Dispatchers.IO) {
+                    val urls = listOfNotNull(
+                        nextUrl,
+                        nextUrl.resize(backdropArtworkSizePx, backdropArtworkSizePx),
+                        nextUrl.highRes(),
+                    ).distinct()
+
+                    for (targetUrl in urls) {
+                        val request = ImageRequest.Builder(context)
+                            .data(targetUrl)
+                            .memoryCacheKey(targetUrl)
+                            .diskCacheKey(targetUrl)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .networkCachePolicy(CachePolicy.ENABLED)
+                            .build()
+                        context.imageLoader.enqueue(request)
+                    }
+
+                    val mediaId = nextItem.mediaId
+                    if (mediaId.isNotBlank() && !gradientColorsCache.containsKey(mediaId)) {
+                        val paletteRequest = ImageRequest.Builder(context)
+                            .data(nextUrl)
+                            .memoryCacheKey(nextUrl)
+                            .diskCacheKey(nextUrl)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .networkCachePolicy(CachePolicy.ENABLED)
+                            .size(PlayerColorExtractor.Config.IMAGE_SIZE, PlayerColorExtractor.Config.IMAGE_SIZE)
+                            .allowHardware(false)
+                            .build()
+                        val result = runCatching { context.imageLoader.execute(paletteRequest) }.getOrNull()
+                        val bitmap = result?.image?.toBitmap()
+                        if (bitmap != null) {
+                            val palette = Palette.from(bitmap)
+                                .maximumColorCount(PlayerColorExtractor.Config.MAX_COLOR_COUNT)
+                                .resizeBitmapArea(PlayerColorExtractor.Config.BITMAP_AREA)
+                                .generate()
+                            val extractedColors = PlayerColorExtractor.extractGradientColors(
+                                palette = palette,
+                                fallbackColor = fallbackColor,
+                            )
+                            gradientColorsCache[mediaId] = extractedColors
+                        }
+                    }
+                }
+            }
+        }
+
         val enrichedMetadata =
             remember(mediaMetadata, currentSong, currentWindowIndex) {
                 val fallbackItem = playerConnection.player.currentMediaItem
@@ -1081,6 +1163,17 @@ fun BottomSheetPlayer(
                         meta
                     }
                 }
+            }
+
+        val currentArtworkUrl =
+            remember(enrichedMetadata, mediaMetadata, currentSong, currentWindowIndex, queueWindows) {
+                enrichedMetadata?.thumbnailUrl
+                    ?: mediaMetadata?.thumbnailUrl
+                    ?: queueWindows.getOrNull(currentWindowIndex)?.mediaItem?.metadata?.thumbnailUrl
+                    ?: queueWindows.getOrNull(currentWindowIndex)?.mediaItem?.mediaMetadata?.artworkUri?.toString()
+                    ?: currentSong?.song?.thumbnailUrl
+                    ?: playerConnection.player.currentMediaItem?.mediaMetadata?.artworkUri?.toString()
+                    ?: (playerConnection.player.currentMediaItem?.mediaId?.takeIf { it.isNotBlank() }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" })
             }
 
         val storefront =
@@ -1239,12 +1332,13 @@ fun BottomSheetPlayer(
                                     Modifier
                                         .fillMaxSize(),
                             ) {
+                                val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
                                 val v7SwapState =
                                     rememberThumbnailSwapState(
-                                        videoId = mediaMetadata?.id,
-                                        ytmUrl = mediaMetadata?.thumbnailUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl,
+                                        videoId = enrichedMetadata?.id ?: mediaMetadata?.id,
+                                        ytmUrl = effectiveThumbnailUrl,
                                         lowDataMode = lowDataModeActive,
-                                        isMusicVideo = mediaMetadata?.isMusicVideo ?: false,
+                                        isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
                                     )
                                 V7PlayerBackdrop(
                                     thumbnailUrl = v7SwapState.displayUrl,
@@ -1348,12 +1442,13 @@ fun BottomSheetPlayer(
                                     Modifier
                                         .fillMaxSize(),
                             ) {
+                                val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
                                 val v7SwapState =
                                     rememberThumbnailSwapState(
-                                        videoId = mediaMetadata?.id,
-                                        ytmUrl = mediaMetadata?.thumbnailUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl,
+                                        videoId = enrichedMetadata?.id ?: mediaMetadata?.id,
+                                        ytmUrl = effectiveThumbnailUrl,
                                         lowDataMode = lowDataModeActive,
-                                        isMusicVideo = mediaMetadata?.isMusicVideo ?: false,
+                                        isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
                                     )
                                 V7PlayerBackdrop(
                                     thumbnailUrl = v7SwapState.displayUrl,
@@ -1752,9 +1847,11 @@ private fun V7PlayerBackdrop(
         }
 
     LaunchedEffect(paletteSourceUrl, hasCanvas, fallbackColor) {
-        backdropPalette = V7BackdropPalette.fromColors(emptyList(), fallbackColor)
-        canvasGradientColors = emptyList()
-        if (paletteSourceUrl == null) return@LaunchedEffect
+        if (paletteSourceUrl == null) {
+            backdropPalette = V7BackdropPalette.fromColors(emptyList(), fallbackColor)
+            canvasGradientColors = emptyList()
+            return@LaunchedEffect
+        }
 
         val request =
             ImageRequest
@@ -1813,17 +1910,37 @@ private fun V7PlayerBackdrop(
         backdropPalette = V7BackdropPalette.fromColors(colors, fallbackColor)
     }
 
+    var readyArtworkUrl by remember { mutableStateOf(sharpArtworkUrl) }
+    val imageLoader = remember(context) { context.imageLoader }
+    LaunchedEffect(sharpArtworkUrl, backdropArtworkSizePx) {
+        if (sharpArtworkUrl.isNullOrBlank()) return@LaunchedEffect
+        val targetModel = sharpArtworkUrl.resize(backdropArtworkSizePx, backdropArtworkSizePx)
+        val request =
+            ImageRequest
+                .Builder(context)
+                .data(targetModel)
+                .memoryCacheKey(targetModel)
+                .diskCacheKey(targetModel)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .build()
+        val result = imageLoader.execute(request)
+        if (result is SuccessResult) {
+            readyArtworkUrl = sharpArtworkUrl
+        } else {
+            readyArtworkUrl = sharpArtworkUrl
+        }
+    }
+
     val backdropState =
-        remember(sharpArtworkUrl, canvasPrimary, canvasFallback) {
+        remember(readyArtworkUrl, canvasPrimary, canvasFallback) {
             V7PlayerBackdropState(
-                artworkUrl = sharpArtworkUrl,
+                artworkUrl = readyArtworkUrl,
                 canvasPrimaryUrl = canvasPrimary,
                 canvasFallbackUrl = canvasFallback,
             )
         }
     val shouldApplyBlur = !disableBlur
-
-    val v7LiveBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
         modifier =
@@ -1834,10 +1951,12 @@ private fun V7PlayerBackdrop(
         AnimatedContent(
             targetState = backdropState,
             transitionSpec = {
-                fadeIn(tween(1200)) togetherWith fadeOut(tween(1200))
+                (fadeIn(animationSpec = tween(1200, easing = LinearEasing)) togetherWith ExitTransition.None)
+                    .apply { targetContentZIndex = 1f }
             },
             label = label,
         ) { backdrop ->
+            val v7LiveBackdrop = rememberLayerBackdrop()
             val sharpArtworkModel =
                 remember(backdrop.artworkUrl, backdropArtworkSizePx) {
                     backdrop.artworkUrl?.resize(backdropArtworkSizePx, backdropArtworkSizePx)
@@ -2060,23 +2179,14 @@ private fun V7PlayerBackdrop(
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
-                        AnimatedContent(
-                            targetState = backdropState,
-                            transitionSpec = {
-                                fadeIn(tween(900)) togetherWith fadeOut(tween(900))
-                            },
-                            label = label,
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            if (sharpArtworkModel != null) {
-                                AsyncImage(
-                                    model = sharpArtworkRequest,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    alignment = Alignment.TopCenter,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            }
+                        if (sharpArtworkModel != null) {
+                            AsyncImage(
+                                model = sharpArtworkRequest,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier.fillMaxSize(),
+                            )
                         }
                     }
                 }
