@@ -1229,7 +1229,11 @@ fun BottomSheetPlayer(
             }
 
         var v7CanvasArtwork by remember(mediaMetadata?.id) {
-            mutableStateOf<CanvasArtwork?>(null)
+            mutableStateOf(
+                mediaMetadata?.id?.takeIf { it.isNotBlank() }?.let { id ->
+                    CanvasArtworkPlaybackCache.get(id, preferCachedOnly = true)
+                }
+            )
         }
         var v7CanvasFetchInFlight by remember(mediaMetadata?.id) {
             mutableStateOf(false)
