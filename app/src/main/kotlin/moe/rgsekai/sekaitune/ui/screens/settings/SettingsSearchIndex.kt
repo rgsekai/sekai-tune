@@ -922,17 +922,6 @@ object SettingsSearchRepository {
                 keywords = listOf("restore backup", "import backup", "load playlists", "restore settings"),
             ),
         )
-        add(
-            SettingsSearchEntry(
-                id = "sub_spotify_sync",
-                title = "Spotify sync & import",
-                subtitle = "Connect your Spotify account to import and synchronize playlists",
-                category = accountCategory,
-                iconRes = R.drawable.playlist_play,
-                route = "settings/account",
-                keywords = listOf("spotify sync", "spotify import", "import spotify playlists", "transfer playlists from spotify"),
-            ),
-        )
 
         // ==========================================
         // 12. DEVELOPER & DEBUG SUB-SETTINGS

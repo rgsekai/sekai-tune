@@ -229,7 +229,7 @@ fun SettingsScreen(
                 } else {
                     itemsIndexed(
                         items = searchResults,
-                        key = { _, item -> item.id },
+                        key = { index, item -> "${item.id}_$index" },
                         contentType = { _, _ -> "settings_search_result" },
                     ) { index, entry ->
                         SettingsSearchResultItem(
