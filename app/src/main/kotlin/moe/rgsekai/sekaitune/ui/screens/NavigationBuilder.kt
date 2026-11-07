@@ -76,6 +76,7 @@ import moe.rgsekai.sekaitune.ui.screens.settings.PalettePickerScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.PlayerSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.PoTokenScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.PrivacySettings
+import moe.rgsekai.sekaitune.ui.screens.settings.ScrobbleSettingsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.SettingsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.StorageSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.SupportScreen
@@ -430,6 +431,18 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/integrations") {
         IntegrationsScreen(navController)
+    }
+    composable("settings/integrations/lastfm") {
+        ScrobbleSettingsScreen(
+            navController = navController,
+            provider = moe.rgsekai.sekaitune.scrobble.ScrobbleProvider.LASTFM,
+        )
+    }
+    composable("settings/integrations/librefm") {
+        ScrobbleSettingsScreen(
+            navController = navController,
+            provider = moe.rgsekai.sekaitune.scrobble.ScrobbleProvider.LIBREFM,
+        )
     }
     composable("settings/music_together") {
         MusicTogetherScreen(navController)

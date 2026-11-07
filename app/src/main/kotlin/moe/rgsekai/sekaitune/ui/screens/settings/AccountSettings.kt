@@ -121,6 +121,10 @@ import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.auth.AuthViewModel
+import moe.rgsekai.sekaitune.constants.LastFmEnabledKey
+import moe.rgsekai.sekaitune.constants.LastFmUsernameKey
+import moe.rgsekai.sekaitune.constants.LibreFmEnabledKey
+import moe.rgsekai.sekaitune.constants.LibreFmUsernameKey
 import moe.rgsekai.sekaitune.constants.AccountChannelHandleKey
 import moe.rgsekai.sekaitune.constants.AccountEmailKey
 import moe.rgsekai.sekaitune.constants.AccountNameKey
@@ -195,6 +199,11 @@ fun AccountSettings(
     val loginLabel = stringResource(R.string.login)
     val notLoggedInLabel = stringResource(R.string.not_logged_in)
     val tokenDescription = stringResource(R.string.token_adv_login_description)
+
+    val (lastfmUsername, _) = rememberPreference(LastFmUsernameKey, "")
+    val (lastfmEnabled, _) = rememberPreference(LastFmEnabledKey, false)
+    val (librefmUsername, _) = rememberPreference(LibreFmUsernameKey, "")
+    val (librefmEnabled, _) = rememberPreference(LibreFmEnabledKey, false)
 
     val (accountNamePref, onAccountNameChange) = rememberPreference(AccountNameKey, "")
     val (accountEmail, onAccountEmailChange) = rememberPreference(AccountEmailKey, "")
@@ -503,6 +512,36 @@ fun AccountSettings(
                                 stringResource(R.string.integrations_desc)
                             },
                             onClick = { navController.navigate("settings/integrations") },
+                        )
+
+                        ExpressiveDivider()
+
+                        ExpressiveActionRow(
+                            icon = painterResource(R.drawable.ic_lastfm),
+                            title = stringResource(R.string.scrobble_lastfm_title),
+                            subtitle = if (lastfmUsername.isNotBlank()) {
+                                if (lastfmEnabled) stringResource(R.string.scrobble_connected_as, lastfmUsername)
+                                else "$lastfmUsername (Paused)"
+                            } else {
+                                stringResource(R.string.scrobble_lastfm_desc)
+                            },
+                            accent = Color(0xFFD51007),
+                            onClick = { navController.navigate("settings/integrations/lastfm") },
+                        )
+
+                        ExpressiveDivider()
+
+                        ExpressiveActionRow(
+                            icon = painterResource(R.drawable.ic_librefm),
+                            title = stringResource(R.string.scrobble_librefm_title),
+                            subtitle = if (librefmUsername.isNotBlank()) {
+                                if (librefmEnabled) stringResource(R.string.scrobble_connected_as, librefmUsername)
+                                else "$librefmUsername (Paused)"
+                            } else {
+                                stringResource(R.string.scrobble_librefm_desc)
+                            },
+                            accent = Color(0xFFB52323),
+                            onClick = { navController.navigate("settings/integrations/librefm") },
                         )
                     }
                 }

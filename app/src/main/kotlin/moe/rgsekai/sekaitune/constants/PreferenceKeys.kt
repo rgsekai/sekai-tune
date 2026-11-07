@@ -847,6 +847,23 @@ val LiquidGlassDialogEnabledKey = booleanPreferencesKey("liquidGlassDialogEnable
 val LiquidGlassQueueEnabledKey = booleanPreferencesKey("liquidGlassQueueEnabled")
 val LiquidGlassPlayerEnabledKey = booleanPreferencesKey("liquidGlassPlayerEnabled")
 
+// Scrobbling (Last.fm & Libre.fm)
+val LastFmEnabledKey = booleanPreferencesKey("lastfm_enabled")
+val LastFmUsernameKey = stringPreferencesKey("lastfm_username")
+val LastFmSessionKey = stringPreferencesKey("lastfm_session_key")
+val LastFmScrobbleKey = booleanPreferencesKey("lastfm_scrobble_enabled")
+val LastFmNowPlayingKey = booleanPreferencesKey("lastfm_now_playing_enabled")
+val LastFmPrimaryArtistOnlyKey = booleanPreferencesKey("lastfm_primary_artist_only")
+
+val LibreFmEnabledKey = booleanPreferencesKey("librefm_enabled")
+val LibreFmUsernameKey = stringPreferencesKey("librefm_username")
+val LibreFmSessionKey = stringPreferencesKey("librefm_session_key")
+val LibreFmScrobbleKey = booleanPreferencesKey("librefm_scrobble_enabled")
+val LibreFmNowPlayingKey = booleanPreferencesKey("librefm_now_playing_enabled")
+val LibreFmPrimaryArtistOnlyKey = booleanPreferencesKey("librefm_primary_artist_only")
+val ScrobbleSendLikesKey = booleanPreferencesKey("scrobble_send_likes")
+
+
 
 
 

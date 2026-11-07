@@ -332,6 +332,28 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_lastfm_scrobble",
+                title = context.getString(R.string.scrobble_lastfm_title),
+                subtitle = context.getString(R.string.scrobble_lastfm_desc),
+                category = accountCategory,
+                iconRes = R.drawable.ic_lastfm,
+                route = "settings/integrations/lastfm",
+                keywords = listOf("lastfm", "last.fm", "scrobble", "scrobbling", "now playing", "audioscrobbler"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
+                id = "sub_librefm_scrobble",
+                title = context.getString(R.string.scrobble_librefm_title),
+                subtitle = context.getString(R.string.scrobble_librefm_desc),
+                category = accountCategory,
+                iconRes = R.drawable.ic_librefm,
+                route = "settings/integrations/librefm",
+                keywords = listOf("librefm", "libre.fm", "scrobble", "scrobbling", "now playing", "gnu fm"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_more_content",
                 title = context.getString(R.string.more_content),
                 subtitle = context.getString(R.string.use_login_for_browse_desc),

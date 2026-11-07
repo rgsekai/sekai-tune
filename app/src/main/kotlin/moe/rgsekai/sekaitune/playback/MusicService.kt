@@ -338,6 +338,15 @@ class MusicService :
     @Inject
     lateinit var sourceRegistry: moe.rgsekai.sekaitune.playback.sources.SourceRegistry
 
+    @Inject
+    lateinit var scrobbleManager: moe.rgsekai.sekaitune.scrobble.ScrobbleManager
+    private val scrobbleTracker by lazy {
+        moe.rgsekai.sekaitune.scrobble.PlaybackScrobbleTracker(
+            scope = { scope },
+            scrobbleManager = scrobbleManager,
+        )
+    }
+
     @Volatile
     var isQualityUpgradeSwapInProgress = false
     private val customStreamHeaders = ConcurrentHashMap<String, Map<String, String>>()
@@ -6465,6 +6474,8 @@ class MusicService :
         if (currentMeta != null) {
             queueMediaMetadataCache[currentMeta.id] = currentMeta
         }
+        val songDurationMs = try { player.duration.takeIf { it > 0 } ?: (currentMeta?.duration?.toLong()?.times(1000) ?: 0L) } catch (e: Exception) { 0L }
+        scrobbleTracker.onSongStart(currentMeta, songDurationMs)
 
         beginHistorySession(mediaItem?.mediaId, forceNew = true)
 
@@ -6831,6 +6842,10 @@ class MusicService :
             checkAndTriggerQualityUpgrade()
         }
         updateAudiblePlaybackRecovery()
+
+        val activeMeta = player.currentMetadata
+        val activeDurationMs = try { player.duration.takeIf { it > 0 } ?: (activeMeta?.duration?.toLong()?.times(1000) ?: 0L) } catch (e: Exception) { 0L }
+        scrobbleTracker.onIsPlayingChanged(isPlaying, activeMeta, activeDurationMs)
 
         widgetUpdater.update()
         widgetUpdater.updateProgressTracking()
@@ -8910,6 +8925,7 @@ class MusicService :
 
     override fun onDestroy() {
         super.onDestroy()
+        scrobbleTracker.onSongStop()
         sessionDeduplicator.clear()
         qualityUpgradeManager.cancelUpgrade("MusicService destroyed")
         customStreamHeaders.clear()

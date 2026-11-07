@@ -45,6 +45,7 @@ import moe.rgsekai.sekaitune.innertube.utils.completed
 import moe.rgsekai.sekaitune.innertube.utils.hasYouTubeLoginCookie
 import moe.rgsekai.sekaitune.innertube.utils.parseSongCount
 import moe.rgsekai.sekaitune.models.toMediaMetadata
+import moe.rgsekai.sekaitune.scrobble.ScrobbleManager
 import timber.log.Timber
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicLong
@@ -57,6 +58,7 @@ class SyncUtils
     constructor(
         private val database: MusicDatabase,
         @ApplicationContext private val context: Context,
+        private val scrobbleManager: ScrobbleManager,
     ) {
         private val syncScope = CoroutineScope(Dispatchers.IO)
         private val syncEnabled = MutableStateFlow(true)
@@ -217,6 +219,12 @@ class SyncUtils
         private fun isSyncStillEnabled(gen: Long): Boolean = syncEnabled.value && syncGeneration.get() == gen
 
         fun likeSong(s: SongEntity) {
+            syncScope.launch {
+                val artist = database.song(s.id).firstOrNull()?.artists?.firstOrNull()?.name
+                if (!artist.isNullOrBlank()) {
+                    scrobbleManager.love(artist, s.title, s.liked)
+                }
+            }
             if (s.isLocal) return
             syncScope.launch {
                 if (!isLoggedIn()) {

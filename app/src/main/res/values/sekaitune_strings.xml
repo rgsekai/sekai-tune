@@ -801,6 +801,34 @@
     <string name="artist_monthly_listeners">%1$s monthly listeners</string>
     <string name="artist_songs">%1$s songs</string>
     <string name="artist_albums">%1$s albums</string>
+
+    <!-- Scrobbling (Last.fm & Libre.fm) -->
+    <string name="scrobble_lastfm_title">Last.fm</string>
+    <string name="scrobble_lastfm_desc">Scrobble played tracks to Last.fm</string>
+    <string name="scrobble_librefm_title">Libre.fm</string>
+    <string name="scrobble_librefm_desc">Scrobble played tracks to Libre.fm</string>
+    <string name="scrobble_enable_switch">Enable scrobbling</string>
+    <string name="scrobble_enable_switch_desc">Submit tracks you listen to on this device</string>
+    <string name="scrobble_now_playing">Send \"Now Playing\"</string>
+    <string name="scrobble_now_playing_desc">Update your current listening status live</string>
+    <string name="scrobble_submit_plays">Submit scrobbles</string>
+    <string name="scrobble_submit_plays_desc">Record plays after 50% or 4 minutes of playback</string>
+    <string name="scrobble_primary_artist">First artist only</string>
+    <string name="scrobble_primary_artist_desc">Strip collaborators to improve scrobble tagging accuracy</string>
+    <string name="scrobble_pending_scrobbles">Pending scrobbles</string>
+    <string name="scrobble_pending_desc">Queued offline plays: %1$d</string>
+    <string name="scrobble_sign_in_title">Sign in to %1$s</string>
+    <string name="scrobble_username_hint">Username</string>
+    <string name="scrobble_password_hint">Password</string>
+    <string name="scrobble_connected_as">Signed in as %1$s</string>
+    <string name="scrobble_not_connected">Not signed in</string>
+    <string name="scrobble_sign_in_button">Sign In</string>
+    <string name="scrobble_register_link">Create an account</string>
+    <string name="scrobble_not_configured_title">Service not configured</string>
+    <string name="scrobble_not_configured_desc">API key and secret for %1$s are not configured. Please add them to local.properties or provide them in settings.</string>
+    <string name="scrobble_send_likes">Send likes</string>
+    <string name="scrobble_send_likes_desc">Love or unlove tracks on %1$s when you like them in the app</string>
+    <string name="scrobble_signed_out">Signed out of %1$s</string>
 </resources>
 
 

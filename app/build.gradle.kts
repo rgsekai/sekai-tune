@@ -77,6 +77,16 @@ android {
                 ).trim()
         buildConfigField("String", "RELAY_SERVICE_URL", "\"$relayServiceUrl\"")
         buildConfigField("String", "RELAY_SERVICE_API_KEY", "\"$relayServiceApiKey\"")
+
+        val lastfmApiKey = (localProperties.getProperty("LASTFM_API_KEY") ?: System.getenv("LASTFM_API_KEY") ?: "").trim()
+        val lastfmSecret = (localProperties.getProperty("LASTFM_SECRET") ?: System.getenv("LASTFM_SECRET") ?: "").trim()
+        val librefmApiKey = (localProperties.getProperty("LIBREFM_API_KEY") ?: System.getenv("LIBREFM_API_KEY") ?: "").trim()
+        val librefmSecret = (localProperties.getProperty("LIBREFM_SECRET") ?: System.getenv("LIBREFM_SECRET") ?: "").trim()
+
+        buildConfigField("String", "LASTFM_API_KEY", "\"$lastfmApiKey\"")
+        buildConfigField("String", "LASTFM_SECRET", "\"$lastfmSecret\"")
+        buildConfigField("String", "LIBREFM_API_KEY", "\"$librefmApiKey\"")
+        buildConfigField("String", "LIBREFM_SECRET", "\"$librefmSecret\"")
     }
 
     flavorDimensions += listOf("distribution", "device", "abi")
