@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.constants.ScrobbleSendLikesKey
+import moe.rgsekai.sekaitune.utils.PreferenceStore
 import moe.rgsekai.sekaitune.utils.dataStore
 import javax.inject.Inject
 
@@ -46,6 +47,27 @@ class ScrobbleViewModel @Inject constructor(
 
     private val _loading = MutableStateFlow(false)
     private val _error = MutableStateFlow<String?>(null)
+
+    private fun initialUiState(provider: ScrobbleProvider): ScrobbleUiState {
+        val sessionKey = PreferenceStore.get(provider.sessionKeyPref).orEmpty()
+        val username = PreferenceStore.get(provider.usernamePref).orEmpty()
+        val isEnabled = PreferenceStore.get(provider.enabledPref) ?: false
+        val scrobbleEnabled = PreferenceStore.get(provider.scrobblePref) ?: true
+        val nowPlayingEnabled = PreferenceStore.get(provider.nowPlayingPref) ?: true
+        val sendLikesEnabled = PreferenceStore.get(ScrobbleSendLikesKey) ?: false
+        val primaryArtistOnly = PreferenceStore.get(provider.primaryArtistOnlyPref) ?: false
+
+        return ScrobbleUiState(
+            isConfigured = provider.client.isConfigured,
+            isAuthenticated = sessionKey.isNotBlank(),
+            username = username,
+            isEnabled = isEnabled,
+            scrobbleEnabled = scrobbleEnabled,
+            nowPlayingEnabled = nowPlayingEnabled,
+            sendLikesEnabled = sendLikesEnabled,
+            primaryArtistOnly = primaryArtistOnly,
+        )
+    }
 
     fun uiState(provider: ScrobbleProvider): StateFlow<ScrobbleUiState> {
         val pendingCountFlow = scrobbleManager.getPendingCountFlow(provider)
@@ -80,7 +102,7 @@ class ScrobbleViewModel @Inject constructor(
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            ScrobbleUiState(),
+            initialUiState(provider),
         )
     }
 

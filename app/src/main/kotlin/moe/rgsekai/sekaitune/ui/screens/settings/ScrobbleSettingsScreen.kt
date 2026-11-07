@@ -154,6 +154,7 @@ fun ScrobbleSettingsScreen(
                             title = stringResource(R.string.scrobble_sign_in_title, provider.title),
                             subtitle = if (!state.isConfigured) stringResource(R.string.scrobble_not_configured_title) else stringResource(R.string.scrobble_not_connected),
                             accent = accentColor,
+                            tintIcon = false,
                             onClick = {
                                 if (!state.isLoading && state.isConfigured) {
                                     showSignInSheet = true

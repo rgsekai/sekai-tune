@@ -104,6 +104,8 @@ object PreferenceStore {
 
     fun <T> get(key: Preferences.Key<T>): T? = _prefs.value?.get(key)
 
+    fun getPreferences(): Preferences? = _prefs.value
+
     fun launchEdit(
         dataStore: DataStore<Preferences>,
         block: MutablePreferences.() -> Unit,
@@ -179,15 +181,16 @@ fun <T> rememberPreference(
     defaultValue: T,
 ): MutableState<T> {
     val context = LocalContext.current
+    val initial = remember(key) { PreferenceStore.get(key) ?: defaultValue }
 
     val state =
-        remember {
+        remember(key) {
             context.dataStore.data
                 .map { it[key] ?: defaultValue }
                 .distinctUntilChanged()
-        }.collectAsState(defaultValue)
+        }.collectAsState(initial)
 
-    return remember {
+    return remember(key) {
         object : MutableState<T> {
             override var value: T
                 get() = state.value
@@ -210,9 +213,23 @@ inline fun <reified T : Enum<T>> rememberEnumPreference(
     defaultValue: T,
 ): MutableState<T> {
     val context = LocalContext.current
+    val initial = remember(key) {
+        val raw = PreferenceStore.get(key)
+        if (raw == null) {
+            defaultValue
+        } else if (T::class == AudioQuality::class) {
+            @Suppress("UNCHECKED_CAST")
+            (AudioQuality.fromPreferences(raw) as T)
+        } else if (T::class == MaxQualityNetwork::class) {
+            @Suppress("UNCHECKED_CAST")
+            (MaxQualityNetwork.fromPreferences(raw) as T)
+        } else {
+            raw.toEnum(defaultValue = defaultValue)
+        }
+    }
 
     val state =
-        remember {
+        remember(key) {
             context.dataStore.data
                 .map { prefs ->
                     val raw = prefs[key]
@@ -227,7 +244,7 @@ inline fun <reified T : Enum<T>> rememberEnumPreference(
                     }
                 }
                 .distinctUntilChanged()
-        }.collectAsState(defaultValue)
+        }.collectAsState(initial)
 
     return remember {
         object : MutableState<T> {

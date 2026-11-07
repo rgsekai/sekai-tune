@@ -533,6 +533,7 @@ fun AccountSettings(
                                 stringResource(R.string.scrobble_lastfm_desc)
                             },
                             accent = Color(0xFFD51007),
+                            tintIcon = false,
                             onClick = { navController.navigate("settings/integrations/lastfm") },
                         )
 
@@ -548,6 +549,7 @@ fun AccountSettings(
                                 stringResource(R.string.scrobble_librefm_desc)
                             },
                             accent = Color(0xFFB52323),
+                            tintIcon = false,
                             onClick = { navController.navigate("settings/integrations/librefm") },
                         )
 
@@ -1435,6 +1437,7 @@ internal fun ExpressiveActionRow(
     title: String,
     subtitle: String? = null,
     accent: Color? = null,
+    tintIcon: Boolean = true,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -1472,7 +1475,7 @@ internal fun ExpressiveActionRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            ExpressiveRowIcon(icon = icon, tint = tint)
+            ExpressiveRowIcon(icon = icon, tint = tint, tintIcon = tintIcon)
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -1513,6 +1516,7 @@ internal fun ExpressiveSwitchRow(
     title: String,
     subtitle: String? = null,
     checked: Boolean,
+    tintIcon: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val isTv = LocalIsTv.current
@@ -1555,6 +1559,7 @@ internal fun ExpressiveSwitchRow(
                 icon = icon,
                 tint = MaterialTheme.colorScheme.primary,
                 emphasized = checked,
+                tintIcon = tintIcon,
             )
 
             Column(
@@ -1602,6 +1607,7 @@ internal fun ExpressiveRowIcon(
     icon: Painter,
     tint: Color,
     emphasized: Boolean = false,
+    tintIcon: Boolean = true,
 ) {
     val bgAlpha by animateFloatAsState(
         targetValue = if (emphasized) 0.20f else 0.10f,
@@ -1615,12 +1621,20 @@ internal fun ExpressiveRowIcon(
         color = tint.copy(alpha = bgAlpha),
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Icon(
-                painter = icon,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = tint,
-            )
+            if (tintIcon) {
+                Icon(
+                    painter = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = tint,
+                )
+            } else {
+                androidx.compose.foundation.Image(
+                    painter = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
     }
 }
