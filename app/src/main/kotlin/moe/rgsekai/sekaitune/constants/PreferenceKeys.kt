@@ -863,6 +863,32 @@ val LibreFmNowPlayingKey = booleanPreferencesKey("librefm_now_playing_enabled")
 val LibreFmPrimaryArtistOnlyKey = booleanPreferencesKey("librefm_primary_artist_only")
 val ScrobbleSendLikesKey = booleanPreferencesKey("scrobble_send_likes")
 
+// Discord Rich Presence
+val DiscordAccessTokenKey = stringPreferencesKey("discordAccessToken")
+val DiscordRefreshTokenKey = stringPreferencesKey("discordRefreshToken")
+val DiscordTokenExpiresAtKey = longPreferencesKey("discordTokenExpiresAt")
+val DiscordProfileKey = stringPreferencesKey("discordProfile")
+val DiscordLoginStateKey = stringPreferencesKey("discordLoginState")
+val DiscordLoginVerifierKey = stringPreferencesKey("discordLoginVerifier")
+val EnableDiscordRPCKey = booleanPreferencesKey("discordRPCEnable")
+val DiscordActivityTypeKey = stringPreferencesKey("discordActivityType")
+val DiscordRefreshSecondsKey = intPreferencesKey("discordPresenceRefreshSeconds")
+val DiscordActivityNameKey = stringPreferencesKey("discordPresenceName")
+val DiscordDetailsKey = stringPreferencesKey("discordPresenceDetails")
+val DiscordStateKey = stringPreferencesKey("discordPresenceState")
+val DiscordLargeTextKey = stringPreferencesKey("discordPresenceLargeText")
+val DiscordSmallTextKey = stringPreferencesKey("discordPresenceSmallText")
+val DiscordLargeImageKey = stringPreferencesKey("discordPresenceLargeImage")
+val DiscordSmallImageKey = stringPreferencesKey("discordPresenceSmallImage")
+val DiscordSpinSecondsKey = intPreferencesKey("discordPresenceSpinSeconds")
+val DiscordSpinFpsKey = intPreferencesKey("discordPresenceSpinFps")
+val DiscordButton1TextKey = stringPreferencesKey("discordPresenceButton1Text")
+val DiscordButton1TargetKey = stringPreferencesKey("discordPresenceButton1Target")
+val DiscordButton2TextKey = stringPreferencesKey("discordPresenceButton2Text")
+val DiscordButton2TargetKey = stringPreferencesKey("discordPresenceButton2Target")
+val DiscordClearOnPauseKey = booleanPreferencesKey("discordPresenceClearOnPause")
+
+
 
 
 

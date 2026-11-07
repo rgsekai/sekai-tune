@@ -354,6 +354,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_discord_rpc",
+                title = context.getString(R.string.discord_title),
+                subtitle = context.getString(R.string.discord_desc),
+                category = accountCategory,
+                iconRes = R.drawable.discord,
+                route = "settings/integrations/discord",
+                keywords = listOf("discord", "rpc", "rich presence", "status", "listening to", "playing"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_more_content",
                 title = context.getString(R.string.more_content),
                 subtitle = context.getString(R.string.use_login_for_browse_desc),

@@ -87,6 +87,11 @@ android {
         buildConfigField("String", "LASTFM_SECRET", "\"$lastfmSecret\"")
         buildConfigField("String", "LIBREFM_API_KEY", "\"$librefmApiKey\"")
         buildConfigField("String", "LIBREFM_SECRET", "\"$librefmSecret\"")
+
+        val discordClientId = (localProperties.getProperty("DISCORD_CLIENT_ID") ?: System.getenv("DISCORD_CLIENT_ID") ?: "").trim()
+        buildConfigField("String", "DISCORD_CLIENT_ID", "\"$discordClientId\"")
+        manifestPlaceholders["discordRedirectScheme"] =
+            if (discordClientId.isNotBlank()) "discord-$discordClientId" else "sekaitune-discord-unset"
     }
 
     flavorDimensions += listOf("distribution", "device", "abi")

@@ -347,6 +347,9 @@ class MusicService :
         )
     }
 
+    @Inject
+    lateinit var discordPresence: moe.rgsekai.sekaitune.discord.DiscordPresence
+
     @Volatile
     var isQualityUpgradeSwapInProgress = false
     private val customStreamHeaders = ConcurrentHashMap<String, Map<String, String>>()
@@ -728,6 +731,38 @@ class MusicService :
         }
 
     private lateinit var widgetUpdater: MusicServiceWidgetUpdater
+
+    private fun publishPresence() {
+        val metadata = player.currentMetadata
+        val state = player.playbackState
+        if (metadata == null || state == Player.STATE_IDLE || state == Player.STATE_ENDED) {
+            discordPresence.update(null)
+            return
+        }
+        val song = currentSong.value?.takeIf { it.id == metadata.id }
+        val durationMs = try {
+            player.duration.takeIf { it > 0 } ?: (metadata.duration * 1000L)
+        } catch (e: Exception) {
+            0L
+        }
+        discordPresence.update(
+            moe.rgsekai.sekaitune.discord.NowPlaying(
+                mediaId = metadata.id,
+                title = metadata.title,
+                artist = metadata.artists.joinToString { it.name },
+                album = metadata.album?.title ?: song?.song?.albumName,
+                artworkUrl = metadata.thumbnailUrl,
+                artistArtworkUrl = song?.artists?.firstNotNullOfOrNull { it.thumbnailUrl },
+                durationMs = durationMs,
+                positionMs = try { player.currentPosition.coerceAtLeast(0L) } catch (e: Exception) { 0L },
+                readAtMs = System.currentTimeMillis(),
+                speed = player.playbackParameters.speed,
+                isPlaying = player.playWhenReady,
+                quality = song?.format?.let { "${it.mimeType?.substringAfter('/')?.uppercase() ?: "AUDIO"} · ${it.bitrate?.div(1000) ?: 0} kbps" },
+                isYouTube = song?.song?.isLocal != true && !metadata.id.isLocalMediaId() && !metadata.id.startsWith("content://") && !metadata.id.startsWith("file://") && !metadata.id.startsWith("addon:") && !metadata.id.startsWith("webdav:"),
+            ),
+        )
+    }
 
     fun isCurrentSongLiked(): Boolean = currentSong.value?.song?.liked == true
 
@@ -1297,6 +1332,9 @@ class MusicService :
         scope.launch {
             connectivityObserver.networkStatus.collect { isConnected ->
                 isNetworkConnected.value = isConnected
+                if (isConnected) {
+                    discordPresence.nudge()
+                }
                 if (!audioQualityManager.isMaxAllowed()) {
                     qualityUpgradeManager.cancelUpgrade("Network does not permit Max quality")
                 }
@@ -1327,6 +1365,7 @@ class MusicService :
         currentSong.collect(scope) { song ->
             updateNotification()
             widgetUpdater.update()
+            publishPresence()
         }
 
         combine(
@@ -6821,6 +6860,7 @@ class MusicService :
     override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
         super.onPlaybackParametersChanged(playbackParameters)
         secondaryCrossfadePlayer?.playbackParameters = playbackParameters
+        publishPresence()
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -6855,6 +6895,15 @@ class MusicService :
         player: Player,
         events: Player.Events,
     ) {
+        if (events.containsAny(
+                Player.EVENT_MEDIA_ITEM_TRANSITION,
+                Player.EVENT_PLAY_WHEN_READY_CHANGED,
+                Player.EVENT_PLAYBACK_STATE_CHANGED,
+                Player.EVENT_POSITION_DISCONTINUITY,
+            )
+        ) {
+            publishPresence()
+        }
         val currentMediaId = player.currentMediaItem?.mediaId
         if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
             safePlaybackMediaId = currentMediaId
@@ -8925,6 +8974,7 @@ class MusicService :
 
     override fun onDestroy() {
         super.onDestroy()
+        discordPresence.update(null)
         scrobbleTracker.onSongStop()
         sessionDeduplicator.clear()
         qualityUpgradeManager.cancelUpgrade("MusicService destroyed")

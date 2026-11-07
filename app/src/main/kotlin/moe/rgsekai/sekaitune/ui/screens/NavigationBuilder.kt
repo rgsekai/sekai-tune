@@ -444,6 +444,11 @@ fun NavGraphBuilder.navigationBuilder(
             provider = moe.rgsekai.sekaitune.scrobble.ScrobbleProvider.LIBREFM,
         )
     }
+    composable("settings/integrations/discord") {
+        moe.rgsekai.sekaitune.ui.screens.settings.discord.DiscordScreen(
+            navController = navController,
+        )
+    }
     composable("settings/music_together") {
         MusicTogetherScreen(navController)
     }

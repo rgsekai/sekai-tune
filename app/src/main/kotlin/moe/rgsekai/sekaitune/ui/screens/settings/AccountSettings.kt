@@ -125,6 +125,9 @@ import moe.rgsekai.sekaitune.constants.LastFmEnabledKey
 import moe.rgsekai.sekaitune.constants.LastFmUsernameKey
 import moe.rgsekai.sekaitune.constants.LibreFmEnabledKey
 import moe.rgsekai.sekaitune.constants.LibreFmUsernameKey
+import moe.rgsekai.sekaitune.constants.DiscordAccessTokenKey
+import moe.rgsekai.sekaitune.constants.DiscordProfileKey
+import moe.rgsekai.sekaitune.constants.EnableDiscordRPCKey
 import moe.rgsekai.sekaitune.constants.AccountChannelHandleKey
 import moe.rgsekai.sekaitune.constants.AccountEmailKey
 import moe.rgsekai.sekaitune.constants.AccountNameKey
@@ -204,6 +207,10 @@ fun AccountSettings(
     val (lastfmEnabled, _) = rememberPreference(LastFmEnabledKey, false)
     val (librefmUsername, _) = rememberPreference(LibreFmUsernameKey, "")
     val (librefmEnabled, _) = rememberPreference(LibreFmEnabledKey, false)
+    val (discordToken, _) = rememberPreference(DiscordAccessTokenKey, "")
+    val (discordRpcEnabled, _) = rememberPreference(EnableDiscordRPCKey, true)
+    val (discordProfileJson, _) = rememberPreference(DiscordProfileKey, "")
+    val discordProfile = remember(discordProfileJson) { moe.rgsekai.sekaitune.discord.DiscordProfile.fromJson(discordProfileJson) }
 
     val (accountNamePref, onAccountNameChange) = rememberPreference(AccountNameKey, "")
     val (accountEmail, onAccountEmailChange) = rememberPreference(AccountEmailKey, "")
@@ -542,6 +549,26 @@ fun AccountSettings(
                             },
                             accent = Color(0xFFB52323),
                             onClick = { navController.navigate("settings/integrations/librefm") },
+                        )
+
+                        ExpressiveDivider()
+
+                        ExpressiveActionRow(
+                            icon = painterResource(R.drawable.discord),
+                            title = stringResource(R.string.discord_title),
+                            subtitle = if (discordToken.isNotBlank()) {
+                                val user = discordProfile?.displayName ?: discordProfile?.username
+                                if (user != null) {
+                                    if (discordRpcEnabled) "Connected as $user"
+                                    else "$user (Paused)"
+                                } else {
+                                    "Connected"
+                                }
+                            } else {
+                                stringResource(R.string.discord_desc)
+                            },
+                            accent = Color(0xFF5865F2),
+                            onClick = { navController.navigate("settings/integrations/discord") },
                         )
                     }
                 }

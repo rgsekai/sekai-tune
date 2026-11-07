@@ -829,6 +829,13 @@
     <string name="scrobble_send_likes">Send likes</string>
     <string name="scrobble_send_likes_desc">Love or unlove tracks on %1$s when you like them in the app</string>
     <string name="scrobble_signed_out">Signed out of %1$s</string>
+
+    <!-- Discord Rich Presence -->
+    <string name="discord_title">Discord</string>
+    <string name="discord_desc">Rich Presence on your Discord profile</string>
+    <string name="discord_behaviour">Behaviour</string>
+    <string name="discord_clear_on_pause">Clear status when paused</string>
+    <string name="discord_clear_on_pause_desc">Takes the song off your profile as soon as you pause, and puts it back when you play again.</string>
 </resources>
 
 
