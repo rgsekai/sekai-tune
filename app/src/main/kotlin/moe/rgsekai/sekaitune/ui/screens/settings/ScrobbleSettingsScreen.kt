@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.scrobble.ScrobbleProvider
@@ -91,6 +92,7 @@ fun ScrobbleSettingsScreen(
     val playerInsets = LocalPlayerAwareWindowInsets.current
     val state by viewModel.uiState(provider).collectAsStateWithLifecycle()
     var showSignInSheet by rememberSaveable { mutableStateOf(false) }
+    var unconfiguredError by rememberSaveable { mutableStateOf<String?>(null) }
 
     val iconRes = if (provider == ScrobbleProvider.LASTFM) R.drawable.ic_lastfm else R.drawable.ic_librefm
     val accentColor = if (provider == ScrobbleProvider.LASTFM) Color(0xFFD51007) else Color(0xFFB52323)
@@ -159,7 +161,7 @@ fun ScrobbleSettingsScreen(
                                 if (!state.isLoading && state.isConfigured) {
                                     showSignInSheet = true
                                 } else if (!state.isConfigured) {
-                                    viewModel.login(provider, "", "")
+                                    unconfiguredError = "${provider.title} API key and secret are not configured. Please add LASTFM_API_KEY and LASTFM_SECRET to local.properties."
                                 }
                             },
                         )
@@ -282,23 +284,19 @@ fun ScrobbleSettingsScreen(
     if (showSignInSheet) {
         ScrobbleSignInSheet(
             provider = provider,
-            isLoading = state.isLoading,
+            viewModel = viewModel,
             onDismiss = { showSignInSheet = false },
-            onSignIn = { user, pass ->
-                showSignInSheet = false
-                viewModel.login(provider, user, pass)
-            },
         )
     }
 
-    val errorMessage = state.errorMessage
-    if (errorMessage != null) {
+    val unconfiguredMessage = unconfiguredError
+    if (unconfiguredMessage != null) {
         DefaultDialog(
-            onDismiss = viewModel::dismissError,
-            title = { Text(stringResource(R.string.error_unknown)) },
-            content = { Text(errorMessage) },
+            onDismiss = { unconfiguredError = null },
+            title = { Text(stringResource(R.string.scrobble_not_configured_title)) },
+            content = { Text(unconfiguredMessage) },
             buttons = {
-                TextButton(onClick = viewModel::dismissError) {
+                TextButton(onClick = { unconfiguredError = null }) {
                     Text(stringResource(android.R.string.ok))
                 }
             },
@@ -309,17 +307,39 @@ fun ScrobbleSettingsScreen(
 @Composable
 private fun ScrobbleSignInSheet(
     provider: ScrobbleProvider,
-    isLoading: Boolean,
+    viewModel: ScrobbleViewModel,
     onDismiss: () -> Unit,
-    onSignIn: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var username by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var problem by remember { mutableStateOf<String?>(null) }
+
+    fun submit() {
+        if (username.isBlank() || password.isEmpty() || busy) return
+        focusManager.clearFocus()
+        busy = true
+        problem = null
+        scope.launch {
+            val error = viewModel.login(provider, username, password)
+            busy = false
+            if (error != null) {
+                problem = error
+            } else {
+                password = ""
+                onDismiss()
+            }
+        }
+    }
 
     GlassModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            password = ""
+            onDismiss()
+        },
     ) {
         Column(
             modifier = Modifier
@@ -336,7 +356,10 @@ private fun ScrobbleSignInSheet(
 
             OutlinedTextField(
                 value = username,
-                onValueChange = { username = it },
+                onValueChange = {
+                    username = it
+                    problem = null
+                },
                 label = { Text(stringResource(R.string.scrobble_username_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -351,7 +374,10 @@ private fun ScrobbleSignInSheet(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    problem = null
+                },
                 label = { Text(stringResource(R.string.scrobble_password_hint)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -361,24 +387,28 @@ private fun ScrobbleSignInSheet(
                     keyboardType = KeyboardType.Password,
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus()
-                        if (username.isNotBlank() && password.isNotBlank()) {
-                            onSignIn(username, password)
-                        }
-                    },
+                    onDone = { submit() },
                 ),
             )
 
+            problem?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
+
             Button(
-                onClick = { onSignIn(username, password) },
-                enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
+                onClick = ::submit,
+                enabled = username.isNotBlank() && password.isNotBlank() && !busy,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
             ) {
-                if (isLoading) {
+                if (busy) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,

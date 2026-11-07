@@ -27,8 +27,17 @@ class ScrobblerApiException(
     val code: Int,
     message: String,
 ) : Exception(message) {
-    val isSessionInvalid: Boolean get() = code == 9
-    val isAuthFailed: Boolean get() = code == 4
-    val isTemporary: Boolean get() = code in setOf(-1, 8, 11, 16, 29)
+    val isSessionInvalid: Boolean get() = code == INVALID_SESSION
+    val isAuthFailed: Boolean get() = code == AUTH_FAILED
+    val isTemporary: Boolean get() = code in TemporaryCodes
+
+    companion object {
+        const val SERVER_ERROR = -1
+        const val AUTH_FAILED = 4
+        const val INVALID_PARAMETERS = 6
+        const val INVALID_RESOURCE = 7
+        const val INVALID_SESSION = 9
+        val TemporaryCodes = setOf(SERVER_ERROR, 8, 11, 16, 29)
+    }
 }
 

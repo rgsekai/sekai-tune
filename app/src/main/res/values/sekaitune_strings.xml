@@ -830,6 +830,12 @@
     <string name="scrobble_send_likes_desc">Love or unlove tracks on %1$s when you like them in the app</string>
     <string name="scrobble_signed_out">Signed out of %1$s</string>
 
+    <string name="scrobble_sign_in_wrong">That username or password didn\'t work. Check them and try again.</string>
+    <string name="scrobble_sign_in_busy">%1$s couldn\'t sign you in right now. Try again in a moment.</string>
+    <string name="scrobble_sign_in_offline">Couldn\'t reach %1$s. Check your connection and try again.</string>
+    <string name="scrobble_sign_in_failed">Sign-in failed</string>
+    <string name="scrobble_signing_in">Signing in…</string>
+
     <!-- Discord Rich Presence -->
     <string name="discord_title">Discord</string>
     <string name="discord_desc">Rich Presence on your Discord profile</string>

@@ -106,30 +106,35 @@ class ScrobbleViewModel @Inject constructor(
         )
     }
 
-    fun login(provider: ScrobbleProvider, user: String, pass: String) {
+    suspend fun login(provider: ScrobbleProvider, user: String, pass: String): String? {
         if (!provider.client.isConfigured) {
-            _error.value = "${provider.title} API key and secret are not configured. Please add LASTFM_API_KEY and LASTFM_SECRET to local.properties."
-            return
+            return "${provider.title} API key and secret are not configured. Please add LASTFM_API_KEY and LASTFM_SECRET to local.properties."
         }
         if (user.isBlank() || pass.isBlank()) {
-            _error.value = "Username and password cannot be empty"
-            return
+            return "Username and password cannot be empty"
         }
-        viewModelScope.launch {
-            _loading.value = true
-            _error.value = null
-            try {
-                val session = provider.client.authenticate(user.trim(), pass)
-                context.dataStore.edit {
-                    it[provider.sessionKeyPref] = session.sessionKey
-                    it[provider.usernamePref] = session.username
-                    it[provider.enabledPref] = true
-                }
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Authentication failed"
-            } finally {
-                _loading.value = false
+        _loading.value = true
+        _error.value = null
+        return try {
+            val session = provider.client.authenticate(user.trim(), pass)
+            context.dataStore.edit {
+                it[provider.sessionKeyPref] = session.sessionKey
+                it[provider.usernamePref] = session.username
+                it[provider.enabledPref] = true
             }
+            null
+        } catch (e: ScrobblerApiException) {
+            if (e.isAuthFailed) {
+                context.getString(moe.rgsekai.sekaitune.R.string.scrobble_sign_in_wrong)
+            } else if (e.isTemporary) {
+                context.getString(moe.rgsekai.sekaitune.R.string.scrobble_sign_in_busy, provider.title)
+            } else {
+                e.message ?: "Authentication failed (${e.code})"
+            }
+        } catch (e: Exception) {
+            context.getString(moe.rgsekai.sekaitune.R.string.scrobble_sign_in_offline, provider.title)
+        } finally {
+            _loading.value = false
         }
     }
 
