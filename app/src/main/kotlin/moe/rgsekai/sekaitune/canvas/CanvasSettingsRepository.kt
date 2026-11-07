@@ -31,6 +31,7 @@ import moe.rgsekai.sekaitune.constants.LowDataModeKey
 import moe.rgsekai.sekaitune.constants.MaxCanvasCacheSizeKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
+import moe.rgsekai.sekaitune.constants.UseYtVideoAsCanvasKey
 import moe.rgsekai.sekaitune.ui.player.CanvasArtworkPlaybackCache
 import moe.rgsekai.sekaitune.utils.dataStore
 import java.io.IOException
@@ -50,6 +51,7 @@ class CanvasSettingsRepository @Inject constructor(
     val configuration: Flow<CanvasConfiguration> = context.dataStore.data.map { preferences ->
         CanvasConfiguration(
             enabled = preferences[SekaiTuneCanvasKey] ?: true,
+            useYtVideo = preferences[UseYtVideoAsCanvasKey] ?: false,
             source = CanvasSource.fromPreference(preferences[CanvasSourceKey]),
             wifiOnly = preferences[CanvasWifiOnlyKey] ?: false,
             proceduralFallback = preferences[CanvasProceduralFallbackKey] ?: false,
@@ -93,6 +95,10 @@ class CanvasSettingsRepository @Inject constructor(
 
     suspend fun setEnabled(enabled: Boolean) {
         context.dataStore.edit { it[SekaiTuneCanvasKey] = enabled }
+    }
+
+    suspend fun setUseYtVideo(useYtVideo: Boolean) {
+        context.dataStore.edit { it[UseYtVideoAsCanvasKey] = useYtVideo }
     }
 
     suspend fun setSource(source: CanvasSource) {

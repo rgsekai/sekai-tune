@@ -70,6 +70,7 @@ enum class CanvasSettingsDialog { CACHE_LIMIT, CLEAR_CACHE }
 
 sealed interface CanvasSettingsAction {
     data class SetEnabled(val enabled: Boolean) : CanvasSettingsAction
+    data class SetUseYtVideo(val useYtVideo: Boolean) : CanvasSettingsAction
     data class SelectSource(val source: CanvasSource) : CanvasSettingsAction
     data class SetWifiOnly(val wifiOnly: Boolean) : CanvasSettingsAction
     data class SetProceduralFallback(val enabled: Boolean) : CanvasSettingsAction
@@ -169,6 +170,7 @@ class CanvasSettingsViewModel @Inject constructor(
             try {
                 when (action) {
                     is CanvasSettingsAction.SetEnabled -> useCases.setEnabled(action.enabled)
+                    is CanvasSettingsAction.SetUseYtVideo -> useCases.setUseYtVideo(action.useYtVideo)
                     is CanvasSettingsAction.SelectSource -> useCases.setSource(action.source)
                     is CanvasSettingsAction.SetWifiOnly -> useCases.setWifiOnly(action.wifiOnly)
                     is CanvasSettingsAction.SetProceduralFallback -> useCases.setProceduralFallback(action.enabled)

@@ -32,6 +32,7 @@ class CanvasSettingsUseCases @Inject constructor(
     val spotifyConnected: Flow<Boolean> = repository.spotifyConnected
 
     suspend fun setEnabled(enabled: Boolean) = repository.setEnabled(enabled)
+    suspend fun setUseYtVideo(useYtVideo: Boolean) = repository.setUseYtVideo(useYtVideo)
     suspend fun setSource(source: CanvasSource) = repository.setSource(source)
     suspend fun setWifiOnly(wifiOnly: Boolean) = repository.setWifiOnly(wifiOnly)
     suspend fun setProceduralFallback(enabled: Boolean) = repository.setProceduralFallback(enabled)

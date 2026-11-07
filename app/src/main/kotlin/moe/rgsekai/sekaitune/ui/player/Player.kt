@@ -183,6 +183,7 @@ import moe.rgsekai.sekaitune.constants.CanvasProceduralFallbackKey
 import moe.rgsekai.sekaitune.constants.CanvasProceduralStyleKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
+import moe.rgsekai.sekaitune.constants.UseYtVideoAsCanvasKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
 import moe.rgsekai.sekaitune.constants.BackdropBlurAmountKey
 import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
@@ -400,6 +401,7 @@ fun BottomSheetPlayer(
     val aodModeEnabled by playerConnection.aodModeEnabled.collectAsStateWithLifecycle()
     val (thumbnailCornerRadius) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = 8f)
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, true)
+    val useYtVideoCanvas by rememberPreference(UseYtVideoAsCanvasKey, false)
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
@@ -945,6 +947,7 @@ fun BottomSheetPlayer(
             backdropArtworkSizePx,
             shouldUseV7Canvas,
             shouldFetchV7Canvas,
+            useYtVideoCanvas,
             canvasPolicy,
             storefront,
         ) {
@@ -956,7 +959,7 @@ fun BottomSheetPlayer(
 
             withContext(Dispatchers.IO) {
                 var resolvedCanvasForNext: CanvasArtwork? = null
-                if (shouldUseV7Canvas && nextItem.mediaId.isNotBlank()) {
+                if (shouldUseV7Canvas && !useYtVideoCanvas && nextItem.mediaId.isNotBlank()) {
                     try {
                         val nextArtist = meta?.artists?.firstOrNull()?.name.orEmpty()
                         val nextTitle = meta?.title.orEmpty().ifBlank { nextItem.mediaMetadata.title?.toString().orEmpty() }
@@ -1090,9 +1093,9 @@ fun BottomSheetPlayer(
             mutableStateOf(false)
         }
 
-        LaunchedEffect(shouldUseV7Canvas, shouldFetchV7Canvas, mediaMetadata?.id) {
+        LaunchedEffect(shouldUseV7Canvas, shouldFetchV7Canvas, useYtVideoCanvas, mediaMetadata?.id) {
             val metadata = mediaMetadata
-            if (!shouldUseV7Canvas || metadata == null) {
+            if (!shouldUseV7Canvas || useYtVideoCanvas || metadata == null) {
                 v7CanvasArtwork = null
                 v7CanvasFetchInFlight = false
                 return@LaunchedEffect
@@ -1156,6 +1159,19 @@ fun BottomSheetPlayer(
                     drawContent()
                 }
 
+            val currentMediaMetadata = enrichedMetadata ?: mediaMetadata
+            val ytVideoCanvasSong = if (useYtVideoCanvas && currentMediaMetadata != null && shouldUseV7Canvas) {
+                rememberSongVideo(
+                    mediaId = currentMediaMetadata.id,
+                    title = currentMediaMetadata.title,
+                    artist = currentMediaMetadata.artists.joinToString { it.name },
+                    isVideoSong = currentMediaMetadata.isMusicVideo,
+                    enabled = true,
+                )
+            } else {
+                null
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1178,18 +1194,19 @@ fun BottomSheetPlayer(
                         isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
                         )
                         V7PlayerBackdrop(
-                        trackId = currentTrackId,
-                        thumbnailUrl = v7SwapState.displayUrl,
-                        canvasStaticUrl = v7CanvasArtwork?.static,
-                        canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
-                        canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
-                        isPlaying = isPlaying,
-                        disableBlur = disableBlur,
-                        themeBackdropMode = themeBackdropMode,
-                        themeBackdropBlurEnabled = themeBackdropBlurEnabled,
-                        themeBackdropBlurStrength = themeBackdropBlurStrength,
-                        gradientColors = gradientColors,
-                        label = "v7BackdropLandscape",
+                            trackId = currentTrackId,
+                            thumbnailUrl = v7SwapState.displayUrl,
+                            canvasStaticUrl = v7CanvasArtwork?.static,
+                            canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
+                            canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
+                            songVideo = ytVideoCanvasSong,
+                            isPlaying = isPlaying,
+                            disableBlur = disableBlur,
+                            themeBackdropMode = themeBackdropMode,
+                            themeBackdropBlurEnabled = themeBackdropBlurEnabled,
+                            themeBackdropBlurStrength = themeBackdropBlurStrength,
+                            gradientColors = gradientColors,
+                            label = "v7BackdropLandscape",
                         )
                         
                         Column(
@@ -1258,6 +1275,7 @@ fun BottomSheetPlayer(
                                 canvasStaticUrl = v7CanvasArtwork?.static,
                                 canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
                                 canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
+                                songVideo = ytVideoCanvasSong,
                                 isPlaying = isPlaying,
                                 disableBlur = disableBlur,
                                 themeBackdropMode = themeBackdropMode,
@@ -1515,6 +1533,7 @@ private fun V7PlayerBackdrop(
     canvasStaticUrl: String?,
     canvasPrimaryUrl: String?,
     canvasFallbackUrl: String?,
+    songVideo: SongVideo? = null,
     isPlaying: Boolean,
     disableBlur: Boolean,
     themeBackdropMode: ThemeBackdropMode = ThemeBackdropMode.GLOW_ANIMATED,
@@ -1696,12 +1715,13 @@ private fun V7PlayerBackdrop(
     }
 
     val backdropState =
-        remember(trackId, readyArtworkUrl, canvasPrimary, canvasFallback, canvasRenderMode) {
+        remember(trackId, readyArtworkUrl, canvasPrimary, canvasFallback, songVideo, canvasRenderMode) {
             V7PlayerBackdropState(
                 trackId = trackId,
                 artworkUrl = readyArtworkUrl,
                 canvasPrimaryUrl = canvasPrimary,
                 canvasFallbackUrl = canvasFallback,
+                songVideo = songVideo,
                 canvasRenderMode = canvasRenderMode,
             )
         }
@@ -1716,7 +1736,8 @@ private fun V7PlayerBackdrop(
             targetState = backdropState,
             transitionSpec = {
                 val isLiveCanvasActive = targetState.canvasRenderMode !is CanvasRenderMode.None ||
-                    initialState.canvasRenderMode !is CanvasRenderMode.None
+                    initialState.canvasRenderMode !is CanvasRenderMode.None ||
+                    targetState.songVideo != null || initialState.songVideo != null
                 if (isLiveCanvasActive) {
                     (EnterTransition.None togetherWith ExitTransition.None)
                         .apply { targetContentZIndex = 1f }
@@ -1951,7 +1972,13 @@ private fun V7PlayerBackdrop(
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    if (backdrop.canvasRenderMode !is CanvasRenderMode.None) {
+                    if (backdrop.songVideo != null) {
+                        YouTubeVideoBackground(
+                            video = backdrop.songVideo,
+                            isPlaying = isPlaying,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else if (backdrop.canvasRenderMode !is CanvasRenderMode.None) {
                         CanvasArtworkPlayer(
                             renderMode = backdrop.canvasRenderMode,
                             isPlaying = isPlaying,
@@ -2071,6 +2098,7 @@ private data class V7PlayerBackdropState(
     val artworkUrl: String?,
     val canvasPrimaryUrl: String?,
     val canvasFallbackUrl: String?,
+    val songVideo: SongVideo? = null,
     val canvasRenderMode: CanvasRenderMode = CanvasRenderMode.None,
 )
 

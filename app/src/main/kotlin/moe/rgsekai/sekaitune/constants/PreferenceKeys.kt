@@ -900,6 +900,7 @@ enum class VideoQuality(val shortSide: Int) {
     Q144(144),
 }
 
+val UseYtVideoAsCanvasKey = booleanPreferencesKey("useYtVideoAsCanvas")
 val VideoQualityKey = stringPreferencesKey("videoQuality")
 val YtVideoBackgroundLyricsSyncKey = booleanPreferencesKey("ytVideoBackgroundLyricsSync")
 val VideoModeReturnStyleKey = stringPreferencesKey("videoModeReturnStyle")

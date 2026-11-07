@@ -157,56 +157,6 @@ fun DebugSettings(navController: NavController) {
                     ).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PreferenceGroup(title = "Video Mode Debug Test") {
-                item {
-                    val mediaMetadata by (playerConnection?.mediaMetadata ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
-                    val mediaId = mediaMetadata?.id.orEmpty()
-                    val title = mediaMetadata?.title.orEmpty()
-                    val artist = mediaMetadata?.artists?.joinToString { it.name }.orEmpty()
-                    val lookup = moe.rgsekai.sekaitune.ui.player.rememberSongVideoLookup(
-                        mediaId = mediaId,
-                        title = title,
-                        artist = artist,
-                        isVideoSong = false,
-                        enabled = mediaId.isNotBlank(),
-                    )
-                    val isPlaying = playerConnection?.player?.isPlaying == true
-                    val video = lookup.video
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = if (lookup.searching) "Searching video for: $title..." else if (video != null) "Video loaded: ${video.videoId}" else "No video for: $title",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        if (video != null) {
-                            val session = moe.rgsekai.sekaitune.ui.player.video.rememberYouTubeVideoSession(video.videoId)
-                            moe.rgsekai.sekaitune.ui.player.video.DriveYouTubeVideo(
-                                session = session,
-                                video = video,
-                                isPlaying = isPlaying,
-                                autoCap = 720,
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(220.dp)
-                                    .background(androidx.compose.ui.graphics.Color.Black),
-                            ) {
-                                moe.rgsekai.sekaitune.ui.player.video.DebugVideoPlayerView(
-                                    session = session,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             PreferenceGroup(title = stringResource(R.string.experimental_features)) {
                 item {
                     SwitchPreference(

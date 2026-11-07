@@ -167,6 +167,7 @@ private fun CanvasSettingsBody(
         onAction(CanvasSettingsAction.SetAudioReactive(isGranted))
     }
     val onEnabled: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetEnabled(it)) } }
+    val onUseYtVideo: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetUseYtVideo(it)) } }
     val onWifiOnly: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetWifiOnly(it)) } }
     val onProceduralFallback: (Boolean) -> Unit = remember(onAction) { { onAction(CanvasSettingsAction.SetProceduralFallback(it)) } }
     val onAudioReactive: (Boolean) -> Unit = remember(onAction, context, permissionLauncher) {
@@ -271,7 +272,79 @@ private fun CanvasSettingsBody(
             }
         }
 
-        if (!isTv) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier
+                .tvSettingsItemFocus(
+                    shape = MaterialTheme.shapes.large,
+                    onClick = { if (!model.busy) onUseYtVideo(!model.configuration.useYtVideo) },
+                )
+                .then(
+                    if (isTv) {
+                        Modifier.clickable(
+                            enabled = true,
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                            onClick = { if (!model.busy) onUseYtVideo(!model.configuration.useYtVideo) },
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isTv) {
+                                Modifier.focusProperties { canFocus = false }
+                            } else {
+                                Modifier.toggleable(
+                                    value = model.configuration.useYtVideo,
+                                    enabled = !model.busy,
+                                    role = Role.Switch,
+                                    onValueChange = onUseYtVideo,
+                                )
+                            }
+                        )
+                        .padding(horizontal = SettingsDimensions.RowHorizontalPadding, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = remember { Arrangement.spacedBy(16.dp) },
+                ) {
+                    Column(modifier = remember { Modifier.weight(1f) }) {
+                        Text(
+                            text = stringResource(R.string.canvas_use_yt_video),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.canvas_use_yt_video_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = model.configuration.useYtVideo,
+                        onCheckedChange = null,
+                        enabled = if (isTv) true else !model.busy,
+                        modifier = if (isTv) Modifier.focusProperties { canFocus = false } else Modifier,
+                    )
+                }
+
+                val (videoQuality, setVideoQuality) = moe.rgsekai.sekaitune.utils.rememberEnumPreference(
+                    moe.rgsekai.sekaitune.constants.VideoQualityKey,
+                    moe.rgsekai.sekaitune.constants.VideoQuality.AUTO,
+                )
+                VideoQualityPreference(
+                    selectedQuality = videoQuality,
+                    onQualitySelected = setVideoQuality,
+                    isEnabled = !model.busy && model.configuration.useYtVideo,
+                )
+            }
+        }
+
+        if (!isTv && !model.configuration.useYtVideo) {
             CanvasSettingsGroup(title = stringResource(R.string.canvas_source)) {
                 Column(
                     modifier = remember {
@@ -589,7 +662,7 @@ private fun CanvasSettingsBody(
             }
         }
 
-        if (!isTv) {
+        if (!isTv && !model.configuration.useYtVideo) {
             CanvasSettingsGroup(
                 title = stringResource(R.string.canvas_provider_health),
                 action = {

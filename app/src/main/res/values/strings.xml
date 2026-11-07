@@ -1142,6 +1142,18 @@
     <string name="webdav_offline_cached">Offline, showing cached</string>
     <string name="webdav_sign_in_needed">Sign-in needed</string>
     <string name="webdav_scanning_found">Scanning… %1$d found</string>
+    <string name="canvas_use_yt_video">Use YT Music videos as live album art</string>
+    <string name="canvas_use_yt_video_desc">Show official music videos as live animated background</string>
+    <string name="video_quality">Video quality</string>
+    <string name="video_quality_auto">Auto</string>
+    <string name="video_quality_auto_desc">Drops lower on slow internet so it won\'t freeze</string>
+    <string name="video_quality_auto_now">Auto · %1</string>
+    <string name="video_quality_size">%1</string>
+    <string name="video_quality_fixed_desc">Stays here, may pause to load on slow internet</string>
+    <string name="video_quality_settings_desc">How sharp YouTube videos look</string>
+    <string name="video_quality_not_loaded">Sizes show up once the video loads</string>
+    <string name="video_quality_4k">4K</string>
+    <string name="video_quality_sharp_desc">If the video and your phone can, uses way more data</string>
 </resources>
 
 

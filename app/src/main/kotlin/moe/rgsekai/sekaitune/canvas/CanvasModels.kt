@@ -24,6 +24,7 @@ enum class ProceduralCanvasStyle {
 @Immutable
 data class CanvasConfiguration(
     val enabled: Boolean = true,
+    val useYtVideo: Boolean = false,
     val source: CanvasSource = CanvasSource.ALL,
     val wifiOnly: Boolean = false,
     val proceduralFallback: Boolean = false,
