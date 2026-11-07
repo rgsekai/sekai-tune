@@ -130,6 +130,11 @@ jobs:
           NIGHTLY_BUILD_HASH: ${{ steps.build_hash.outputs.value }}
           RELAY_SERVICE_URL: https://sekai-tune.onrender.com
           RELAY_SERVICE_API_KEY: ${{ secrets.RELAY_SERVICE_API_KEY }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LIBREFM_API_KEY: ${{ secrets.LIBREFM_API_KEY }}
+          LIBREFM_SECRET: ${{ secrets.LIBREFM_SECRET }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
 
       - name: Resolve release output directory
         id: release_dir
@@ -320,6 +325,11 @@ jobs:
           NIGHTLY_BUILD_HASH: ${{ steps.build_hash.outputs.value }}
           RELAY_SERVICE_URL: https://sekai-tune.onrender.com
           RELAY_SERVICE_API_KEY: ${{ secrets.RELAY_SERVICE_API_KEY }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LIBREFM_API_KEY: ${{ secrets.LIBREFM_API_KEY }}
+          LIBREFM_SECRET: ${{ secrets.LIBREFM_SECRET }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v7
