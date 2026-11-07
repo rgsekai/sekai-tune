@@ -520,6 +520,13 @@ class InnerTube {
         }
     }
 
+
+    suspend fun timedText(baseUrl: String, client: YouTubeClient) = withRetry {
+        httpClient.get(baseUrl) {
+            url.parameters["fmt"] = "json3"
+            client.userAgent?.let { userAgent(it) }
+        }
+    }
     suspend fun getTranscript(
         client: YouTubeClient,
         videoId: String,

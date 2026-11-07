@@ -2356,6 +2356,27 @@ object YouTube {
                 }
         }
 
+
+    suspend fun videoCaptions(videoId: String): Result<VideoCaptions> = runCatching {
+        CAPTION_CLIENTS.firstNotNullOfOrNull { client ->
+            runCatching {
+                player(videoId, client = client).getOrThrow()
+                    .captions?.playerCaptionsTracklistRenderer?.captionTracks
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { VideoCaptions(videoId, it, client) }
+            }.getOrNull()
+        } ?: throw IllegalStateException("No captions for $videoId")
+    }
+
+    suspend fun captionCues(captions: VideoCaptions, track: PlayerResponse.Captions.CaptionTrack): Result<List<CaptionCue>> = runCatching {
+        timedTextToCues(innerTube.timedText(track.baseUrl, captions.client).bodyAsText())
+    }
+
+    private val CAPTION_CLIENTS = listOf(
+        YouTubeClient.ANDROID_VR_NO_AUTH,
+        YouTubeClient.IOS,
+        YouTubeClient.WEB_REMIX,
+    )
     suspend fun transcript(videoId: String): Result<String> =
         runCatching {
             val response = innerTube.getTranscript(WEB, videoId).body<GetTranscriptResponse>()

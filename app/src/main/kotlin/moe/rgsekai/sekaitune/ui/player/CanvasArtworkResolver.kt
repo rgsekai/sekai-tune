@@ -195,7 +195,7 @@ private fun CanvasArtwork.hasRequiredCanvasVariant(requireVertical: Boolean): Bo
 
 private const val CanvasArtworkLogTag = "CanvasArtwork"
 
-private fun normalizeCanvasSongTitle(raw: String): String {
+internal fun normalizeCanvasSongTitle(raw: String): String {
     val stripped =
         raw
             .replace(Regex("""^\d+[\s.\-_]+"""), "")
@@ -219,7 +219,7 @@ private fun normalizeCanvasSongTitle(raw: String): String {
         .trim()
 }
 
-private fun normalizeCanvasArtistName(raw: String): String {
+internal fun normalizeCanvasArtistName(raw: String): String {
     val first =
         raw
             .split(

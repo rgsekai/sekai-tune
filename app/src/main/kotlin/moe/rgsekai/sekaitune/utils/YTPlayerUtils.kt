@@ -1624,6 +1624,139 @@ object YTPlayerUtils {
     }
 
     private fun describeClient(client: YouTubeClient): String = "${client.clientName}@${client.clientVersion}"
+
+    private val VIDEO_BACKGROUND_CLIENTS: Array<YouTubeClient> = arrayOf(
+        MAIN_CLIENT,
+        WEB_REMIX,
+        TVHTML5_SIMPLY_EMBEDDED_PLAYER,
+        YouTubeClient.ANDROID_VR_1_61_48,
+        WEB,
+    )
+
+    private fun YouTubeClient.videoStreamHeaders(): Map<String, String> =
+        buildMap {
+            put("User-Agent", userAgent)
+            put("Accept", "*/*")
+            put("Accept-Language", "en-US,en;q=0.9")
+        }
+
+    private fun validateVideoStreamStatus(
+        url: String,
+        headers: Map<String, String> = emptyMap(),
+        contentLength: Long? = null,
+    ): Boolean {
+        val offset = contentLength?.takeIf { it > 1 }?.minus(1) ?: 786_432L
+        Timber.tag(logTag).d("Validating video stream URL status at byte $offset")
+        return try {
+            val requestBuilder = okhttp3.Request.Builder()
+                .get()
+                .url(url)
+                .header("Range", "bytes=$offset-$offset")
+            headers.forEach { (key, value) -> requestBuilder.header(key, value) }
+            val client = okhttp3.OkHttpClient.Builder()
+                .proxy(YouTube.streamOkHttpProxy)
+                .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+            client.newCall(requestBuilder.build()).execute().use { response ->
+                val code = response.code
+                val isSuccessful = code in 200..299
+                Timber.tag(logTag).d("Video stream validation response code: $code (success=$isSuccessful)")
+                isSuccessful
+            }
+        } catch (e: Exception) {
+            Timber.tag(logTag).w(e, "Video stream validation request failed")
+            false
+        }
+    }
+
+    suspend fun resolveVideoStreams(videoId: String): Result<VideoStreams> = runCatching {
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            val currentAuth = YouTube.currentPlaybackAuthState()
+            val authState = if (YouTube.cookie == null && currentAuth.visitorData.isNullOrEmpty()) {
+                ensureVisitorDataReady(videoId, currentAuth, reason = "resolveVideoStreams")
+            } else {
+                currentAuth
+            }
+
+            val signatureTimestamp by lazy {
+                kotlinx.coroutines.runBlocking { getSignatureTimestampOrNull(videoId) }
+            }
+
+            for (client in VIDEO_BACKGROUND_CLIENTS) {
+                val streams = try {
+                    videoStreamsFrom(client, videoId, authState) { signatureTimestamp }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} threw: ${e.message}")
+                    null
+                }
+                if (streams != null) {
+                    Timber.tag(logTag).d("resolveVideoStreams: ${streams.tracks.size} sizes via ${client.clientName}")
+                    return@withContext streams
+                }
+            }
+            throw Exception("Could not resolve a playable video stream for videoId=$videoId after trying ${VIDEO_BACKGROUND_CLIENTS.size} clients")
+        }
+    }
+
+    private suspend fun videoStreamsFrom(
+        client: YouTubeClient,
+        videoId: String,
+        authState: PlaybackAuthState,
+        signatureTimestamp: () -> Int?,
+    ): VideoStreams? {
+        val timestamp = if (client.useSignatureTimestamp) signatureTimestamp() else null
+        val response = YouTube.player(videoId, null, client, timestamp, null, authState = authState).getOrNull() ?: return null
+        if (response.playabilityStatus.status != "OK") {
+            Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} not OK: ${response.playabilityStatus.status}")
+            return null
+        }
+        val streaming = response.streamingData ?: return null
+
+        suspend fun trackOf(format: PlayerResponse.StreamingData.Format): VideoTrack? {
+            val url = runCatching { findUrl(format, videoId, client, authState).getOrNull() }.getOrNull()
+                ?: return null
+            return VideoTrack(
+                itag = format.itag,
+                url = url,
+                mimeType = format.containerType(),
+                codecs = format.codecs(),
+                width = format.width ?: 0,
+                height = format.height ?: 0,
+                fps = format.fps ?: 30,
+                bitrate = format.bitrate,
+                initRange = format.initRange?.toLongRange(),
+                indexRange = format.indexRange?.toLongRange(),
+                contentLength = format.contentLength,
+            )
+        }
+
+        val tracks = pickVideoFamily(streaming.adaptiveFormats).mapNotNull { trackOf(it) }
+        if (tracks.isEmpty()) {
+            Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} had no video format")
+            return null
+        }
+        val headers = client.videoStreamHeaders()
+        val probe = tracks.minByOrNull { kotlin.math.abs(it.shortSide - 720) } ?: tracks.first()
+        if (!validateVideoStreamStatus(probe.url, headers, probe.contentLength)) {
+            Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} cuts the video off")
+            return null
+        }
+        val durationMs = streaming.adaptiveFormats.firstNotNullOfOrNull { it.approxDurationMs?.toLongOrNull() }
+            ?: response.videoDetails?.lengthSeconds?.toLongOrNull()?.times(1000L)
+            ?: 0L
+        val sharpTracks = pickSharpFamily(streaming.adaptiveFormats, tracks.last().shortSide).mapNotNull { trackOf(it) }
+        return VideoStreams(
+            videoId = videoId,
+            tracks = tracks,
+            headers = headers,
+            expiresAtMs = System.currentTimeMillis() + ((streaming.expiresInSeconds?.toLong() ?: 21600L) * 1000L),
+            durationMs = durationMs,
+            sharpTracks = sharpTracks,
+        )
+    }
 }
 
 

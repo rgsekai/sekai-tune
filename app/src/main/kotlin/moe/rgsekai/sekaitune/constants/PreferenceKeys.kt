@@ -888,6 +888,22 @@ val DiscordButton2TextKey = stringPreferencesKey("discordPresenceButton2Text")
 val DiscordButton2TargetKey = stringPreferencesKey("discordPresenceButton2Target")
 val DiscordClearOnPauseKey = booleanPreferencesKey("discordPresenceClearOnPause")
 
+enum class VideoQuality(val shortSide: Int) {
+    AUTO(0),
+    Q2160(2160),
+    Q1440(1440),
+    Q1080(1080),
+    Q720(720),
+    Q480(480),
+    Q360(360),
+    Q240(240),
+    Q144(144),
+}
+
+val VideoQualityKey = stringPreferencesKey("videoQuality")
+val YtVideoBackgroundLyricsSyncKey = booleanPreferencesKey("ytVideoBackgroundLyricsSync")
+val VideoModeReturnStyleKey = stringPreferencesKey("videoModeReturnStyle")
+
 
 
 
