@@ -464,7 +464,7 @@ fun PlayerMenu(
         }
     }
 
-    if (isQueueTrigger != true && hasVideo) {
+    if (isQueueTrigger != true && (hasVideo || !useYtVideoCanvas)) {
         Spacer(modifier = Modifier.height(12.dp))
 
         MenuSurfaceSection(
