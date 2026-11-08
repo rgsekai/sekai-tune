@@ -370,5 +370,7 @@ object YouTubeVideoSessions {
         entry.pendingRelease = drop
         main.postDelayed(drop, LingerMs)
     }
+
+    fun get(videoId: String): YouTubeVideoSession? = entries[videoId]?.session
 }
 

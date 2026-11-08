@@ -913,3 +913,5 @@ val VideoModeWholeVideoKey = booleanPreferencesKey("videoModeWholeVideo")
 
 
 
+val VideoModeActiveKey = booleanPreferencesKey("videoModeActive")
+val VideoModeFullScreenKey = booleanPreferencesKey("videoModeFullScreen")

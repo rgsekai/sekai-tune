@@ -1152,10 +1152,6 @@
     <string name="video_quality_not_loaded">Sizes show up once the video loads</string>
     <string name="video_quality_4k">4K</string>
     <string name="video_quality_sharp_desc">If the video and your phone can, uses way more data</string>
-    <string name="view_video">View video</string>
-    <string name="exit_video">Exit video</string>
-    <string name="view_full_screen">View full screen</string>
-    <string name="video_not_available">No video available</string>
     <string name="video_mode">Full video</string>
     <string name="video_mode_exit">Exit video mode</string>
     <string name="video_mode_close_player">Close player</string>

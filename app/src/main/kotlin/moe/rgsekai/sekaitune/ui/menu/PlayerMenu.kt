@@ -14,6 +14,14 @@ import android.media.audiofx.AudioEffect
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -45,6 +53,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import moe.rgsekai.sekaitune.ui.player.rememberSongVideoLookup
+import moe.rgsekai.sekaitune.ui.player.video.VideoLoadingIndicator
+import moe.rgsekai.sekaitune.ui.player.video.YouTubeVideoSessions
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
@@ -464,77 +475,132 @@ fun PlayerMenu(
         }
     }
 
+    val videoLookup = rememberSongVideoLookup(
+        mediaId = mediaMetadata.id,
+        title = mediaMetadata.title,
+        artist = mediaMetadata.artists.joinToString { it.name },
+        isVideoSong = mediaMetadata.isMusicVideo,
+        enabled = useYtVideoCanvas || inlineVideoActive,
+    )
+    val videoSession = videoLookup.video?.videoId?.let { YouTubeVideoSessions.get(it) }
+    val isVideoLoading = (useYtVideoCanvas || inlineVideoActive) && (videoLookup.searching || (videoSession != null && (!videoSession.hasFrame || videoSession.isStalled)))
+
     if (isQueueTrigger != true && (hasVideo || !useYtVideoCanvas)) {
         Spacer(modifier = Modifier.height(12.dp))
 
         MenuSurfaceSection(
             shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(64.dp),
         ) {
-            Column {
-                if (useYtVideoCanvas) {
-                    ListItem(
-                        headlineContent = { Text(text = stringResource(R.string.view_full_screen)) },
-                        leadingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+            ) {
+                Text(
+                    text = "Video mode",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    // Full screen icon sitting to the left of Exit (X) when inline video is active and playing
+                    AnimatedVisibility(
+                        visible = !useYtVideoCanvas && inlineVideoActive && !isVideoLoading,
+                        enter = fadeIn(tween(200)) + expandHorizontally(),
+                        exit = fadeOut(tween(200)) + shrinkHorizontally(),
+                    ) {
+                        IconButton(
+                            onClick = {
+                                onDismiss()
+                                onViewFullScreen()
+                            },
+                            modifier = Modifier.size(48.dp),
+                        ) {
                             Icon(
                                 painter = painterResource(R.drawable.fullscreen),
-                                contentDescription = null,
+                                contentDescription = "Full screen",
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
+                        }
+                    }
+
+                    // Far right action slot
+                    AnimatedContent(
+                        targetState = when {
+                            isVideoLoading -> VideoRowSlot.LOADING
+                            useYtVideoCanvas -> VideoRowSlot.FULL_SCREEN
+                            inlineVideoActive -> VideoRowSlot.EXIT
+                            else -> VideoRowSlot.PLAY
                         },
-                        modifier = Modifier.clickable {
-                            onDismiss()
-                            onViewFullScreen()
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
-                } else if (!inlineVideoActive) {
-                    ListItem(
-                        headlineContent = { Text(text = stringResource(R.string.view_video)) },
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.slow_motion_video),
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            onDismiss()
-                            onToggleInlineVideo()
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
-                } else {
-                    ListItem(
-                        headlineContent = { Text(text = stringResource(R.string.exit_video)) },
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.close),
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            onDismiss()
-                            onToggleInlineVideo()
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                    ListItem(
-                        headlineContent = { Text(text = stringResource(R.string.view_full_screen)) },
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.fullscreen),
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            onDismiss()
-                            onViewFullScreen()
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                        transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                        label = "VideoActionSlotAnim",
+                    ) { slot ->
+                        when (slot) {
+                            VideoRowSlot.PLAY -> {
+                                IconButton(
+                                    onClick = {
+                                        if (hasVideo || videoLookup.video != null) {
+                                            onToggleInlineVideo()
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.video_mode_no_video),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+                                    },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.play),
+                                        contentDescription = "Video mode",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                            VideoRowSlot.LOADING -> {
+                                IconButton(
+                                    onClick = { onToggleInlineVideo() },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    VideoLoadingIndicator(
+                                        loading = true,
+                                        size = 24.dp,
+                                    )
+                                }
+                            }
+                            VideoRowSlot.EXIT -> {
+                                IconButton(
+                                    onClick = { onToggleInlineVideo() },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.close),
+                                        contentDescription = "Exit video mode",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                            VideoRowSlot.FULL_SCREEN -> {
+                                IconButton(
+                                    onClick = {
+                                        onDismiss()
+                                        onViewFullScreen()
+                                    },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.fullscreen),
+                                        contentDescription = "Full screen",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2518,6 +2584,10 @@ private fun formatDb(db: Float): String {
     return "${if (rounded > 0f) "+" else ""}$rounded dB"
 }
 
-
-
+private enum class VideoRowSlot {
+    PLAY,
+    LOADING,
+    EXIT,
+    FULL_SCREEN,
+}
 

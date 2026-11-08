@@ -15,10 +15,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import moe.rgsekai.sekaitune.ui.player.video.DriveYouTubeVideo
-import moe.rgsekai.sekaitune.ui.player.video.VideoLoadingIndicator
 import moe.rgsekai.sekaitune.ui.player.video.YouTubeVideoSurface
 import moe.rgsekai.sekaitune.ui.player.video.rememberYouTubeVideoSession
 import moe.rgsekai.sekaitune.ui.utils.rememberSettled
@@ -51,10 +49,6 @@ fun YouTubeVideoBackground(
             session = session,
             isPlaying = isPlaying,
             modifier = Modifier.fillMaxSize(),
-        )
-        VideoLoadingIndicator(
-            loading = session.hasFrame && session.isStalled,
-            modifier = Modifier.align(Alignment.Center),
         )
     }
 }

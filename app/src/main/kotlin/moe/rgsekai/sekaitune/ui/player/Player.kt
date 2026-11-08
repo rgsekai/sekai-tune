@@ -184,6 +184,8 @@ import moe.rgsekai.sekaitune.constants.CanvasProceduralStyleKey
 import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.constants.UseYtVideoAsCanvasKey
+import moe.rgsekai.sekaitune.constants.VideoModeActiveKey
+import moe.rgsekai.sekaitune.constants.VideoModeFullScreenKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
 import moe.rgsekai.sekaitune.constants.BackdropBlurAmountKey
 import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
@@ -396,7 +398,7 @@ fun BottomSheetPlayer(
     val (thumbnailCornerRadius) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = 8f)
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, true)
     val useYtVideoCanvas by rememberPreference(UseYtVideoAsCanvasKey, false)
-    var inlineVideoActive by rememberSaveable(mediaMetadata?.id) { mutableStateOf(false) }
+    var inlineVideoActive by rememberPreference(VideoModeActiveKey, defaultValue = false)
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
@@ -741,9 +743,7 @@ fun BottomSheetPlayer(
     var isLyricsScreenVisible by rememberSaveable {
         mutableStateOf(false)
     }
-    var isFullScreenVideo by rememberSaveable {
-        mutableStateOf(false)
-    }
+    var isFullScreenVideo by rememberPreference(VideoModeFullScreenKey, defaultValue = false)
     val isInPip = moe.rgsekai.sekaitune.ui.player.video.LocalInPipMode.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
