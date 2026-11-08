@@ -176,9 +176,12 @@ internal fun BoxScope.VideoTopBar(
     state: VideoModeState,
     controls: () -> Float,
     onClose: () -> Unit,
+    onEnterPip: () -> Unit,
     onSongInfo: () -> Unit,
 ) {
     val visible by rememberControlsVisible(controls)
+    val context = LocalContext.current
+    val pipSupported = remember(context) { isPipSupported(context) }
     AsyncImage(
         model = artworkUrl,
         contentDescription = null,
@@ -251,7 +254,19 @@ internal fun BoxScope.VideoTopBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // PiP Button slot - Phase 6
+            if (pipSupported) {
+                val pipLabel = stringResource(R.string.pip)
+                PressScaleActionButton(
+                    icon = R.drawable.picture_in_picture,
+                    tint = Color.White,
+                    containerColor = Color.White.copy(alpha = 0.22f),
+                    size = 30.dp,
+                    onClick = { if (state.controlsShown) onEnterPip() else state.toggleControls() },
+                    modifier = Modifier
+                        .semantics { contentDescription = pipLabel }
+                        .graphicsLayer { alpha = controls() },
+                )
+            }
             PressScaleActionButton(
                 icon = R.drawable.close,
                 tint = Color.White,

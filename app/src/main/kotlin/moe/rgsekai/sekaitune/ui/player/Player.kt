@@ -744,6 +744,19 @@ fun BottomSheetPlayer(
     var isFullScreenVideo by rememberSaveable {
         mutableStateOf(false)
     }
+    val isInPip = moe.rgsekai.sekaitune.ui.player.video.LocalInPipMode.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    // When leaving PiP:
+    // If the activity is stopped/finishing (user clicked 'X' to close PiP), exit full screen video mode
+    // so when returning to the app later, it restores the previous player style.
+    DisposableEffect(isInPip) {
+        onDispose {
+            if (isInPip && !lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                isFullScreenVideo = false
+            }
+        }
+    }
     val openQueue =
         remember(state, queueSheetState) {
             {

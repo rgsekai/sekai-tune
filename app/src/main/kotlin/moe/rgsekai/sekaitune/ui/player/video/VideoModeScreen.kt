@@ -120,6 +120,25 @@ fun VideoModeScreen(
     val player = connection.player
     val isPlaying by connection.isPlaying.collectAsState()
 
+    // Video session reuse
+    val session = rememberYouTubeVideoSession(video.videoId)
+    DriveYouTubeVideo(session, video, isPlaying, ModeAutoCap)
+
+    val isInPip = LocalInPipMode.current
+
+    // Update PiP actions when playback state changes while in PiP mode
+    LaunchedEffect(isInPip, isPlaying, session.aspect) {
+        if (isInPip && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val activity = context as? Activity
+            if (activity != null && isPipSupported(activity)) {
+                try {
+                    val params = buildPipParams(activity, session.aspect, isPlaying)
+                    activity.setPictureInPictureParams(params)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     // System bars and keep screen on management
     DisposableEffect(Unit) {
         val activity = context as? Activity
@@ -166,10 +185,6 @@ fun VideoModeScreen(
         }
     }
 
-    // Video session reuse
-    val session = rememberYouTubeVideoSession(video.videoId)
-    DriveYouTubeVideo(session, video, isPlaying, ModeAutoCap)
-
     val (wholeVideo) = rememberPreference(VideoModeWholeVideoKey, defaultValue = false)
     val fit = animateFloatAsState(
         targetValue = if (wholeVideo) 1f else 0f,
@@ -177,36 +192,60 @@ fun VideoModeScreen(
         label = "videoFit",
     )
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
-        VideoTurnFrame(modifier = Modifier.fillMaxSize()) {
-            VideoModeLayout(
-                state = state,
-                metadata = metadata,
-                artworkUrl = artworkUrl,
-                session = session,
-                isPlaying = isPlaying,
-                ambient = ambient,
-                lyricsSyncOffset = lyricsSyncOffset,
-                controls = controls,
-                fit = { fit.value },
-                onExit = onExitVideoMode,
-            )
+    val activity = context as? Activity
+    val onEnterPip: () -> Unit = {
+        if (activity != null) {
+            enterPictureInPictureMode(activity, session.aspect, isPlaying)
+        }
+    }
 
-            if (state.menuOpen) {
-                VideoModeMenu(
+    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+        if (isInPip) {
+            // In PiP: reset quarter turn, hide all overlay/pane UI, show only the video surface
+            if (session.hasFrame) {
+                YouTubeVideoSurface(
+                    session = session,
+                    isPlaying = isPlaying,
+                    fit = { fit.value },
+                    keepScreenOn = isPlaying,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                VideoArtwork(thumbnailUrl = artworkUrl)
+            }
+        } else {
+            VideoTurnFrame(modifier = Modifier.fillMaxSize()) {
+                VideoModeLayout(
+                    state = state,
                     metadata = metadata,
                     artworkUrl = artworkUrl,
                     session = session,
-                    onDismiss = { state.menuOpen = false },
-                    onExitVideoMode = onExitVideoMode,
-                    onOpenPane = { state.openPane(it) },
-                    onSongInfo = { state.songInfoOpen = true },
+                    isPlaying = isPlaying,
+                    ambient = ambient,
+                    lyricsSyncOffset = lyricsSyncOffset,
+                    controls = controls,
+                    fit = { fit.value },
+                    onExit = onExitVideoMode,
+                    onEnterPip = onEnterPip,
                 )
-            }
 
-            if (state.songInfoOpen) {
-                ShowMediaInfo(videoId = metadata.id)
-                state.songInfoOpen = false
+                if (state.menuOpen) {
+                    VideoModeMenu(
+                        metadata = metadata,
+                        artworkUrl = artworkUrl,
+                        session = session,
+                        onDismiss = { state.menuOpen = false },
+                        onExitVideoMode = onExitVideoMode,
+                        onEnterPip = onEnterPip,
+                        onOpenPane = { state.openPane(it) },
+                        onSongInfo = { state.songInfoOpen = true },
+                    )
+                }
+
+                if (state.songInfoOpen) {
+                    ShowMediaInfo(videoId = metadata.id)
+                    state.songInfoOpen = false
+                }
             }
         }
     }
@@ -224,6 +263,7 @@ private fun VideoModeLayout(
     controls: () -> Float,
     fit: () -> Float,
     onExit: () -> Unit,
+    onEnterPip: () -> Unit,
 ) {
     val connection = LocalPlayerConnection.current ?: return
     BoxWithConstraints(
@@ -316,6 +356,7 @@ private fun VideoModeLayout(
                 state = state,
                 controls = controls,
                 onClose = onExit,
+                onEnterPip = onEnterPip,
                 onSongInfo = { state.songInfoOpen = true },
             )
             VideoTransport(state = state, controls = controls, isPlaying = isPlaying)

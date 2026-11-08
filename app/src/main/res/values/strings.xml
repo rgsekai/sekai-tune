@@ -1172,6 +1172,7 @@
     <string name="video_mode_song_info">Song info</string>
     <string name="video_mode_whole_video">Show the whole video</string>
     <string name="video_mode_whole_video_desc">Off, the video is zoomed in to fill the screen</string>
+    <string name="pip">Picture-in-Picture</string>
     <string name="pause">Pause</string>
     <string name="previous">Previous</string>
     <plurals name="video_mode_seek_seconds">

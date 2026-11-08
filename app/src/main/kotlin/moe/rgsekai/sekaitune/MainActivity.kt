@@ -248,6 +248,8 @@ import moe.rgsekai.sekaitune.ui.screens.search.AddonSearchScreen
 import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
 import moe.rgsekai.sekaitune.ui.component.GlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
+import moe.rgsekai.sekaitune.ui.player.video.LocalInPipMode
+import moe.rgsekai.sekaitune.ui.player.video.rememberPipBroadcastReceiver
 import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.layerBackdrop
 import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.rememberLayerBackdrop
@@ -373,6 +375,7 @@ class MainActivity : ComponentActivity() {
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
     private var isMusicServiceBound = false
+    private var isInPipMode by mutableStateOf(false)
     private var immersiveStatusBarsHidden = false
 
     private val serviceConnection =
@@ -511,6 +514,14 @@ class MainActivity : ComponentActivity() {
         } finally {
             isMusicServiceBound = false
         }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isInPipMode = isInPictureInPictureMode
     }
 
     override fun onStop() {
@@ -1715,10 +1726,12 @@ class MainActivity : ComponentActivity() {
                         LocalSyncUtils provides syncUtils,
                         LocalGlassEffectConfig provides glassEffectConfig,
                         LocalAppBackdrop provides (if (playerBottomSheetState.isExpanded || playerBottomSheetState.progress > 0.05f) playerBackdrop else rootBackdrop),
+                        LocalInPipMode provides isInPipMode,
                         moe.rgsekai.sekaitune.ui.component.LocalBottomSheetPageState provides bottomSheetPageState,
                         moe.rgsekai.sekaitune.ui.component.LocalMenuState provides menuState,
                         LocalIsTv provides isTvDevice,
                     ) {
+                        rememberPipBroadcastReceiver(playerConnection)
                         if (isTvDevice) {
                             TvRoot(
                                 navController = navController,

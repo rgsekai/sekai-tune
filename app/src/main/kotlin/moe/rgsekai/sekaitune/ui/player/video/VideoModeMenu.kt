@@ -75,9 +75,12 @@ internal fun VideoModeMenu(
     session: YouTubeVideoSession?,
     onDismiss: () -> Unit,
     onExitVideoMode: () -> Unit,
+    onEnterPip: () -> Unit,
     onOpenPane: (VideoPane) -> Unit,
     onSongInfo: () -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pipSupported = remember(context) { isPipSupported(context) }
     val connection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
     val coroutineScope = rememberCoroutineScope()
@@ -261,12 +264,14 @@ internal fun VideoModeMenu(
                 onClick = { showSleepTimer = true },
             )
 
-            // PiP placeholder spot - Phase 6
-            // MenuOptionRow(
-            //     icon = R.drawable.pip,
-            //     title = stringResource(R.string.pip),
-            //     onClick = { closeThen { /* enter PiP in Phase 6 */ } },
-            // )
+            if (pipSupported) {
+                Spacer(modifier = Modifier.height(8.dp))
+                MenuOptionRow(
+                    icon = R.drawable.picture_in_picture,
+                    title = stringResource(R.string.pip),
+                    onClick = { closeThen(onEnterPip) },
+                )
+            }
         }
     }
 

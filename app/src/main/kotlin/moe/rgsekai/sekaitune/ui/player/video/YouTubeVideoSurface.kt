@@ -83,7 +83,8 @@ fun DriveYouTubeVideo(
     val playerConnection = LocalPlayerConnection.current ?: return
     val (quality) = rememberEnumPreference(VideoQualityKey, VideoQuality.AUTO)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    val running by rememberUpdatedState(isPlaying && lifecycle.isAtLeast(Lifecycle.State.STARTED))
+    val isInPip = LocalInPipMode.current
+    val running by rememberUpdatedState(isPlaying && (isInPip || lifecycle.isAtLeast(Lifecycle.State.STARTED)))
     val positionAt by rememberUpdatedState(video.positionAt)
     var streams by remember(video.videoId) { mutableStateOf(video.streams) }
     LaunchedEffect(video.streams) { if (!video.streams.isExpired) streams = video.streams }
