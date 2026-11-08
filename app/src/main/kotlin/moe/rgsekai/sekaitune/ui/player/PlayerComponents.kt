@@ -697,13 +697,29 @@ fun V8PlayerControlsContent(
     val qualityBadgeInfo by playerConnection.qualityBadgeFlow.collectAsState()
     var showPipelineDetails by rememberSaveable { mutableStateOf(false) }
     val onMenuClick =
-        remember(mediaMetadata, navController, state, menuState, bottomSheetPageState) {
+        remember(
+            mediaMetadata,
+            navController,
+            state,
+            menuState,
+            bottomSheetPageState,
+            hasVideo,
+            useYtVideoCanvas,
+            inlineVideoActive,
+            onToggleInlineVideo,
+            onViewFullScreen,
+        ) {
             {
                 menuState.show {
                     PlayerMenu(
                         mediaMetadata = mediaMetadata,
                         navController = navController,
                         playerBottomSheetState = state,
+                        hasVideo = hasVideo,
+                        useYtVideoCanvas = useYtVideoCanvas,
+                        inlineVideoActive = inlineVideoActive,
+                        onToggleInlineVideo = onToggleInlineVideo,
+                        onViewFullScreen = onViewFullScreen,
                         onShowDetailsDialog = {
                             bottomSheetPageState.show {
                                 ShowMediaInfo(mediaMetadata.id)
@@ -829,17 +845,6 @@ fun V8PlayerControlsContent(
                 onPreviousClick = onPreviousClick,
                 onPlayPauseClick = onPlayPauseClick,
                 onNextClick = onNextClick,
-            )
-
-            V8VideoActions(
-                useYtVideoCanvas = useYtVideoCanvas,
-                inlineVideoActive = inlineVideoActive,
-                hasVideo = hasVideo,
-                foreground = foreground,
-                secondaryForeground = secondaryForeground,
-                onToggleInlineVideo = onToggleInlineVideo,
-                onViewFullScreen = onViewFullScreen,
-                modifier = Modifier.padding(top = 12.dp),
             )
         }
     }
@@ -1132,191 +1137,6 @@ private fun V8TransportControls(
         }
     }
 }
-@Composable
-private fun V8VideoActions(
-    useYtVideoCanvas: Boolean,
-    inlineVideoActive: Boolean,
-    hasVideo: Boolean,
-    foreground: Color,
-    secondaryForeground: Color,
-    onToggleInlineVideo: () -> Unit,
-    onViewFullScreen: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val useGlass = rememberPlayerGlassEnabled()
-    val pillShape = RoundedCornerShape(16.dp)
-
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (useYtVideoCanvas) {
-            Box(
-                modifier = Modifier
-                    .clip(pillShape)
-                    .then(
-                        if (useGlass) {
-                            Modifier.playerGlass(pillShape)
-                        } else {
-                            Modifier.background(foreground.copy(alpha = 0.16f))
-                        },
-                    )
-                    .clickable(onClick = onViewFullScreen)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.fullscreen),
-                        contentDescription = null,
-                        tint = foreground,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.view_full_screen),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = foreground,
-                    )
-                }
-            }
-        } else if (!hasVideo) {
-            Box(
-                modifier = Modifier
-                    .clip(pillShape)
-                    .then(
-                        if (useGlass) {
-                            Modifier.playerGlass(pillShape)
-                        } else {
-                            Modifier.background(foreground.copy(alpha = 0.08f))
-                        },
-                    )
-                    .alpha(0.38f)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.slow_motion_video),
-                        contentDescription = null,
-                        tint = foreground.copy(alpha = 0.38f),
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.video_not_available),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = foreground.copy(alpha = 0.38f),
-                    )
-                }
-            }
-        } else if (!inlineVideoActive) {
-            Box(
-                modifier = Modifier
-                    .clip(pillShape)
-                    .then(
-                        if (useGlass) {
-                            Modifier.playerGlass(pillShape)
-                        } else {
-                            Modifier.background(foreground.copy(alpha = 0.16f))
-                        },
-                    )
-                    .clickable(onClick = onToggleInlineVideo)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.slow_motion_video),
-                        contentDescription = null,
-                        tint = foreground,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.view_video),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = foreground,
-                    )
-                }
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .clip(pillShape)
-                    .then(
-                        if (useGlass) {
-                            Modifier.playerGlass(pillShape)
-                        } else {
-                            Modifier.background(foreground.copy(alpha = 0.16f))
-                        },
-                    )
-                    .clickable(onClick = onToggleInlineVideo)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.close),
-                        contentDescription = null,
-                        tint = foreground,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.exit_video),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = foreground,
-                    )
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .clip(pillShape)
-                    .then(
-                        if (useGlass) {
-                            Modifier.playerGlass(pillShape)
-                        } else {
-                            Modifier.background(foreground.copy(alpha = 0.16f))
-                        },
-                    )
-                    .clickable(onClick = onViewFullScreen)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.fullscreen),
-                        contentDescription = null,
-                        tint = foreground,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.view_full_screen),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = foreground,
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-
-
 /** True when the "Glass Player" option (and the global glass switch) is on and the device supports it. */
 @Composable
 internal fun rememberPlayerGlassEnabled(): Boolean {

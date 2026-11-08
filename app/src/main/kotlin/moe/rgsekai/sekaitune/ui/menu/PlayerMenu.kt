@@ -142,7 +142,6 @@ import moe.rgsekai.sekaitune.ui.component.MenuSurfaceSection
 import moe.rgsekai.sekaitune.ui.component.NewAction
 import moe.rgsekai.sekaitune.ui.component.NewActionGrid
 import moe.rgsekai.sekaitune.ui.component.TextFieldDialog
-import moe.rgsekai.sekaitune.ui.player.rememberDeviceMusicVolumeController
 import moe.rgsekai.sekaitune.LocalResolveUploadedCatalogMatchUseCase
 import moe.rgsekai.sekaitune.db.entities.ArtistEntity
 import moe.rgsekai.sekaitune.playback.CatalogMatchResult
@@ -167,6 +166,11 @@ fun PlayerMenu(
     navController: NavController,
     playerBottomSheetState: BottomSheetState,
     isQueueTrigger: Boolean? = false,
+    hasVideo: Boolean = false,
+    useYtVideoCanvas: Boolean = false,
+    inlineVideoActive: Boolean = false,
+    onToggleInlineVideo: () -> Unit = {},
+    onViewFullScreen: () -> Unit = {},
     onRemoveFromQueue: (() -> Unit)? = null,
     onShowDetailsDialog: () -> Unit,
     onDismiss: () -> Unit,
@@ -176,11 +180,6 @@ fun PlayerMenu(
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val resolveUploadedCatalogMatchUseCase = LocalResolveUploadedCatalogMatchUseCase.current
-    val deviceMusicVolumeController = rememberDeviceMusicVolumeController()
-    val onPlayerVolumeChange =
-        remember(deviceMusicVolumeController) {
-            { volume: Float -> deviceMusicVolumeController.setVolumeFraction(volume) }
-        }
     val activityResultLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
     val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
@@ -465,13 +464,80 @@ fun PlayerMenu(
         }
     }
 
-    if (isQueueTrigger != true) {
+    if (isQueueTrigger != true && hasVideo) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        PlayerVolumeCard(
-            volume = deviceMusicVolumeController.volumeFraction,
-            onVolumeChange = onPlayerVolumeChange,
-        )
+        MenuSurfaceSection(
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column {
+                if (useYtVideoCanvas) {
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.view_full_screen)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.fullscreen),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss()
+                            onViewFullScreen()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                } else if (!inlineVideoActive) {
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.view_video)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.slow_motion_video),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss()
+                            onToggleInlineVideo()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                } else {
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.exit_video)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.close),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss()
+                            onToggleInlineVideo()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.view_full_screen)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.fullscreen),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onDismiss()
+                            onViewFullScreen()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -1088,148 +1154,6 @@ fun PlayerMenu(
             }
         }
     }
-}
-
-@Composable
-private fun PlayerVolumeCard(
-    volume: Float,
-    onVolumeChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val safeVolume = volume.coerceIn(0f, 1f)
-
-    val glassConfig = moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig.current
-    val isGlass = glassConfig.isEnabledFor(moe.rgsekai.sekaitune.ui.component.GlassComponent.POPUP_MENU)
-    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
-    val sliderShape = RoundedCornerShape(18.dp)
-    val sliderRimColor = if (isLight) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.10f)
-
-    MenuSurfaceSection(
-        shape = RoundedCornerShape(28.dp),
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringResource(R.string.volume),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
-                )
-
-                Text(
-                    text = "${(safeVolume * 100).roundToInt()}%",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            Surface(
-                shape = sliderShape,
-                color =
-                    if (isGlass) {
-                        Color.Transparent
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    },
-                border = if (isGlass) BorderStroke(1.dp, sliderRimColor) else null,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (isGlass) {
-                                Modifier.liquidGlass(
-                                    config = glassConfig,
-                                    shape = sliderShape,
-                                    applyEdgeEffects = true,
-                                )
-                            } else {
-                                Modifier
-                            },
-                        ),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.volume_off),
-                        contentDescription = stringResource(R.string.minimum_volume),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-
-                    VolumeSliderL(
-                        value = safeVolume,
-                        onValueChange = onVolumeChange,
-                        modifier = Modifier.weight(1f),
-                    )
-
-                    Icon(
-                        painter = painterResource(R.drawable.volume_up),
-                        contentDescription = stringResource(R.string.maximum_volume),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun VolumeSliderL(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val safeValue = value.coerceIn(0f, 1f)
-    var sliderValue by remember { mutableFloatStateOf(safeValue) }
-    var isDragging by remember { mutableStateOf(false) }
-
-    LaunchedEffect(safeValue) {
-        if (!isDragging) sliderValue = safeValue
-    }
-
-    Slider(
-        value = sliderValue,
-        onValueChange = { updated ->
-            isDragging = true
-            val coerced = updated.coerceIn(0f, 1f)
-            sliderValue = coerced
-            onValueChange(coerced)
-        },
-        onValueChangeFinished = { isDragging = false },
-        valueRange = 0f..1f,
-        modifier = modifier.height(36.dp),
-        thumb = {
-            Box(
-                modifier =
-                    Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-            )
-        },
-        colors =
-            SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                activeTickColor = Color.Transparent,
-                inactiveTickColor = Color.Transparent,
-            ),
-    )
 }
 
 @Composable
