@@ -64,8 +64,13 @@ object YouTubeVideoUrlCache {
 }
 
 suspend fun findOfficialMusicVideo(title: String, artist: String): OfficialMusicVideo? {
-    val videoId = findOfficialMusicVideoId(title, artist) ?: return null
-    val streams = YTPlayerUtils.resolveVideoStreams(videoId).getOrNull() ?: return null
+    val videoId = findOfficialMusicVideoId(title, artist)
+    android.util.Log.d("VideoDebug", "Step 1b: findOfficialMusicVideoId returned videoId=$videoId for title='$title', artist='$artist'")
+    if (videoId == null) return null
+    val result = YTPlayerUtils.resolveVideoStreams(videoId)
+    val streams = result.getOrNull()
+    android.util.Log.d("VideoDebug", "Step 1b: resolveVideoStreams in findOfficialMusicVideo isSuccess=${result.isSuccess}, error=${result.exceptionOrNull()?.message}, tracks=${streams?.tracks?.size}")
+    if (streams == null) return null
     return OfficialMusicVideo(videoId = videoId, streams = streams)
 }
 
@@ -73,15 +78,39 @@ suspend fun ownMusicVideo(mediaId: String): OfficialMusicVideo? =
     YTPlayerUtils.resolveVideoStreams(mediaId).getOrNull()?.let { OfficialMusicVideo(mediaId, it) }
 
 suspend fun findOfficialMusicVideoId(title: String, artist: String): String? {
-    if (title.isBlank() || artist.isBlank()) return null
+    android.util.Log.d("VideoDebug", "Step 1b: lookup start for title='$title', artist='$artist'")
+    if (title.isBlank() || artist.isBlank()) {
+        android.util.Log.d("VideoDebug", "Step 1b: title or artist is blank, returning null")
+        return null
+    }
     val key = "$title|$artist"
-    if (OfficialVideoIdCache.contains(key)) return OfficialVideoIdCache.get(key)
+    if (OfficialVideoIdCache.contains(key)) {
+        val cached = OfficialVideoIdCache.get(key)
+        android.util.Log.d("VideoDebug", "Step 1b: cache hit for key='$key' -> videoId=$cached")
+        return cached
+    }
+    android.util.Log.d("VideoDebug", "Step 1b: cache miss for key='$key', searching YouTube...")
 
     val results = YouTube.search(query = "$title $artist", filter = YouTube.SearchFilter.FILTER_VIDEO)
-        .getOrElse { return null }.items
+        .getOrElse {
+            android.util.Log.d("VideoDebug", "Step 1b: search failed with exception: ${it.message}")
+            return null
+        }.items
+
+    android.util.Log.d("VideoDebug", "Step 1b: search returned ${results.size} items")
 
     val normalizedTitle = normalizeCanvasSongTitle(title)
     val normalizedArtist = normalizeCanvasArtistName(artist)
+    android.util.Log.d("VideoDebug", "Step 1b: normalized target: title='$normalizedTitle', artist='$normalizedArtist'")
+
+    for (item in results) {
+        if (item is SongItem) {
+            val config = item.endpoint?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig
+            val candidateTitle = normalizeCanvasSongTitle(item.title)
+            val candidateArtist = normalizeCanvasArtistName(item.artists.joinToString { it.name })
+            android.util.Log.d("VideoDebug", "Step 1b: candidate id=${item.id}, musicVideoType=${config?.musicVideoType}, rawTitle='${item.title}', normTitle='$candidateTitle', rawArtist='${item.artists.joinToString { it.name }}', normArtist='$candidateArtist'")
+        }
+    }
 
     val match = results
         .filterIsInstance<SongItem>()
@@ -95,6 +124,7 @@ suspend fun findOfficialMusicVideoId(title: String, artist: String): String? {
             (candidateTitle.contains(normalizedTitle, ignoreCase = true) || normalizedTitle.contains(candidateTitle, ignoreCase = true)) &&
                 (candidateArtist.contains(normalizedArtist, ignoreCase = true) || normalizedArtist.contains(candidateArtist, ignoreCase = true))
         }
+    android.util.Log.d("VideoDebug", "Step 1b: lookup result -> match=${match?.id} (title=${match?.title})")
     OfficialVideoIdCache.put(key, match?.id)
     return match?.id
 }
@@ -213,9 +243,19 @@ private val lookupLock = Mutex()
 internal suspend fun lookUpVideo(mediaId: String, title: String, artist: String, isVideoSong: Boolean): OfficialMusicVideo? =
     lookupLock.withLock {
         val key = videoCacheKey(mediaId, isVideoSong)
-        if (YouTubeVideoUrlCache.contains(key)) return@withLock YouTubeVideoUrlCache.get(key)
-        if (!isVideoSong && (title.isBlank() || artist.isBlank())) return@withLock null
+        android.util.Log.d("VideoDebug", "Step 1b: lookUpVideo mediaId=$mediaId, key=$key, isVideoSong=$isVideoSong")
+        if (YouTubeVideoUrlCache.contains(key)) {
+            val cached = YouTubeVideoUrlCache.get(key)
+            android.util.Log.d("VideoDebug", "Step 1b: YouTubeVideoUrlCache hit for key=$key -> videoId=${cached?.videoId}")
+            return@withLock cached
+        }
+        android.util.Log.d("VideoDebug", "Step 1b: YouTubeVideoUrlCache miss for key=$key")
+        if (!isVideoSong && (title.isBlank() || artist.isBlank())) {
+            android.util.Log.d("VideoDebug", "Step 1b: not video song and title/artist blank")
+            return@withLock null
+        }
         val resolved = if (isVideoSong) ownMusicVideo(mediaId) else findOfficialMusicVideo(title, artist)
+        android.util.Log.d("VideoDebug", "Step 1b: lookUpVideo resolved=${resolved?.videoId}")
         YouTubeVideoUrlCache.put(key, resolved)
         resolved
     }

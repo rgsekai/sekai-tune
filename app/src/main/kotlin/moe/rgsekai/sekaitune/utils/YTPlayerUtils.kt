@@ -1626,7 +1626,7 @@ object YTPlayerUtils {
     private fun describeClient(client: YouTubeClient): String = "${client.clientName}@${client.clientVersion}"
 
     private val VIDEO_BACKGROUND_CLIENTS: Array<YouTubeClient> = arrayOf(
-        MAIN_CLIENT,
+        VISIONOS,
         WEB_REMIX,
         TVHTML5_SIMPLY_EMBEDDED_PLAYER,
         YouTubeClient.ANDROID_VR_1_61_48,
@@ -1671,6 +1671,7 @@ object YTPlayerUtils {
     }
 
     suspend fun resolveVideoStreams(videoId: String): Result<VideoStreams> = runCatching {
+        android.util.Log.d("VideoDebug", "Step 1c: resolveVideoStreams start for videoId=$videoId")
         kotlinx.coroutines.withContext(Dispatchers.IO) {
             val currentAuth = YouTube.currentPlaybackAuthState()
             val authState = if (YouTube.cookie == null && currentAuth.visitorData.isNullOrEmpty()) {
@@ -1684,19 +1685,25 @@ object YTPlayerUtils {
             }
 
             for (client in VIDEO_BACKGROUND_CLIENTS) {
+                android.util.Log.d("VideoDebug", "Step 1c: trying client ${client.clientName}@${client.clientVersion}")
                 val streams = try {
                     videoStreamsFrom(client, videoId, authState) { signatureTimestamp }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} threw exception: ${e.message}")
                     Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} threw: ${e.message}")
                     null
                 }
                 if (streams != null) {
+                    android.util.Log.d("VideoDebug", "Step 1c: SUCCESS with client ${client.clientName}, returned ${streams.tracks.size} tracks, duration=${streams.durationMs}ms")
                     Timber.tag(logTag).d("resolveVideoStreams: ${streams.tracks.size} sizes via ${client.clientName}")
                     return@withContext streams
+                } else {
+                    android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} failed to return streams")
                 }
             }
+            android.util.Log.e("VideoDebug", "Step 1c: all ${VIDEO_BACKGROUND_CLIENTS.size} clients failed for videoId=$videoId")
             throw Exception("Could not resolve a playable video stream for videoId=$videoId after trying ${VIDEO_BACKGROUND_CLIENTS.size} clients")
         }
     }
@@ -1708,12 +1715,21 @@ object YTPlayerUtils {
         signatureTimestamp: () -> Int?,
     ): VideoStreams? {
         val timestamp = if (client.useSignatureTimestamp) signatureTimestamp() else null
-        val response = YouTube.player(videoId, null, client, timestamp, null, authState = authState).getOrNull() ?: return null
+        val response = YouTube.player(videoId, null, client, timestamp, null, authState = authState).getOrNull()
+        if (response == null) {
+            android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} YouTube.player returned null")
+            return null
+        }
         if (response.playabilityStatus.status != "OK") {
+            android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} status not OK: ${response.playabilityStatus.status}, reason: ${response.playabilityStatus.reason}")
             Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} not OK: ${response.playabilityStatus.status}")
             return null
         }
-        val streaming = response.streamingData ?: return null
+        val streaming = response.streamingData
+        if (streaming == null) {
+            android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} streamingData is null")
+            return null
+        }
 
         suspend fun trackOf(format: PlayerResponse.StreamingData.Format): VideoTrack? {
             val url = runCatching { findUrl(format, videoId, client, authState).getOrNull() }.getOrNull()
@@ -1734,13 +1750,18 @@ object YTPlayerUtils {
         }
 
         val tracks = pickVideoFamily(streaming.adaptiveFormats).mapNotNull { trackOf(it) }
+        android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} adaptiveFormats total=${streaming.adaptiveFormats.size}, resolved video tracks=${tracks.size}")
         if (tracks.isEmpty()) {
+            android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} had no video format")
             Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} had no video format")
             return null
         }
         val headers = client.videoStreamHeaders()
         val probe = tracks.minByOrNull { kotlin.math.abs(it.shortSide - 720) } ?: tracks.first()
-        if (!validateVideoStreamStatus(probe.url, headers, probe.contentLength)) {
+        val probePassed = validateVideoStreamStatus(probe.url, headers, probe.contentLength)
+        android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} probe result: $probePassed (probe track ${probe.width}x${probe.height})")
+        if (!probePassed) {
+            android.util.Log.d("VideoDebug", "Step 1c: client ${client.clientName} probe failed (cuts the video off)")
             Timber.tag(logTag).d("resolveVideoStreams: client ${client.clientName} cuts the video off")
             return null
         }
