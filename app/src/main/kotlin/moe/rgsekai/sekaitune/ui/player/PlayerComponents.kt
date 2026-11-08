@@ -70,6 +70,8 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import moe.rgsekai.sekaitune.ui.component.ResizableIconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -671,8 +673,11 @@ fun V8PlayerControlsContent(
     sliderPosition: Long?,
     position: Long,
     duration: Long,
-    volume: Float,
-    showVolumeBar: Boolean,
+    useYtVideoCanvas: Boolean = false,
+    inlineVideoActive: Boolean = false,
+    hasVideo: Boolean = false,
+    onToggleInlineVideo: () -> Unit = {},
+    onViewFullScreen: () -> Unit = {},
     currentFormat: FormatEntity?,
     playerConnection: PlayerConnection,
     navController: NavController,
@@ -681,7 +686,6 @@ fun V8PlayerControlsContent(
     bottomSheetPageState: BottomSheetPageState,
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
-    onVolumeChange: (Float) -> Unit,
     lyricsSyncOffset: Int = 0,
     showOneLineLyrics: Boolean = true,
     onShowLyrics: () -> Unit = {},
@@ -827,16 +831,16 @@ fun V8PlayerControlsContent(
                 onNextClick = onNextClick,
             )
 
-            if (showVolumeBar) {
-                Spacer(Modifier.height(12.dp))
-
-                V8VolumeControls(
-                    volume = volume,
-                    foreground = foreground,
-                    secondaryForeground = secondaryForeground,
-                    onVolumeChange = onVolumeChange,
-                )
-            }
+            V8VideoActions(
+                useYtVideoCanvas = useYtVideoCanvas,
+                inlineVideoActive = inlineVideoActive,
+                hasVideo = hasVideo,
+                foreground = foreground,
+                secondaryForeground = secondaryForeground,
+                onToggleInlineVideo = onToggleInlineVideo,
+                onViewFullScreen = onViewFullScreen,
+                modifier = Modifier.padding(top = 12.dp),
+            )
         }
     }
 
@@ -1128,78 +1132,190 @@ private fun V8TransportControls(
         }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun V8VolumeControls(
-    volume: Float,
+private fun V8VideoActions(
+    useYtVideoCanvas: Boolean,
+    inlineVideoActive: Boolean,
+    hasVideo: Boolean,
     foreground: Color,
     secondaryForeground: Color,
-    onVolumeChange: (Float) -> Unit,
+    onToggleInlineVideo: () -> Unit,
+    onViewFullScreen: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val volumeInteractionSource = remember { MutableInteractionSource() }
-    val isVolumeDragged by volumeInteractionSource.collectIsDraggedAsState()
-    val isVolumePressed by volumeInteractionSource.collectIsPressedAsState()
-    val isVolumeActive = isVolumeDragged || isVolumePressed
-
-    val volumeTrackHeight by animateDpAsState(
-        targetValue = if (isVolumeActive) 16.dp else 10.dp,
-        animationSpec =
-            spring(
-                dampingRatio = 0.7f,
-                stiffness = 600f,
-            ),
-        label = "v8VolumeTrackHeight",
-    )
-
-    val volumeColors =
-        SliderDefaults.colors(
-            activeTrackColor = foreground.copy(alpha = 0.88f),
-            inactiveTrackColor = foreground.copy(alpha = 0.28f),
-            thumbColor = Color.Transparent,
-        )
+    val useGlass = rememberPlayerGlassEnabled()
+    val pillShape = RoundedCornerShape(16.dp)
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            painter = painterResource(R.drawable.volume_off),
-            contentDescription = stringResource(R.string.minimum_volume),
-            tint = secondaryForeground,
-            modifier = Modifier.size(24.dp),
-        )
-
-        Slider(
-            value = volume.coerceIn(0f, 1f),
-            valueRange = 0f..1f,
-            onValueChange = { onVolumeChange(it.coerceIn(0f, 1f)) },
-            onValueChangeFinished = {},
-            interactionSource = volumeInteractionSource,
-            colors = volumeColors,
-            thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-            track = { sliderState ->
-                PlayerSliderTrack(
-                    sliderState = sliderState,
-                    colors = volumeColors,
-                    trackHeight = volumeTrackHeight,
-                )
-            },
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(horizontal = 14.dp)
-                    .height(28.dp),
-        )
-
-        Icon(
-            painter = painterResource(R.drawable.volume_up),
-            contentDescription = stringResource(R.string.maximum_volume),
-            tint = secondaryForeground,
-            modifier = Modifier.size(24.dp),
-        )
+        if (useYtVideoCanvas) {
+            Box(
+                modifier = Modifier
+                    .clip(pillShape)
+                    .then(
+                        if (useGlass) {
+                            Modifier.playerGlass(pillShape)
+                        } else {
+                            Modifier.background(foreground.copy(alpha = 0.12f))
+                        },
+                    )
+                    .alpha(0.5f)
+                    .clickable(enabled = false, onClick = onViewFullScreen)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.fullscreen),
+                        contentDescription = null,
+                        tint = foreground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.view_full_screen),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = foreground.copy(alpha = 0.5f),
+                    )
+                }
+            }
+        } else if (!hasVideo) {
+            Box(
+                modifier = Modifier
+                    .clip(pillShape)
+                    .then(
+                        if (useGlass) {
+                            Modifier.playerGlass(pillShape)
+                        } else {
+                            Modifier.background(foreground.copy(alpha = 0.08f))
+                        },
+                    )
+                    .alpha(0.38f)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.slow_motion_video),
+                        contentDescription = null,
+                        tint = foreground.copy(alpha = 0.38f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.video_not_available),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = foreground.copy(alpha = 0.38f),
+                    )
+                }
+            }
+        } else if (!inlineVideoActive) {
+            Box(
+                modifier = Modifier
+                    .clip(pillShape)
+                    .then(
+                        if (useGlass) {
+                            Modifier.playerGlass(pillShape)
+                        } else {
+                            Modifier.background(foreground.copy(alpha = 0.16f))
+                        },
+                    )
+                    .clickable(onClick = onToggleInlineVideo)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.slow_motion_video),
+                        contentDescription = null,
+                        tint = foreground,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.view_video),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = foreground,
+                    )
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .clip(pillShape)
+                    .then(
+                        if (useGlass) {
+                            Modifier.playerGlass(pillShape)
+                        } else {
+                            Modifier.background(foreground.copy(alpha = 0.16f))
+                        },
+                    )
+                    .clickable(onClick = onToggleInlineVideo)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.close),
+                        contentDescription = null,
+                        tint = foreground,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.exit_video),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = foreground,
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(pillShape)
+                    .then(
+                        if (useGlass) {
+                            Modifier.playerGlass(pillShape)
+                        } else {
+                            Modifier.background(foreground.copy(alpha = 0.12f))
+                        },
+                    )
+                    .alpha(0.5f)
+                    .clickable(enabled = false, onClick = onViewFullScreen)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.fullscreen),
+                        contentDescription = null,
+                        tint = foreground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.view_full_screen),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = foreground.copy(alpha = 0.5f),
+                    )
+                }
+            }
+        }
     }
 }
+
 
 
 

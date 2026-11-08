@@ -194,7 +194,6 @@ import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
 import moe.rgsekai.sekaitune.constants.MaxCanvasCacheSizeKey
 import moe.rgsekai.sekaitune.constants.QueuePeekHeight
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
-import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
 import moe.rgsekai.sekaitune.constants.ThemeBackdropModeKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurEnabledKey
@@ -335,11 +334,6 @@ fun BottomSheetPlayer(
 
     val playerConnection = LocalPlayerConnection.current ?: return
 
-    val showPlayerVolumeBar by rememberPreference(
-        key = ShowPlayerVolumeBarKey,
-        defaultValue = false,
-    )
-
 
 
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
@@ -402,6 +396,7 @@ fun BottomSheetPlayer(
     val (thumbnailCornerRadius) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = 8f)
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, true)
     val useYtVideoCanvas by rememberPreference(UseYtVideoAsCanvasKey, false)
+    var inlineVideoActive by rememberSaveable(mediaMetadata?.id) { mutableStateOf(false) }
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
@@ -1093,9 +1088,9 @@ fun BottomSheetPlayer(
             mutableStateOf(false)
         }
 
-        LaunchedEffect(shouldUseV7Canvas, shouldFetchV7Canvas, useYtVideoCanvas, mediaMetadata?.id) {
+        LaunchedEffect(shouldUseV7Canvas, shouldFetchV7Canvas, useYtVideoCanvas, inlineVideoActive, mediaMetadata?.id) {
             val metadata = mediaMetadata
-            if (!shouldUseV7Canvas || useYtVideoCanvas || metadata == null) {
+            if (!shouldUseV7Canvas || useYtVideoCanvas || inlineVideoActive || metadata == null) {
                 v7CanvasArtwork = null
                 v7CanvasFetchInFlight = false
                 return@LaunchedEffect
@@ -1160,7 +1155,7 @@ fun BottomSheetPlayer(
                 }
 
             val currentMediaMetadata = enrichedMetadata ?: mediaMetadata
-            val ytVideoCanvasSong = if (useYtVideoCanvas && currentMediaMetadata != null && shouldUseV7Canvas) {
+            val ytVideoCanvasSong = if ((useYtVideoCanvas || inlineVideoActive) && currentMediaMetadata != null && shouldUseV7Canvas) {
                 rememberSongVideo(
                     mediaId = currentMediaMetadata.id,
                     title = currentMediaMetadata.title,
@@ -1231,8 +1226,11 @@ fun BottomSheetPlayer(
                         sliderPosition = sliderPosition,
                         position = position,
                         duration = duration,
-                        volume = deviceMusicVolumeController.volumeFraction,
-                        showVolumeBar = showPlayerVolumeBar,
+                        useYtVideoCanvas = useYtVideoCanvas,
+                        inlineVideoActive = inlineVideoActive,
+                        hasVideo = (ytVideoCanvasSong != null),
+                        onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
+                        onViewFullScreen = { /* Phase 5 enables this */ },
                         currentFormat = currentFormat,
                         playerConnection = playerConnection,
                         navController = navController,
@@ -1241,7 +1239,6 @@ fun BottomSheetPlayer(
                         bottomSheetPageState = bottomSheetPageState,
                         onSliderValueChange = onSliderValueChange,
                         onSliderValueChangeFinished = onSliderValueChangeFinished,
-                        onVolumeChange = onPlayerVolumeChange,
                         landscape = true,
                         lyricsSyncOffset = lyricsSyncOffset,
                         showOneLineLyrics = showOneLineLyrics,
@@ -1306,8 +1303,11 @@ fun BottomSheetPlayer(
                                         sliderPosition = sliderPosition,
                                         position = position,
                                         duration = duration,
-                                        volume = deviceMusicVolumeController.volumeFraction,
-                                        showVolumeBar = showPlayerVolumeBar,
+                                        useYtVideoCanvas = useYtVideoCanvas,
+                                        inlineVideoActive = inlineVideoActive,
+                                        hasVideo = (ytVideoCanvasSong != null),
+                                        onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
+                                        onViewFullScreen = { /* Phase 5 enables this */ },
                                         currentFormat = currentFormat,
                                         playerConnection = playerConnection,
                                         navController = navController,
@@ -1316,7 +1316,6 @@ fun BottomSheetPlayer(
                                         bottomSheetPageState = bottomSheetPageState,
                                         onSliderValueChange = onSliderValueChange,
                                         onSliderValueChangeFinished = onSliderValueChangeFinished,
-                                        onVolumeChange = onPlayerVolumeChange,
                                         lyricsSyncOffset = lyricsSyncOffset,
                                         showOneLineLyrics = showOneLineLyrics,
                                         onShowLyrics = { isLyricsScreenVisible = true },

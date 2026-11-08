@@ -98,7 +98,6 @@ import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
 import moe.rgsekai.sekaitune.constants.ShowHomeCategoryChipsKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
-import moe.rgsekai.sekaitune.constants.ShowPlayerVolumeBarKey
 import moe.rgsekai.sekaitune.constants.ShowTagsInLibraryKey
 import moe.rgsekai.sekaitune.constants.SwipeThumbnailKey
 import moe.rgsekai.sekaitune.constants.SwipeToSongKey
@@ -130,11 +129,6 @@ fun AppearanceSettings(navController: NavController) {
         rememberEnumPreference(
             DarkModeKey,
             defaultValue = DarkMode.AUTO,
-        )
-    val (showPlayerVolumeBar, onShowPlayerVolumeBarChange) =
-        rememberPreference(
-            ShowPlayerVolumeBarKey,
-            defaultValue = false,
         )
     val (showOneLineLyrics, onShowOneLineLyricsChange) =
         rememberPreference(
@@ -494,14 +488,6 @@ fun AppearanceSettings(navController: NavController) {
             }
 
             PreferenceGroup(title = stringResource(R.string.player)) {
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.show_player_volume_bar)) },
-                        icon = { Icon(painterResource(R.drawable.volume_up), null) },
-                        checked = showPlayerVolumeBar,
-                        onCheckedChange = onShowPlayerVolumeBarChange,
-                    )
-                }
 
                 item {
                     SwitchPreference(

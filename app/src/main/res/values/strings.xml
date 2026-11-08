@@ -246,8 +246,6 @@
     <string name="sample_rate">Sample rate</string>
     <string name="loudness">Loudness</string>
     <string name="volume">Volume</string>
-    <string name="show_player_volume_bar">Show volume bar</string>
-    <string name="player_volume_bar_v7_v8_only">Available only with V7 and V8 player styles</string>
     <string name="file_size">File size</string>
     <string name="unknown">Unknown</string>
     <string name="copied">Copied to clipboard</string>
@@ -1154,6 +1152,10 @@
     <string name="video_quality_not_loaded">Sizes show up once the video loads</string>
     <string name="video_quality_4k">4K</string>
     <string name="video_quality_sharp_desc">If the video and your phone can, uses way more data</string>
+    <string name="view_video">View video</string>
+    <string name="exit_video">Exit video</string>
+    <string name="view_full_screen">View full screen</string>
+    <string name="video_not_available">No video available</string>
 </resources>
 
 
