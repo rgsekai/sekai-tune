@@ -1174,17 +1174,15 @@ fun BottomSheetPlayer(
 
             val currentMediaMetadata = enrichedMetadata ?: mediaMetadata
             android.util.Log.d("VideoDebug", "Step 1a: toggle useYtVideoCanvas=$useYtVideoCanvas, inlineVideoActive=$inlineVideoActive, shouldUseV7Canvas=$shouldUseV7Canvas, currentMediaMetadata=${currentMediaMetadata?.title}")
-            val ytVideoCanvasSong = if ((useYtVideoCanvas || inlineVideoActive) && currentMediaMetadata != null && shouldUseV7Canvas) {
-                rememberSongVideo(
-                    mediaId = currentMediaMetadata.id,
-                    title = currentMediaMetadata.title,
-                    artist = currentMediaMetadata.artists.joinToString { it.name },
-                    isVideoSong = currentMediaMetadata.isMusicVideo,
-                    enabled = true,
-                )
-            } else {
-                null
-            }
+            val videoLookupEnabled = (useYtVideoCanvas || inlineVideoActive || isFullScreenVideo) && currentMediaMetadata != null && shouldUseV7Canvas
+            val videoLookup = rememberSongVideoLookup(
+                mediaId = currentMediaMetadata?.id.orEmpty(),
+                title = currentMediaMetadata?.title.orEmpty(),
+                artist = currentMediaMetadata?.artists?.joinToString { it.name }.orEmpty(),
+                isVideoSong = currentMediaMetadata?.isMusicVideo ?: false,
+                enabled = videoLookupEnabled,
+            )
+            val ytVideoCanvasSong = if (useYtVideoCanvas || inlineVideoActive) videoLookup.video else null
 
             Box(
                 modifier = Modifier
@@ -1415,12 +1413,13 @@ fun BottomSheetPlayer(
                 }
             }
 
-            if (isFullScreenVideo && ytVideoCanvasSong != null) {
+            if (isFullScreenVideo) {
                 mediaMetadata?.let { metadata ->
                     moe.rgsekai.sekaitune.ui.player.video.VideoModeScreen(
                         metadata = metadata,
                         artworkUrl = currentArtworkUrl,
-                        video = ytVideoCanvasSong!!,
+                        video = videoLookup.video,
+                        searching = videoLookup.searching,
                         lyricsSyncOffset = lyricsSyncOffset,
                         onExitVideoMode = { isFullScreenVideo = false },
                     )
@@ -1993,7 +1992,17 @@ private fun V7PlayerBackdrop(
                 Box(
                     modifier = bannerModifier,
                 ) {
-                    if (sharpArtworkModel != null) {
+                    var liveVideoShown by remember(backdrop.trackId) { mutableStateOf(false) }
+                    val liveCovered by produceState(false, liveVideoShown) {
+                        if (liveVideoShown) {
+                            delay(450L)
+                            value = true
+                        } else {
+                            value = false
+                        }
+                    }
+
+                    if (sharpArtworkModel != null && !liveCovered) {
                         AsyncImage(
                             model = sharpArtworkRequest,
                             contentDescription = null,
@@ -2006,6 +2015,7 @@ private fun V7PlayerBackdrop(
                         YouTubeVideoBackground(
                             video = backdrop.songVideo,
                             isPlaying = isPlaying,
+                            onShowingChange = { shown -> liveVideoShown = shown },
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else if (backdrop.canvasRenderMode !is CanvasRenderMode.None) {

@@ -110,7 +110,8 @@ fun Modifier.quarterTurn(enabled: Boolean = true): Modifier = layout { measurabl
 fun VideoModeScreen(
     metadata: MediaMetadata,
     artworkUrl: String?,
-    video: moe.rgsekai.sekaitune.ui.player.SongVideo,
+    video: moe.rgsekai.sekaitune.ui.player.SongVideo?,
+    searching: Boolean = false,
     lyricsSyncOffset: Int,
     onExitVideoMode: () -> Unit,
     modifier: Modifier = Modifier,
@@ -121,14 +122,16 @@ fun VideoModeScreen(
     val isPlaying by connection.isPlaying.collectAsState()
 
     // Video session reuse
-    val session = rememberYouTubeVideoSession(video.videoId)
-    DriveYouTubeVideo(session, video, isPlaying, ModeAutoCap)
+    val session = if (video != null) rememberYouTubeVideoSession(video.videoId) else null
+    if (session != null && video != null) {
+        DriveYouTubeVideo(session, video, isPlaying, ModeAutoCap)
+    }
 
     val isInPip = LocalInPipMode.current
 
     // Update PiP actions when playback state changes while in PiP mode
-    LaunchedEffect(isInPip, isPlaying, session.aspect) {
-        if (isInPip && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    LaunchedEffect(isInPip, isPlaying, session?.aspect) {
+        if (isInPip && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && session != null) {
             val activity = context as? Activity
             if (activity != null && isPipSupported(activity)) {
                 try {
@@ -194,7 +197,7 @@ fun VideoModeScreen(
 
     val activity = context as? Activity
     val onEnterPip: () -> Unit = {
-        if (activity != null) {
+        if (activity != null && session != null) {
             enterPictureInPictureMode(activity, session.aspect, isPlaying)
         }
     }
@@ -202,7 +205,7 @@ fun VideoModeScreen(
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         if (isInPip) {
             // In PiP: reset quarter turn, hide all overlay/pane UI, show only the video surface
-            if (session.hasFrame) {
+            if (session != null && session.hasFrame) {
                 YouTubeVideoSurface(
                     session = session,
                     isPlaying = isPlaying,
@@ -219,6 +222,8 @@ fun VideoModeScreen(
                     state = state,
                     metadata = metadata,
                     artworkUrl = artworkUrl,
+                    video = video,
+                    searching = searching,
                     session = session,
                     isPlaying = isPlaying,
                     ambient = ambient,
@@ -256,6 +261,8 @@ private fun VideoModeLayout(
     state: VideoModeState,
     metadata: MediaMetadata,
     artworkUrl: String?,
+    video: moe.rgsekai.sekaitune.ui.player.SongVideo?,
+    searching: Boolean,
     session: YouTubeVideoSession?,
     isPlaying: Boolean,
     ambient: VideoAmbientState,
@@ -315,13 +322,35 @@ private fun VideoModeLayout(
                 }
             }
 
-            val loading = session != null && (!session.hasFrame || session.isStalled)
+            val loading = searching || (session != null && (!session.hasFrame || session.isStalled))
             VideoLoadingIndicator(
                 loading = loading && isPlaying,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .graphicsLayer { translationX = -paneShift * state.pane.value },
             )
+
+            val status = when {
+                video != null -> null
+                searching -> R.string.video_mode_finding
+                else -> R.string.video_mode_no_video
+            }
+            if (status != null) {
+                Text(
+                    text = stringResource(status),
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 40.dp)
+                        .graphicsLayer {
+                            alpha = 1f - controls()
+                            translationX = -paneShift * state.pane.value
+                        },
+                )
+            }
 
             // Pane layer
             if (state.paneMounted) {
@@ -493,7 +522,13 @@ private fun VideoArtwork(thumbnailUrl: String?) {
             model = thumbnailUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        renderEffect = BlurEffect(48.dp.toPx(), 48.dp.toPx(), TileMode.Clamp)
+                    }
+                },
         )
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
     }
