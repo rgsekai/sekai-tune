@@ -741,6 +741,9 @@ fun BottomSheetPlayer(
     var isLyricsScreenVisible by rememberSaveable {
         mutableStateOf(false)
     }
+    var isFullScreenVideo by rememberSaveable {
+        mutableStateOf(false)
+    }
     val openQueue =
         remember(state, queueSheetState) {
             {
@@ -754,10 +757,12 @@ fun BottomSheetPlayer(
 
     BackHandler(
         enabled =
-            queueSheetState.isExpandedOrExpanding ||
+            isFullScreenVideo ||
+                queueSheetState.isExpandedOrExpanding ||
                 state.isExpandedOrExpanding,
     ) {
         when {
+            isFullScreenVideo -> isFullScreenVideo = false
             isLyricsScreenVisible && state.isExpandedOrExpanding -> isLyricsScreenVisible = false
             queueSheetState.isExpandedOrExpanding -> queueSheetState.collapseSoft()
             state.isExpandedOrExpanding -> state.collapseSoft()
@@ -1230,7 +1235,7 @@ fun BottomSheetPlayer(
                         inlineVideoActive = inlineVideoActive,
                         hasVideo = (ytVideoCanvasSong != null),
                         onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
-                        onViewFullScreen = { /* Phase 5 enables this */ },
+                        onViewFullScreen = { isFullScreenVideo = true },
                         currentFormat = currentFormat,
                         playerConnection = playerConnection,
                         navController = navController,
@@ -1307,7 +1312,7 @@ fun BottomSheetPlayer(
                                         inlineVideoActive = inlineVideoActive,
                                         hasVideo = (ytVideoCanvasSong != null),
                                         onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
-                                        onViewFullScreen = { /* Phase 5 enables this */ },
+                                        onViewFullScreen = { isFullScreenVideo = true },
                                         currentFormat = currentFormat,
                                         playerConnection = playerConnection,
                                         navController = navController,
@@ -1392,6 +1397,18 @@ fun BottomSheetPlayer(
                         onSeek = { sliderPosition = it },
                         onSeekFinished = onSliderValueChangeFinished,
                         onExit = { playerConnection.aodModeEnabled.value = false },
+                    )
+                }
+            }
+
+            if (isFullScreenVideo && ytVideoCanvasSong != null) {
+                mediaMetadata?.let { metadata ->
+                    moe.rgsekai.sekaitune.ui.player.video.VideoModeScreen(
+                        metadata = metadata,
+                        artworkUrl = currentArtworkUrl,
+                        video = ytVideoCanvasSong!!,
+                        lyricsSyncOffset = lyricsSyncOffset,
+                        onExitVideoMode = { isFullScreenVideo = false },
                     )
                 }
             }

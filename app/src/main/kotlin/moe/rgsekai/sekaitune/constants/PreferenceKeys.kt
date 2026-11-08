@@ -903,6 +903,8 @@ val UseYtVideoAsCanvasKey = booleanPreferencesKey("useYtVideoAsCanvas")
 val VideoQualityKey = stringPreferencesKey("videoQuality")
 val YtVideoBackgroundLyricsSyncKey = booleanPreferencesKey("ytVideoBackgroundLyricsSync")
 val VideoModeReturnStyleKey = stringPreferencesKey("videoModeReturnStyle")
+val VideoModeWholeVideoKey = booleanPreferencesKey("videoModeWholeVideo")
+val FullScreenVideoModeKey = booleanPreferencesKey("fullScreenVideoMode")
 
 
 

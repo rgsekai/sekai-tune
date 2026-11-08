@@ -1159,11 +1159,10 @@ private fun V8VideoActions(
                         if (useGlass) {
                             Modifier.playerGlass(pillShape)
                         } else {
-                            Modifier.background(foreground.copy(alpha = 0.12f))
+                            Modifier.background(foreground.copy(alpha = 0.16f))
                         },
                     )
-                    .alpha(0.5f)
-                    .clickable(enabled = false, onClick = onViewFullScreen)
+                    .clickable(onClick = onViewFullScreen)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1174,13 +1173,13 @@ private fun V8VideoActions(
                     Icon(
                         painter = painterResource(R.drawable.fullscreen),
                         contentDescription = null,
-                        tint = foreground.copy(alpha = 0.5f),
+                        tint = foreground,
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
                         text = stringResource(R.string.view_full_screen),
                         style = MaterialTheme.typography.labelLarge,
-                        color = foreground.copy(alpha = 0.5f),
+                        color = foreground,
                     )
                 }
             }
@@ -1287,11 +1286,10 @@ private fun V8VideoActions(
                         if (useGlass) {
                             Modifier.playerGlass(pillShape)
                         } else {
-                            Modifier.background(foreground.copy(alpha = 0.12f))
+                            Modifier.background(foreground.copy(alpha = 0.16f))
                         },
                     )
-                    .alpha(0.5f)
-                    .clickable(enabled = false, onClick = onViewFullScreen)
+                    .clickable(onClick = onViewFullScreen)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1302,13 +1300,13 @@ private fun V8VideoActions(
                     Icon(
                         painter = painterResource(R.drawable.fullscreen),
                         contentDescription = null,
-                        tint = foreground.copy(alpha = 0.5f),
+                        tint = foreground,
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
                         text = stringResource(R.string.view_full_screen),
                         style = MaterialTheme.typography.labelLarge,
-                        color = foreground.copy(alpha = 0.5f),
+                        color = foreground,
                     )
                 }
             }

@@ -1156,6 +1156,28 @@
     <string name="exit_video">Exit video</string>
     <string name="view_full_screen">View full screen</string>
     <string name="video_not_available">No video available</string>
+    <string name="video_mode">Full video</string>
+    <string name="video_mode_exit">Exit video mode</string>
+    <string name="video_mode_close_player">Close player</string>
+    <string name="video_mode_finding">Looking for the video...</string>
+    <string name="video_mode_no_video">No video for this song. The lyrics still play here.</string>
+    <string name="video_mode_no_lyrics">No lyrics for this song</string>
+    <string name="video_mode_queue">Queue</string>
+    <string name="video_mode_lyrics">Lyrics</string>
+    <string name="video_mode_lyrics_provider">Lyrics provider</string>
+    <string name="video_mode_lyrics_offset">Lyrics offset</string>
+    <string name="video_mode_lyrics_translation">Lyrics translation</string>
+    <string name="video_mode_speed">Playback speed and tempo</string>
+    <string name="video_mode_volume">Volume</string>
+    <string name="video_mode_song_info">Song info</string>
+    <string name="video_mode_whole_video">Show the whole video</string>
+    <string name="video_mode_whole_video_desc">Off, the video is zoomed in to fill the screen</string>
+    <string name="pause">Pause</string>
+    <string name="previous">Previous</string>
+    <plurals name="video_mode_seek_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
 </resources>
 
 
