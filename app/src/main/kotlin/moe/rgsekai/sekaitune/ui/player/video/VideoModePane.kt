@@ -20,6 +20,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -215,6 +218,46 @@ internal fun BoxScope.VideoPaneHandle(
 ) {
     val density = LocalDensity.current
     val travel = with(density) { (frame.height - HandleTop - HandleBottom - HandleHeight).toPx() }
+    val travelHeight = with(density) { frame.height.toPx() * 0.72f }
+
+    // Direct touch interceptor for the handle area when pane is open, so taps & drags on top handle zone always close/drag pane
+    if (state.paneMounted) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .width(frame.paneWidth)
+                .height(56.dp)
+                .pointerInput(state, frame) {
+                    detectTapGestures {
+                        if (state.paneOpen) state.closePane()
+                    }
+                }
+                .pointerInput(state, frame) {
+                    var mode = false
+                    detectVerticalDragGestures(
+                        onDragStart = {
+                            state.startPaneDrag()
+                            mode = true
+                        },
+                        onVerticalDrag = { change, dy ->
+                            if (mode) {
+                                change.consume()
+                                state.dragPaneBy(-dy / travelHeight)
+                            }
+                        },
+                        onDragEnd = {
+                            if (mode) state.settlePane(0f)
+                            mode = false
+                        },
+                        onDragCancel = {
+                            if (mode) state.settlePane(0f)
+                            mode = false
+                        },
+                    )
+                },
+        )
+    }
+
     Box(
         modifier = Modifier
             .align(Alignment.TopEnd)

@@ -10,12 +10,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -23,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
@@ -46,6 +50,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,6 +64,8 @@ import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.VideoModeWholeVideoKey
+import moe.rgsekai.sekaitune.lyrics.LyricsEntry
+import moe.rgsekai.sekaitune.lyrics.LyricsUtils
 import moe.rgsekai.sekaitune.models.MediaMetadata
 
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
@@ -128,6 +135,17 @@ fun VideoModeScreen(
     }
 
     val isInPip = LocalInPipMode.current
+    val currentLyrics by connection.currentLyrics.collectAsState(initial = null)
+    val parsedLines: List<LyricsEntry> = remember(currentLyrics?.lyrics) {
+        val raw = currentLyrics?.lyrics
+        if (raw.isNullOrBlank() || raw == moe.rgsekai.sekaitune.db.entities.LyricsEntity.LYRICS_NOT_FOUND) {
+            emptyList()
+        } else if (LyricsUtils.isTtml(raw)) {
+            LyricsUtils.parseTtml(raw)
+        } else {
+            LyricsUtils.parseLyrics(raw)
+        }
+    }
 
     // Update PiP actions when playback state changes while in PiP mode
     LaunchedEffect(isInPip, isPlaying, session?.aspect) {
@@ -228,6 +246,7 @@ fun VideoModeScreen(
                     isPlaying = isPlaying,
                     ambient = ambient,
                     lyricsSyncOffset = lyricsSyncOffset,
+                    parsedLines = parsedLines,
                     controls = controls,
                     fit = { fit.value },
                     onExit = onExitVideoMode,
@@ -267,6 +286,7 @@ private fun VideoModeLayout(
     isPlaying: Boolean,
     ambient: VideoAmbientState,
     lyricsSyncOffset: Int,
+    parsedLines: List<LyricsEntry>,
     controls: () -> Float,
     fit: () -> Float,
     onExit: () -> Unit,
@@ -377,6 +397,54 @@ private fun VideoModeLayout(
                     },
             )
 
+            // Bottom-left single-line lyrics when pane is closed
+            if (parsedLines.isNotEmpty() && state.pane.value < 0.999f) {
+                val playbackPosition = remember { mutableLongStateOf(connection.player.currentPosition) }
+                LaunchedEffect(isPlaying, connection) {
+                    while (true) {
+                        withFrameNanos { }
+                        playbackPosition.longValue = connection.player.currentPosition + lyricsSyncOffset
+                        if (!isPlaying) delay(250)
+                    }
+                }
+
+                val currentLineIndex by remember(parsedLines) {
+                    derivedStateOf {
+                        val pos = playbackPosition.longValue
+                        val idx = parsedLines.indexOfLast { entry -> entry.time <= pos }
+                        if (idx >= 0) idx else 0
+                    }
+                }
+
+                val currentLineText = parsedLines.getOrNull(currentLineIndex)?.text.orEmpty()
+                if (currentLineText.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 24.dp, bottom = if (controls() > 0.01f) 80.dp else 26.dp)
+                            .widthIn(max = (frame.width * 0.55f).coerceAtLeast(200.dp))
+                            .graphicsLayer {
+                                val p = state.pane.value
+                                alpha = (1f - p) * (if (controls() > 0.01f) 0.85f else 1f)
+                                translationY = -controls() * 8.dp.toPx()
+                            }
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.35f))
+                            .clickable { state.openPane(VideoPane.LYRICS) }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Text(
+                            text = currentLineText,
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+
             VideoSeekFlash(frame = frame, state = state)
             VideoTopBar(
                 metadata = metadata,
@@ -421,6 +489,8 @@ private fun Modifier.videoGestures(
             onTap = { offset ->
                 if (paneHandleZone(frame, state.paneOpen, offset.x, offset.y, this)) {
                     if (state.paneOpen) state.closePane() else state.openPane(VideoPane.LYRICS)
+                } else if (state.paneOpen && !paneSide(frame, offset.x, this)) {
+                    state.closePane()
                 } else {
                     state.toggleControls()
                 }

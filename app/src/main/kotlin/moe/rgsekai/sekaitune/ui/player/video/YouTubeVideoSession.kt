@@ -114,14 +114,6 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
 
     private val listener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
-            val stateName = when (playbackState) {
-                Player.STATE_IDLE -> "IDLE"
-                Player.STATE_BUFFERING -> "BUFFERING"
-                Player.STATE_READY -> "READY"
-                Player.STATE_ENDED -> "ENDED"
-                else -> "UNKNOWN($playbackState)"
-            }
-            android.util.Log.d("VideoDebug", "Step 1d: session onPlaybackStateChanged -> $stateName, playWhenReady=${player?.playWhenReady}")
             if (playbackState == Player.STATE_READY && seekStartedAt != 0L) {
                 val took = SystemClock.elapsedRealtime() - seekStartedAt
                 seekLatencyMs = seekLatencyMs * 0.6 + took * 0.4
@@ -131,17 +123,14 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-            android.util.Log.d("VideoDebug", "Step 1d: session onPlayWhenReadyChanged -> playWhenReady=$playWhenReady, reason=$reason")
             publishStall()
         }
 
         override fun onRenderedFirstFrame() {
-            android.util.Log.d("VideoDebug", "Step 1e: onRenderedFirstFrame fired! hasFrame=true")
             main.post { hasFrame = true }
         }
 
         override fun onVideoSizeChanged(videoSize: VideoSize) {
-            android.util.Log.d("VideoDebug", "Step 1d: onVideoSizeChanged -> ${videoSize.width}x${videoSize.height}")
             if (videoSize.width <= 0 || videoSize.height <= 0) return
             val ratio = videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height
             val side = minOf(videoSize.width, videoSize.height)
@@ -152,13 +141,11 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            android.util.Log.e("VideoDebug", "Step 1d: onPlayerError errorCode=${error.errorCode}, errorCodeName=${error.errorCodeName}, message=${error.message}", error)
             main.post { failures += 1 }
         }
     }
 
     fun load(streams: VideoStreams, quality: VideoQuality, autoCap: Int, startMs: Long) {
-        android.util.Log.d("VideoDebug", "Step 1d: session load videoId=$videoId, quality=$quality, autoCap=$autoCap, startMs=$startMs")
         if (loaded == streams) return
         loaded = streams
         sizes = streams.sizes
@@ -168,7 +155,6 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
             this.quality = quality
             this.autoCap = autoCap
             val p = player ?: buildPlayer().also {
-                android.util.Log.d("VideoDebug", "Step 1d: built new ExoPlayer for session videoId=$videoId")
                 player = it
             }
             applyQuality(p)
@@ -176,7 +162,6 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
             val source = mediaSourceFor(streams)
             p.setMediaSource(source, startMs.coerceAtLeast(0L))
             p.prepare()
-            android.util.Log.d("VideoDebug", "Step 1d: mediaSource prepared")
         }
     }
 
@@ -201,7 +186,6 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
     }
 
     fun attach(texture: SurfaceTexture) = handler.post {
-        android.util.Log.d("VideoDebug", "Step 1e: session attach texture=$texture, released=$released")
         if (released || texture in textures) return@post
         textures.add(texture)
         surfaces[texture] = Surface(texture)
@@ -209,7 +193,6 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
     }
 
     fun detach(texture: SurfaceTexture, onFreed: () -> Unit) = handler.post {
-        android.util.Log.d("VideoDebug", "Step 1e: session detach texture=$texture")
         textures.remove(texture)
         val surface = surfaces.remove(texture)
         if (owner === texture) {
@@ -226,7 +209,6 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
     private fun showOn(texture: SurfaceTexture) {
         owner = texture
         val surface = surfaces[texture]
-        android.util.Log.d("VideoDebug", "Step 1e: session showOn surface=$surface, playerExists=${player != null}")
         surface?.let { player?.setVideoSurface(it) }
     }
 
@@ -278,13 +260,11 @@ class YouTubeVideoSession internal constructor(context: Context, val videoId: St
             runCatching { DashManifestParser().parse(ManifestUri, xml.byteInputStream()) }.getOrNull()
         }
         if (manifest != null) {
-            android.util.Log.d("VideoDebug", "Step 1d: mediaSource chosen: DASH manifest (${family.size} tracks)")
             wholeFileSide = 0
             val item = MediaItem.Builder().setUri(ManifestUri).setMimeType(MimeTypes.APPLICATION_MPD).build()
             return DashMediaSource.Factory(dataSource).createMediaSource(manifest, item)
         }
         val track = s.trackFor(capShortSide()) ?: s.tracks.first()
-        android.util.Log.d("VideoDebug", "Step 1d: mediaSource chosen: Progressive (track ${track.width}x${track.height}, side=${track.shortSide})")
         wholeFileSide = track.shortSide
         return ProgressiveMediaSource.Factory(dataSource).createMediaSource(MediaItem.fromUri(track.url))
     }

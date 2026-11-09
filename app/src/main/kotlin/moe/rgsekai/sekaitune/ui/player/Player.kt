@@ -1173,7 +1173,6 @@ fun BottomSheetPlayer(
                 }
 
             val currentMediaMetadata = enrichedMetadata ?: mediaMetadata
-            android.util.Log.d("VideoDebug", "Step 1a: toggle useYtVideoCanvas=$useYtVideoCanvas, inlineVideoActive=$inlineVideoActive, shouldUseV7Canvas=$shouldUseV7Canvas, currentMediaMetadata=${currentMediaMetadata?.title}")
             val videoLookupEnabled = (useYtVideoCanvas || inlineVideoActive || isFullScreenVideo) && currentMediaMetadata != null
             val videoLookup = rememberSongVideoLookup(
                 mediaId = currentMediaMetadata?.id.orEmpty(),

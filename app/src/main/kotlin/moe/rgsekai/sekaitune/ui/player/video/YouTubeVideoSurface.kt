@@ -107,13 +107,8 @@ fun DriveYouTubeVideo(
     }
 
     LaunchedEffect(session) {
-        var lastRunning: Boolean? = null
         while (isActive) {
             val player = playerConnection.player
-            if (lastRunning != running) {
-                lastRunning = running
-                android.util.Log.d("VideoDebug", "Step 1f: sync loop running=$running (isPlaying=$isPlaying, isInPip=$isInPip, lifecycle=${lifecycle.name})")
-            }
             session.sync(target(player.currentPosition), player.playbackParameters.speed, running)
             delay(SyncIntervalMs)
         }
