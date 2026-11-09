@@ -198,10 +198,7 @@ private const val CanvasArtworkLogTag = "CanvasArtwork"
 internal fun normalizeCanvasSongTitle(raw: String): String {
     val stripped =
         raw
-            .replace(Regex("""^\d+[\s.\-_]+"""), "")
-            .replace(Regex("""(?i)\s*\((?:mp3|flac|wav|m4a|aac|opus|ogg|320k|320kbps|128k|128kbps|256k|256kbps|audio|official|video|mv|lyrics?|visualizer|remaster(?:ed)?|version|edit|mix|remix|hq|hd|yt|youtube|spotify-downloader\.com)\b[^)]*\)"""), "")
-            .replace(Regex("""(?i)\s*\[(?:mp3|flac|wav|m4a|aac|opus|ogg|320k|320kbps|128k|128kbps|256k|256kbps|audio|official|video|mv|lyrics?|visualizer|remaster(?:ed)?|version|edit|mix|remix|hq|hd|yt|youtube|spotify-downloader\.com)\b[^]]*\]"""), "")
-            .replace(Regex("""(?i)\s*-\s*(?:mp3|flac|wav|320k|320kbps|audio|official|video|mv|lyrics?|visualizer|remaster(?:ed)?|version|edit|mix|remix|hq|hd)\b.*$"""), "")
+            .replace(Regex("\\s*\\[[^]]*]"), "")
             .replace(
                 Regex(
                     "\\s*\\((?:feat\\.?|ft\\.?|featuring|with)\\b[^)]*\\)",
@@ -209,12 +206,25 @@ internal fun normalizeCanvasSongTitle(raw: String): String {
                 ),
                 "",
             )
-            .replace('_', ' ')
+            .replace(
+                Regex(
+                    "\\s*\\((?:official\\s*)?(?:music\\s*)?(?:video|mv|lyrics?|audio|visualizer|live|remaster(?:ed)?|version|edit|mix|remix)[^)]*\\)",
+                    RegexOption.IGNORE_CASE,
+                ),
+                "",
+            )
+            .replace(
+                Regex(
+                    "\\s*-\\s*(?:official\\s*)?(?:music\\s*)?(?:video|mv|lyrics?|audio|visualizer|live|remaster(?:ed)?|version|edit|mix|remix)\\b.*$",
+                    RegexOption.IGNORE_CASE,
+                ),
+                "",
+            )
             .replace(Regex("\\s+"), " ")
             .trim()
 
     return stripped
-        .trim('-', '_', ' ')
+        .trim('-')
         .replace(Regex("\\s+"), " ")
         .trim()
 }
@@ -224,13 +234,11 @@ internal fun normalizeCanvasArtistName(raw: String): String {
         raw
             .split(
                 Regex(
-                    "(?:\\s*,\\s*|\\s*&\\s*|\\s+x\\s+|\\bfeat\\.?\\b|\\bft\\.?\\b|\\bfeaturing\\b|\\bwith\\b)",
+                    "(?:\\s*,\\s*|\\s*&\\s*|\\s+×\\s+|\\s+x\\s+|\\bfeat\\.?\\b|\\bft\\.?\\b|\\bfeaturing\\b|\\bwith\\b)",
                     RegexOption.IGNORE_CASE,
                 ),
                 limit = 2,
-            ).firstOrNull()
-            .orEmpty()
-            .replace('_', ' ')
+            ).firstOrNull().orEmpty()
 
     return first.replace(Regex("\\s+"), " ").trim()
 }

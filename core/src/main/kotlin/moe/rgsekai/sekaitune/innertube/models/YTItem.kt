@@ -51,6 +51,7 @@ data class SongItem(
     val artists: List<Artist>,
     val album: Album? = null,
     val duration: Int? = null,
+    val musicVideoType: String? = null,
     val chartPosition: Int? = null,
     val chartChange: String? = null,
     override val thumbnail: String,
@@ -61,6 +62,9 @@ data class SongItem(
     val viewCount: Long? = null,
     val uploadEntityId: String? = null,
 ) : YTItem() {
+    val isVideoSong: Boolean
+        get() = musicVideoType != null && musicVideoType != WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.MUSIC_VIDEO_TYPE_ATV
+
     override val shareLink: String
         get() = "https://music.youtube.com/watch?v=$id"
 }

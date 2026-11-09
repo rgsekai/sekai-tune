@@ -1174,7 +1174,7 @@ fun BottomSheetPlayer(
 
             val currentMediaMetadata = enrichedMetadata ?: mediaMetadata
             android.util.Log.d("VideoDebug", "Step 1a: toggle useYtVideoCanvas=$useYtVideoCanvas, inlineVideoActive=$inlineVideoActive, shouldUseV7Canvas=$shouldUseV7Canvas, currentMediaMetadata=${currentMediaMetadata?.title}")
-            val videoLookupEnabled = (useYtVideoCanvas || inlineVideoActive || isFullScreenVideo) && currentMediaMetadata != null && shouldUseV7Canvas
+            val videoLookupEnabled = (useYtVideoCanvas || inlineVideoActive || isFullScreenVideo) && currentMediaMetadata != null
             val videoLookup = rememberSongVideoLookup(
                 mediaId = currentMediaMetadata?.id.orEmpty(),
                 title = currentMediaMetadata?.title.orEmpty(),
@@ -1245,7 +1245,7 @@ fun BottomSheetPlayer(
                         duration = duration,
                         useYtVideoCanvas = useYtVideoCanvas,
                         inlineVideoActive = inlineVideoActive,
-                        hasVideo = (ytVideoCanvasSong != null),
+                        hasVideo = (videoLookup.video != null),
                         onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
                         onViewFullScreen = { isFullScreenVideo = true },
                         currentFormat = currentFormat,
@@ -1322,7 +1322,7 @@ fun BottomSheetPlayer(
                                         duration = duration,
                                         useYtVideoCanvas = useYtVideoCanvas,
                                         inlineVideoActive = inlineVideoActive,
-                                        hasVideo = (ytVideoCanvasSong != null),
+                                        hasVideo = (videoLookup.video != null),
                                         onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
                                         onViewFullScreen = { isFullScreenVideo = true },
                                         currentFormat = currentFormat,

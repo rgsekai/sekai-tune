@@ -105,19 +105,15 @@ suspend fun findOfficialMusicVideoId(title: String, artist: String): String? {
 
     for (item in results) {
         if (item is SongItem) {
-            val config = item.endpoint?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig
             val candidateTitle = normalizeCanvasSongTitle(item.title)
             val candidateArtist = normalizeCanvasArtistName(item.artists.joinToString { it.name })
-            android.util.Log.d("VideoDebug", "Step 1b: candidate id=${item.id}, musicVideoType=${config?.musicVideoType}, rawTitle='${item.title}', normTitle='$candidateTitle', rawArtist='${item.artists.joinToString { it.name }}', normArtist='$candidateArtist'")
+            android.util.Log.d("VideoDebug", "Step 1b: candidate id=${item.id}, musicVideoType=${item.musicVideoType}, rawTitle='${item.title}', normTitle='$candidateTitle', rawArtist='${item.artists.joinToString { it.name }}', normArtist='$candidateArtist'")
         }
     }
 
     val match = results
         .filterIsInstance<SongItem>()
-        .filter {
-            val config = it.endpoint?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig
-            config?.musicVideoType == MUSIC_VIDEO_TYPE_OMV
-        }
+        .filter { it.musicVideoType == MUSIC_VIDEO_TYPE_OMV }
         .firstOrNull { candidate ->
             val candidateTitle = normalizeCanvasSongTitle(candidate.title)
             val candidateArtist = normalizeCanvasArtistName(candidate.artists.joinToString { it.name })

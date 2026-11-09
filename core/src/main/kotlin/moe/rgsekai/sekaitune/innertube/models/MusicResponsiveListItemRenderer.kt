@@ -88,6 +88,16 @@ data class MusicResponsiveListItemRenderer(
                 MUSIC_PAGE_TYPE_LIBRARY_ARTIST ||
                 navigationEndpoint?.browseEndpoint?.browseId?.startsWith("FEmusic_library_privately_owned_artist") == true
 
+    val musicVideoType: String?
+        get() =
+            overlay
+                ?.musicItemThumbnailOverlayRenderer
+                ?.content
+                ?.musicPlayButtonRenderer
+                ?.playNavigationEndpoint
+                ?.musicVideoType
+                ?: navigationEndpoint?.musicVideoType
+
 
     @Serializable
     data class FlexColumn(

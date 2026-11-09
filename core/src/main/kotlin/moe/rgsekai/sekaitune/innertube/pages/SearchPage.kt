@@ -47,6 +47,7 @@ object SearchPage {
                             )
                         },
                     duration = metadata.duration(),
+                    musicVideoType = renderer.musicVideoType,
                     viewCountText = metadata.viewCountText(),
                     viewCount = metadata.viewCount(),
                     thumbnail = thumbnail ?: return null,

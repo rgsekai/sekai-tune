@@ -483,7 +483,19 @@ fun PlayerMenu(
         enabled = useYtVideoCanvas || inlineVideoActive,
     )
     val videoSession = videoLookup.video?.videoId?.let { YouTubeVideoSessions.get(it) }
-    val isVideoLoading = (useYtVideoCanvas || inlineVideoActive) && (videoLookup.searching || (videoSession != null && (!videoSession.hasFrame || videoSession.isStalled)))
+    val hasVideoFrame = videoSession?.hasFrame == true
+    val isVideoLoading = (useYtVideoCanvas || inlineVideoActive) && (videoLookup.searching || !hasVideoFrame || videoSession?.isStalled == true)
+
+    LaunchedEffect(inlineVideoActive, videoLookup.searching, videoLookup.video) {
+        if (inlineVideoActive && !videoLookup.searching && videoLookup.video == null) {
+            onToggleInlineVideo()
+            Toast.makeText(
+                context,
+                context.getString(R.string.video_mode_no_video),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
 
     if (isQueueTrigger != true && (hasVideo || !useYtVideoCanvas)) {
         Spacer(modifier = Modifier.height(12.dp))
@@ -508,7 +520,7 @@ fun PlayerMenu(
                 ) {
                     // Full screen icon sitting to the left of Exit (X) when inline video is active and playing
                     AnimatedVisibility(
-                        visible = !useYtVideoCanvas && inlineVideoActive && !isVideoLoading,
+                        visible = !useYtVideoCanvas && inlineVideoActive && hasVideoFrame && !videoLookup.searching && videoSession?.isStalled != true,
                         enter = fadeIn(tween(200)) + expandHorizontally(),
                         exit = fadeOut(tween(200)) + shrinkHorizontally(),
                     ) {
@@ -531,8 +543,8 @@ fun PlayerMenu(
                     AnimatedContent(
                         targetState = when {
                             isVideoLoading -> VideoRowSlot.LOADING
-                            useYtVideoCanvas -> VideoRowSlot.FULL_SCREEN
-                            inlineVideoActive -> VideoRowSlot.EXIT
+                            useYtVideoCanvas && hasVideoFrame -> VideoRowSlot.FULL_SCREEN
+                            inlineVideoActive && hasVideoFrame -> VideoRowSlot.EXIT
                             else -> VideoRowSlot.PLAY
                         },
                         transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
@@ -542,15 +554,7 @@ fun PlayerMenu(
                             VideoRowSlot.PLAY -> {
                                 IconButton(
                                     onClick = {
-                                        if (hasVideo || videoLookup.video != null) {
-                                            onToggleInlineVideo()
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.video_mode_no_video),
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                        }
+                                        onToggleInlineVideo()
                                     },
                                     modifier = Modifier.size(48.dp),
                                 ) {
