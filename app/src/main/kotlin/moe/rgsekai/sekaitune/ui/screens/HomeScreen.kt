@@ -314,20 +314,6 @@ private fun HomeContent(
                             )
                         }
 
-                        item(
-                            key = "home_quick_actions_pill",
-                            contentType = "quick_actions_pill",
-                        ) {
-                            HomeQuickActionsPill(
-                                onMusicTogetherClick = {
-                                    navController.navigate("settings/music_together")
-                                },
-                                onShuffleClick = {
-                                    onAction(HomeAction.Shuffle(playerConnection))
-                                },
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
                     }
 
                     if (uiState.speedDialItems.isNotEmpty()) {
