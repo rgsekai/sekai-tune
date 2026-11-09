@@ -1984,11 +1984,15 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     }
                                                     TranslucentTopAppBarIconButton(
-                                                        onClick = { navController.navigate("stats") },
+                                                        onClick = {
+                                                            playerConnection?.let {
+                                                                homeViewModel.shuffle(it)
+                                                            }
+                                                        },
                                                     ) {
                                                         Icon(
-                                                            painter = painterResource(R.drawable.stats),
-                                                            contentDescription = stringResource(R.string.settings_stats_title),
+                                                            painter = painterResource(R.drawable.shuffle),
+                                                            contentDescription = stringResource(R.string.shuffle),
                                                         )
                                                     }
                                                     TranslucentTopAppBarIconButton(

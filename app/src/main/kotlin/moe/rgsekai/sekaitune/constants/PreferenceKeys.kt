@@ -311,7 +311,6 @@ val ArtistSignaturesApiUrlKey = stringPreferencesKey("artistSignaturesApiUrl")
 val ExternalDownloaderEnabledKey = booleanPreferencesKey("externalDownloaderEnabled")
 val ExternalDownloaderPackageKey = stringPreferencesKey("externalDownloaderPackage")
 val PlaylistTagsFilterKey = stringPreferencesKey("playlistTagsFilter")
-val ShowHomeCategoryChipsKey = booleanPreferencesKey("showHomeCategoryChips")
 val ShowTagsInLibraryKey = booleanPreferencesKey("showTagsInLibrary")
 
 val EqualizerEnabledKey = booleanPreferencesKey("equalizerEnabled")

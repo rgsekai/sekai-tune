@@ -206,8 +206,6 @@
     <string name="theme_export_success">تم تصدير السمة</string>
     <string name="theme_export_failed">فشل التصدير</string>
     <string name="theme_import_failed_title">لا يمكن استيراد السمة</string>
-    <string name="show_home_category_chips">إظهار أزرار تصنيفات الصفحة الرئيسية</string>
-    <string name="show_home_category_chips_desc">إظهار أزرار تصفية التصنيفات في الصفحة الرئيسية</string>
     <string name="player_design_v6">معبر</string>
     <string name="album_not_found">لم يتم العثور على الألبوم</string>
     <string name="album_not_found_desc">تعذر تحميل الألبوم المطلوب</string>

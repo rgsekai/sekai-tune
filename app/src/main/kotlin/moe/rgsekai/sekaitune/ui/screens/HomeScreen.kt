@@ -7,7 +7,6 @@
 
 package moe.rgsekai.sekaitune.ui.screens
 
-import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -105,7 +104,6 @@ fun HomeScreen(
 
     val successState = screenState as? HomeScreenState.Success
     val uiState = successState?.uiState
-    val selectedChip = uiState?.selectedChip
 
     LaunchedEffect(uiState?.homePage?.continuation) {
         val continuation = uiState?.homePage?.continuation ?: return@LaunchedEffect
@@ -126,17 +124,6 @@ fun HomeScreen(
         }
     }
 
-    if (selectedChip != null) {
-        BackHandler {
-            viewModel.onAction(HomeAction.SelectChip(selectedChip))
-        }
-    }
-
-    LaunchedEffect(uiState?.showCategoryChips, selectedChip) {
-        if (uiState?.showCategoryChips == false && selectedChip != null) {
-            viewModel.onAction(HomeAction.SelectChip(selectedChip))
-        }
-    }
 
     // Attach the shell's floating-header connection inside this screen (Step 2b) so
     // Home's scroll/fling writes Home's own header state and can't leak into another
@@ -309,20 +296,6 @@ private fun HomeContent(
                             .fillMaxWidth()
                             .align(Alignment.TopCenter),
                 ) {
-                    if (uiState.showCategoryChips) {
-                        item(
-                            key = "home_category_chips",
-                            contentType = "category_chips",
-                        ) {
-                            HomeCategoryChips(
-                                chips = uiState.homePage?.chips.orEmpty(),
-                                selectedChip = uiState.selectedChip,
-                                onChipSelected = { onAction(HomeAction.SelectChip(it)) },
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
-                    }
-
                     if (uiState.quickPicks.isNotEmpty()) {
                         item(
                             key = "home_quick_picks",

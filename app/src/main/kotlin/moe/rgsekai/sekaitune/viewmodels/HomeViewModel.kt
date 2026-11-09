@@ -122,7 +122,6 @@ private data class HomeRemoteContent(
 private data class HomeContent(
     val local: HomeLocalContent,
     val remote: HomeRemoteContent,
-    val selectedChip: HomePage.Chip?,
 ) {
     val hasContent: Boolean
         get() =
@@ -165,11 +164,9 @@ private data class HomeStateInputs(
                 similarRecommendations = ImmutableList.copyOf(content.remote.similarRecommendations),
                 accountPlaylists = ImmutableList.copyOf(content.remote.accountPlaylists),
                 homePage = content.remote.homePage,
-                selectedChip = content.selectedChip,
                 accountName = content.remote.accountName,
                 accountImageUrl = content.remote.accountImageUrl,
                 quickPicksDisplayMode = preferences.quickPicksDisplayMode,
-                showCategoryChips = preferences.showCategoryChips,
                 showTonalBackdrop = preferences.showTonalBackdrop,
                 isRefreshing = isRefreshing,
                 isLoadingMore = isLoadingMore,
@@ -201,8 +198,6 @@ class HomeViewModel
         private val similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
         private val accountPlaylists = MutableStateFlow<List<PlaylistItem>?>(null)
         private val homePage = MutableStateFlow<HomePage?>(null)
-        private val selectedChip = MutableStateFlow<HomePage.Chip?>(null)
-        private val previousHomePage = MutableStateFlow<HomePage?>(null)
 
         private val _allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
         val allLocalItems: StateFlow<List<LocalItem>> = _allLocalItems.asStateFlow()
@@ -254,12 +249,10 @@ class HomeViewModel
             combine(
                 localContent,
                 remoteContent,
-                selectedChip,
-            ) { localContent, remoteContent, selectedChip ->
+            ) { localContent, remoteContent ->
                 HomeContent(
                     local = localContent,
                     remote = remoteContent,
-                    selectedChip = selectedChip,
                 )
             }
 
@@ -294,13 +287,6 @@ class HomeViewModel
             )
 
         private var wasLoggedIn = false
-        private var chipLoadJob: Job? = null
-
-        private fun filterHomeChips(chips: List<HomePage.Chip>?): List<HomePage.Chip>? =
-            chips?.filterNot {
-                it.title.contains("podcasts", ignoreCase = true)
-            }
-
         private fun List<Song>.toQuickPickSample(): List<Song> =
             filter { song -> song.artists.none { it.blockedAt != null } }
                 .distinctBy { it.id }
@@ -454,7 +440,6 @@ class HomeViewModel
                             .onSuccess { page ->
                                 homePage.value =
                                     page.copy(
-                                        chips = filterHomeChips(page.chips),
                                         sections =
                                             page.sections.map { section ->
                                                 section.copy(
@@ -671,7 +656,6 @@ class HomeViewModel
                     val nextSections = YouTube.home(continuation).getOrNull() ?: return@launch
                     homePage.value =
                         nextSections.copy(
-                            chips = homePage.value?.chips,
                             sections =
                                 (homePage.value?.sections.orEmpty() + nextSections.sections).map { section ->
                                     section.copy(
@@ -689,48 +673,9 @@ class HomeViewModel
             }
         }
 
-        private fun toggleChip(chip: HomePage.Chip?) {
-            chipLoadJob?.cancel()
-            if (chip == null || chip == selectedChip.value && previousHomePage.value != null) {
-                homePage.value = previousHomePage.value
-                previousHomePage.value = null
-                selectedChip.value = null
-                return
-            }
-
-            if (selectedChip.value == null) {
-                previousHomePage.value = homePage.value
-            }
-
-            chipLoadJob =
-                viewModelScope.launch(Dispatchers.IO) {
-                    val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                    val hideVideo = context.dataStore.get(HideVideoKey, false)
-                    val blockedArtistIds = database.getBlockedArtistIds().toSet()
-                    val nextSections = YouTube.home(params = chip?.endpoint?.params).getOrNull() ?: return@launch
-
-                    homePage.value =
-                        nextSections.copy(
-                            chips = homePage.value?.chips,
-                            sections =
-                                nextSections.sections.map { section ->
-                                    section.copy(
-                                        items =
-                                            section.items
-                                                .filterExplicit(hideExplicit)
-                                                .filterVideo(hideVideo)
-                                                .filterBlockedArtists(blockedArtistIds),
-                                    )
-                                },
-                        )
-                    selectedChip.value = chip
-                }
-        }
-
         fun onAction(action: HomeAction) {
             when (action) {
                 HomeAction.Refresh -> refresh()
-                is HomeAction.SelectChip -> toggleChip(action.chip)
                 is HomeAction.LoadMore -> loadMoreYouTubeItems(action.continuation)
                 is HomeAction.Shuffle -> shuffle(action.playerConnection)
             }

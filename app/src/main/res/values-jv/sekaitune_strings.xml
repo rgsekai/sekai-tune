@@ -189,8 +189,6 @@
     <string name="hide_player_thumbnail_desc">Ganti sampul album dengan logo aplikasi di pemutar</string>
     <string name="crop_thumbnail_to_square">Pangkas thumbnail menjadi 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Tampilake thumbnail YouTube dalam format persegi, bukan 16:9</string>
-    <string name="show_home_category_chips">Tampilake chip kategori beranda</string>
-    <string name="show_home_category_chips_desc">Tampilake chip filter kategori di layar beranda</string>
     <string name="show_tags_in_library">Tampilake tag di pustaka</string>
     <string name="show_tags_in_library_desc">Tampilake chip filter tag di pustaka</string>
     <string name="already_in_playlist">Sudah ada di playlist:</string>

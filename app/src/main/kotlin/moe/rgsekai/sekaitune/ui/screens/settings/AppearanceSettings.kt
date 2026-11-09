@@ -96,7 +96,6 @@ import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
-import moe.rgsekai.sekaitune.constants.ShowHomeCategoryChipsKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowTagsInLibraryKey
 import moe.rgsekai.sekaitune.constants.SwipeThumbnailKey
@@ -203,11 +202,6 @@ fun AppearanceSettings(navController: NavController) {
         rememberPreference(
             ShowTagsInLibraryKey,
             defaultValue = false,
-        )
-    val (showHomeCategoryChips, onShowHomeCategoryChipsChange) =
-        rememberPreference(
-            ShowHomeCategoryChipsKey,
-            defaultValue = true,
         )
     val (quickPicksDisplayMode, onQuickPicksDisplayModeChange) =
         rememberEnumPreference(
@@ -611,16 +605,6 @@ fun AppearanceSettings(navController: NavController) {
                             }
                         },
                         onValueSelected = onDefaultChipChange,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.show_home_category_chips)) },
-                        description = stringResource(R.string.show_home_category_chips_desc),
-                        icon = { Icon(painterResource(R.drawable.home_outlined), null) },
-                        checked = showHomeCategoryChips,
-                        onCheckedChange = onShowHomeCategoryChipsChange,
                     )
                 }
 

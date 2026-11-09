@@ -212,8 +212,6 @@
     <string name="hide_player_thumbnail_desc">プレイヤー内のアルバムアートをアプリロゴに置き換える</string>
     <string name="crop_thumbnail_to_square">サムネイルを1:1に切り抜く</string>
     <string name="crop_thumbnail_to_square_desc">YouTubeサムネイルを16:9ではなく正方形で表示</string>
-    <string name="show_home_category_chips">ホームカテゴリチップを表示</string>
-    <string name="show_home_category_chips_desc">ホーム画面にカテゴリフィルターチップを表示</string>
     <string name="show_tags_in_library">ライブラリにタグを表示</string>
     <string name="show_tags_in_library_desc">ライブラリにタグフィルターチップを表示</string>
     <string name="already_in_playlist">すでにプレイリスト内:</string>

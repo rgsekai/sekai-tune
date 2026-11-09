@@ -211,8 +211,6 @@
     <string name="music_recognition_permission_desc">Cho phép truy cập micro để nhận diện nhạc phát gần đó.</string>
     <string name="music_recognition_permission_action">Cho phép</string>
     <string name="music_recognition_error">Đã xảy ra lỗi</string>
-    <string name="show_home_category_chips">Hiển thị danh mục chip ở trang chủ</string>
-    <string name="show_home_category_chips_desc">Hiển thị các chip lọc danh mục trên màn hình chính</string>
     <string name="player_design_v6">Biểu cảm</string>
     <string name="player_design_v7">Đắm chìm</string>
     <string name="lyrics_romanize_chinese">Romanize lời bài hát Trung Quốc</string>

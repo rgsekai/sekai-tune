@@ -190,8 +190,6 @@
     <string name="theme_editor_title">%1$s 颜色</string>
     <string name="backup_step_copying_file">正在复制%1$s</string>
     <string name="restore_step_restoring_file">正在恢复%1$s</string>
-    <string name="show_home_category_chips">显示首页分类标签</string>
-    <string name="show_home_category_chips_desc">在首页显示分类筛选标签</string>
     <string name="player_design_v6">生动</string>
     <string name="canvas_cache">画面缓存</string>
     <string name="clear_canvas_cache">清理画面缓存</string>

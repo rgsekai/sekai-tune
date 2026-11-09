@@ -118,8 +118,6 @@
     <string name="hide_player_thumbnail_desc">재생 화면에서 앨범 아트 대신 앱 로고를 표시합니다.</string>
     <string name="crop_thumbnail_to_square">썸네일을 1:1로 자르기</string>
     <string name="crop_thumbnail_to_square_desc">YouTube 썸네일을 16:9 대신 정사각형으로 잘라 표시합니다.</string>
-    <string name="show_home_category_chips">홈 카테고리 필터 칩 표시</string>
-    <string name="show_home_category_chips_desc">홈 화면 상단에 카테고리 필터 칩을 표시합니다.</string>
     <string name="show_tags_in_library">보관함에 태그 표시</string>
     <string name="show_tags_in_library_desc">보관함 화면에 태그 필터 칩을 함께 표시합니다.</string>
     <string name="already_in_playlist">이미 재생목록에 있음:</string>

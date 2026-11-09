@@ -137,62 +137,6 @@ import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun HomeCategoryChips(
-    chips: List<HomePage.Chip>,
-    selectedChip: HomePage.Chip?,
-    onChipSelected: (HomePage.Chip) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .heightIn(min = 68.dp)
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-    ) {
-        chips.forEach { chip ->
-            val selected = chip == selectedChip
-            FilterChip(
-                selected = selected,
-                onClick = { onChipSelected(chip) },
-                label = {
-                    Text(
-                        text = chip.title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                leadingIcon =
-                    if (selected) {
-                        {
-                            Icon(
-                                painter = painterResource(R.drawable.done),
-                                contentDescription = null,
-                                modifier = Modifier.size(FilterChipDefaults.IconSize),
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                shapes = FilterChipDefaults.shapes(),
-                colors =
-                    FilterChipDefaults.filterChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f),
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.94f),
-                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    ),
-                border = null,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
 fun HomeSectionHeader(
     title: String,
     modifier: Modifier = Modifier,

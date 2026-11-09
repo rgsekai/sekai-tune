@@ -43,11 +43,9 @@ data class HomeUiState(
     val similarRecommendations: ImmutableList<SimilarRecommendation>,
     val accountPlaylists: ImmutableList<PlaylistItem>,
     val homePage: HomePage?,
-    val selectedChip: HomePage.Chip?,
     val accountName: String,
     val accountImageUrl: String?,
     val quickPicksDisplayMode: QuickPicksDisplayMode,
-    val showCategoryChips: Boolean,
     val showTonalBackdrop: Boolean,
     val isRefreshing: Boolean,
     val isLoadingMore: Boolean,
@@ -55,10 +53,6 @@ data class HomeUiState(
 
 sealed interface HomeAction {
     data object Refresh : HomeAction
-
-    data class SelectChip(
-        val chip: HomePage.Chip?,
-    ) : HomeAction
 
     data class LoadMore(
         val continuation: String?,

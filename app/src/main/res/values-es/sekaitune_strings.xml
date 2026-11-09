@@ -217,8 +217,6 @@
     <string name="music_recognition_permission_desc">Permite el acceso al micrófono para detectar la música.</string>
     <string name="music_recognition_permission_action">Permitir</string>
     <string name="music_recognition_error">Ha surgido un problema</string>
-    <string name="show_home_category_chips">Mostrar los iconos de las categorías de inicio</string>
-    <string name="show_home_category_chips_desc">Mostrar los iconos de filtrado por categoría en la pantalla de inicio</string>
     <string name="player_design_v6">Expresivo</string>
     <string name="player_design_v7">Inmersivo</string>
     <string name="lyrics_romanize_chinese">Transcribir letras en chino</string>

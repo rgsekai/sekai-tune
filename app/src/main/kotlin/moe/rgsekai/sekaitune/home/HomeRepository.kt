@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.map
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
-import moe.rgsekai.sekaitune.constants.ShowHomeCategoryChipsKey
 import moe.rgsekai.sekaitune.extensions.toEnum
 import moe.rgsekai.sekaitune.utils.dataStore
 import javax.inject.Inject
@@ -25,11 +24,6 @@ class HomeRepository
     constructor(
         @ApplicationContext context: Context,
     ) {
-        val showCategoryChips: Flow<Boolean> =
-            context.dataStore.data
-                .map { preferences -> preferences[ShowHomeCategoryChipsKey] ?: true }
-                .distinctUntilChanged()
-
         val quickPicksDisplayMode: Flow<QuickPicksDisplayMode> =
             context.dataStore.data
                 .map { preferences ->
