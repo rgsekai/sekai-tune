@@ -112,12 +112,16 @@ private data class MediaInfoMetric(
 )
 
 @Composable
-fun ShowMediaInfo(videoId: String) {
+fun ShowMediaInfo(
+    videoId: String,
+    onCloseOverride: (() -> Unit)? = null,
+) {
     if (videoId.isBlank()) return
 
     val context = LocalContext.current
     val database = LocalDatabase.current
     val bottomSheetPageState = LocalBottomSheetPageState.current
+    val onCloseAction = onCloseOverride ?: bottomSheetPageState::dismiss
     val playerConnection = LocalPlayerConnection.current
     val song by database.song(videoId).collectAsState(initial = null)
     val currentFormat by database.format(videoId).collectAsState(initial = null)
@@ -272,7 +276,7 @@ fun ShowMediaInfo(videoId: String) {
                 isLoading = info == null,
                 loadingText = pleaseWaitText,
                 closeText = closeText,
-                onClose = bottomSheetPageState::dismiss,
+                onClose = onCloseAction,
             )
         }
 

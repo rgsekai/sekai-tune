@@ -276,17 +276,9 @@ internal fun VideoModeMenu(
     }
 
     if (showQuality) {
-        VideoQualityBottomSheet(
-            selectedQuality = quality,
+        VideoLandscapeQualitySheet(
             session = session,
-            sheetState = qualitySheetState,
             onDismiss = { showQuality = false },
-            onQualitySelected = { newQuality ->
-                setQuality(newQuality)
-                coroutineScope.launch { qualitySheetState.hide() }.invokeOnCompletion {
-                    showQuality = false
-                }
-            },
         )
     }
 
@@ -299,11 +291,11 @@ internal fun VideoModeMenu(
     }
 
     if (showTempoPitch) {
-        TempoPitchDialog(onDismiss = { showTempoPitch = false })
+        VideoLandscapeSpeedSheet(onDismiss = { showTempoPitch = false })
     }
 
     if (showSleepTimer) {
-        SleepTimerDialog(
+        VideoLandscapeSleepTimerSheet(
             onDismiss = { showSleepTimer = false },
             onConfirm = { minutes ->
                 connection.service.sleepTimer.start(minutes)

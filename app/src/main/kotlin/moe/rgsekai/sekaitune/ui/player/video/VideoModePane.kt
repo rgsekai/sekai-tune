@@ -157,7 +157,11 @@ private fun VideoPaneQueueList(onClose: () -> Unit) {
     ) {
         itemsIndexed(
             items = queueWindows,
-            key = { index, window -> window.uid },
+            key = { index, window ->
+                (window.uid.hashCode().toLong() shl Int.SIZE_BITS) xor
+                    (window.mediaItem.mediaId.hashCode().toLong() and 0xFFFFFFFFL) xor
+                    index.toLong()
+            },
         ) { index, window ->
             val metadata = window.mediaItem.metadata ?: return@itemsIndexed
             val isActive = index == currentIndex

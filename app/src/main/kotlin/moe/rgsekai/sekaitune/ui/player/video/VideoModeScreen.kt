@@ -68,7 +68,33 @@ import moe.rgsekai.sekaitune.lyrics.LyricsEntry
 import moe.rgsekai.sekaitune.lyrics.LyricsUtils
 import moe.rgsekai.sekaitune.models.MediaMetadata
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.material3.rememberModalBottomSheetState
+import moe.rgsekai.sekaitune.constants.VideoQuality
+import moe.rgsekai.sekaitune.constants.VideoQualityKey
+import moe.rgsekai.sekaitune.ui.menu.TempoPitchDialog
+import moe.rgsekai.sekaitune.ui.player.SleepTimerDialog
+import moe.rgsekai.sekaitune.ui.screens.settings.VideoQualityBottomSheet
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
+import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import kotlin.math.abs
 import kotlin.math.cos
@@ -113,6 +139,7 @@ fun Modifier.quarterTurn(enabled: Boolean = true): Modifier = layout { measurabl
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoModeScreen(
     metadata: MediaMetadata,
@@ -206,9 +233,14 @@ fun VideoModeScreen(
         }
     }
 
-    val (wholeVideo) = rememberPreference(VideoModeWholeVideoKey, defaultValue = false)
+    var showQualitySheet by remember { mutableStateOf(false) }
+    var showSpeedDialog by remember { mutableStateOf(false) }
+    var showSleepTimerDialog by remember { mutableStateOf(false) }
+    var showSongInfoDialog by remember { mutableStateOf(false) }
+    var wholeVideoPreference by rememberPreference(VideoModeWholeVideoKey, defaultValue = false)
+
     val fit = animateFloatAsState(
-        targetValue = if (wholeVideo) 1f else 0f,
+        targetValue = if (wholeVideoPreference) 1f else 0f,
         animationSpec = tween(FitMs, easing = FastOutSlowInEasing),
         label = "videoFit",
     )
@@ -248,9 +280,17 @@ fun VideoModeScreen(
                     lyricsSyncOffset = lyricsSyncOffset,
                     parsedLines = parsedLines,
                     controls = controls,
+                    wholeVideo = wholeVideoPreference,
+                    onToggleWholeVideo = { wholeVideoPreference = !wholeVideoPreference },
                     fit = { fit.value },
                     onExit = onExitVideoMode,
                     onEnterPip = onEnterPip,
+                    onOpenLyrics = { state.openPane(VideoPane.LYRICS) },
+                    onOpenQueue = { state.openPane(VideoPane.QUEUE) },
+                    onOpenSpeed = { showSpeedDialog = true },
+                    onOpenQuality = { showQualitySheet = true },
+                    onOpenSleepTimer = { showSleepTimerDialog = true },
+                    onSongInfo = { showSongInfoDialog = true },
                 )
 
                 if (state.menuOpen) {
@@ -262,13 +302,47 @@ fun VideoModeScreen(
                         onExitVideoMode = onExitVideoMode,
                         onEnterPip = onEnterPip,
                         onOpenPane = { state.openPane(it) },
-                        onSongInfo = { state.songInfoOpen = true },
+                        onSongInfo = { showSongInfoDialog = true },
                     )
                 }
 
                 if (state.songInfoOpen) {
-                    ShowMediaInfo(videoId = metadata.id)
+                    showSongInfoDialog = true
                     state.songInfoOpen = false
+                }
+
+                if (showQualitySheet) {
+                    VideoLandscapeQualitySheet(
+                        session = session,
+                        onDismiss = { showQualitySheet = false },
+                    )
+                }
+
+                if (showSpeedDialog) {
+                    VideoLandscapeSpeedSheet(
+                        onDismiss = { showSpeedDialog = false },
+                    )
+                }
+
+                if (showSleepTimerDialog) {
+                    VideoLandscapeSleepTimerSheet(
+                        onDismiss = { showSleepTimerDialog = false },
+                        onConfirm = { minutes ->
+                            connection.service.sleepTimer.start(minutes)
+                            showSleepTimerDialog = false
+                        },
+                        onEndOfSong = {
+                            connection.service.sleepTimer.start(-1)
+                            showSleepTimerDialog = false
+                        },
+                    )
+                }
+
+                if (showSongInfoDialog) {
+                    VideoLandscapeSongInfoSheet(
+                        videoId = metadata.id,
+                        onDismiss = { showSongInfoDialog = false },
+                    )
                 }
             }
         }
@@ -288,9 +362,17 @@ private fun VideoModeLayout(
     lyricsSyncOffset: Int,
     parsedLines: List<LyricsEntry>,
     controls: () -> Float,
+    wholeVideo: Boolean,
+    onToggleWholeVideo: () -> Unit,
     fit: () -> Float,
     onExit: () -> Unit,
     onEnterPip: () -> Unit,
+    onOpenLyrics: () -> Unit,
+    onOpenQueue: () -> Unit,
+    onOpenSpeed: () -> Unit,
+    onOpenQuality: () -> Unit,
+    onOpenSleepTimer: () -> Unit,
+    onSongInfo: () -> Unit,
 ) {
     val connection = LocalPlayerConnection.current ?: return
     BoxWithConstraints(
@@ -416,30 +498,91 @@ private fun VideoModeLayout(
                     }
                 }
 
-                val currentLineText = parsedLines.getOrNull(currentLineIndex)?.text.orEmpty()
-                if (currentLineText.isNotBlank()) {
+                val currentLineText = parsedLines.getOrNull(currentLineIndex)?.text.orEmpty().trim()
+                val hasLine = currentLineText.isNotBlank()
+
+                // Corner radial soft shade behind the lyrics
+                val shadeAlphaAnim by animateFloatAsState(
+                    targetValue = if (hasLine) 1f else 0f,
+                    animationSpec = tween(500, easing = FastOutSlowInEasing),
+                    label = "lyricsCornerShade",
+                )
+
+                if (shadeAlphaAnim > 0.01f) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 24.dp, bottom = if (controls() > 0.01f) 80.dp else 26.dp)
-                            .widthIn(max = (frame.width * 0.55f).coerceAtLeast(200.dp))
-                            .graphicsLayer {
+                            .fillMaxSize()
+                            .drawBehind {
                                 val p = state.pane.value
-                                alpha = (1f - p) * (if (controls() > 0.01f) 0.85f else 1f)
-                                translationY = -controls() * 8.dp.toPx()
-                            }
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                            .background(Color.Black.copy(alpha = 0.35f))
-                            .clickable { state.openPane(VideoPane.LYRICS) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                    ) {
+                                val strength = shadeAlphaAnim * (1f - (p * 1.6f).coerceIn(0f, 1f))
+                                if (strength < 0.01f) return@drawBehind
+                                val radius = size.width * 0.62f
+                                val center = Offset(0f, size.height)
+                                scale(scaleX = 1f, scaleY = size.height * 0.5f / radius, pivot = center) {
+                                    drawCircle(
+                                        brush = Brush.radialGradient(
+                                            0f to Color.Black.copy(alpha = 0.42f * strength),
+                                            0.45f to Color.Black.copy(alpha = 0.22f * strength),
+                                            1f to Color.Transparent,
+                                            center = center,
+                                            radius = radius,
+                                        ),
+                                        radius = radius,
+                                        center = center,
+                                    )
+                                }
+                            },
+                    )
+                }
+
+                AnimatedContent(
+                    targetState = currentLineText,
+                    transitionSpec = {
+                        val slide = spring<IntOffset>(
+                            dampingRatio = 0.86f,
+                            stiffness = Spring.StiffnessLow,
+                            visibilityThreshold = IntOffset.VisibilityThreshold,
+                        )
+                        val fade = tween<Float>(520, easing = FastOutSlowInEasing)
+                        (slideInVertically(slide) { it / 2 } + fadeIn(fade))
+                            .togetherWith(slideOutVertically(slide) { -it / 2 } + fadeOut(fade))
+                            .using(SizeTransform(clip = false))
+                    },
+                    contentAlignment = Alignment.BottomStart,
+                    label = "videoModeSingleLyricLine",
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 24.dp, bottom = 16.dp)
+                        .widthIn(max = (frame.width * 0.62f).coerceAtLeast(240.dp))
+                        .graphicsLayer {
+                            val p = state.pane.value
+                            val c = controls()
+                            // Lift smoothly over seekbar when controls are visible
+                            translationY = -c * 54.dp.toPx()
+                            alpha = (1f - (p * 1.5f).coerceIn(0f, 1f)) * (1f - 0.4f * c)
+                        }
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = { state.openPane(VideoPane.LYRICS) },
+                        ),
+                ) { lineText ->
+                    if (lineText.isNotBlank()) {
                         Text(
-                            text = currentLineText,
+                            text = lineText,
                             color = Color.White,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
+                            fontSize = 24.sp,
+                            lineHeight = 30.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
+                            style = TextStyle(
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 0.75f),
+                                    offset = Offset(0f, 2f),
+                                    blurRadius = 10f,
+                                ),
+                            ),
                         )
                     }
                 }
@@ -452,9 +595,16 @@ private fun VideoModeLayout(
                 frame = frame,
                 state = state,
                 controls = controls,
+                wholeVideo = wholeVideo,
+                onToggleWholeVideo = onToggleWholeVideo,
                 onClose = onExit,
                 onEnterPip = onEnterPip,
-                onSongInfo = { state.songInfoOpen = true },
+                onOpenLyrics = onOpenLyrics,
+                onOpenQueue = onOpenQueue,
+                onOpenSpeed = onOpenSpeed,
+                onOpenQuality = onOpenQuality,
+                onOpenSleepTimer = onOpenSleepTimer,
+                onSongInfo = onSongInfo,
             )
             VideoTransport(state = state, controls = controls, isPlaying = isPlaying)
             VideoVolumeBar(state = state, controls = controls)

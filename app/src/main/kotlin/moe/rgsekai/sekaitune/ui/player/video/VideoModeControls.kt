@@ -175,8 +175,15 @@ internal fun BoxScope.VideoTopBar(
     frame: VideoFrame,
     state: VideoModeState,
     controls: () -> Float,
+    wholeVideo: Boolean,
+    onToggleWholeVideo: () -> Unit,
     onClose: () -> Unit,
     onEnterPip: () -> Unit,
+    onOpenLyrics: () -> Unit,
+    onOpenQueue: () -> Unit,
+    onOpenSpeed: () -> Unit,
+    onOpenQuality: () -> Unit,
+    onOpenSleepTimer: () -> Unit,
     onSongInfo: () -> Unit,
 ) {
     val visible by rememberControlsVisible(controls)
@@ -205,7 +212,7 @@ internal fun BoxScope.VideoTopBar(
         modifier = Modifier
             .align(Alignment.TopStart)
             .padding(start = EdgeStart + ArtSize + 14.dp, top = TopRow + 3.dp)
-            .widthIn(max = (frame.width - EdgeStart - ArtSize - EdgeEnd - 70.dp).coerceAtLeast(80.dp))
+            .widthIn(max = (frame.width - EdgeStart - ArtSize - EdgeEnd - 320.dp).coerceAtLeast(80.dp))
             .graphicsLayer {
                 val c = controls()
                 alpha = c
@@ -247,35 +254,150 @@ internal fun BoxScope.VideoTopBar(
     }
     if (visible) {
         val closeLabel = stringResource(R.string.video_mode_close_player)
+        val buttonSize = 34.dp
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = EdgeEnd, top = TopRow + 9.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(end = EdgeEnd, top = TopRow + 7.dp)
+                .graphicsLayer { alpha = controls() },
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (pipSupported) {
-                val pipLabel = stringResource(R.string.pip)
+            // Options Pill container
+            Row(
+                modifier = Modifier
+                    .height(buttonSize)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.18f))
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Playback speed
                 PressScaleActionButton(
-                    icon = R.drawable.picture_in_picture,
+                    icon = R.drawable.speed,
                     tint = Color.White,
-                    containerColor = Color.White.copy(alpha = 0.22f),
-                    size = 30.dp,
-                    onClick = { if (state.controlsShown) onEnterPip() else state.toggleControls() },
-                    modifier = Modifier
-                        .semantics { contentDescription = pipLabel }
-                        .graphicsLayer { alpha = controls() },
+                    containerColor = Color.Transparent,
+                    size = buttonSize,
+                    onClick = {
+                        state.touched()
+                        if (state.controlsShown) onOpenSpeed() else state.toggleControls()
+                    },
+                    modifier = Modifier.semantics { contentDescription = "Playback speed" },
+                )
+
+                // PiP mode
+                if (pipSupported) {
+                    val pipLabel = stringResource(R.string.pip)
+                    PressScaleActionButton(
+                        icon = R.drawable.picture_in_picture,
+                        tint = Color.White,
+                        containerColor = Color.Transparent,
+                        size = buttonSize,
+                        onClick = {
+                            state.touched()
+                            if (state.controlsShown) onEnterPip() else state.toggleControls()
+                        },
+                        modifier = Modifier.semantics { contentDescription = pipLabel },
+                    )
+                }
+
+                // Lyrics
+                val lyricsLabel = stringResource(R.string.lyrics)
+                PressScaleActionButton(
+                    icon = R.drawable.lyrics,
+                    tint = if (state.paneOpen && state.paneContent == VideoPane.LYRICS) Color(0xFF64B5F6) else Color.White,
+                    containerColor = Color.Transparent,
+                    size = buttonSize,
+                    onClick = {
+                        state.touched()
+                        if (state.controlsShown) onOpenLyrics() else state.toggleControls()
+                    },
+                    modifier = Modifier.semantics { contentDescription = lyricsLabel },
+                )
+
+                // Queue
+                val queueLabel = stringResource(R.string.queue)
+                PressScaleActionButton(
+                    icon = R.drawable.queue_music,
+                    tint = if (state.paneOpen && state.paneContent == VideoPane.QUEUE) Color(0xFF64B5F6) else Color.White,
+                    containerColor = Color.Transparent,
+                    size = buttonSize,
+                    onClick = {
+                        state.touched()
+                        if (state.controlsShown) onOpenQueue() else state.toggleControls()
+                    },
+                    modifier = Modifier.semantics { contentDescription = queueLabel },
+                )
+
+                // Show the whole video (Fit / Crop toggle)
+                val wholeVideoLabel = stringResource(R.string.video_mode_whole_video)
+                PressScaleActionButton(
+                    icon = if (wholeVideo) R.drawable.fullscreen_exit else R.drawable.fullscreen,
+                    tint = if (wholeVideo) Color(0xFF81C784) else Color.White,
+                    containerColor = Color.Transparent,
+                    size = buttonSize,
+                    onClick = {
+                        state.touched()
+                        if (state.controlsShown) onToggleWholeVideo() else state.toggleControls()
+                    },
+                    modifier = Modifier.semantics { contentDescription = wholeVideoLabel },
+                )
+
+                // Video Quality
+                val qualityLabel = stringResource(R.string.video_quality)
+                PressScaleActionButton(
+                    icon = R.drawable.tune,
+                    tint = Color.White,
+                    containerColor = Color.Transparent,
+                    size = buttonSize,
+                    onClick = {
+                        state.touched()
+                        if (state.controlsShown) onOpenQuality() else state.toggleControls()
+                    },
+                    modifier = Modifier.semantics { contentDescription = qualityLabel },
+                )
+
+                // Sleep Timer
+                val sleepLabel = stringResource(R.string.sleep_timer)
+                PressScaleActionButton(
+                    icon = R.drawable.sleep_timer,
+                    tint = Color.White,
+                    containerColor = Color.Transparent,
+                    size = buttonSize,
+                    onClick = {
+                        state.touched()
+                        if (state.controlsShown) onOpenSleepTimer() else state.toggleControls()
+                    },
+                    modifier = Modifier.semantics { contentDescription = sleepLabel },
+                )
+
+                // Song Info
+                val infoLabel = stringResource(R.string.video_mode_song_info)
+                PressScaleActionButton(
+                    icon = R.drawable.info,
+                    tint = Color.White,
+                    containerColor = Color.Transparent,
+                    size = buttonSize,
+                    onClick = {
+                        state.touched()
+                        if (state.controlsShown) onSongInfo() else state.toggleControls()
+                    },
+                    modifier = Modifier.semantics { contentDescription = infoLabel },
                 )
             }
+
+            // Close button (circular action button)
             PressScaleActionButton(
                 icon = R.drawable.close,
                 tint = Color.White,
                 containerColor = Color.White.copy(alpha = 0.22f),
-                size = 30.dp,
-                onClick = { if (state.controlsShown) onClose() else state.toggleControls() },
-                modifier = Modifier
-                    .semantics { contentDescription = closeLabel }
-                    .graphicsLayer { alpha = controls() },
+                size = buttonSize,
+                onClick = {
+                    state.touched()
+                    if (state.controlsShown) onClose() else state.toggleControls()
+                },
+                modifier = Modifier.semantics { contentDescription = closeLabel },
             )
         }
     }
