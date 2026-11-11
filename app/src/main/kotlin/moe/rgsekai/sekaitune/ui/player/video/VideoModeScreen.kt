@@ -15,9 +15,14 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -88,10 +93,12 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.material3.rememberModalBottomSheetState
+import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadiusKey
 import moe.rgsekai.sekaitune.constants.VideoQuality
 import moe.rgsekai.sekaitune.constants.VideoQualityKey
 import moe.rgsekai.sekaitune.ui.menu.TempoPitchDialog
 import moe.rgsekai.sekaitune.ui.player.SleepTimerDialog
+import moe.rgsekai.sekaitune.ui.player.rememberOfflineArtworkImageRequest
 import moe.rgsekai.sekaitune.ui.screens.settings.VideoQualityBottomSheet
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
@@ -154,8 +161,6 @@ fun VideoModeScreen(
     val connection = LocalPlayerConnection.current ?: return
     val player = connection.player
     val isPlaying by connection.isPlaying.collectAsState()
-
-    // Video session reuse
     val session = if (video != null) rememberYouTubeVideoSession(video.videoId) else null
     if (session != null && video != null) {
         DriveYouTubeVideo(session, video, isPlaying, ModeAutoCap)
@@ -432,14 +437,68 @@ private fun VideoModeLayout(
                     .graphicsLayer { translationX = -paneShift * state.pane.value },
             )
 
-            val status = when {
-                video != null -> null
-                searching -> R.string.video_mode_finding
-                else -> R.string.video_mode_no_video
-            }
-            if (status != null) {
+            // When searching has finished and there is no video, show sharp album art centered over blurred background
+            val (coverCornerRadius) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = 8f)
+            val showNoVideoCover = !searching && video == null && !artworkUrl.isNullOrBlank()
+            val noVideoCoverAlpha by animateFloatAsState(
+                targetValue = if (showNoVideoCover) 1f else 0f,
+                animationSpec = tween(400, easing = FastOutSlowInEasing),
+                label = "noVideoCoverAlpha",
+            )
+            if (noVideoCoverAlpha > 0.001f) {
+                val coverSize = (frame.height * 0.52f).coerceIn(160.dp, 280.dp)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .graphicsLayer {
+                            alpha = noVideoCoverAlpha
+                            translationX = -paneShift * state.pane.value
+                        },
+                ) {
+                    val sharpImageRequest = rememberOfflineArtworkImageRequest(artworkUrl)
+                    AsyncImage(
+                        model = sharpImageRequest,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(coverSize)
+                            .clip(RoundedCornerShape(coverCornerRadius.dp))
+                            .background(Color.White.copy(alpha = 0.08f)),
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.video_mode_no_video),
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .padding(horizontal = 24.dp)
+                            .graphicsLayer {
+                                alpha = 1f - controls()
+                            },
+                    )
+                }
+            } else if (searching) {
                 Text(
-                    text = stringResource(status),
+                    text = stringResource(R.string.video_mode_finding),
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 40.dp)
+                        .graphicsLayer {
+                            alpha = 1f - controls()
+                            translationX = -paneShift * state.pane.value
+                        },
+                )
+            } else if (video == null) {
+                // Artwork is missing or blank: keep the existing centered top message over blurred backdrop
+                Text(
+                    text = stringResource(R.string.video_mode_no_video),
                     color = Color.White.copy(alpha = 0.75f),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,

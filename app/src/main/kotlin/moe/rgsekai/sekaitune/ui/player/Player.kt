@@ -1181,7 +1181,8 @@ fun BottomSheetPlayer(
                 isVideoSong = currentMediaMetadata?.isMusicVideo ?: false,
                 enabled = videoLookupEnabled,
             )
-            val ytVideoCanvasSong = if (useYtVideoCanvas || inlineVideoActive) videoLookup.video else null
+            // Suppress the inline backdrop when full screen video mode is active so multiple video surfaces do not conflict
+            val ytVideoCanvasSong = if ((useYtVideoCanvas || inlineVideoActive) && !isFullScreenVideo) videoLookup.video else null
 
             Box(
                 modifier = Modifier
