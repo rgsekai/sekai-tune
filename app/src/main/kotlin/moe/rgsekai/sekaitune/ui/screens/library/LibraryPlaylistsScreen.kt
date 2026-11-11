@@ -94,7 +94,6 @@ import moe.rgsekai.sekaitune.constants.PlaylistEditLockKey
 import moe.rgsekai.sekaitune.constants.PlaylistSortDescendingKey
 import moe.rgsekai.sekaitune.constants.PlaylistSortType
 import moe.rgsekai.sekaitune.constants.PlaylistSortTypeKey
-import moe.rgsekai.sekaitune.constants.PureBlackKey
 import moe.rgsekai.sekaitune.db.entities.Playlist
 import moe.rgsekai.sekaitune.extensions.move
 import moe.rgsekai.sekaitune.extensions.toMediaItem
@@ -648,7 +647,7 @@ fun rememberArtworkCardColor(
         )
     val surfaceColor = MaterialTheme.colorScheme.surface
     val useDarkTheme = remember(surfaceColor) { ColorUtils.calculateLuminance(surfaceColor.toArgb()) < 0.5 }
-    val pureBlack by rememberPreference(PureBlackKey, defaultValue = false)
+    val pureBlack = true
 
     return remember(gradientColors, useDarkTheme, pureBlack) {
         val baseColor = gradientColors.firstOrNull() ?: fallbackColor

@@ -72,7 +72,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.LogcatScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsAnimationSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.MusicTogetherScreen
-import moe.rgsekai.sekaitune.ui.screens.settings.PalettePickerScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.PlayerSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.PoTokenScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.PrivacySettings
@@ -80,7 +79,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.ScrobbleSettingsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.SettingsScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.StorageSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.SupportScreen
-import moe.rgsekai.sekaitune.ui.screens.settings.ThemeCreatorScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.UpdateScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.sources.SourcesScreen
 
@@ -387,14 +385,8 @@ fun NavGraphBuilder.navigationBuilder(
     composable("settings/appearance/aod_customized") {
         AodCustomizedScreen(navController)
     }
-    composable("settings/appearance/palette_picker") {
-        PalettePickerScreen(navController)
-    }
     composable("settings/appearance/lyrics_animations") {
         LyricsAnimationSettings(navController)
-    }
-    composable("settings/appearance/theme_creator") {
-        ThemeCreatorScreen(navController)
     }
     composable("settings/content") {
         ContentSettings(navController)

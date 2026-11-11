@@ -569,31 +569,11 @@ fun TvRoot(
                     )
                 }
 
-                composable("settings/appearance/palette_picker") {
-                    TvSettingsScreen(
-                        navController = navController,
-                        initialCategory = TvSettingsCategory.ACCOUNT,
-                        activeSubRoute = "settings/appearance/palette_picker",
-                        upFocusRequester = topBarFocusRequester,
-                        contentFocusRequester = contentFocusRequester,
-                    )
-                }
-
                 composable("settings/appearance/lyrics_animations") {
                     TvSettingsScreen(
                         navController = navController,
                         initialCategory = TvSettingsCategory.ACCOUNT,
                         activeSubRoute = "settings/appearance/lyrics_animations",
-                        upFocusRequester = topBarFocusRequester,
-                        contentFocusRequester = contentFocusRequester,
-                    )
-                }
-
-                composable("settings/appearance/theme_creator") {
-                    TvSettingsScreen(
-                        navController = navController,
-                        initialCategory = TvSettingsCategory.ACCOUNT,
-                        activeSubRoute = "settings/appearance/theme_creator",
                         upFocusRequester = topBarFocusRequester,
                         contentFocusRequester = contentFocusRequester,
                     )

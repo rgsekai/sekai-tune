@@ -72,7 +72,6 @@ import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
-import moe.rgsekai.sekaitune.constants.PureBlackKey
 import moe.rgsekai.sekaitune.constants.SongFilter
 import moe.rgsekai.sekaitune.constants.SongFilterKey
 import moe.rgsekai.sekaitune.constants.SongSortDescendingKey
@@ -106,7 +105,7 @@ fun LibrarySongsScreen(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val isDarkTheme = isSystemInDarkTheme()
-    val pureBlack by rememberPreference(PureBlackKey, defaultValue = false)
+    val pureBlack = true
 
     val (sortType, onSortTypeChange) =
         rememberEnumPreference(

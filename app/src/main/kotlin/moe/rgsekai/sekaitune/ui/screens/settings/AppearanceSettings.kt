@@ -77,10 +77,8 @@ import moe.rgsekai.sekaitune.constants.ChipSortTypeKey
 import moe.rgsekai.sekaitune.constants.CropThumbnailToSquareKey
 import moe.rgsekai.sekaitune.constants.CustomFontNameKey
 import moe.rgsekai.sekaitune.constants.CustomFontUriKey
-import moe.rgsekai.sekaitune.constants.DarkModeKey
 import moe.rgsekai.sekaitune.constants.DefaultOpenTabKey
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
-import moe.rgsekai.sekaitune.constants.DynamicThemeKey
 import moe.rgsekai.sekaitune.constants.FontPreferenceKey
 import moe.rgsekai.sekaitune.constants.GridItemSize
 import moe.rgsekai.sekaitune.constants.GridItemsSizeKey
@@ -91,7 +89,6 @@ import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
 import moe.rgsekai.sekaitune.constants.ThemeBackdropModeKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurEnabledKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurStrengthKey
-import moe.rgsekai.sekaitune.constants.PureBlackKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
@@ -117,16 +114,6 @@ import kotlin.math.roundToInt
 @Composable
 fun AppearanceSettings(navController: NavController) {
     val context = LocalContext.current
-    val (dynamicTheme, onDynamicThemeChange) =
-        rememberPreference(
-            DynamicThemeKey,
-            defaultValue = false,
-        )
-    val (darkMode, onDarkModeChange) =
-        rememberEnumPreference(
-            DarkModeKey,
-            defaultValue = DarkMode.AUTO,
-        )
     val (showOneLineLyrics, onShowOneLineLyricsChange) =
         rememberPreference(
             ShowOneLineLyricsKey,
@@ -147,7 +134,6 @@ fun AppearanceSettings(navController: NavController) {
             MiniPlayerBackgroundStyleKey,
             defaultValue = MiniPlayerBackgroundStyle.GLOW,
         )
-    val (pureBlack, onPureBlackChange) = rememberPreference(PureBlackKey, defaultValue = false)
     val (disableBlur, onDisableBlurChange) = rememberPreference(DisableBlurKey, defaultValue = false)
     val (blurRadius, onBlurRadiusChange) = rememberPreference(BlurRadiusKey, defaultValue = 48f)
     val (backdropEnabled, onBackdropEnabledChange) = rememberPreference(BackdropEnabledKey, defaultValue = true)
@@ -245,12 +231,6 @@ fun AppearanceSettings(navController: NavController) {
             }
         }
 
-    val isSystemInDarkTheme = isSystemInDarkTheme()
-    val useDarkTheme =
-        remember(darkMode, isSystemInDarkTheme) {
-            if (darkMode == DarkMode.AUTO) isSystemInDarkTheme else darkMode == DarkMode.ON
-        }
-
     val (defaultChip, onDefaultChipChange) =
         rememberEnumPreference(
             key = ChipSortTypeKey,
@@ -285,54 +265,11 @@ fun AppearanceSettings(navController: NavController) {
         ) {
             PreferenceGroup(title = stringResource(R.string.theme)) {
                 item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.enable_dynamic_theme)) },
-                        icon = { Icon(painterResource(R.drawable.palette), null) },
-                        checked = dynamicTheme,
-                        onCheckedChange = onDynamicThemeChange,
-                    )
-                }
-
-                item(visible = !dynamicTheme || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.color_palette)) },
-                        description = stringResource(R.string.customize_theme_colors),
-                        icon = { Icon(painterResource(R.drawable.format_paint), null) },
-                        onClick = { navController.navigate("settings/appearance/palette_picker") },
-                    )
-                }
-
-                item {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.liquid_glass)) },
                         description = stringResource(R.string.liquid_glass_performance_warning),
                         icon = { Icon(painterResource(R.drawable.tune), null) },
                         onClick = { navController.navigate("settings/appearance/liquid_glass") },
-                    )
-                }
-
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.dark_theme)) },
-                        icon = { Icon(painterResource(R.drawable.dark_mode), null) },
-                        selectedValue = darkMode,
-                        onValueSelected = onDarkModeChange,
-                        valueText = {
-                            when (it) {
-                                DarkMode.ON -> stringResource(R.string.dark_theme_on)
-                                DarkMode.OFF -> stringResource(R.string.dark_theme_off)
-                                DarkMode.AUTO -> stringResource(R.string.dark_theme_follow_system)
-                            }
-                        },
-                    )
-                }
-
-                item(visible = useDarkTheme) {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.pure_black)) },
-                        icon = { Icon(painterResource(R.drawable.contrast), null) },
-                        checked = pureBlack,
-                        onCheckedChange = onPureBlackChange,
                     )
                 }
 

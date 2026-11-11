@@ -42,9 +42,6 @@ import moe.rgsekai.sekaitune.paxsenix.PaxsenixLyrics
 import moe.rgsekai.sekaitune.storage.StorageFolderKind
 import moe.rgsekai.sekaitune.storage.StorageLocationRepository
 import moe.rgsekai.sekaitune.ui.player.CanvasArtworkPlaybackCache
-import moe.rgsekai.sekaitune.ui.screens.settings.ThemePalettes
-import moe.rgsekai.sekaitune.ui.theme.ThemeSeedPalette
-import moe.rgsekai.sekaitune.ui.theme.ThemeSeedPaletteCodec
 import moe.rgsekai.sekaitune.utils.ColdStartTimer
 import moe.rgsekai.sekaitune.utils.PreferenceStore
 import moe.rgsekai.sekaitune.utils.ProxyUtils

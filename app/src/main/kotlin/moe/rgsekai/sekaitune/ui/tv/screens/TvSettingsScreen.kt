@@ -97,11 +97,9 @@ import moe.rgsekai.sekaitune.ui.screens.settings.LogcatScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsAnimationSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.LyricsSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.MusicTogetherScreen
-import moe.rgsekai.sekaitune.ui.screens.settings.PalettePickerScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.PoTokenScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.StorageSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.SupportScreen
-import moe.rgsekai.sekaitune.ui.screens.settings.ThemeCreatorScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.UpdateScreen
 import moe.rgsekai.sekaitune.ui.utils.safeRequestFocus
 import moe.rgsekai.sekaitune.ui.utils.tvFocusOutline
@@ -157,9 +155,7 @@ private fun tvSubRouteTitle(subRoute: String): String {
         "settings/appearance/ambient_mode" -> stringResource(R.string.ambient_mode)
         "settings/appearance/icon" -> stringResource(R.string.app_icon)
         "settings/appearance/aod_customized" -> stringResource(R.string.aod_customize_title)
-        "settings/appearance/palette_picker" -> stringResource(R.string.color_palette)
         "settings/appearance/lyrics_animations" -> stringResource(R.string.lyrics_animation_style)
-        "settings/appearance/theme_creator" -> stringResource(R.string.theme_creator_title)
         "settings/player/chiper" -> stringResource(R.string.mori_cipher_settings_title)
         "settings/music_together" -> stringResource(R.string.music_together)
         "settings/misc" -> stringResource(R.string.misc)
@@ -626,9 +622,7 @@ private fun TvSettingsSubRouteContent(
         "settings/appearance/ambient_mode" -> AmbientModeSettingsScreen(navController)
         "settings/appearance/icon" -> IconScreen(navController)
         "settings/appearance/aod_customized" -> AodCustomizedScreen(navController)
-        "settings/appearance/palette_picker" -> PalettePickerScreen(navController)
         "settings/appearance/lyrics_animations" -> LyricsAnimationSettings(navController)
-        "settings/appearance/theme_creator" -> ThemeCreatorScreen(navController)
         "settings/player/chiper" -> ChiperSettings(navController)
         "settings/music_together" -> MusicTogetherScreen(navController)
         "settings/misc" -> DebugSettings(navController)

@@ -202,11 +202,9 @@ import moe.rgsekai.sekaitune.constants.AppFontPreference
 import moe.rgsekai.sekaitune.constants.AmbientArtScaleKey
 import moe.rgsekai.sekaitune.constants.AppLanguageKey
 import moe.rgsekai.sekaitune.constants.CustomFontUriKey
-import moe.rgsekai.sekaitune.constants.CustomThemeColorKey
 import moe.rgsekai.sekaitune.constants.DarkModeKey
 import moe.rgsekai.sekaitune.constants.DefaultOpenTabKey
 import moe.rgsekai.sekaitune.constants.DisableScreenshotKey
-import moe.rgsekai.sekaitune.constants.DynamicThemeKey
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
 import moe.rgsekai.sekaitune.constants.FloatingToolbarBottomPadding
 import moe.rgsekai.sekaitune.constants.FloatingToolbarHeight
@@ -238,7 +236,6 @@ import moe.rgsekai.sekaitune.constants.OnboardingCompletedKey
 import moe.rgsekai.sekaitune.constants.PauseSearchHistoryKey
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.PlayerBackgroundStyleKey
-import moe.rgsekai.sekaitune.constants.PureBlackKey
 import moe.rgsekai.sekaitune.constants.RemindAfterKey
 import moe.rgsekai.sekaitune.constants.SYSTEM_DEFAULT
 import moe.rgsekai.sekaitune.constants.SearchSource
@@ -316,9 +313,6 @@ import moe.rgsekai.sekaitune.ui.screens.search.onlineSearchResultRoute
 import moe.rgsekai.sekaitune.ui.screens.settings.DarkMode
 import moe.rgsekai.sekaitune.ui.screens.settings.NavigationTab
 import moe.rgsekai.sekaitune.ui.theme.SekaiTuneTheme
-import moe.rgsekai.sekaitune.ui.theme.ColorSaver
-import moe.rgsekai.sekaitune.ui.theme.DefaultThemeColor
-import moe.rgsekai.sekaitune.ui.theme.extractThemeColor
 import moe.rgsekai.sekaitune.ui.utils.appBarScrollBehavior
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.ui.utils.resetHeightOffset
@@ -741,9 +735,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = false)
-            val effectiveDynamicTheme = if (isTv) false else enableDynamicTheme
-            val customThemeColorValue by rememberPreference(CustomThemeColorKey, defaultValue = "default")
             val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
             val disableAnimations = false
             val fontPreference by rememberEnumPreference(FontPreferenceKey, defaultValue = AppFontPreference.DEFAULT)
@@ -754,47 +745,9 @@ class MainActivity : ComponentActivity() {
                 remember(darkTheme, isSystemInDarkTheme) {
                     if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
                 }
-            val pureBlackEnabled by rememberPreference(PureBlackKey, defaultValue = false)
-            val pureBlack = pureBlackEnabled && useDarkTheme
+            val pureBlack = true
 
-            val customThemeSeedPalette =
-                remember(customThemeColorValue) {
-                    if (customThemeColorValue.startsWith("#")) {
-                        null
-                    } else if (customThemeColorValue.startsWith("seedPalette:")) {
-                        moe.rgsekai.sekaitune.ui.theme.ThemeSeedPaletteCodec
-                            .decodeFromPreference(customThemeColorValue)
-                    } else {
-                        moe.rgsekai.sekaitune.ui.screens.settings.ThemePalettes
-                            .findById(customThemeColorValue)
-                            ?.let {
-                                moe.rgsekai.sekaitune.ui.theme.ThemeSeedPalette(
-                                    primary = it.primary,
-                                    secondary = it.secondary,
-                                    tertiary = it.tertiary,
-                                    neutral = it.neutral,
-                                )
-                            }
-                    }
-                }
 
-            val customThemeColor =
-                remember(customThemeColorValue, customThemeSeedPalette) {
-                    if (customThemeColorValue.startsWith("#")) {
-                        try {
-                            val colorString = customThemeColorValue.removePrefix("#")
-                            Color(android.graphics.Color.parseColor("#$colorString"))
-                        } catch (e: Exception) {
-                            DefaultThemeColor
-                        }
-                    } else {
-                        customThemeSeedPalette?.primary ?: DefaultThemeColor
-                    }
-                }
-
-            var themeColor by rememberSaveable(stateSaver = ColorSaver) {
-                mutableStateOf(DefaultThemeColor)
-            }
 
             LaunchedEffect(legacyUseSystemFont) {
                 if (!legacyUseSystemFont) return@LaunchedEffect
@@ -810,49 +763,8 @@ class MainActivity : ComponentActivity() {
                     if (preferences[SmartTrimmerKey] != true) {
                         dataStore.edit { it[SmartTrimmerKey] = true }
                     }
-                    if (preferences[DynamicThemeKey] != false) {
-                        dataStore.edit { it[DynamicThemeKey] = false }
-                    }
                     if (preferences[AmbientArtScaleKey] == null || preferences[AmbientArtScaleKey] == 0.85f) {
                         dataStore.edit { it[AmbientArtScaleKey] = 0.95f }
-                    }
-                }
-            }
-
-            LaunchedEffect(playerConnection, effectiveDynamicTheme, isSystemInDarkTheme, customThemeColor) {
-                val playerConnection = playerConnection
-                if (!effectiveDynamicTheme || playerConnection == null) {
-                    themeColor = if (!effectiveDynamicTheme) customThemeColor else DefaultThemeColor
-                    return@LaunchedEffect
-                }
-                playerConnection.service.currentMediaMetadata.collectLatest { song ->
-                    if (song != null) {
-                        withContext(Dispatchers.Default) {
-                            try {
-                                val result =
-                                    imageLoader.execute(
-                                        ImageRequest
-                                            .Builder(this@MainActivity)
-                                            .data(song.thumbnailUrl)
-                                            .allowHardware(false)
-                                            .build(),
-                                    )
-                                val extractedColor = result.image?.toBitmap()?.extractThemeColor()
-                                withContext(Dispatchers.Main) {
-                                    themeColor = extractedColor ?: DefaultThemeColor
-                                }
-                            } catch (e: Exception) {
-                                withContext(Dispatchers.Main) {
-                                    themeColor = DefaultThemeColor
-                                }
-                            }
-                        }
-                    } else {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            themeColor = DefaultThemeColor
-                        } else {
-                            themeColor = customThemeColor
-                        }
                     }
                 }
             }
@@ -860,8 +772,6 @@ class MainActivity : ComponentActivity() {
             SekaiTuneTheme(
                 darkTheme = useDarkTheme,
                 pureBlack = pureBlack,
-                themeColor = themeColor,
-                seedPalette = if (!effectiveDynamicTheme) customThemeSeedPalette else null,
                 disableAnimations = disableAnimations,
                 fontPreference = fontPreference,
                 customFontUri = customFontUri,

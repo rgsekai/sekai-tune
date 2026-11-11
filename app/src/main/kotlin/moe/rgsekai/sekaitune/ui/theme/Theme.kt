@@ -71,8 +71,8 @@ data class ThemeSeedPalette(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SekaiTuneTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    pureBlack: Boolean = false,
+    darkTheme: Boolean = true,
+    pureBlack: Boolean = true,
     themeColor: Color = DefaultThemeColor,
     seedPalette: ThemeSeedPalette? = null,
     disableAnimations: Boolean = false,
@@ -81,8 +81,7 @@ fun SekaiTuneTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val useSystemDynamicColor =
-        (seedPalette == null && themeColor == DefaultThemeColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+    val useSystemDynamicColor = false
 
     val customFontFamily =
         produceState<FontFamily?>(

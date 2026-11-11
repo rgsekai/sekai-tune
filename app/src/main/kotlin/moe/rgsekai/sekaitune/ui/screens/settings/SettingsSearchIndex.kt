@@ -380,61 +380,6 @@ object SettingsSearchRepository {
         // ==========================================
         add(
             SettingsSearchEntry(
-                id = "sub_dark_theme",
-                title = context.getString(R.string.dark_theme),
-                subtitle = "Turn dark mode on, off, or follow system theme",
-                category = appearanceCategory,
-                iconRes = R.drawable.dark_mode,
-                route = "settings/appearance",
-                keywords = listOf("dark theme", "dark mode", "light mode", "system theme", "night mode", "display"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
-                id = "sub_pure_black",
-                title = context.getString(R.string.pure_black),
-                subtitle = "Pitch black background for OLED screens to save battery",
-                category = appearanceCategory,
-                iconRes = R.drawable.contrast,
-                route = "settings/appearance",
-                keywords = listOf("pure black", "oled", "amoled", "pitch black", "true black", "battery saver"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
-                id = "sub_dynamic_theme",
-                title = "Dynamic theme",
-                subtitle = "Generate theme colors dynamically from current song album art",
-                category = appearanceCategory,
-                iconRes = R.drawable.palette,
-                route = "settings/appearance",
-                keywords = listOf("dynamic theme", "material you", "album art color", "monet", "adaptive theme"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
-                id = "sub_palette_picker",
-                title = context.getString(R.string.color_palette),
-                subtitle = context.getString(R.string.customize_theme_colors),
-                category = appearanceCategory,
-                iconRes = R.drawable.palette,
-                route = "settings/appearance/palette_picker",
-                keywords = listOf("color palette", "custom colors", "accent color", "seed color", "theme color"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
-                id = "sub_theme_creator",
-                title = context.getString(R.string.theme_creator_title),
-                subtitle = "Build and edit your custom color palette and scheme",
-                category = appearanceCategory,
-                iconRes = R.drawable.format_paint,
-                route = "settings/appearance/theme_creator",
-                keywords = listOf("theme creator", "create theme", "custom palette", "build theme", "edit scheme"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
                 id = "sub_app_icon",
                 title = "App icon",
                 subtitle = "Choose the launcher icon style for Sekai Tune",
