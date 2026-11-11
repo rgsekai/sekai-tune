@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
-import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
-import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
 import moe.rgsekai.sekaitune.extensions.toEnum
 import moe.rgsekai.sekaitune.utils.dataStore
 import javax.inject.Inject
@@ -24,12 +22,6 @@ class HomeRepository
     constructor(
         @ApplicationContext context: Context,
     ) {
-        val quickPicksDisplayMode: Flow<QuickPicksDisplayMode> =
-            context.dataStore.data
-                .map { preferences ->
-                    preferences[QuickPicksDisplayModeKey].toEnum(QuickPicksDisplayMode.CARD)
-                }.distinctUntilChanged()
-
         val showTonalBackdrop: Flow<Boolean> =
             context.dataStore.data
                 .map { preferences -> preferences[DisableBlurKey] != true }

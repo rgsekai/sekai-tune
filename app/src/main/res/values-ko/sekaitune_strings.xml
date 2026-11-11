@@ -161,9 +161,7 @@
     <string name="lyrics_romanize_chinese">중국어 가사 로마자 표기</string>
     <string name="lyrics_romanize_hindi">힌디어 가사 로마자 표기</string>
     <string name="lyrics_romanize_other_languages">기타 비라틴어 가사 로마자 표기</string>
-    <string name="quick_picks_display_mode">빠른 선곡 표시 모드</string>
-    <string name="quick_picks_display_mode_card">카드</string>
-    <string name="quick_picks_display_mode_list">목록</string>    <string name="advanced_login">고급 로그인 (토큰)</string>
+ <string name="advanced_login">고급 로그인 (토큰)</string>
     <string name="token_hidden">탭하여 토큰 보기</string>
     <string name="token_shown">다시 탭하여 복사/편집</string>
     <string name="token_adv_login_description">이 방식은 고급 로그인 수단입니다. 웹 페이지 대신 로그인 토큰을 직접 입력하거나 업데이트하여 여러 기기에서 로그인 속도를 높일 수 있습니다. 유효하지 않은 토큰 형식은 허용되지 않습니다.</string>

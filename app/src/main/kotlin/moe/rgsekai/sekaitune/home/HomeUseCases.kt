@@ -9,8 +9,7 @@ package moe.rgsekai.sekaitune.home
 
 import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class ObserveHomePresentationPreferencesUseCase
@@ -19,12 +18,8 @@ class ObserveHomePresentationPreferencesUseCase
         private val repository: HomeRepository,
     ) {
         operator fun invoke(): Flow<HomePresentationPreferences> =
-            combine(
-                repository.quickPicksDisplayMode,
-                repository.showTonalBackdrop,
-            ) { quickPicksDisplayMode, showTonalBackdrop ->
+            repository.showTonalBackdrop.map { showTonalBackdrop ->
                 HomePresentationPreferences(
-                    quickPicksDisplayMode = quickPicksDisplayMode,
                     showTonalBackdrop = showTonalBackdrop,
                 )
             }
@@ -32,7 +27,6 @@ class ObserveHomePresentationPreferencesUseCase
 
 @Immutable
 data class HomePresentationPreferences(
-    val quickPicksDisplayMode: QuickPicksDisplayMode,
     val showTonalBackdrop: Boolean,
 )
 

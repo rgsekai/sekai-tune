@@ -260,9 +260,7 @@
     <string name="lyrics_romanize_chinese">Romanizar letras em chinês</string>
     <string name="lyrics_romanize_hindi">Romanizar letras em hindi</string>
     <string name="lyrics_romanize_other_languages">Romanizar outras letras não latinas</string>
-    <string name="quick_picks_display_mode">Modo de exibição das escolhas rápidas</string>
-    <string name="quick_picks_display_mode_card">Cartão</string>
-    <string name="quick_picks_display_mode_list">Lista</string>    <string name="advanced_login">Login com token</string>
+ <string name="advanced_login">Login com token</string>
     <string name="token_hidden">Toque para mostrar o token</string>
     <string name="token_shown">Toque novamente para copiar ou editar</string>
     <string name="token_adv_login_description">Este é um método de login AVANÇADO. Como alternativa ao portal web, você pode inserir ou atualizar diretamente seu token de login aqui. Por exemplo, isso pode acelerar o login em vários dispositivos. Observe que formatos de token inválidos que o app não conseguir interpretar não serão aceitos</string>

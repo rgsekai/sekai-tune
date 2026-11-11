@@ -278,9 +278,6 @@
     <string name="local_songs_no_matches_desc">Prueba con otra canción, otro artista u otro álbum.</string>
     <string name="sort_by_album">Álbum</string>
     <string name="lyrics_line_blur">Desenfocar letras de canciones</string>
-    <string name="quick_picks_display_mode">Modo de visualización «Selecciones rápidas»</string>
-    <string name="quick_picks_display_mode_card">Tarjeta</string>
-    <string name="quick_picks_display_mode_list">Lista</string>
     <string name="stats_favourite_artist">Tu artista favorito</string>
     <string name="stats_favourite_song">Tu canción favorita</string>
     <string name="stats_total_time_listened">Tiempo total de escucha</string>

@@ -260,9 +260,7 @@
     <string name="lyrics_romanize_chinese">中国語歌詞をローマ字化</string>
     <string name="lyrics_romanize_hindi">ヒンディー語歌詞をローマ字化</string>
     <string name="lyrics_romanize_other_languages">その他の非ラテン文字歌詞をローマ字化</string>
-    <string name="quick_picks_display_mode">クイックピック表示モード</string>
-    <string name="quick_picks_display_mode_card">カード</string>
-    <string name="quick_picks_display_mode_list">リスト</string>    <string name="advanced_login">トークンでログイン</string>
+ <string name="advanced_login">トークンでログイン</string>
     <string name="token_hidden">タップしてトークンを表示</string>
     <string name="token_shown">もう一度タップしてコピーまたは編集</string>
     <string name="token_adv_login_description">これは上級者向けのログイン方法。Webポータルの代わりに、ここでログイントークンを直接入力または更新できる。例えば複数端末でのログインを高速化できる。アプリが解析できない無効なトークン形式は受け付けられない。</string>

@@ -297,9 +297,7 @@
     <string name="lyrics_romanize_chinese">Romanize chinese lyrics</string>
     <string name="lyrics_romanize_hindi">Romanize hindi lyrics</string>
     <string name="lyrics_romanize_other_languages">Romanize other non-latin lyrics</string>
-    <string name="quick_picks_display_mode">Quick Picks display mode</string>
-    <string name="quick_picks_display_mode_card">Card</string>
-    <string name="quick_picks_display_mode_list">List</string>    <string name="advanced_login">Login with token</string>
+ <string name="advanced_login">Login with token</string>
     <string name="token_hidden">Tap to show token</string>
     <string name="token_shown">Tap again to copy or edit</string>
     <string name="token_adv_login_description">This is an ADVANCED login method. As an alternative to the web portal, you may directly enter or update your login token here. For example, this can speed up logging in on multiple devices. Please note that any invalid token formats the app fails to parse will not be accepted</string>

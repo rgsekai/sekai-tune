@@ -259,9 +259,7 @@
     <string name="lyrics_romanize_chinese">בצע \"רומניזיציה\" למילות שיר סיניות</string>
     <string name="lyrics_romanize_hindi">בצע \"רומניזיציה\" למילות שיר הודיות</string>
     <string name="lyrics_romanize_other_languages">בצע \"רומניזציה\" למילות שיר של שפות אחרות שאינן לטיניות (כמו עברית וערבית)</string>
-    <string name="quick_picks_display_mode">מצב תצוגה של בחירות מהירות</string>
-    <string name="quick_picks_display_mode_card">כרטיס</string>
-    <string name="quick_picks_display_mode_list">רשימה</string>    <string name="advanced_login">התחבר עם טוקן</string>
+ <string name="advanced_login">התחבר עם טוקן</string>
     <string name="token_hidden">הקש כדי להציג טוקן</string>
     <string name="token_shown">הקש שוב כדי להעתיק או לערוך</string>
     <string name="token_adv_login_description">זוהי שיטת התחברות מתקדמת. כחלופה לפורטל האינטרנט, ניתן להזין או לעדכן את טוקן ההתחברות שלך ישירות כאן. לדוגמה, פעולה זו יכולה להאיץ את ההתחברות במספר מכשירים. שימו לב שכל פורמט טוקן לא חוקי שהאפליקציה לא מצליחה לנתח לא יתקבל</string>

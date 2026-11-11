@@ -166,7 +166,6 @@ private data class HomeStateInputs(
                 homePage = content.remote.homePage,
                 accountName = content.remote.accountName,
                 accountImageUrl = content.remote.accountImageUrl,
-                quickPicksDisplayMode = preferences.quickPicksDisplayMode,
                 showTonalBackdrop = preferences.showTonalBackdrop,
                 isRefreshing = isRefreshing,
                 isLoadingMore = isLoadingMore,

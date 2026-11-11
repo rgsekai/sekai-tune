@@ -94,8 +94,6 @@ import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurStrengthKey
 import moe.rgsekai.sekaitune.constants.PureBlackKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
-import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
-import moe.rgsekai.sekaitune.constants.QuickPicksDisplayModeKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.ShowTagsInLibraryKey
 import moe.rgsekai.sekaitune.constants.SwipeThumbnailKey
@@ -202,11 +200,6 @@ fun AppearanceSettings(navController: NavController) {
         rememberPreference(
             ShowTagsInLibraryKey,
             defaultValue = false,
-        )
-    val (quickPicksDisplayMode, onQuickPicksDisplayModeChange) =
-        rememberEnumPreference(
-            QuickPicksDisplayModeKey,
-            defaultValue = QuickPicksDisplayMode.CARD,
         )
 
     val customFontPickerLauncher =
@@ -615,21 +608,6 @@ fun AppearanceSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.filter_alt), null) },
                         checked = showTagsInLibrary,
                         onCheckedChange = onShowTagsInLibraryChange,
-                    )
-                }
-
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.quick_picks_display_mode)) },
-                        icon = { Icon(painterResource(R.drawable.grid_view), null) },
-                        selectedValue = quickPicksDisplayMode,
-                        onValueSelected = onQuickPicksDisplayModeChange,
-                        valueText = {
-                            when (it) {
-                                QuickPicksDisplayMode.CARD -> stringResource(R.string.quick_picks_display_mode_card)
-                                QuickPicksDisplayMode.LIST -> stringResource(R.string.quick_picks_display_mode_list)
-                            }
-                        },
                     )
                 }
 

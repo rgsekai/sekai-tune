@@ -10,7 +10,6 @@ package moe.rgsekai.sekaitune.home
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import com.google.common.collect.ImmutableList
-import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.db.entities.LocalItem
 import moe.rgsekai.sekaitune.db.entities.Song
 import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
@@ -45,7 +44,6 @@ data class HomeUiState(
     val homePage: HomePage?,
     val accountName: String,
     val accountImageUrl: String?,
-    val quickPicksDisplayMode: QuickPicksDisplayMode,
     val showTonalBackdrop: Boolean,
     val isRefreshing: Boolean,
     val isLoadingMore: Boolean,

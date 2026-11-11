@@ -94,7 +94,6 @@ import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.GridThumbnailHeight
 import moe.rgsekai.sekaitune.constants.ListItemHeight
 import moe.rgsekai.sekaitune.constants.ListThumbnailSize
-import moe.rgsekai.sekaitune.constants.QuickPicksDisplayMode
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadius
 import moe.rgsekai.sekaitune.db.entities.Album
 import moe.rgsekai.sekaitune.db.entities.Artist
@@ -197,7 +196,6 @@ fun QuickPicksSection(
     quickPicks: List<Song>,
     mediaMetadata: MediaMetadata?,
     isPlaying: Boolean,
-    displayMode: QuickPicksDisplayMode,
     navController: NavController,
     playerConnection: PlayerConnection,
     menuState: MenuState,
@@ -205,9 +203,6 @@ fun QuickPicksSection(
     modifier: Modifier = Modifier,
 ) {
     val distinctQuickPicks = remember(quickPicks) { quickPicks.distinctBy { it.id } }
-
-    when (displayMode) {
-        QuickPicksDisplayMode.CARD -> {
             BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
                 val heroHeight =
                     when {
@@ -350,91 +345,6 @@ fun QuickPicksSection(
                         }
                     }
                 }
-            }
-        }
-
-        QuickPicksDisplayMode.LIST -> {
-            BoxWithConstraints(
-                modifier = modifier.fillMaxWidth(),
-            ) {
-                val widthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
-                val itemWidth = maxWidth * widthFactor
-                val lazyGridState = rememberLazyGridState()
-                LazyHorizontalGrid(
-                    state = lazyGridState,
-                    rows = GridCells.Fixed(4),
-                    flingBehavior = rememberSnapFlingBehavior(lazyGridState),
-                    contentPadding =
-                        WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(ListItemHeight * 4),
-                ) {
-                    items(
-                        items = distinctQuickPicks,
-                        key = { it.id },
-                        contentType = { "quick_pick_song" },
-                    ) { song ->
-                        SongListItem(
-                            song = song,
-                            showInLibraryIcon = true,
-                            isActive = song.id == mediaMetadata?.id,
-                            isPlaying = isPlaying,
-                            isSwipeable = false,
-                            trailingContent = {
-                                IconButton(
-                                    onClick = {
-                                        menuState.show {
-                                            SongMenu(
-                                                originalSong = song,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss,
-                                            )
-                                        }
-                                    },
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.more_vert),
-                                        contentDescription = null,
-                                    )
-                                }
-                            },
-                            modifier =
-                                Modifier
-                                    .width(itemWidth)
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (song.id == mediaMetadata?.id) {
-                                                playerConnection.player.togglePlayPause()
-                                            } else {
-                                                playerConnection.playQueue(
-                                                    if (song.song.isLocal) {
-                                                        ListQueue(items = listOf(song.toMediaItem()))
-                                                    } else {
-                                                        YouTubeQueue.radio(song.toMediaMetadata())
-                                                    },
-                                                )
-                                            }
-                                        },
-                                        onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            menuState.show {
-                                                SongMenu(
-                                                    originalSong = song,
-                                                    navController = navController,
-                                                    onDismiss = menuState::dismiss,
-                                                )
-                                            }
-                                        },
-                                    ),
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

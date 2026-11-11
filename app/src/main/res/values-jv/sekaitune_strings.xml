@@ -234,9 +234,7 @@
     <string name="lyrics_romanize_chinese">Romanisasikan lirik Mandarin</string>
     <string name="lyrics_romanize_hindi">Romanisasikan lirik Hindi</string>
     <string name="lyrics_romanize_other_languages">Romanisasikan lirik non-latin lainnya</string>
-    <string name="quick_picks_display_mode">Mode tampilan Pilihan Cepat</string>
-    <string name="quick_picks_display_mode_card">Kartu</string>
-    <string name="quick_picks_display_mode_list">Daftar</string>    <string name="advanced_login">Mlebu dengan token</string>
+ <string name="advanced_login">Mlebu dengan token</string>
     <string name="token_hidden">Ketuk untuk menampilkan token</string>
     <string name="token_shown">Ketuk lagi untuk menyalin atau mengedit</string>
     <string name="token_adv_login_description">Ini adalah metode login LANJUTAN. Sebagai alternatif dari portal web, Kowe dapat langsung memasukkan atau memperbarui token login Kowe di sini. Misalnya, ini dapat mempercepat login di beberapa perangkat. Harap dicatat bahwa format token tidak valid apa pun yang gagal diurai oleh aplikasi tidak akan diterima</string>
