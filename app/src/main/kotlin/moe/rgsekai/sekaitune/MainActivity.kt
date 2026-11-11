@@ -1858,7 +1858,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         val shouldShowBlurBackground =
                                             remember(navBackStackEntry) {
-                                                shouldUseFloatingTopBar
+                                                shouldUseFloatingTopBar && navBackStackEntry?.destination?.route != Screens.Home.route
                                             }
 
                                         val surfaceColor = MaterialTheme.colorScheme.surface

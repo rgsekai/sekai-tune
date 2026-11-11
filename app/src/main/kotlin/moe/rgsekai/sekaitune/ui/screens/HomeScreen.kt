@@ -13,6 +13,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -287,12 +288,25 @@ private fun HomeContent(
                 val forgottenItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
                 val forgottenItemWidth = maxWidth.coerceAtMost(HomeFeedMaxWidth) * forgottenItemWidthFactor
 
+                val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+                val listContentPadding = remember(insetsPadding, uiState.quickPicks.isNotEmpty()) {
+                    if (uiState.quickPicks.isNotEmpty()) {
+                        PaddingValues(
+                            start = insetsPadding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+                            top = 0.dp,
+                            end = insetsPadding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+                            bottom = insetsPadding.calculateBottomPadding(),
+                        )
+                    } else {
+                        insetsPadding
+                    }
+                }
+
                 LazyColumn(
                     state = lazyListState,
-                    contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+                    contentPadding = listContentPadding,
                     modifier =
                         Modifier
-                            .widthIn(max = HomeFeedMaxWidth)
                             .fillMaxWidth()
                             .align(Alignment.TopCenter),
                 ) {

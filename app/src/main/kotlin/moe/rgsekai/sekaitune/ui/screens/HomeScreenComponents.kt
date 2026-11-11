@@ -7,8 +7,22 @@
 
 package moe.rgsekai.sekaitune.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -17,8 +31,12 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -47,10 +65,33 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size as GeometrySize
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
+import android.os.Build
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import moe.rgsekai.sekaitune.constants.DisableBlurKey
+import moe.rgsekai.sekaitune.utils.rememberPreference
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -65,12 +106,11 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -186,6 +226,248 @@ fun HomeSectionHeader(
     }
 }
 
+private val HeroSlideEasing = CubicBezierEasing(0.32f, 0f, 0.15f, 1f)
+private const val HeroSlideMillis = 1150
+private const val HeroAdvanceMillis = 5500L
+private val HeroPillFill = Color.White.copy(alpha = 0.64f)
+private val HeroPillContent = Color(0xFF2F2F2F)
+private val HeroLabelColor = Color.White.copy(alpha = 0.69f)
+
+private const val PageMediaTravel = 0.18f
+private const val PageTextTravel = 0.42f
+private const val PageWipeFeather = 0.55f
+private const val PageWipeTrail = 0.25f
+private val PageSwitchBlur = 18.dp
+private const val PageWipeCurveReach = 0.6f
+private const val PageWipeFlat = 0.04f
+private const val PageWipeSettled = 0.001f
+private const val PageWipeHidden = 0.999f
+
+private fun PagerState.offsetOf(page: Int): Float =
+    (page - currentPage) - currentPageOffsetFraction
+
+private fun Modifier.pageMediaDrift(pageOffset: () -> Float): Modifier = graphicsLayer {
+    val d = pageOffset().coerceIn(-1f, 1f)
+    val scale = 1f + 2f * PageMediaTravel * kotlin.math.abs(d)
+    scaleX = scale
+    scaleY = scale
+    translationX = d * size.width * PageMediaTravel
+}
+
+private fun Modifier.pageTextDrift(pageOffset: () -> Float): Modifier = graphicsLayer {
+    val d = pageOffset()
+    translationX = d * size.width * (PageTextTravel + PageMediaTravel)
+    alpha = (1f - kotlin.math.abs(d) * 1.9f).coerceIn(0f, 1f)
+}
+
+private class PageWipeEdge {
+    var incoming = false
+    var centerX = 0f
+    var centerY = 0f
+    var inner = 0f
+    var outer = 0f
+    var blur = 0f
+
+    fun update(d: Float, size: GeometrySize, curve: Float, blurPx: Float): Boolean {
+        val a = kotlin.math.abs(d)
+        if (a < PageWipeSettled || a >= PageWipeHidden) return false
+        val w = size.width
+        val feather = w * PageWipeFeather
+        val progress = if (d > 0f) 1f - d else -d
+        val off = w * PageWipeCurveReach / curve.coerceIn(PageWipeFlat, 1f)
+        centerX = w + off
+        centerY = size.height / 2f
+        val from = off - feather
+        val to = kotlin.math.hypot(centerX, centerY)
+        val r = from + (to - from) * progress
+        incoming = d > 0f
+        if (incoming) {
+            inner = r
+            outer = r + feather
+        } else {
+            inner = r - feather * PageWipeTrail
+            outer = inner + feather
+        }
+        blur = a * blurPx
+        val erases = if (incoming) inner < to else outer > off
+        return erases || blur > 0.5f
+    }
+}
+
+private val FeatherEase = floatArrayOf(0f, 0.104f, 0.352f, 0.648f, 0.896f, 1f)
+
+private fun featherStops(start: Float, inside: Color, outside: Color): Array<Pair<Float, Color>> {
+    val s = start.coerceIn(0f, 0.999f)
+    return Array(FeatherEase.size) { i ->
+        val t = i / (FeatherEase.size - 1f)
+        (s + (1f - s) * t) to lerp(inside, outside, FeatherEase[i])
+    }
+}
+
+@Composable
+private fun PageWipeCopy(
+    pageLayer: GraphicsLayer,
+    pageOffset: () -> Float,
+    curve: () -> Float,
+    blurPx: Float,
+) {
+    val edge = remember { PageWipeEdge() }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                val a = kotlin.math.abs(pageOffset())
+                if (blurPx > 0.5f && a >= PageWipeSettled && a < PageWipeHidden && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val r = (a * blurPx).coerceIn(0f, 48f)
+                    if (r > 0.5f) {
+                        renderEffect = androidx.compose.ui.graphics.BlurEffect(r, r, androidx.compose.ui.graphics.TileMode.Clamp)
+                    }
+                }
+            }
+            .clipToBounds()
+            .drawWithContent {
+                if (!edge.update(pageOffset(), size, curve(), blurPx)) return@drawWithContent
+                val w = size.width
+                val h = size.height
+                val halfH = h / 2f
+                fun fullyInside(radius: Float): Float =
+                    if (radius > halfH) kotlin.math.min(w, edge.centerX - kotlin.math.sqrt(radius * radius - halfH * halfH)) else w
+                val left: Float
+                val right: Float
+                val maskLeft: Float
+                val maskRight: Float
+                if (edge.incoming) {
+                    left = (edge.centerX - edge.outer).coerceAtLeast(0f)
+                    right = w
+                    maskLeft = left
+                    maskRight = fullyInside(edge.inner)
+                } else {
+                    left = 0f
+                    right = fullyInside(edge.inner)
+                    maskLeft = (edge.centerX - edge.outer).coerceAtLeast(0f)
+                    maskRight = right
+                }
+                if (right <= left) return@drawWithContent
+                clipRect(left, 0f, right, h) { drawLayer(pageLayer) }
+                if (maskRight > maskLeft) {
+                    val center = Offset(edge.centerX, edge.centerY)
+                    val stops = if (edge.incoming) {
+                        featherStops(edge.inner / edge.outer, inside = Color.Transparent, outside = Color.Black)
+                    } else {
+                        featherStops(edge.inner / edge.outer, inside = Color.Black, outside = Color.Transparent)
+                    }
+                    drawRect(
+                        brush = Brush.radialGradient(*stops, center = center, radius = edge.outer),
+                        topLeft = Offset(maskLeft, 0f),
+                        size = GeometrySize(maskRight - maskLeft, h),
+                        blendMode = BlendMode.DstOut,
+                    )
+                }
+            }
+    )
+}
+
+@Composable
+private fun PageWipe(
+    pageOffset: () -> Float,
+    curve: () -> Float,
+    blur: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val blurPx = if (blur) with(LocalDensity.current) { PageSwitchBlur.toPx() } else 0f
+    val pageLayer = rememberGraphicsLayer()
+    val sourceEdge = remember { PageWipeEdge() }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                val d = pageOffset()
+                translationX = -d * size.width
+                alpha = if (kotlin.math.abs(d) >= PageWipeHidden) 0f else 1f
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()
+                .drawWithContent {
+                    if (sourceEdge.update(pageOffset(), size, curve(), blurPx)) {
+                        pageLayer.record { this@drawWithContent.drawContent() }
+                    } else {
+                        drawContent()
+                    }
+                },
+            content = content,
+        )
+        PageWipeCopy(pageLayer = pageLayer, pageOffset = pageOffset, curve = curve, blurPx = blurPx)
+    }
+}
+
+@Composable
+private fun Modifier.heroPressBounce(
+    interactionSource: MutableInteractionSource,
+    pressedScale: Float = 0.88f,
+): Modifier {
+    val scale = remember { Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(interactionSource, pressedScale) {
+        var pressed = 0
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    pressed++
+                    launch { scale.animateTo(pressedScale, spring(dampingRatio = 1f, stiffness = 1600f)) }
+                }
+                is PressInteraction.Release, is PressInteraction.Cancel -> {
+                    pressed = (pressed - 1).coerceAtLeast(0)
+                    if (pressed == 0) {
+                        launch {
+                            if (scale.value > pressedScale + 0.03f) scale.animateTo(pressedScale, tween(70))
+                            scale.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 520f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return this.graphicsLayer {
+        scaleX = scale.value
+        scaleY = scale.value
+    }
+}
+
+private const val HeroDim = 0.36f
+private fun heroScrimBlack(gradient: Float): Color =
+    Color.Black.copy(alpha = 1f - (1f - HeroDim) * (1f - gradient))
+
+@Composable
+private fun HeroScrims(modifier: Modifier = Modifier) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .drawWithCache {
+                    val topEnd = 0.463f
+                    val bottomStart = 0.533f
+                    val bottomEnd = 0.989f
+                    val scrim =
+                        Brush.verticalGradient(
+                            0f to heroScrimBlack(0.86f),
+                            0.475f * topEnd to heroScrimBlack(0.59f),
+                            topEnd to heroScrimBlack(0f),
+                            bottomStart to heroScrimBlack(0f),
+                            bottomStart + 0.457f * (bottomEnd - bottomStart) to heroScrimBlack(0.59f),
+                            bottomEnd to heroScrimBlack(1f),
+                            1f to heroScrimBlack(1f),
+                            startY = 0f,
+                            endY = size.height,
+                        )
+                    onDrawBehind { drawRect(scrim) }
+                },
+    )
+}
+
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalMaterial3ExpressiveApi::class,
@@ -203,148 +485,287 @@ fun QuickPicksSection(
     modifier: Modifier = Modifier,
 ) {
     val distinctQuickPicks = remember(quickPicks) { quickPicks.distinctBy { it.id } }
-            BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-                val heroHeight =
-                    when {
-                        maxWidth >= 840.dp -> 340.dp
-                        maxWidth >= 600.dp -> 316.dp
-                        else -> 292.dp
-                    }
-                val heroMaxWidth =
-                    (maxWidth - 56.dp)
-                        .coerceAtLeast(220.dp)
-                        .coerceAtMost(390.dp)
-                val density = LocalDensity.current
-                val requestWidthPx = with(density) { heroMaxWidth.roundToPx().coerceAtLeast(1) }
-                val requestHeightPx = with(density) { heroHeight.roundToPx().coerceAtLeast(1) }
+    if (distinctQuickPicks.isEmpty()) return
 
-                HorizontalCenteredHeroCarousel(
-                    state = rememberCarouselState { distinctQuickPicks.size },
-                    maxItemWidth = heroMaxWidth,
-                    itemSpacing = 10.dp,
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+    val isSingleItem = distinctQuickPicks.size == 1
+    val initialPage =
+        remember(distinctQuickPicks.size) {
+            if (isSingleItem) 0
+            else (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % distinctQuickPicks.size)
+        }
+    val pagerState =
+        rememberPagerState(
+            initialPage = initialPage,
+            pageCount = { if (isSingleItem) 1 else Int.MAX_VALUE },
+        )
+
+    val (disableBlur) = rememberPreference(DisableBlurKey, defaultValue = false)
+    val edgeBlur = !disableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+    if (!isSingleItem) {
+        val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
+        androidx.compose.runtime.LaunchedEffect(pagerState, distinctQuickPicks.size, isDragged) {
+            if (isDragged) return@LaunchedEffect
+            while (true) {
+                delay(HeroAdvanceMillis)
+                pagerState.animateScrollToPage(
+                    page = pagerState.currentPage + 1,
+                    animationSpec = tween(HeroSlideMillis, easing = HeroSlideEasing),
+                )
+            }
+        }
+    }
+
+    var userSwipe by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val dragging by pagerState.interactionSource.collectIsDraggedAsState()
+    androidx.compose.runtime.LaunchedEffect(dragging) { if (dragging) userSwipe = true }
+    androidx.compose.runtime.LaunchedEffect(pagerState) {
+        androidx.compose.runtime.snapshotFlow { pagerState.isScrollInProgress }.collect { if (!it) userSwipe = false }
+    }
+    val wipeCurve by animateFloatAsState(if (userSwipe) 1f else 0f, tween(260), label = "heroWipeCurve")
+
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val heroHeight = screenHeight * 0.60f
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(heroHeight)
+                .clipToBounds(),
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = !isSingleItem,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            val pageOffset = remember(pagerState, page) { { pagerState.offsetOf(page) } }
+            val song = distinctQuickPicks[page.mod(distinctQuickPicks.size)]
+            val isSongActive = song.id == mediaMetadata?.id
+            val isSongPlaying = isSongActive && isPlaying
+            val context = LocalContext.current
+
+            val imageRequest =
+                remember(song.song.thumbnailUrl, context) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(song.song.thumbnailUrl)
+                        .crossfade(300)
+                        .build()
+                }
+
+            PageWipe(
+                pageOffset = pageOffset,
+                curve = { wipeCurve },
+                blur = edgeBlur,
+            ) {
+                Box(
                     modifier =
                         Modifier
-                            .fillMaxWidth()
-                            .height(heroHeight),
-                ) { index ->
-                    val song = distinctQuickPicks[index]
-                    val isActive = song.id == mediaMetadata?.id
-                    val context = LocalContext.current
-                    val imageRequest =
-                        remember(song.song.thumbnailUrl, requestWidthPx, requestHeightPx) {
-                            ImageRequest
-                                .Builder(context)
-                                .data(song.song.thumbnailUrl)
-                                .size(Size(requestWidthPx, requestHeightPx))
-                                .crossfade(true)
-                                .build()
-                        }
-
-                    Box(
+                            .fillMaxSize()
+                            .combinedClickable(
+                                onClick = {
+                                    if (isSongActive) {
+                                        playerConnection.player.togglePlayPause()
+                                    } else {
+                                        playerConnection.playQueue(
+                                            if (song.song.isLocal) {
+                                                ListQueue(items = listOf(song.toMediaItem()))
+                                            } else {
+                                                YouTubeQueue.radio(song.toMediaMetadata())
+                                            },
+                                        )
+                                    }
+                                },
+                                onLongClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    menuState.show {
+                                        SongMenu(
+                                            originalSong = song,
+                                            navController = navController,
+                                            onDismiss = menuState::dismiss,
+                                        )
+                                    }
+                                },
+                            ),
+                ) {
+                    // Background cover image with page drift & subtle zoom
+                    AsyncImage(
+                        model = imageRequest,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .maskClip(MaterialTheme.shapes.extraLarge)
-                                .maskBorder(
-                                    BorderStroke(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
-                                    ),
-                                    MaterialTheme.shapes.extraLarge,
-                                ).focusable()
-                                .combinedClickable(
-                                    onClick = {
-                                        if (isActive) {
-                                            playerConnection.player.togglePlayPause()
-                                        } else {
-                                            playerConnection.playQueue(
-                                                if (song.song.isLocal) {
-                                                    ListQueue(items = listOf(song.toMediaItem()))
-                                                } else {
-                                                    YouTubeQueue.radio(song.toMediaMetadata())
-                                                },
-                                            )
-                                        }
-                                    },
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        menuState.show {
-                                            SongMenu(
-                                                originalSong = song,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss,
-                                            )
-                                        }
-                                    },
-                                ),
-                    ) {
-                        AsyncImage(
-                            model = imageRequest,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                                .pageMediaDrift(pageOffset),
+                    )
 
+                    // Progressive blur bands if blur is supported and enabled
+                    if (edgeBlur) {
+                        // Top blur band
                         Box(
                             modifier =
                                 Modifier
-                                    .fillMaxSize()
+                                    .align(Alignment.TopCenter)
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.46f)
+                                    .blur(22.dp)
                                     .background(
                                         Brush.verticalGradient(
-                                            0f to Color.Transparent,
-                                            0.48f to Color.Black.copy(alpha = 0.08f),
-                                            1f to Color.Black.copy(alpha = 0.84f),
+                                            0f to Color.Black.copy(alpha = 0.50f),
+                                            0.4f to Color.Black.copy(alpha = 0.25f),
+                                            1f to Color.Transparent,
                                         ),
                                     ),
                         )
+                        // Bottom blur band
+                        Box(
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.50f)
+                                    .blur(30.dp)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            0f to Color.Transparent,
+                                            0.5f to Color.Black.copy(alpha = 0.40f),
+                                            1f to Color.Black.copy(alpha = 0.85f),
+                                        ),
+                                    ),
+                        )
+                    }
 
-                        if (isActive && isPlaying) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                                shape = CircleShape,
-                                tonalElevation = 2.dp,
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(14.dp)
-                                        .size(36.dp),
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
+                    // Multi-stop scrim gradient
+                    HeroScrims()
+
+                    // Content at bottom-left with page text drift
+                    Column(
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .pageTextDrift(pageOffset)
+                                .padding(start = 36.dp, end = 36.dp, bottom = 64.dp),
+                    ) {
+                        // Category / status label with seed/reason style
+                        val labelText = if (isSongActive) {
+                            stringResource(R.string.playing_desc)
+                        } else {
+                            stringResource(R.string.quick_picks)
+                        }
+                        Text(
+                            text = labelText,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.02).sp,
+                            ),
+                            color = HeroLabelColor,
+                            maxLines = 1,
+                        )
+
+                        Spacer(Modifier.height(4.dp))
+
+                        // Title & Artist headline with smooth transition
+                        val displayHeadline = remember(song.song.title, song.artists) {
+                            val artistStr = song.artists.joinToString { it.name }
+                            if (artistStr.isNotEmpty()) "${song.song.title} - $artistStr" else song.song.title
+                        }
+
+                        AnimatedContent(
+                            targetState = displayHeadline,
+                            transitionSpec = {
+                                (slideInVertically(spring(dampingRatio = 0.8f, stiffness = 420f)) { it / 3 } + fadeIn(tween(220)))
+                                    .togetherWith(slideOutVertically(tween(160)) { -it / 3 } + fadeOut(tween(140)))
+                                    .using(SizeTransform(clip = false))
+                            },
+                            label = "heroSongHeadline",
+                        ) { headline ->
+                            Text(
+                                text = headline,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.04).sp,
+                                    lineHeight = 30.sp,
+                                ),
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+
+                        Spacer(Modifier.height(11.dp))
+
+                        // Capsule Play / Pause Pill button
+                        val pillInteraction = remember { MutableInteractionSource() }
+                        Box(
+                            modifier =
+                                Modifier
+                                    .heroPressBounce(pillInteraction)
+                                    .height(33.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(HeroPillFill)
+                                    .clickable(
+                                        interactionSource = pillInteraction,
+                                        indication = null,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            if (isSongActive) {
+                                                playerConnection.player.togglePlayPause()
+                                            } else {
+                                                playerConnection.playQueue(
+                                                    if (song.song.isLocal) {
+                                                        ListQueue(items = listOf(song.toMediaItem()))
+                                                    } else {
+                                                        YouTubeQueue.radio(song.toMediaMetadata())
+                                                    },
+                                                )
+                                            }
+                                        },
+                                    ),
+                        ) {
+                            AnimatedContent(
+                                targetState = isSongPlaying,
+                                transitionSpec = {
+                                    (scaleIn(initialScale = 0.6f, animationSpec = spring(dampingRatio = 0.55f, stiffness = 650f)) + fadeIn(tween(130)))
+                                        .togetherWith(scaleOut(targetScale = 0.6f, animationSpec = tween(110)) + fadeOut(tween(90)))
+                                        .using(SizeTransform(clip = false) { _, _ -> spring(dampingRatio = 0.75f, stiffness = 520f) })
+                                },
+                                label = "heroPillPlayback",
+                            ) { playing ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier =
+                                        Modifier
+                                            .height(33.dp)
+                                            .padding(start = 21.dp, end = 17.dp),
+                                ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.volume_up),
+                                        painter = painterResource(
+                                            if (playing) R.drawable.pause else R.drawable.play
+                                        ),
                                         contentDescription = null,
-                                        modifier = Modifier.size(19.dp),
+                                        tint = HeroPillContent,
+                                        modifier = Modifier.size(15.dp),
+                                    )
+                                    Spacer(Modifier.width(9.dp))
+                                    Text(
+                                        text = if (playing) stringResource(R.string.pause) else stringResource(R.string.play),
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = (-0.02).sp,
+                                        ),
+                                        color = HeroPillContent,
                                     )
                                 }
                             }
                         }
-
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                            modifier =
-                                Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(20.dp),
-                        ) {
-                            Text(
-                                text = song.song.title,
-                                style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                                color = Color.White,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                text = song.artists.joinToString { it.name },
-                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp, fontWeight = FontWeight.Medium),
-                                color = Color.White.copy(alpha = 0.85f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
                     }
                 }
+            }
+        }
     }
 }
 
