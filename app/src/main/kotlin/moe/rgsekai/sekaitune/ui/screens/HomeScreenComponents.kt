@@ -448,15 +448,12 @@ private fun HeroScrims(modifier: Modifier = Modifier) {
             modifier
                 .fillMaxSize()
                 .drawWithCache {
-                    val topEnd = 0.463f
                     val bottomStart = 0.533f
                     val bottomEnd = 0.989f
                     val scrim =
                         Brush.verticalGradient(
-                            0f to heroScrimBlack(0.86f),
-                            0.475f * topEnd to heroScrimBlack(0.59f),
-                            topEnd to heroScrimBlack(0f),
-                            bottomStart to heroScrimBlack(0f),
+                            0f to Color.Transparent,
+                            bottomStart to Color.Transparent,
                             bottomStart + 0.457f * (bottomEnd - bottomStart) to heroScrimBlack(0.59f),
                             bottomEnd to heroScrimBlack(1f),
                             1f to heroScrimBlack(1f),
@@ -600,24 +597,8 @@ fun QuickPicksSection(
                                 .pageMediaDrift(pageOffset),
                     )
 
-                    // Progressive blur bands if blur is supported and enabled
+                    // Progressive blur band at bottom if blur is supported and enabled
                     if (edgeBlur) {
-                        // Top blur band
-                        Box(
-                            modifier =
-                                Modifier
-                                    .align(Alignment.TopCenter)
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(0.46f)
-                                    .blur(22.dp)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            0f to Color.Black.copy(alpha = 0.50f),
-                                            0.4f to Color.Black.copy(alpha = 0.25f),
-                                            1f to Color.Transparent,
-                                        ),
-                                    ),
-                        )
                         // Bottom blur band
                         Box(
                             modifier =

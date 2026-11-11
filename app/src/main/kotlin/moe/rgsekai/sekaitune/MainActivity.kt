@@ -1598,13 +1598,12 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
-
-                    LaunchedEffect(navBackStackEntry) {
-                        shouldShowTopBar =
+                    val shouldShowTopBar =
+                        remember(active, navBackStackEntry, topLevelScreens) {
                             !active && navBackStackEntry?.destination?.route in topLevelScreens &&
-                            navBackStackEntry?.destination?.route != "settings" && navBackStackEntry?.destination?.route != Screens.NewRelease.route
-                    }
+                                navBackStackEntry?.destination?.route != "settings" &&
+                                navBackStackEntry?.destination?.route != Screens.NewRelease.route
+                        }
 
                     var sharedSong: SongItem? by remember {
                         mutableStateOf(null)
@@ -1939,22 +1938,25 @@ class MainActivity : ComponentActivity() {
                                                         ) + WindowInsetsSides.Top,
                                                     ),
                                                 title = {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        // app icon
-                                                        Icon(
-                                                            painter = painterResource(id = R.drawable.ic_sekai_tune_logo),
-                                                            contentDescription = null,
-                                                            modifier =
-                                                                Modifier
-                                                                    .size(35.dp)
-                                                                    .padding(end = 3.dp),
-                                                        )
-                                                        Text(
-                                                            text = stringResource(R.string.app_name),
-                                                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                        )
+                                                    val route = navBackStackEntry?.destination?.route
+                                                    if (route != null && route != Screens.Home.route && route != "settings" && !route.startsWith("settings/")) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            // app icon
+                                                            Icon(
+                                                                painter = painterResource(id = R.drawable.ic_sekai_tune_logo),
+                                                                contentDescription = null,
+                                                                modifier =
+                                                                    Modifier
+                                                                        .size(35.dp)
+                                                                        .padding(end = 3.dp),
+                                                            )
+                                                            Text(
+                                                                text = stringResource(R.string.app_name),
+                                                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                            )
+                                                        }
                                                     }
                                                 },
                                                 actions = {
