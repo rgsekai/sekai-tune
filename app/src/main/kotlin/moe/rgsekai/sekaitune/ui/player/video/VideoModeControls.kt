@@ -629,13 +629,12 @@ internal fun BoxScope.VideoVolumeBar(state: VideoModeState, controls: () -> Floa
     )
 }
 
-// Seek bar with times and chevron button
+// Seek bar with times
 @Composable
 internal fun BoxScope.VideoSeekRow(
     state: VideoModeState,
     controls: () -> Float,
     positionProvider: () -> Long,
-    onChevron: () -> Unit,
 ) {
     val visible by rememberControlsVisible(controls)
     if (!visible) return
@@ -657,7 +656,6 @@ internal fun BoxScope.VideoSeekRow(
         }
     }
     val shownMs = dragFraction?.let { (it * durationMs).toLong() } ?: currentPos
-    val moreLabel = stringResource(R.string.more)
 
     Column(
         modifier = Modifier
@@ -666,27 +664,6 @@ internal fun BoxScope.VideoSeekRow(
             .padding(start = EdgeStart, end = EdgeEnd, bottom = SeekBottom)
             .graphicsLayer { alpha = controls() },
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // PiP Button slot - Phase 6
-                PressScaleActionButton(
-                    icon = R.drawable.expand_less,
-                    tint = Color.White,
-                    containerColor = Color.White.copy(alpha = 0.22f),
-                    size = ChevronSize,
-                    onClick = {
-                        state.touched()
-                        if (state.controlsShown) onChevron() else state.toggleControls()
-                    },
-                    modifier = Modifier.semantics { contentDescription = moreLabel },
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             TimeText(makeTimeString(shownMs))
             Spacer(modifier = Modifier.weight(1f))

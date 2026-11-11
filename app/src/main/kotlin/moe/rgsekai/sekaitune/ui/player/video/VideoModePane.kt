@@ -262,20 +262,7 @@ internal fun BoxScope.VideoPaneHandle(
         )
     }
 
-    Box(
-        modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(end = (frame.paneWidth - HandleWidth) / 2, top = HandleTop)
-            .offset {
-                IntOffset(0, (travel * (1f - state.pane.value)).roundToInt())
-            }
-            .graphicsLayer {
-                alpha = HandleRestAlpha + (HandleOpenAlpha - HandleRestAlpha) * state.pane.value
-            }
-            .size(HandleWidth, HandleHeight)
-            .clip(CircleShape)
-            .background(Color.White),
-    )
+    // Handle pill bar visual has been removed per UI customization
     val closed by remember { derivedStateOf { state.pane.value < 0.001f && !state.paneDragging } }
     if (closed) {
         Box(

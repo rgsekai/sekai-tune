@@ -671,7 +671,6 @@ private fun VideoModeLayout(
                 state = state,
                 controls = controls,
                 positionProvider = { connection.player.currentPosition },
-                onChevron = { state.menuOpen = true },
             )
             VideoPaneHandle(frame = frame, state = state)
         }
