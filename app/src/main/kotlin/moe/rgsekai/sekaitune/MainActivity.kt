@@ -36,6 +36,7 @@ import moe.rgsekai.sekaitune.utils.AppUpdateInstaller
 import moe.rgsekai.sekaitune.utils.UpdateDownloadState
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -43,8 +44,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -245,6 +248,11 @@ import moe.rgsekai.sekaitune.ui.screens.search.AddonSearchScreen
 import moe.rgsekai.sekaitune.ui.component.GlassDropdownMenu
 import moe.rgsekai.sekaitune.ui.component.GlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
+import moe.rgsekai.sekaitune.ui.component.isGlassSupported
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawBehind
 import moe.rgsekai.sekaitune.ui.player.video.LocalInPipMode
 import moe.rgsekai.sekaitune.ui.player.video.rememberPipBroadcastReceiver
 import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
@@ -2532,7 +2540,12 @@ class MainActivity : ComponentActivity() {
                         // Floating Home Action Pill Overlay
                         val isHomeRoute = navBackStackEntry?.destination?.route == Screens.Home.route
                         if (isHomeRoute && !active && !playerBottomSheetState.isExpanded) {
+                            var isMenuExpanded by rememberSaveable { mutableStateOf(false) }
                             val homeTopOffset = homeScrollBehavior.state.heightOffset.roundToInt()
+                            val pillShape = RoundedCornerShape(24.dp)
+                            val isGlass = isGlassSupported()
+                            val pillRimColor = Color.White.copy(alpha = 0.18f)
+
                             Column(
                                 modifier =
                                     Modifier
@@ -2543,74 +2556,112 @@ class MainActivity : ComponentActivity() {
                                             end = 16.dp,
                                         )
                                         .zIndex(20f)
-                                        .clip(RoundedCornerShape(32.dp))
-                                        .background(Color.White)
-                                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                                        .animateContentSize(
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMediumLow,
+                                            )
+                                        )
+                                        .clip(pillShape)
+                                        .then(
+                                            if (isGlass) {
+                                                Modifier
+                                                    .liquidGlass(
+                                                        config = glassEffectConfig.copy(
+                                                            surfaceOpacity = 28f,
+                                                            surfaceTintColor = Color.Black,
+                                                        ),
+                                                        shape = pillShape,
+                                                        applyEdgeEffects = true,
+                                                    )
+                                                    .border(BorderStroke(1.dp, pillRimColor), pillShape)
+                                            } else {
+                                                Modifier
+                                                    .background(Color.Black.copy(alpha = 0.45f), pillShape)
+                                                    .border(BorderStroke(1.dp, pillRimColor), pillShape)
+                                            },
+                                        )
+                                        .padding(vertical = 2.dp, horizontal = 2.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                // 1st circle: Three dot
+                                // 1st icon (top): Three dot (toggles expanded / collapsed)
                                 IconButton(
-                                    onClick = { /* Three dot menu */ },
-                                    modifier =
-                                        Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black),
+                                    onClick = { isMenuExpanded = !isMenuExpanded },
+                                    modifier = Modifier.size(44.dp),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.more_horiz),
-                                        contentDescription = null,
+                                        contentDescription = "More options",
                                         tint = Color.White,
                                         modifier = Modifier.size(24.dp),
                                     )
                                 }
 
-                                // 2nd circle: Settings
-                                IconButton(
-                                    onClick = { navController.navigate("settings") },
-                                    modifier =
-                                        Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black),
+                                // Expanded items (float directly on the frosted glass background)
+                                AnimatedVisibility(
+                                    visible = isMenuExpanded,
+                                    enter = fadeIn(animationSpec = tween(150)) + expandVertically(
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                            stiffness = Spring.StiffnessMediumLow,
+                                        ),
+                                        expandFrom = Alignment.Top,
+                                    ),
+                                    exit = fadeOut(animationSpec = tween(100)) + shrinkVertically(
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                            stiffness = Spring.StiffnessMediumLow,
+                                        ),
+                                        shrinkTowards = Alignment.Top,
+                                    ),
                                 ) {
-                                    BadgedBox(badge = {
-                                        if (
-                                            BuildConfig.UPDATER_AVAILABLE &&
-                                            Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        // 2nd icon: Settings
+                                        IconButton(
+                                            onClick = {
+                                                isMenuExpanded = false
+                                                navController.navigate("settings")
+                                            },
+                                            modifier = Modifier.size(44.dp),
                                         ) {
-                                            Badge()
+                                            BadgedBox(badge = {
+                                                if (
+                                                    BuildConfig.UPDATER_AVAILABLE &&
+                                                    Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                                                ) {
+                                                    Badge()
+                                                }
+                                            }) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.settings),
+                                                    contentDescription = stringResource(R.string.settings),
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                            }
                                         }
-                                    }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.settings),
-                                            contentDescription = stringResource(R.string.settings),
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    }
-                                }
 
-                                // 3rd circle: Shuffle
-                                IconButton(
-                                    onClick = {
-                                        playerConnection?.let {
-                                            homeViewModel.shuffle(it)
+                                        // 3rd icon: Shuffle
+                                        IconButton(
+                                            onClick = {
+                                                playerConnection?.let {
+                                                    homeViewModel.shuffle(it)
+                                                }
+                                            },
+                                            modifier = Modifier.size(44.dp),
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.shuffle),
+                                                contentDescription = stringResource(R.string.shuffle),
+                                                tint = Color.White,
+                                                modifier = Modifier.size(24.dp),
+                                            )
                                         }
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.shuffle),
-                                        contentDescription = stringResource(R.string.shuffle),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp),
-                                    )
+                                    }
                                 }
                             }
                         }
