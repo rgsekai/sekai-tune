@@ -628,52 +628,52 @@ fun QuickPicksSection(
                                 .pageTextDrift(pageOffset)
                                 .padding(start = 36.dp, end = 36.dp, bottom = 64.dp),
                     ) {
-                        // Category / status label with seed/reason style
-                        val labelText = if (isSongActive) {
-                            stringResource(R.string.playing_desc)
-                        } else {
-                            stringResource(R.string.quick_picks)
-                        }
-                        Text(
-                            text = labelText,
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.02).sp,
-                            ),
-                            color = HeroLabelColor,
-                            maxLines = 1,
-                        )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        // Title & Artist headline with smooth transition
-                        val displayHeadline = remember(song.song.title, song.artists) {
-                            val artistStr = song.artists.joinToString { it.name }
-                            if (artistStr.isNotEmpty()) "${song.song.title} - $artistStr" else song.song.title
+                        // Title & Artist with smooth transition
+                        val songTitle = song.song.title
+                        val artistName = remember(song.artists) {
+                            song.artists.joinToString { it.name }
                         }
 
                         AnimatedContent(
-                            targetState = displayHeadline,
+                            targetState = songTitle to artistName,
                             transitionSpec = {
                                 (slideInVertically(spring(dampingRatio = 0.8f, stiffness = 420f)) { it / 3 } + fadeIn(tween(220)))
                                     .togetherWith(slideOutVertically(tween(160)) { -it / 3 } + fadeOut(tween(140)))
                                     .using(SizeTransform(clip = false))
                             },
-                            label = "heroSongHeadline",
-                        ) { headline ->
-                            Text(
-                                text = headline,
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = (-0.04).sp,
-                                    lineHeight = 30.sp,
-                                ),
-                                color = Color.White,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                            label = "heroSongInfo",
+                        ) { (title, artist) ->
+                            Column {
+                                // 1st line: Song Title (single line with ellipsis)
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.headlineMedium.copy(
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = (-0.04).sp,
+                                        lineHeight = 30.sp,
+                                    ),
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+
+                                if (artist.isNotEmpty()) {
+                                    Spacer(Modifier.height(2.dp))
+                                    // 2nd line: Artist Name (low contrast / secondary tone)
+                                    Text(
+                                        text = artist,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            letterSpacing = (-0.02).sp,
+                                        ),
+                                        color = Color.White.copy(alpha = 0.70f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(Modifier.height(11.dp))
