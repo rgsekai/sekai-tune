@@ -269,8 +269,9 @@ private fun HomeContent(
                 val forgottenItemWidth = maxWidth.coerceAtMost(HomeFeedMaxWidth) * forgottenItemWidthFactor
 
                 val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
-                val listContentPadding = remember(insetsPadding, uiState.quickPicks.isNotEmpty()) {
-                    if (uiState.quickPicks.isNotEmpty()) {
+                val hasHeroItems = uiState.heroItems.isNotEmpty() || uiState.quickPicks.isNotEmpty()
+                val listContentPadding = remember(insetsPadding, hasHeroItems) {
+                    if (hasHeroItems) {
                         PaddingValues(
                             start = insetsPadding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
                             top = 0.dp,
@@ -290,13 +291,18 @@ private fun HomeContent(
                             .fillMaxWidth()
                             .align(Alignment.TopCenter),
                 ) {
-                    if (uiState.quickPicks.isNotEmpty()) {
+                    if (hasHeroItems) {
+                        val heroItems = if (uiState.heroItems.isNotEmpty()) {
+                            uiState.heroItems
+                        } else {
+                            uiState.quickPicks.map { moe.rgsekai.sekaitune.models.HeroCardItem.QuickPick(it) }
+                        }
                         item(
                             key = "home_quick_picks",
                             contentType = "quick_picks",
                         ) {
                             QuickPicksSection(
-                                quickPicks = uiState.quickPicks,
+                                heroItems = heroItems,
                                 mediaMetadata = mediaMetadata,
                                 isPlaying = isPlaying,
                                 navController = navController,

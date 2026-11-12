@@ -14,6 +14,7 @@ import moe.rgsekai.sekaitune.db.entities.LocalItem
 import moe.rgsekai.sekaitune.db.entities.Song
 import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
 import moe.rgsekai.sekaitune.innertube.pages.HomePage
+import moe.rgsekai.sekaitune.models.HeroCardItem
 import moe.rgsekai.sekaitune.models.SimilarRecommendation
 import moe.rgsekai.sekaitune.playback.PlayerConnection
 
@@ -36,6 +37,7 @@ sealed interface HomeScreenState {
 @Immutable
 data class HomeUiState(
     val quickPicks: ImmutableList<Song>,
+    val heroItems: ImmutableList<HeroCardItem> = ImmutableList.of(),
     val speedDialItems: ImmutableList<LocalItem>,
     val forgottenFavorites: ImmutableList<Song>,
     val keepListening: ImmutableList<LocalItem>,

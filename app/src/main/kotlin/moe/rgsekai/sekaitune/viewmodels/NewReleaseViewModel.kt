@@ -16,19 +16,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import moe.rgsekai.sekaitune.constants.HideExplicitKey
-import moe.rgsekai.sekaitune.constants.HideVideoKey
-import moe.rgsekai.sekaitune.db.MusicDatabase
-import moe.rgsekai.sekaitune.extensions.filterBlockedArtists
-import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.innertube.models.AlbumItem
-import moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType
-import moe.rgsekai.sekaitune.innertube.models.filterExplicit
-import moe.rgsekai.sekaitune.innertube.models.filterVideo
-import moe.rgsekai.sekaitune.utils.dataStore
-import moe.rgsekai.sekaitune.utils.get
+import moe.rgsekai.sekaitune.repository.NewReleaseRepository
 import moe.rgsekai.sekaitune.utils.reportException
 import javax.inject.Inject
 
@@ -62,77 +52,40 @@ class NewReleaseViewModel
     @Inject
     constructor(
         @ApplicationContext val context: Context,
-        private val database: MusicDatabase,
+        private val newReleaseRepository: NewReleaseRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<NewReleaseUiState>(NewReleaseUiState.Loading)
         val uiState = _uiState.asStateFlow()
 
         init {
-            load()
+            load(forceRefresh = false)
         }
 
         fun retry() {
-            load()
+            load(forceRefresh = true)
         }
 
-        private fun load() {
+        private fun load(forceRefresh: Boolean) {
             viewModelScope.launch(Dispatchers.IO) {
-                _uiState.value = NewReleaseUiState.Loading
-                try {
-                    val albums = YouTube.newReleaseAlbums().getOrThrow()
-                    val blockedArtistIds = database.getBlockedArtistIds().toSet()
-                    val artistRanks: MutableMap<String, Int> = mutableMapOf()
-                    val favouriteArtistRanks: MutableMap<String, Int> = mutableMapOf()
-                    database.allArtistsByPlayTime().first().let { list ->
-                        var favIndex = 0
-                        for ((artistsIndex, artist) in list.withIndex()) {
-                            artistRanks[artist.id] = artistsIndex
-                            if (artist.artist.bookmarkedAt != null) {
-                                favouriteArtistRanks[artist.id] = favIndex
-                                favIndex++
+                if (_uiState.value !is NewReleaseUiState.Success) {
+                    _uiState.value = NewReleaseUiState.Loading
+                }
+                newReleaseRepository
+                    .getNewReleases(forceRefresh = forceRefresh)
+                    .onSuccess { content ->
+                        _uiState.value =
+                            if (content.isEmpty) {
+                                NewReleaseUiState.Empty
+                            } else {
+                                NewReleaseUiState.Success(content)
                             }
+                    }
+                    .onFailure { t ->
+                        reportException(t)
+                        if (_uiState.value !is NewReleaseUiState.Success) {
+                            _uiState.value = NewReleaseUiState.Error
                         }
                     }
-                    val filtered =
-                        albums
-                            .sortedBy { album ->
-                                val artistIds = album.artists.orEmpty().mapNotNull { it.id }
-                                val firstArtistKey =
-                                    artistIds.firstNotNullOfOrNull { artistId ->
-                                        favouriteArtistRanks[artistId] ?: artistRanks[artistId]
-                                    } ?: Int.MAX_VALUE
-                                firstArtistKey
-                            }.filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                            .filterVideo(context.dataStore.get(HideVideoKey, false))
-                            .filterBlockedArtists(blockedArtistIds)
-                            .distinctBy { it.id }
-                    val content = filtered.toNewReleaseContent()
-                    _uiState.value =
-                        if (content.isEmpty) {
-                            NewReleaseUiState.Empty
-                        } else {
-                            NewReleaseUiState.Success(content)
-                        }
-                } catch (t: Throwable) {
-                    reportException(t)
-                    _uiState.value = NewReleaseUiState.Error
-                }
             }
         }
-
-        private fun List<AlbumItem>.toNewReleaseContent(): NewReleaseContent {
-            val albumsList = filter { it.releaseType == AlbumReleaseType.ALBUM }
-            val singlesList = filter { it.releaseType == AlbumReleaseType.SINGLE }
-            val epsList = filter { it.releaseType == AlbumReleaseType.EP }
-
-            return NewReleaseContent(
-                albums = if (albumsList.isEmpty() && singlesList.isEmpty() && epsList.isEmpty()) this else albumsList,
-                singles = singlesList,
-                eps = epsList,
-            )
-        }
     }
-
-
-
-

@@ -48,6 +48,8 @@ import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint
 import moe.rgsekai.sekaitune.innertube.models.YTItem
 import moe.rgsekai.sekaitune.innertube.models.filterExplicit
+import moe.rgsekai.sekaitune.models.HeroCardItem
+import moe.rgsekai.sekaitune.repository.NewReleaseRepository
 import moe.rgsekai.sekaitune.innertube.models.filterVideo
 import moe.rgsekai.sekaitune.innertube.pages.HomePage
 import moe.rgsekai.sekaitune.innertube.utils.completed
@@ -106,6 +108,7 @@ data class AccountChannelUiModel(
 
 private data class HomeLocalContent(
     val quickPicks: List<Song>,
+    val heroItems: List<HeroCardItem>,
     val speedDialItems: List<LocalItem>,
     val forgottenFavorites: List<Song>,
     val keepListening: List<LocalItem>,
@@ -158,6 +161,7 @@ private data class HomeStateInputs(
         return HomeScreenState.Success(
             HomeUiState(
                 quickPicks = ImmutableList.copyOf(content.local.quickPicks),
+                heroItems = ImmutableList.copyOf(content.local.heroItems),
                 speedDialItems = ImmutableList.copyOf(content.local.speedDialItems),
                 forgottenFavorites = ImmutableList.copyOf(content.local.forgottenFavorites),
                 keepListening = ImmutableList.copyOf(content.local.keepListening),
@@ -183,6 +187,7 @@ class HomeViewModel
         private val syncUtils: SyncUtils,
         private val switchSavedYouTubeAccount: SwitchSavedYouTubeAccountUseCase,
         observeHomePresentationPreferences: ObserveHomePresentationPreferencesUseCase,
+        private val newReleaseRepository: NewReleaseRepository,
     ) : ViewModel() {
         private val isRefreshing = MutableStateFlow(false)
         private val isLoading = MutableStateFlow(false)
@@ -191,6 +196,7 @@ class HomeViewModel
         private val isLoadingMore = MutableStateFlow(false)
 
         private val quickPicks = MutableStateFlow<List<Song>?>(null)
+        private val newReleaseItems = MutableStateFlow<List<AlbumItem>>(emptyList())
         private val speedDialItems = MutableStateFlow<List<LocalItem>>(emptyList())
         private val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
         private val keepListening = MutableStateFlow<List<LocalItem>?>(null)
@@ -215,15 +221,19 @@ class HomeViewModel
         private val localContent =
             combine(
                 quickPicks,
+                newReleaseItems,
                 speedDialItems,
                 forgottenFavorites,
                 keepListening,
-            ) { quickPicks, speedDialItems, forgottenFavorites, keepListening ->
+            ) { qp, nri, speedDial, forgotten, keep ->
+                val qpList = qp.orEmpty()
+                val heroList = buildHeroItems(qpList, nri)
                 HomeLocalContent(
-                    quickPicks = quickPicks.orEmpty(),
-                    speedDialItems = speedDialItems,
-                    forgottenFavorites = forgottenFavorites.orEmpty(),
-                    keepListening = keepListening.orEmpty(),
+                    quickPicks = qpList,
+                    heroItems = heroList,
+                    speedDialItems = speedDial,
+                    forgottenFavorites = forgotten.orEmpty(),
+                    keepListening = keep.orEmpty(),
                 )
             }
 
@@ -308,6 +318,142 @@ class HomeViewModel
         private fun Flow<List<Song>>.distinctUntilSongIdsChanged(): Flow<List<Song>> =
             distinctUntilChanged { old, new -> old.hasSameSongIdsAs(new) }
 
+        private fun buildHeroItems(
+            quickPicks: List<Song>,
+            newReleases: List<AlbumItem>,
+        ): List<HeroCardItem> {
+            val qpItems = quickPicks.map { HeroCardItem.QuickPick(it) }
+            if (newReleases.isEmpty()) return qpItems
+            if (qpItems.isEmpty()) return newReleases.map { HeroCardItem.NewRelease(it) }
+
+            val totalQp = qpItems.size
+            val k = newReleases.size
+            val targetPositions =
+                if (totalQp >= 20) {
+                    listOf(2, 5, 8, 12, 15, 18, 22, 25)
+                } else {
+                    List(k) { i ->
+                        val pos = Math.round((i + 1).toDouble() * (totalQp + k) / (k + 1)).toInt()
+                        maxOf(2 + i, pos)
+                    }
+                }
+
+            val result = qpItems.toMutableList<HeroCardItem>()
+            for ((i, nr) in newReleases.withIndex()) {
+                val pos1Based = if (i < targetPositions.size) targetPositions[i] else (result.size + 1)
+                val insertIndex = (pos1Based - 1).coerceIn(0, result.size)
+                result.add(insertIndex, HeroCardItem.NewRelease(nr))
+            }
+            return result
+        }
+
+        private fun filterAndSelectNewReleases(
+            content: NewReleaseContent,
+            currentQuickPicks: List<Song>,
+            maxCount: Int = 8,
+        ): List<AlbumItem> {
+            fun normalize(text: String?): String =
+                text.orEmpty().filter { it.isLetterOrDigit() }.lowercase()
+
+            val seenKeys = HashSet<Pair<String, String>>()
+            for (song in currentQuickPicks) {
+                val t = normalize(song.song.title)
+                val a = normalize(song.artists.firstOrNull()?.name)
+                seenKeys.add(t to a)
+            }
+
+            val seenArtists = HashSet<String>()
+
+            fun canPick(item: AlbumItem): Boolean {
+                if (item.thumbnail.isBlank()) return false
+                val firstArtist = item.artists?.firstOrNull()
+                val t = normalize(item.title)
+                val a = normalize(firstArtist?.name)
+                if (seenKeys.contains(t to a)) return false
+
+                val artistIdOrName = firstArtist?.id ?: firstArtist?.name
+                if (!artistIdOrName.isNullOrBlank() && seenArtists.contains(artistIdOrName)) {
+                    return false
+                }
+                return true
+            }
+
+            fun markPicked(item: AlbumItem) {
+                val firstArtist = item.artists?.firstOrNull()
+                val t = normalize(item.title)
+                val a = normalize(firstArtist?.name)
+                seenKeys.add(t to a)
+                val artistIdOrName = firstArtist?.id ?: firstArtist?.name
+                if (!artistIdOrName.isNullOrBlank()) {
+                    seenArtists.add(artistIdOrName)
+                }
+            }
+
+            val targets = mutableMapOf(
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.SINGLE to 3,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.ALBUM to 3,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.EP to 2,
+            )
+            val pickedCounts = mutableMapOf(
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.SINGLE to 0,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.ALBUM to 0,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.EP to 0,
+            )
+
+            val singlesPool = content.singles.filter { canPick(it) }.toMutableList()
+            val albumsPool = content.albums.filter { canPick(it) }.toMutableList()
+            val epsPool = content.eps.filter { canPick(it) }.toMutableList()
+
+            val pools = mapOf(
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.SINGLE to singlesPool,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.ALBUM to albumsPool,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.EP to epsPool,
+            )
+
+            val orderPattern = listOf(
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.SINGLE,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.ALBUM,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.SINGLE,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.ALBUM,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.EP,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.SINGLE,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.ALBUM,
+                moe.rgsekai.sekaitune.innertube.models.AlbumReleaseType.EP,
+            )
+
+            val selected = mutableListOf<AlbumItem>()
+            for (desiredType in orderPattern) {
+                if (selected.size >= maxCount) break
+                val pool = pools[desiredType] ?: continue
+                val item = pool.firstOrNull { canPick(it) }
+                if (item != null && (pickedCounts[desiredType] ?: 0) < (targets[desiredType] ?: 0)) {
+                    selected.add(item)
+                    markPicked(item)
+                    pickedCounts[desiredType] = (pickedCounts[desiredType] ?: 0) + 1
+                    pool.remove(item)
+                }
+            }
+
+            // Fill remaining if pools ran short of specific types
+            val maxLen = maxOf(singlesPool.size, albumsPool.size, epsPool.size)
+            val fallbackRemaining = mutableListOf<AlbumItem>()
+            for (i in 0 until maxLen) {
+                if (i < singlesPool.size) fallbackRemaining.add(singlesPool[i])
+                if (i < albumsPool.size) fallbackRemaining.add(albumsPool[i])
+                if (i < epsPool.size) fallbackRemaining.add(epsPool[i])
+            }
+
+            for (it in fallbackRemaining) {
+                if (selected.size >= maxCount) break
+                if (canPick(it)) {
+                    selected.add(it)
+                    markPicked(it)
+                }
+            }
+
+            return selected.take(maxCount)
+        }
+
         private fun updateAllLocalItems() {
             _allLocalItems.value =
                 (quickPicks.value.orEmpty() + forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
@@ -382,6 +528,15 @@ class HomeViewModel
                     }
         }
 
+        private suspend fun loadNewReleases(forceRefresh: Boolean = false) {
+            newReleaseRepository.getNewReleases(forceRefresh).onSuccess { content ->
+                val qp = quickPicks.value.orEmpty()
+                newReleaseItems.value = filterAndSelectNewReleases(content, qp, maxCount = 8)
+            }.onFailure {
+                // Background load error is ignored for hero; fallback to quick picks only
+            }
+        }
+
         private suspend fun load() {
             if (isLoading.value) return
             isLoading.value = true
@@ -395,6 +550,7 @@ class HomeViewModel
                     val fromTimeStamp = System.currentTimeMillis() - 86400000 * 7 * 2
 
                     launch { loadSpeedDialItems() }
+                    launch { loadNewReleases(forceRefresh = false) }
                     launch {
                         forgottenFavorites.value =
                             database
@@ -755,6 +911,7 @@ class HomeViewModel
                     supervisorScope {
                         launch { load() }
                         launch { refreshQuickPicks() }
+                        launch { loadNewReleases(forceRefresh = true) }
                     }
                 } catch (e: CancellationException) {
                     throw e

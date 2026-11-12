@@ -149,11 +149,13 @@ import moe.rgsekai.sekaitune.innertube.models.SongItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint
 import moe.rgsekai.sekaitune.innertube.models.YTItem
 import moe.rgsekai.sekaitune.innertube.pages.HomePage
+import moe.rgsekai.sekaitune.models.HeroCardItem
 import moe.rgsekai.sekaitune.models.MediaMetadata
 import moe.rgsekai.sekaitune.models.SimilarRecommendation
 import moe.rgsekai.sekaitune.models.toMediaMetadata
 import moe.rgsekai.sekaitune.playback.PlayerConnection
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
+import moe.rgsekai.sekaitune.playback.queues.YouTubeAlbumRadio
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
 import moe.rgsekai.sekaitune.ui.component.AlbumGridItem
 import moe.rgsekai.sekaitune.ui.component.ArtistGridItem
@@ -472,7 +474,7 @@ private fun HeroScrims(modifier: Modifier = Modifier) {
 )
 @Composable
 fun QuickPicksSection(
-    quickPicks: List<Song>,
+    heroItems: List<HeroCardItem>,
     mediaMetadata: MediaMetadata?,
     isPlaying: Boolean,
     navController: NavController,
@@ -481,14 +483,14 @@ fun QuickPicksSection(
     haptic: HapticFeedback,
     modifier: Modifier = Modifier,
 ) {
-    val distinctQuickPicks = remember(quickPicks) { quickPicks.distinctBy { it.id } }
-    if (distinctQuickPicks.isEmpty()) return
+    val distinctHeroItems = remember(heroItems) { heroItems.distinctBy { it.id } }
+    if (distinctHeroItems.isEmpty()) return
 
-    val isSingleItem = distinctQuickPicks.size == 1
+    val isSingleItem = distinctHeroItems.size == 1
     val initialPage =
-        remember(distinctQuickPicks.size) {
+        remember(distinctHeroItems.size) {
             if (isSingleItem) 0
-            else (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % distinctQuickPicks.size)
+            else (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % distinctHeroItems.size)
         }
     val pagerState =
         rememberPagerState(
@@ -496,12 +498,47 @@ fun QuickPicksSection(
             pageCount = { if (isSingleItem) 1 else Int.MAX_VALUE },
         )
 
+    // Handle late-insertion safety: when new items arrive (e.g. new releases loaded in background),
+    // prevent the pager from jumping or animating to a different card.
+    val lastItemCount = remember { androidx.compose.runtime.mutableIntStateOf(distinctHeroItems.size) }
+    val lastVisibleItemId = remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+
+    androidx.compose.runtime.LaunchedEffect(pagerState) {
+        androidx.compose.runtime.snapshotFlow { pagerState.currentPage }.collect { curr ->
+            val size = distinctHeroItems.size
+            if (size > 0) {
+                lastVisibleItemId.value = distinctHeroItems[curr.mod(size)].id
+            }
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(distinctHeroItems) {
+        val prevSize = lastItemCount.intValue
+        val newSize = distinctHeroItems.size
+        lastItemCount.intValue = newSize
+
+        if (prevSize > 0 && newSize != prevSize && !pagerState.isScrollInProgress) {
+            val targetId = lastVisibleItemId.value
+            if (targetId != null) {
+                val newIndex = distinctHeroItems.indexOfFirst { it.id == targetId }
+                if (newIndex != -1) {
+                    val currentMod = pagerState.currentPage.mod(newSize)
+                    if (currentMod != newIndex) {
+                        val cycles = pagerState.currentPage / newSize
+                        val targetPage = cycles * newSize + newIndex
+                        pagerState.scrollToPage(targetPage)
+                    }
+                }
+            }
+        }
+    }
+
     val (disableBlur) = rememberPreference(DisableBlurKey, defaultValue = false)
     val edgeBlur = !disableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     if (!isSingleItem) {
         val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
-        androidx.compose.runtime.LaunchedEffect(pagerState, distinctQuickPicks.size, isDragged) {
+        androidx.compose.runtime.LaunchedEffect(pagerState, distinctHeroItems.size, isDragged) {
             if (isDragged) return@LaunchedEffect
             while (true) {
                 delay(HeroAdvanceMillis)
@@ -537,16 +574,18 @@ fun QuickPicksSection(
             modifier = Modifier.fillMaxSize(),
         ) { page ->
             val pageOffset = remember(pagerState, page) { { pagerState.offsetOf(page) } }
-            val song = distinctQuickPicks[page.mod(distinctQuickPicks.size)]
-            val isSongActive = song.id == mediaMetadata?.id
-            val isSongPlaying = isSongActive && isPlaying
+            val item = distinctHeroItems[page.mod(distinctHeroItems.size)]
+            val isItemActive = when (item) {
+                is HeroCardItem.QuickPick -> item.song.id == mediaMetadata?.id
+                is HeroCardItem.NewRelease -> item.album.id == mediaMetadata?.album?.id
+            }
             val context = LocalContext.current
 
             val imageRequest =
-                remember(song.song.thumbnailUrl, context) {
+                remember(item.thumbnailUrl, context) {
                     ImageRequest
                         .Builder(context)
-                        .data(song.song.thumbnailUrl)
+                        .data(item.thumbnailUrl)
                         .crossfade(300)
                         .build()
                 }
@@ -562,26 +601,47 @@ fun QuickPicksSection(
                             .fillMaxSize()
                             .combinedClickable(
                                 onClick = {
-                                    if (isSongActive) {
+                                    if (isItemActive) {
                                         playerConnection.player.togglePlayPause()
                                     } else {
-                                        playerConnection.playQueue(
-                                            if (song.song.isLocal) {
-                                                ListQueue(items = listOf(song.toMediaItem()))
-                                            } else {
-                                                YouTubeQueue.radio(song.toMediaMetadata())
-                                            },
-                                        )
+                                        when (item) {
+                                            is HeroCardItem.QuickPick -> {
+                                                val song = item.song
+                                                playerConnection.playQueue(
+                                                    if (song.song.isLocal) {
+                                                        ListQueue(items = listOf(song.toMediaItem()))
+                                                    } else {
+                                                        YouTubeQueue.radio(song.toMediaMetadata())
+                                                    },
+                                                )
+                                            }
+                                            is HeroCardItem.NewRelease -> {
+                                                playerConnection.playQueue(
+                                                    YouTubeAlbumRadio(item.album.playlistId)
+                                                )
+                                            }
+                                        }
                                     }
                                 },
                                 onLongClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     menuState.show {
-                                        SongMenu(
-                                            originalSong = song,
-                                            navController = navController,
-                                            onDismiss = menuState::dismiss,
-                                        )
+                                        when (item) {
+                                            is HeroCardItem.QuickPick -> {
+                                                SongMenu(
+                                                    originalSong = item.song,
+                                                    navController = navController,
+                                                    onDismiss = menuState::dismiss,
+                                                )
+                                            }
+                                            is HeroCardItem.NewRelease -> {
+                                                YouTubeAlbumMenu(
+                                                    albumItem = item.album,
+                                                    navController = navController,
+                                                    onDismiss = menuState::dismiss,
+                                                )
+                                            }
+                                        }
                                     }
                                 },
                             ),
@@ -629,13 +689,11 @@ fun QuickPicksSection(
                                 .padding(start = 36.dp, end = 36.dp, bottom = 44.dp),
                     ) {
                         // Title & Artist with smooth transition
-                        val songTitle = song.song.title
-                        val artistName = remember(song.artists) {
-                            song.artists.joinToString { it.name }
-                        }
+                        val itemTitle = item.title
+                        val artistName = item.artistNames
 
                         AnimatedContent(
-                            targetState = songTitle to artistName,
+                            targetState = itemTitle to artistName,
                             transitionSpec = {
                                 (slideInVertically(spring(dampingRatio = 0.8f, stiffness = 420f)) { it / 3 } + fadeIn(tween(220)))
                                     .togetherWith(slideOutVertically(tween(160)) { -it / 3 } + fadeOut(tween(140)))
@@ -644,7 +702,7 @@ fun QuickPicksSection(
                             label = "heroSongInfo",
                         ) { (title, artist) ->
                             Column {
-                                // 1st line: Song Title (single line with ellipsis)
+                                // 1st line: Song/Album Title (single line with ellipsis)
                                 Text(
                                     text = title,
                                     style = MaterialTheme.typography.headlineMedium.copy(
