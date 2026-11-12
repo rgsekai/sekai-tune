@@ -1867,59 +1867,62 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 },
                                                 actions = {
-                                                    if (
-                                                        BuildConfig.UPDATER_AVAILABLE &&
-                                                        Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
-                                                    ) {
-                                                        TranslucentTopAppBarIconButton(
-                                                            modifier =
-                                                                Modifier.onGloballyPositioned { coordinates ->
-                                                                    if (coordinates.isAttached) {
-                                                                        val pos = coordinates.positionInWindow()
-                                                                        val size = coordinates.size
-                                                                        updateIconTargetOffset =
-                                                                            Offset(pos.x + size.width / 2f, pos.y + size.height / 2f)
-                                                                    }
-                                                                },
-                                                            onClick = { showUpdatePromptDialog = true },
+                                                    val isHomeRoute = navBackStackEntry?.destination?.route == Screens.Home.route
+                                                    if (!isHomeRoute) {
+                                                        if (
+                                                            BuildConfig.UPDATER_AVAILABLE &&
+                                                            Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
                                                         ) {
-                                                            Box(
+                                                            TranslucentTopAppBarIconButton(
                                                                 modifier =
-                                                                    Modifier
-                                                                        .size(10.dp)
-                                                                        .clip(CircleShape)
-                                                                        .background(Color(0xFFE53935)),
+                                                                    Modifier.onGloballyPositioned { coordinates ->
+                                                                        if (coordinates.isAttached) {
+                                                                            val pos = coordinates.positionInWindow()
+                                                                            val size = coordinates.size
+                                                                            updateIconTargetOffset =
+                                                                                Offset(pos.x + size.width / 2f, pos.y + size.height / 2f)
+                                                                        }
+                                                                    },
+                                                                onClick = { showUpdatePromptDialog = true },
+                                                            ) {
+                                                                Box(
+                                                                    modifier =
+                                                                        Modifier
+                                                                            .size(10.dp)
+                                                                            .clip(CircleShape)
+                                                                            .background(Color(0xFFE53935)),
+                                                                )
+                                                            }
+                                                        }
+                                                        TranslucentTopAppBarIconButton(
+                                                            onClick = {
+                                                                playerConnection?.let {
+                                                                    homeViewModel.shuffle(it)
+                                                                }
+                                                            },
+                                                        ) {
+                                                            Icon(
+                                                                painter = painterResource(R.drawable.shuffle),
+                                                                contentDescription = stringResource(R.string.shuffle),
                                                             )
                                                         }
-                                                    }
-                                                    TranslucentTopAppBarIconButton(
-                                                        onClick = {
-                                                            playerConnection?.let {
-                                                                homeViewModel.shuffle(it)
+                                                        TranslucentTopAppBarIconButton(
+                                                            onClick = { navController.navigate("settings") },
+                                                        ) {
+                                                            BadgedBox(badge = {
+                                                                if (
+                                                                    BuildConfig.UPDATER_AVAILABLE &&
+                                                                    Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                                                                ) {
+                                                                    Badge()
+                                                                }
+                                                            }) {
+                                                                Icon(
+                                                                    painter = painterResource(R.drawable.settings),
+                                                                    contentDescription = stringResource(R.string.settings),
+                                                                    modifier = Modifier.size(24.dp),
+                                                                )
                                                             }
-                                                        },
-                                                    ) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.shuffle),
-                                                            contentDescription = stringResource(R.string.shuffle),
-                                                        )
-                                                    }
-                                                    TranslucentTopAppBarIconButton(
-                                                        onClick = { navController.navigate("settings") },
-                                                    ) {
-                                                        BadgedBox(badge = {
-                                                            if (
-                                                                BuildConfig.UPDATER_AVAILABLE &&
-                                                                Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
-                                                            ) {
-                                                                Badge()
-                                                            }
-                                                        }) {
-                                                            Icon(
-                                                                painter = painterResource(R.drawable.settings),
-                                                                contentDescription = stringResource(R.string.settings),
-                                                                modifier = Modifier.size(24.dp),
-                                                            )
                                                         }
                                                     }
                                                 },
@@ -2525,6 +2528,92 @@ class MainActivity : ComponentActivity() {
                                         end = 16.dp,
                                     ).zIndex(10f),
                         )
+
+                        // Floating Home Action Pill Overlay
+                        val isHomeRoute = navBackStackEntry?.destination?.route == Screens.Home.route
+                        if (isHomeRoute && !active && !playerBottomSheetState.isExpanded) {
+                            val homeTopOffset = homeScrollBehavior.state.heightOffset.roundToInt()
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset { IntOffset(x = 0, y = homeTopOffset) }
+                                        .padding(
+                                            top = topInset + 12.dp,
+                                            end = 16.dp,
+                                        )
+                                        .zIndex(20f)
+                                        .clip(RoundedCornerShape(32.dp))
+                                        .background(Color.White)
+                                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                // 1st circle: Three dot
+                                IconButton(
+                                    onClick = { /* Three dot menu */ },
+                                    modifier =
+                                        Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.more_horiz),
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+
+                                // 2nd circle: Settings
+                                IconButton(
+                                    onClick = { navController.navigate("settings") },
+                                    modifier =
+                                        Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black),
+                                ) {
+                                    BadgedBox(badge = {
+                                        if (
+                                            BuildConfig.UPDATER_AVAILABLE &&
+                                            Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                                        ) {
+                                            Badge()
+                                        }
+                                    }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.settings),
+                                            contentDescription = stringResource(R.string.settings),
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                    }
+                                }
+
+                                // 3rd circle: Shuffle
+                                IconButton(
+                                    onClick = {
+                                        playerConnection?.let {
+                                            homeViewModel.shuffle(it)
+                                        }
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.shuffle),
+                                        contentDescription = stringResource(R.string.shuffle),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     pendingBackupRestoreUri?.let { uri ->
