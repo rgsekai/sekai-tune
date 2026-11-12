@@ -1903,18 +1903,6 @@ class MainActivity : ComponentActivity() {
                                                             }
                                                         }
                                                         TranslucentTopAppBarIconButton(
-                                                            onClick = {
-                                                                playerConnection?.let {
-                                                                    homeViewModel.shuffle(it)
-                                                                }
-                                                            },
-                                                        ) {
-                                                            Icon(
-                                                                painter = painterResource(R.drawable.shuffle),
-                                                                contentDescription = stringResource(R.string.shuffle),
-                                                            )
-                                                        }
-                                                        TranslucentTopAppBarIconButton(
                                                             onClick = { navController.navigate("settings") },
                                                         ) {
                                                             BadgedBox(badge = {
