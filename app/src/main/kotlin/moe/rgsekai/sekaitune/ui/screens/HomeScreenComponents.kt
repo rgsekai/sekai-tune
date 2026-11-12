@@ -448,13 +448,13 @@ private fun HeroScrims(modifier: Modifier = Modifier) {
             modifier
                 .fillMaxSize()
                 .drawWithCache {
-                    val bottomStart = 0.533f
-                    val bottomEnd = 0.989f
+                    val bottomStart = 0.68f
+                    val bottomEnd = 0.99f
                     val scrim =
                         Brush.verticalGradient(
                             0f to Color.Transparent,
                             bottomStart to Color.Transparent,
-                            bottomStart + 0.457f * (bottomEnd - bottomStart) to heroScrimBlack(0.59f),
+                            bottomStart + 0.457f * (bottomEnd - bottomStart) to heroScrimBlack(0.50f),
                             bottomEnd to heroScrimBlack(1f),
                             1f to heroScrimBlack(1f),
                             startY = 0f,
@@ -605,12 +605,12 @@ fun QuickPicksSection(
                                 Modifier
                                     .align(Alignment.BottomCenter)
                                     .fillMaxWidth()
-                                    .fillMaxHeight(0.50f)
+                                    .fillMaxHeight(0.35f)
                                     .blur(30.dp)
                                     .background(
                                         Brush.verticalGradient(
                                             0f to Color.Transparent,
-                                            0.5f to Color.Black.copy(alpha = 0.40f),
+                                            0.5f to Color.Black.copy(alpha = 0.35f),
                                             1f to Color.Black.copy(alpha = 0.85f),
                                         ),
                                     ),
@@ -626,7 +626,7 @@ fun QuickPicksSection(
                             Modifier
                                 .align(Alignment.BottomStart)
                                 .pageTextDrift(pageOffset)
-                                .padding(start = 36.dp, end = 36.dp, bottom = 64.dp),
+                                .padding(start = 36.dp, end = 36.dp, bottom = 44.dp),
                     ) {
                         // Title & Artist with smooth transition
                         val songTitle = song.song.title
@@ -671,74 +671,6 @@ fun QuickPicksSection(
                                         color = Color.White.copy(alpha = 0.70f),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(11.dp))
-
-                        // Capsule Play / Pause Pill button
-                        val pillInteraction = remember { MutableInteractionSource() }
-                        Box(
-                            modifier =
-                                Modifier
-                                    .heroPressBounce(pillInteraction)
-                                    .height(33.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(HeroPillFill)
-                                    .clickable(
-                                        interactionSource = pillInteraction,
-                                        indication = null,
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            if (isSongActive) {
-                                                playerConnection.player.togglePlayPause()
-                                            } else {
-                                                playerConnection.playQueue(
-                                                    if (song.song.isLocal) {
-                                                        ListQueue(items = listOf(song.toMediaItem()))
-                                                    } else {
-                                                        YouTubeQueue.radio(song.toMediaMetadata())
-                                                    },
-                                                )
-                                            }
-                                        },
-                                    ),
-                        ) {
-                            AnimatedContent(
-                                targetState = isSongPlaying,
-                                transitionSpec = {
-                                    (scaleIn(initialScale = 0.6f, animationSpec = spring(dampingRatio = 0.55f, stiffness = 650f)) + fadeIn(tween(130)))
-                                        .togetherWith(scaleOut(targetScale = 0.6f, animationSpec = tween(110)) + fadeOut(tween(90)))
-                                        .using(SizeTransform(clip = false) { _, _ -> spring(dampingRatio = 0.75f, stiffness = 520f) })
-                                },
-                                label = "heroPillPlayback",
-                            ) { playing ->
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier =
-                                        Modifier
-                                            .height(33.dp)
-                                            .padding(start = 21.dp, end = 17.dp),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (playing) R.drawable.pause else R.drawable.play
-                                        ),
-                                        contentDescription = null,
-                                        tint = HeroPillContent,
-                                        modifier = Modifier.size(15.dp),
-                                    )
-                                    Spacer(Modifier.width(9.dp))
-                                    Text(
-                                        text = if (playing) stringResource(R.string.pause) else stringResource(R.string.play),
-                                        style = MaterialTheme.typography.labelLarge.copy(
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            letterSpacing = (-0.02).sp,
-                                        ),
-                                        color = HeroPillContent,
                                     )
                                 }
                             }
