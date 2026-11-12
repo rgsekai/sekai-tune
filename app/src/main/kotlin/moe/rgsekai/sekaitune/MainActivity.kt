@@ -1765,10 +1765,7 @@ class MainActivity : ComponentActivity() {
                                                     navBackStackEntry?.destination?.route == Screens.Search.route ||
                                                     navBackStackEntry?.destination?.route == Screens.Library.route
                                             }
-                                        val shouldShowBlurBackground =
-                                            remember(navBackStackEntry) {
-                                                shouldUseFloatingTopBar && navBackStackEntry?.destination?.route != Screens.Home.route
-                                            }
+                                        val shouldShowBlurBackground = false
 
                                         val surfaceColor = MaterialTheme.colorScheme.surface
                                         val isLibraryRoute = navBackStackEntry?.destination?.route == Screens.Library.route
