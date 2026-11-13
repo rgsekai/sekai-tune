@@ -858,6 +858,7 @@ class MainActivity : ComponentActivity() {
                     val isYearInMusicScreen = currentRoute?.startsWith("year_in_music") == true
                     val isAmbientModeScreen = currentRoute == "ambient_mode"
                     val isLoginScreen = currentRoute?.startsWith(LOGIN_ROUTE) == true
+                    val isPlayerStylesScreen = currentRoute == "settings/appearance/styles"
 
                     val navigationItems =
                         remember(isTvDevice) {
@@ -1160,8 +1161,8 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(false)
                     }
 
-                    LaunchedEffect(miniPlayerAnchor, isYearInMusicScreen, isAmbientModeScreen, isLoginScreen, miniPlayerAnchorPersistenceEnabled) {
-                        if (!isYearInMusicScreen && !isAmbientModeScreen && !isLoginScreen && miniPlayerAnchorPersistenceEnabled) {
+                    LaunchedEffect(miniPlayerAnchor, isYearInMusicScreen, isAmbientModeScreen, isLoginScreen, isPlayerStylesScreen, miniPlayerAnchorPersistenceEnabled) {
+                        if (!isYearInMusicScreen && !isAmbientModeScreen && !isLoginScreen && !isPlayerStylesScreen && miniPlayerAnchorPersistenceEnabled) {
                             setSavedMiniPlayerAnchor(miniPlayerAnchor)
                         }
                     }
@@ -1169,6 +1170,7 @@ class MainActivity : ComponentActivity() {
                     var yearInMusicSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
                     var ambientModeSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
                     var loginSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
+                    var playerStylesSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
 
                     val shouldHideStatusBars =
                         isYearInMusicScreen ||
@@ -1180,9 +1182,38 @@ class MainActivity : ComponentActivity() {
                         setStatusBarsHidden(shouldHideStatusBars)
                     }
 
-                    LaunchedEffect(isYearInMusicScreen, isAmbientModeScreen, isLoginScreen, playerConnection) {
+                    LaunchedEffect(isYearInMusicScreen, isAmbientModeScreen, isLoginScreen, isPlayerStylesScreen, playerConnection) {
                         val connection = playerConnection ?: return@LaunchedEffect
                         val player = connection.player
+
+                        if (isPlayerStylesScreen) {
+                            if (playerStylesSavedPlayerAnchor == -1) {
+                                playerStylesSavedPlayerAnchor =
+                                    when {
+                                        playerBottomSheetState.isExpanded -> EXPANDED_ANCHOR
+                                        playerBottomSheetState.isCollapsed -> COLLAPSED_ANCHOR
+                                        playerBottomSheetState.isDismissed -> DISMISSED_ANCHOR
+                                        else -> COLLAPSED_ANCHOR
+                                    }
+                            }
+                            if (!playerBottomSheetState.isDismissed) {
+                                playerBottomSheetState.dismiss()
+                            }
+                        } else if (playerStylesSavedPlayerAnchor != -1) {
+                            val anchorToRestore = playerStylesSavedPlayerAnchor
+                            playerStylesSavedPlayerAnchor = -1
+
+                            if (!awaitRestorablePlayback(connection)) {
+                                playerBottomSheetState.dismiss()
+                            } else {
+                                when (anchorToRestore) {
+                                    EXPANDED_ANCHOR -> playerBottomSheetState.expandSoft()
+                                    COLLAPSED_ANCHOR -> playerBottomSheetState.collapseSoft()
+                                    DISMISSED_ANCHOR -> playerBottomSheetState.collapseSoft()
+                                    else -> playerBottomSheetState.collapseSoft()
+                                }
+                            }
+                        }
 
                         if (isYearInMusicScreen) {
                             if (yearInMusicSavedPlayerAnchor == -1) {
@@ -1463,6 +1494,7 @@ class MainActivity : ComponentActivity() {
                     val currentIsYearInMusicScreen = rememberUpdatedState(isYearInMusicScreen)
                     val currentIsAmbientModeScreen = rememberUpdatedState(isAmbientModeScreen)
                     val currentIsLoginScreen = rememberUpdatedState(isLoginScreen)
+                    val currentIsPlayerStylesScreen = rememberUpdatedState(isPlayerStylesScreen)
 
                     DisposableEffect(playerConnection) {
                         val player =
@@ -1479,7 +1511,8 @@ class MainActivity : ComponentActivity() {
                                         currentPlayerBottomSheetState.value.isDismissed &&
                                         !currentIsYearInMusicScreen.value &&
                                         !currentIsAmbientModeScreen.value &&
-                                        !currentIsLoginScreen.value
+                                        !currentIsLoginScreen.value &&
+                                        !currentIsPlayerStylesScreen.value
                                     ) {
                                         currentPlayerBottomSheetState.value.collapseSoft()
                                     }

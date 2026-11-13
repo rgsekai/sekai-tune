@@ -838,6 +838,15 @@
     <string name="discord_behaviour">Behaviour</string>
     <string name="discord_clear_on_pause">Clear status when paused</string>
     <string name="discord_clear_on_pause_desc">Takes the song off your profile as soon as you pause, and puts it back when you play again.</string>
+
+    <!-- Player Styles -->
+    <string name="player_styles_title">Styles</string>
+    <string name="player_styles_placeholder_title">Song title</string>
+    <string name="player_styles_placeholder_artist">Artist name</string>
+    <string name="player_styles_placeholder_lyrics">Lyrics appear here</string>
+    <string name="player_styles_placeholder_format">FLAC 24-bit</string>
+    <string name="player_styles_action_set">Set</string>
+    <string name="player_styles_action_configure">Configure</string>
 </resources>
 
 

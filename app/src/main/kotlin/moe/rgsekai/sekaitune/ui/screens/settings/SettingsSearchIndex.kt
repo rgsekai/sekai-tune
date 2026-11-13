@@ -445,6 +445,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_player_styles",
+                title = "Styles",
+                subtitle = "Choose Now Playing player design style and appearance",
+                category = appearanceCategory,
+                iconRes = R.drawable.palette,
+                route = "settings/appearance/styles",
+                keywords = listOf("styles", "player style", "now playing style", "modern", "immersive", "player design"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_disable_blur",
                 title = "Disable blur effects",
                 subtitle = "Disable backdrop blur to maximize performance on lower-end devices",

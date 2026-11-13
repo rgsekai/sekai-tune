@@ -358,60 +358,23 @@ fun AppearanceSettings(navController: NavController) {
 
             }
 
-            PreferenceGroup(title = stringResource(R.string.theme_backdrop)) {
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.theme_backdrop)) },
-                        description = stringResource(R.string.theme_backdrop_desc),
-                        icon = { Icon(painterResource(R.drawable.palette), null) },
-                        selectedValue = themeBackdropMode,
-                        onValueSelected = onThemeBackdropModeChange,
-                        isEnabled = !themeBackdropBlurEnabled,
-                        valueText = {
-                            when (it) {
-                                ThemeBackdropMode.GLOW_ANIMATED -> stringResource(R.string.theme_backdrop_glow_animated)
-                                ThemeBackdropMode.STATIC -> stringResource(R.string.theme_backdrop_static)
-                            }
-                        },
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.theme_backdrop_blur)) },
-                        description = stringResource(R.string.theme_backdrop_blur_desc),
-                        icon = { Icon(painterResource(R.drawable.blur_on), null) },
-                        checked = themeBackdropBlurEnabled,
-                        onCheckedChange = onThemeBackdropBlurEnabledChange,
-                    )
-                }
-
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.theme_backdrop_blur_strength)) },
-                        description = if (themeBackdropBlurStrength == 0) {
-                            stringResource(R.string.theme_backdrop_blur_transparent)
-                        } else {
-                            stringResource(R.string.backdrop_blur_amount_value, themeBackdropBlurStrength)
-                        },
-                        icon = { Icon(painterResource(R.drawable.blur_on), null) },
-                        isEnabled = themeBackdropBlurEnabled,
-                        content = {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Slider(
-                                value = themeBackdropBlurStrength.toFloat(),
-                                onValueChange = { onThemeBackdropBlurStrengthChange(it.roundToInt()) },
-                                valueRange = 0f..100f,
-                                steps = 19,
-                                enabled = themeBackdropBlurEnabled,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        },
-                    )
-                }
-            }
-
             PreferenceGroup(title = stringResource(R.string.player)) {
+                item {
+                    val (savedStyleId) = rememberPreference(
+                        key = moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey,
+                        defaultValue = moe.rgsekai.sekaitune.ui.player.styles.PlayerStyle.DEFAULT.id,
+                    )
+                    val activeStyle = remember(savedStyleId) {
+                        moe.rgsekai.sekaitune.ui.player.styles.PlayerStyle.fromPreference(savedStyleId)
+                    }
+
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.player_styles_title)) },
+                        description = stringResource(activeStyle.displayNameRes),
+                        icon = { Icon(painterResource(R.drawable.palette), null) },
+                        onClick = { navController.navigate("settings/appearance/styles") },
+                    )
+                }
 
                 item {
                     SwitchPreference(

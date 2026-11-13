@@ -42,6 +42,7 @@ val CanvasProceduralStyleKey = stringPreferencesKey("canvas_procedural_style")
 val CanvasAudioReactiveKey = booleanPreferencesKey("canvas_audio_reactive")
 val ThumbnailCornerRadiusKey = floatPreferencesKey("thumbnailCornerRadius")
 val CropThumbnailToSquareKey = booleanPreferencesKey("cropThumbnailToSquare")
+val PlayerDesignStyleKey = stringPreferencesKey("playerDesignStyle")
 
 val AmbientArtScaleKey = floatPreferencesKey("ambientArtScale")
 val AmbientCanvasEnabledKey = booleanPreferencesKey("ambientCanvasEnabled")

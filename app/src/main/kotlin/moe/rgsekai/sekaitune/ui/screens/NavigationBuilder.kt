@@ -367,6 +367,9 @@ fun NavGraphBuilder.navigationBuilder(
     composable("settings/appearance") {
         AppearanceSettings(navController)
     }
+    composable("settings/appearance/styles") {
+        moe.rgsekai.sekaitune.ui.player.styles.PlayerStylesScreen(navController)
+    }
     composable("settings/appearance/liquid_glass") {
         GlassEffectSettings(navController)
     }
