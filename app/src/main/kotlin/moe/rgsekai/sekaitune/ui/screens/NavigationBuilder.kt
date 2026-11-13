@@ -476,6 +476,9 @@ fun NavGraphBuilder.navigationBuilder(
     composable("settings/advanced") {
         AdvancedSettings(navController)
     }
+    composable("equalizer") {
+        moe.rgsekai.sekaitune.ui.screens.equalizer.EqualizerScreen(navController)
+    }
     composable(
         route = "$LOGIN_ROUTE?$LOGIN_URL_ARGUMENT={$LOGIN_URL_ARGUMENT}",
         arguments =
