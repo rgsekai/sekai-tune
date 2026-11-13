@@ -1258,6 +1258,7 @@ fun BottomSheetPlayer(
                         onSliderValueChangeFinished = onSliderValueChangeFinished,
                         landscape = true,
                         lyricsSyncOffset = lyricsSyncOffset,
+                        fallbackVideoId = videoLookup.video?.videoId,
                         showOneLineLyrics = showOneLineLyrics,
                         onShowLyrics = { isLyricsScreenVisible = true },
                         )
@@ -1335,6 +1336,7 @@ fun BottomSheetPlayer(
                                         onSliderValueChangeFinished = onSliderValueChangeFinished,
                                         lyricsSyncOffset = lyricsSyncOffset,
                                         showOneLineLyrics = showOneLineLyrics,
+                                        fallbackVideoId = videoLookup.video?.videoId,
                                         onShowLyrics = { isLyricsScreenVisible = true },
                                     )
                                 }

@@ -64,6 +64,10 @@ import moe.rgsekai.sekaitune.innertube.models.response.GetQueueResponse
 import moe.rgsekai.sekaitune.innertube.models.response.GetSearchSuggestionsResponse
 import moe.rgsekai.sekaitune.innertube.models.response.GetTranscriptResponse
 import moe.rgsekai.sekaitune.innertube.models.response.NextResponse
+import moe.rgsekai.sekaitune.innertube.models.response.CommentsResponse
+import moe.rgsekai.sekaitune.innertube.models.getReloadContinuation
+import moe.rgsekai.sekaitune.innertube.pages.CommentsPage
+import moe.rgsekai.sekaitune.innertube.pages.CommentsPageParser
 import moe.rgsekai.sekaitune.innertube.models.response.PlayerResponse
 import moe.rgsekai.sekaitune.innertube.models.response.SearchResponse
 import moe.rgsekai.sekaitune.innertube.pages.AlbumPage
@@ -2196,6 +2200,23 @@ object YouTube {
                     ?.runs
                     ?.firstOrNull()
                     ?.text
+            val allTabs = response.contents.singleColumnMusicWatchNextResultsRenderer
+                ?.tabbedRenderer
+                ?.watchNextTabbedResultsRenderer
+                ?.tabs
+                .orEmpty()
+            val lyricsEndpoint = allTabs
+                .mapNotNull { it.tabRenderer.endpoint?.browseEndpoint }
+                .firstOrNull { it.browseId?.startsWith("MPLY") == true }
+                ?: allTabs.getOrNull(1)?.tabRenderer?.endpoint?.browseEndpoint
+            val relatedEndpoint = allTabs
+                .mapNotNull { it.tabRenderer.endpoint?.browseEndpoint }
+                .firstOrNull { it.browseId?.startsWith("MPTR") == true || it.browseId == "FErelated" }
+                ?: allTabs.getOrNull(if (allTabs.size >= 4) 3 else 2)?.tabRenderer?.endpoint?.browseEndpoint
+            val commentsContinuation = allTabs
+                .mapNotNull { it.tabRenderer.content?.sectionListRenderer?.continuations?.getReloadContinuation() }
+                .firstOrNull()
+
             val items =
                 playlistPanelRenderer.contents.mapNotNull { content ->
                     content.playlistPanelVideoRenderer
@@ -2219,26 +2240,9 @@ object YouTube {
                             result.copy(
                                 title = title,
                                 items = songs + result.items,
-                                lyricsEndpoint =
-                                    response.contents.singleColumnMusicWatchNextResultsRenderer
-                                        ?.tabbedRenderer
-                                        ?.watchNextTabbedResultsRenderer
-                                        ?.tabs
-                                        ?.getOrNull(
-                                            1,
-                                        )?.tabRenderer
-                                        ?.endpoint
-                                        ?.browseEndpoint,
-                                relatedEndpoint =
-                                    response.contents.singleColumnMusicWatchNextResultsRenderer
-                                        ?.tabbedRenderer
-                                        ?.watchNextTabbedResultsRenderer
-                                        ?.tabs
-                                        ?.getOrNull(
-                                            2,
-                                        )?.tabRenderer
-                                        ?.endpoint
-                                        ?.browseEndpoint,
+                                lyricsEndpoint = lyricsEndpoint,
+                                relatedEndpoint = relatedEndpoint,
+                                commentsContinuation = commentsContinuation,
                                 currentIndex = currentIndex,
                                 endpoint = watchPlaylistEndpoint,
                             )
@@ -2249,29 +2253,24 @@ object YouTube {
                 title = title,
                 items = songs,
                 currentIndex = currentIndex,
-                lyricsEndpoint =
-                    response.contents.singleColumnMusicWatchNextResultsRenderer
-                        ?.tabbedRenderer
-                        ?.watchNextTabbedResultsRenderer
-                        ?.tabs
-                        ?.getOrNull(
-                            1,
-                        )?.tabRenderer
-                        ?.endpoint
-                        ?.browseEndpoint,
-                relatedEndpoint =
-                    response.contents.singleColumnMusicWatchNextResultsRenderer
-                        ?.tabbedRenderer
-                        ?.watchNextTabbedResultsRenderer
-                        ?.tabs
-                        ?.getOrNull(
-                            2,
-                        )?.tabRenderer
-                        ?.endpoint
-                        ?.browseEndpoint,
+                lyricsEndpoint = lyricsEndpoint,
+                relatedEndpoint = relatedEndpoint,
+                commentsContinuation = commentsContinuation,
                 continuation = playlistPanelRenderer.continuations?.getContinuation(),
                 endpoint = endpoint,
             )
+        }
+
+    suspend fun getComments(continuation: String): Result<CommentsPage> =
+        runCatching {
+            val response = innerTube.comments(continuation).body<CommentsResponse>()
+            CommentsPageParser.fromCommentsResponse(response)
+        }
+
+    suspend fun getCommentReplies(continuation: String): Result<Pair<List<moe.rgsekai.sekaitune.innertube.models.CommentItem>, String?>> =
+        runCatching {
+            val response = innerTube.comments(continuation).body<CommentsResponse>()
+            CommentsPageParser.parseRepliesResponse(response)
         }
 
     suspend fun lyrics(endpoint: BrowseEndpoint): Result<String?> =

@@ -184,6 +184,7 @@ fun PlayerMenu(
     onViewFullScreen: () -> Unit = {},
     onRemoveFromQueue: (() -> Unit)? = null,
     onShowDetailsDialog: () -> Unit,
+    onShowComments: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     mediaMetadata ?: return
@@ -1148,6 +1149,29 @@ fun PlayerMenu(
                             modifier =
                                 Modifier.clickable {
                                     onRemoveFromQueue()
+                                    onDismiss()
+                                },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 56.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                    }
+
+                    if (onShowComments != null && !isLocalMedia) {
+                        ListItem(
+                            headlineContent = { Text(text = stringResource(R.string.comments)) },
+                            leadingContent = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_comment),
+                                    contentDescription = null,
+                                )
+                            },
+                            modifier =
+                                Modifier.clickable {
+                                    onShowComments()
                                     onDismiss()
                                 },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),

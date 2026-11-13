@@ -488,6 +488,26 @@ class InnerTube {
         }
     }
 
+    suspend fun comments(
+        continuation: String,
+        client: YouTubeClient = YouTubeClient.WEB_REMIX,
+    ) = withRetry {
+        httpClient.post("next") {
+            ytClient(client, setLogin = true)
+            setBody(
+                NextBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    videoId = null,
+                    playlistId = null,
+                    playlistSetVideoId = null,
+                    index = null,
+                    params = null,
+                    continuation = continuation,
+                ),
+            )
+        }
+    }
+
     suspend fun getSearchSuggestions(
         client: YouTubeClient,
         input: String,

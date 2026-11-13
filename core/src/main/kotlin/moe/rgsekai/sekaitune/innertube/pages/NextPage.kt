@@ -23,6 +23,7 @@ data class NextResult(
     val currentIndex: Int? = null,
     val lyricsEndpoint: BrowseEndpoint? = null,
     val relatedEndpoint: BrowseEndpoint? = null,
+    val commentsContinuation: String? = null,
     val continuation: String?,
     val endpoint: WatchEndpoint, // current or continuation next endpoint
 )

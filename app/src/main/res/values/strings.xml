@@ -1175,6 +1175,18 @@
         <item quantity="one">%d second</item>
         <item quantity="other">%d seconds</item>
     </plurals>
+    <string name="comments">Comments</string>
+    <string name="comments_count">%s comments</string>
+    <string name="comments_disabled">Comments are turned off for this song</string>
+    <string name="comments_empty">No comments yet</string>
+    <string name="comments_sort_top">Top</string>
+    <string name="comments_sort_newest">Newest</string>
+    <string name="comments_view_replies">View %d replies</string>
+    <string name="comments_hide_replies">Hide replies</string>
+    <string name="comments_pinned">Pinned</string>
+    <string name="comments_edited">(edited)</string>
+    <string name="comments_add">Add comment</string>
+    <string name="comments_error">Failed to load comments</string>
 </resources>
 
 

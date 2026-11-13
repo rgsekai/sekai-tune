@@ -9,6 +9,9 @@
 
 package moe.rgsekai.sekaitune.ui.player
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import moe.rgsekai.sekaitune.viewmodels.CommentsViewModel
+
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -689,6 +692,8 @@ fun V8PlayerControlsContent(
     lyricsSyncOffset: Int = 0,
     showOneLineLyrics: Boolean = true,
     onShowLyrics: () -> Unit = {},
+    fallbackVideoId: String? = null,
+    initialCommentsContinuation: String? = null,
     modifier: Modifier = Modifier,
     landscape: Boolean = false,
 ) {
@@ -696,6 +701,7 @@ fun V8PlayerControlsContent(
     val secondaryForeground = foreground.copy(alpha = 0.72f)
     val qualityBadgeInfo by playerConnection.qualityBadgeFlow.collectAsState()
     var showPipelineDetails by rememberSaveable { mutableStateOf(false) }
+    var showCommentsSheet by rememberSaveable { mutableStateOf(false) }
     val onMenuClick =
         remember(
             mediaMetadata,
@@ -724,6 +730,9 @@ fun V8PlayerControlsContent(
                             bottomSheetPageState.show {
                                 ShowMediaInfo(mediaMetadata.id)
                             }
+                        },
+                        onShowComments = {
+                            showCommentsSheet = true
                         },
                         onDismiss = menuState::dismiss,
                     )
@@ -813,6 +822,7 @@ fun V8PlayerControlsContent(
                 liked = currentSongLiked,
                 foreground = foreground,
                 onMenuClick = onMenuClick,
+                onCommentsClick = { showCommentsSheet = true },
                 onToggleLike = onToggleLike,
                 onTitleClick = onTitleClick,
                 onArtistClick = onArtistClick,
@@ -861,6 +871,17 @@ fun V8PlayerControlsContent(
             isPlaying = isPlaying,
         )
     }
+
+    if (showCommentsSheet) {
+        val commentsViewModel: CommentsViewModel = hiltViewModel()
+        CommentsBottomSheet(
+            videoId = mediaMetadata.id,
+            fallbackVideoId = fallbackVideoId,
+            initialContinuationToken = initialCommentsContinuation,
+            viewModel = commentsViewModel,
+            onDismiss = { showCommentsSheet = false },
+        )
+    }
 }
 
 @Composable
@@ -871,6 +892,7 @@ private fun V8MetadataActions(
     liked: Boolean,
     foreground: Color,
     onMenuClick: () -> Unit,
+    onCommentsClick: () -> Unit,
     onToggleLike: () -> Unit,
     onTitleClick: () -> Unit,
     onArtistClick: (artistId: String) -> Unit,
@@ -910,6 +932,29 @@ private fun V8MetadataActions(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .then(
+                                if (useGlass) {
+                                    Modifier.playerGlass(CircleShape)
+                                } else {
+                                    Modifier.background(foreground.copy(alpha = 0.20f))
+                                },
+                            )
+                            .clickable(onClick = onCommentsClick),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_comment),
+                        contentDescription = stringResource(R.string.comments),
+                        tint = foreground,
+                        modifier = Modifier.size(19.dp),
+                    )
+                }
+
                 Box(
                     modifier =
                         Modifier
