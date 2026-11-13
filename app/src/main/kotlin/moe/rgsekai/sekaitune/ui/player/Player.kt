@@ -1383,6 +1383,11 @@ fun BottomSheetPlayer(
                     onLyricsSyncOffsetChange = { lyricsSyncOffset = it },
                     onDismiss = { isLyricsScreenVisible = false },
                     onQueueClick = openQueue,
+                    onNavigateToAiSettings = {
+                        isLyricsScreenVisible = false
+                        state.collapseSoft()
+                        navController.navigate("settings/ai_integration")
+                    },
                 )
             }
 
@@ -1442,6 +1447,7 @@ private fun MikoLyricsTransition(
     onDismiss: () -> Unit,
     onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToAiSettings: (() -> Unit)? = null,
 ) {
     val progress by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
@@ -1488,6 +1494,7 @@ private fun MikoLyricsTransition(
                     lyricsSyncOffset = lyricsSyncOffset,
                     onLyricsSyncOffsetChange = onLyricsSyncOffsetChange,
                     onQueueClick = onQueueClick,
+                    onNavigateToAiSettings = onNavigateToAiSettings,
                     backHandlerEnabled = backHandlerEnabled,
                 )
             }

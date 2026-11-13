@@ -43,6 +43,42 @@ internal object CaptionAligner {
         return Alignment(anchors, SongVideoMap(runs), anchors.size, usable)
     }
 
+    fun assignCues(lines: List<LyricsEntry>, map: SongVideoMap, cues: List<CaptionCue>): List<String?> {
+        val windows = lines.indices.map { i ->
+            val line = lines[i]
+            if (line.text.isBlank()) return@map null
+            val isBackground = line.words?.any { it.isBackground } ?: false
+            if (isBackground) return@map null
+            val nextTime = (i + 1 until lines.size).firstOrNull { l ->
+                !(lines[l].words?.any { it.isBackground } ?: false)
+            }?.let { lines[it].time }
+            val wordsEnd = line.words?.lastOrNull()?.endTime?.let { (it * 1000).toLong() }
+            val end = nextTime ?: wordsEnd ?: (line.time + LastLineMs)
+            map.videoMsAt(line.time) to map.videoMsAt(maxOf(end, line.time + 1))
+        }
+        val assigned = arrayOfNulls<StringBuilder>(lines.size)
+        for (cue in cues) {
+            var bestLine = -1
+            var bestOverlap = 0L
+            windows.forEachIndexed { i, window ->
+                if (window == null) return@forEachIndexed
+                val overlap = min(cue.endMs, window.second) - maxOf(cue.startMs, window.first)
+                if (overlap > bestOverlap) {
+                    bestOverlap = overlap
+                    bestLine = i
+                }
+            }
+            val cueLength = (cue.endMs - cue.startMs).coerceAtLeast(1)
+            if (bestLine == -1 || (bestOverlap < MinCueOverlapMs && bestOverlap * 3 < cueLength)) continue
+            val builder = assigned[bestLine]
+            if (builder == null) assigned[bestLine] = StringBuilder(cue.text) else builder.append(' ').append(cue.text)
+        }
+        return assigned.map { it?.toString() }
+    }
+
+    private const val LastLineMs = 5_000L
+    private const val MinCueOverlapMs = 200L
+
     fun normalize(text: String): String {
         val folded = Normalizer.normalize(text, Normalizer.Form.NFKC).lowercase()
         val out = StringBuilder(folded.length)

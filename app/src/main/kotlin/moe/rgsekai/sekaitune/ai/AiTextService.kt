@@ -73,25 +73,57 @@ object AiTextService {
         if (lines.isEmpty()) return emptyList()
         val payload = JSONArray()
         lines.forEach { payload.put(it) }
-        val response =
-            complete(
-                config = config,
-                systemPrompt =
-                    """
-                    You are an expert song lyrics translator.
-                    Translate each input string into $targetLanguage with natural, accurate lyric phrasing.
-                    Preserve meaning, tone, profanity level, names, repeated hooks, and line-level intent.
-                    Do not add timestamps, IDs, XML, markdown, explanations, or extra lines.
-                    Return only a JSON array of strings with exactly ${lines.size} items in the same order.
-                    The caller will reconstruct the $formatName lyrics container separately.
-                    """.trimIndent(),
-                userPrompt = payload.toString(),
-                temperature = 0.15,
-                maxTokens = 8192,
-            )
-        val array = extractJsonArray(response)
-        require(array.length() == lines.size) { "AI response changed the lyric segment count" }
-        return List(array.length()) { index -> array.optString(index) }
+
+        val strictInstruction =
+            """
+            You are an expert song lyrics translator.
+            Translate each input string into $targetLanguage with natural, poetic, and singable lyric phrasing.
+            Preserve meaning, emotional tone, profanity level, names, repeated hooks, and line-level intent.
+            CRITICAL RULES:
+            1. Output ONLY a valid JSON array of strings: ["line1", "line2", ...]
+            2. NO explanations, NO markdown code fences, NO preamble, NO postscript.
+            3. EXACTLY ${lines.size} items in the JSON array, in the exact same 1-to-1 order as the input.
+            4. Preserve empty lines as empty strings "".
+            The caller reconstructs the $formatName lyrics container separately.
+            """.trimIndent()
+
+        // Attempt 1 with temperature 0.2
+        val response1 = complete(
+            config = config,
+            systemPrompt = strictInstruction,
+            userPrompt = payload.toString(),
+            temperature = 0.2,
+            maxTokens = (lines.size * 120).coerceIn(1024, 8192),
+        )
+
+        val array1 = runCatching { extractJsonArray(response1) }.getOrNull()
+        if (array1 != null && array1.length() == lines.size) {
+            return List(array1.length()) { index -> array1.optString(index) }
+        }
+
+        // Retry once with an even stricter system prompt
+        val retryInstruction =
+            """
+            Your previous output did not have exactly ${lines.size} items.
+            You MUST return ONLY a JSON array with EXACTLY ${lines.size} strings.
+            Example format for ${lines.size} lines: ["t1", "t2", ...]
+            NO OTHER TEXT.
+            """.trimIndent()
+
+        val response2 = complete(
+            config = config,
+            systemPrompt = "$strictInstruction\n\n$retryInstruction",
+            userPrompt = payload.toString(),
+            temperature = 0.1,
+            maxTokens = (lines.size * 120).coerceIn(1024, 8192),
+        )
+
+        val array2 = runCatching { extractJsonArray(response2) }.getOrNull()
+        if (array2 != null && array2.length() == lines.size) {
+            return List(array2.length()) { index -> array2.optString(index) }
+        }
+
+        throw AiServiceException("AI response line count mismatch (expected ${lines.size}, received ${array2?.length() ?: array1?.length() ?: 0})")
     }
 
     suspend fun complete(

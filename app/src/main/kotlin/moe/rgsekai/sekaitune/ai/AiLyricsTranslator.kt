@@ -18,14 +18,22 @@ class AiLyricsTranslator {
         val translated = mutableMapOf<Int, String>()
         document.segments.chunkedByBudget().forEach { batch ->
             val batchTranslations =
-                AiTextService.translateLines(
-                    config = config,
-                    targetLanguage = normalizeTargetLanguage(targetLanguage),
-                    lines = batch.map { it.text },
-                    formatName = document.formatName,
-                )
+                try {
+                    AiTextService.translateLines(
+                        config = config,
+                        targetLanguage = normalizeTargetLanguage(targetLanguage),
+                        lines = batch.map { it.text },
+                        formatName = document.formatName,
+                    )
+                } catch (e: Exception) {
+                    // Fall back to GoogleTranslateEngine if AI fails (e.g. line count mismatch, rate limit)
+                    moe.rgsekai.sekaitune.lyrics.translation.GoogleTranslateEngine.translate(
+                        lines = batch.map { it.text },
+                        targetLanguageCode = targetLanguage,
+                    ) ?: throw e
+                }
             batch.forEachIndexed { index, segment ->
-                translated[segment.id] = batchTranslations[index]
+                translated[segment.id] = batchTranslations.getOrNull(index) ?: segment.text
             }
         }
         return document.rebuild(translated)

@@ -230,6 +230,23 @@ class LyricsMenuViewModel
             targetLanguage: String,
         ) {
             if (isAiTranslating.value || lyrics.isBlank()) return
+
+            val cacheId = mediaMetadata.id.ifBlank { lyrics.hashCode().toString() }
+            val cached = moe.rgsekai.sekaitune.lyrics.translation.LyricsTranslationCache.get(cacheId, targetLanguage, mode = "ai")
+            if (cached != null) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    database.query {
+                        replaceLyrics(
+                            id = mediaMetadata.id,
+                            lyrics = cached,
+                            source = LyricsEntity.Source.AI_TRANSLATION.value,
+                        )
+                    }
+                    _aiTranslationEvents.emit(context.getString(R.string.translation_success))
+                }
+                return
+            }
+
             aiTranslationJob =
                 viewModelScope.launch(Dispatchers.IO) {
                     isAiTranslating.value = true
@@ -252,6 +269,7 @@ class LyricsMenuViewModel
                                 lyrics = lyrics,
                                 targetLanguage = targetLanguage.ifBlank { "ENGLISH" },
                             )
+                        moe.rgsekai.sekaitune.lyrics.translation.LyricsTranslationCache.put(cacheId, targetLanguage, translatedLyrics, mode = "ai")
                         database.query {
                             replaceLyrics(
                                 id = mediaMetadata.id,

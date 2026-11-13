@@ -1386,6 +1386,15 @@ class MusicService :
                     )
                 }
             }
+
+            if (mediaMetadata != null) {
+                moe.rgsekai.sekaitune.lyrics.translation.SessionTranslationCoordinator.onSongChanged(
+                    context = this@MusicService,
+                    scope = ioScope,
+                    database = database,
+                    mediaMetadata = mediaMetadata,
+                )
+            }
         }
 
         dataStore.data

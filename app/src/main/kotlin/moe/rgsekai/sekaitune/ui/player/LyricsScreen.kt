@@ -137,6 +137,7 @@ fun LyricsScreen(
     lyricsSyncOffset: Int,
     onLyricsSyncOffsetChange: (Int) -> Unit,
     onQueueClick: (() -> Unit)? = null,
+    onNavigateToAiSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     backHandlerEnabled: Boolean = true,
 ) {
@@ -281,6 +282,9 @@ fun LyricsScreen(
                 showPlayerControlsState = showPlayerControlsState,
                 onShowPlayerControlsChange = onShowPlayerControlsChange,
                 onDismiss = menuState::dismiss,
+                onNavigateToAiSettings = onNavigateToAiSettings ?: {
+                    navController.navigate("settings/ai_integration")
+                },
             )
         }
     }
