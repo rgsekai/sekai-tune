@@ -13,6 +13,7 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -75,6 +77,7 @@ import coil3.size.Size as CoilSize
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.ui.player.BackdropBlurTransformation
+import moe.rgsekai.sekaitune.ui.player.StreamFormatBadge
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
 import moe.rgsekai.sekaitune.utils.makeTimeString
 import kotlin.math.roundToInt
@@ -83,6 +86,11 @@ import kotlin.math.roundToInt
 private const val ReflectionPx = 360
 private const val ReflectionBlurPx = 8
 private const val FrostedEdgeFadeFraction = 0.13f
+private val PlayerHorizontalPadding = 32.dp
+private val ControlsDrawShift = 64.dp
+private val SeekBarLift = 6.dp
+private val PlayerDeckHeight = 54.dp + 9.dp // 63.dp
+private val TransportGapAboveRow = 24.dp + SeekBarLift
 
 // Mochy ControlsShade: clear at top, 24% black by 46% down, then held
 private val ControlsShadeBrush = Brush.verticalGradient(
@@ -198,150 +206,195 @@ fun FlagshipPlayerContent(
         )
 
         // Bottom Controls Column
+        val belowControls = PlayerDeckHeight
+        val transportGap = (screenHeight * 0.19f - 37.dp - belowControls + TransportGapAboveRow + ControlsDrawShift) / 2f
+        val transportSpacer = (transportGap - SeekBarLift - ControlsDrawShift).coerceAtLeast(0.dp)
+        val gapAboveButtons = transportSpacer + SeekBarLift + ControlsDrawShift
+        val gapBelowButtons = transportGap.coerceAtLeast(0.dp)
+        val buttonsLift = (gapAboveButtons - gapBelowButtons) / 2f
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 16.dp),
+                .padding(bottom = belowControls + transportGap.coerceAtLeast(0.dp)),
         ) {
-            // Track Info Row: Title, Artist, Badge, Like, Upward Chevron
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = data.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = foreground,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
+            Column(modifier = Modifier.offset(y = -ControlsDrawShift)) {
+                Spacer(modifier = Modifier.height(20.dp))
 
-                        Spacer(Modifier.width(6.dp))
-
-                        // Format Badge
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(foreground.copy(alpha = 0.18f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
-                        ) {
+                // Track Info Row: Title, Artist, Outlined StreamFormatBadge, Like, Upward Chevron
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = PlayerHorizontalPadding),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
+                                text = data.title,
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = foreground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+
+                            Spacer(Modifier.width(8.dp))
+
+                            // Mochy-exact Outlined Stream Format Badge
+                            StreamFormatBadge(
                                 text = data.formatTag.ifBlank { "OPUS" },
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = foreground.copy(alpha = 0.90f),
+                            )
+                        }
+
+                        if (data.artist.isNotBlank()) {
+                            Text(
+                                text = data.artist,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White.copy(alpha = 0.70f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
 
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.width(12.dp))
 
-                    Text(
-                        text = data.artist,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = secondaryForeground,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    // Action buttons: Like and Chevron Dropdown spaced by 7.dp
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PressScaleButton(
+                            onClick = onLikeClick,
+                            containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
+                                ),
+                                contentDescription = "Like",
+                                tint = if (data.isLiked) Color.White else Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+
+                        PressScaleButton(
+                            onClick = onMenuClick,
+                            containerColor = Color.White.copy(alpha = 0.15f),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.expand_less),
+                                contentDescription = "More options",
+                                tint = Color.White.copy(alpha = 0.90f),
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
                 }
 
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Action buttons: Like and Chevron Dropdown
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                // Seek Bar Column: lifted by -SeekBarLift (-6.dp)
+                Column(
+                    modifier = Modifier.offset(y = -SeekBarLift),
                 ) {
-                    PressScaleButton(
-                        onClick = onLikeClick,
-                        containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
+                    var draggingPosition by remember { mutableStateOf<Long?>(null) }
+                    val safeDuration = if (data.durationMs > 0L) data.durationMs.toFloat() else 1f
+                    val currentPos = draggingPosition ?: data.progressMs
+                    val safeProgress = currentPos.toFloat().coerceIn(0f, safeDuration)
+                    val progressFraction = (safeProgress / safeDuration).coerceIn(0f, 1f)
+
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
+                    val expand by animateFloatAsState(
+                        targetValue = if (isPressed || draggingPosition != null) 1f else 0f,
+                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+                        label = "flagshipSeekExpand",
+                    )
+
+                    // Seek Slider with Mochy DefaultTrack drawing (7.dp rest, 14.dp held, round caps, 0dp thumb)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            painter = painterResource(
-                                if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
-                            ),
-                            contentDescription = "Like",
-                            tint = if (data.isLiked) Color.White else Color.White.copy(alpha = 0.85f),
-                            modifier = Modifier.size(19.dp),
+                        Slider(
+                            value = safeProgress,
+                            valueRange = 0f..safeDuration,
+                            onValueChange = { newPos ->
+                                draggingPosition = newPos.toLong()
+                                onSliderValueChange?.invoke(newPos.toLong())
+                            },
+                            onValueChangeFinished = {
+                                draggingPosition = null
+                                onSliderValueChangeFinished?.invoke()
+                            },
+                            interactionSource = interactionSource,
+                            thumb = { Spacer(Modifier.size(0.dp)) },
+                            track = {
+                                androidx.compose.foundation.Canvas(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(16.dp)
+                                        .padding(horizontal = PlayerHorizontalPadding),
+                                ) {
+                                    val h = (7f + 7f * expand).dp.toPx()
+                                    val y = size.height / 2f
+
+                                    // Inactive Track
+                                    drawLine(
+                                        color = Color.White.copy(alpha = 0.24f),
+                                        start = Offset(h / 2f, y),
+                                        end = Offset(size.width - h / 2f, y),
+                                        strokeWidth = h,
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                                    )
+
+                                    // Active Track
+                                    val endX = (h / 2f + (size.width - h) * progressFraction).coerceAtLeast(h / 2f)
+                                    drawLine(
+                                        color = Color.White,
+                                        start = Offset(h / 2f, y),
+                                        end = Offset(endX, y),
+                                        strokeWidth = h,
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(28.dp),
                         )
                     }
 
-                    PressScaleButton(
-                        onClick = onMenuClick,
-                        containerColor = Color.White.copy(alpha = 0.15f),
+                    // Elapsed & Total Time Labels
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = PlayerHorizontalPadding + 4.dp),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.expand_less),
-                            contentDescription = "More options",
-                            tint = Color.White.copy(alpha = 0.90f),
-                            modifier = Modifier.size(20.dp),
+                        Text(
+                            text = makeTimeString(currentPos),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.70f + 0.30f * expand),
+                        )
+                        Text(
+                            text = makeTimeString(data.durationMs),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.70f + 0.30f * expand),
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
-
-            // Seek Bar
-            var draggingPosition by remember { mutableStateOf<Long?>(null) }
-            val safeDuration = if (data.durationMs > 0L) data.durationMs.toFloat() else 1f
-            val currentPos = draggingPosition ?: data.progressMs
-            val safeProgress = currentPos.toFloat().coerceIn(0f, safeDuration)
-
-            Slider(
-                value = safeProgress,
-                valueRange = 0f..safeDuration,
-                onValueChange = { newPos ->
-                    draggingPosition = newPos.toLong()
-                    onSliderValueChange?.invoke(newPos.toLong())
-                },
-                onValueChangeFinished = {
-                    draggingPosition = null
-                    onSliderValueChangeFinished?.invoke()
-                },
-                colors = SliderDefaults.colors(
-                    activeTrackColor = foreground,
-                    inactiveTrackColor = foreground.copy(alpha = 0.28f),
-                    thumbColor = Color.Transparent,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp),
-            )
-
-            // Elapsed & Total Time Labels
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 2.dp, vertical = 2.dp),
-            ) {
-                Text(
-                    text = makeTimeString(currentPos),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 11.sp,
-                    color = secondaryForeground,
-                )
-                Text(
-                    text = makeTimeString(data.durationMs),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 11.sp,
-                    color = secondaryForeground,
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(transportSpacer))
 
             // Transport Row: Mochy Flagship Vector Shapes & Layout
             MochyTransportRow(
@@ -349,11 +402,16 @@ fun FlagshipPlayerContent(
                 onPreviousClick = onPreviousClick,
                 onPlayPauseClick = onPlayPauseClick,
                 onNextClick = onNextClick,
+                modifier = Modifier.offset(y = -buttonsLift),
             )
+        }
 
-            Spacer(Modifier.height(18.dp))
-
-            // Stacked Bottom Cards (Lyrics & Queue)
+        // Stacked Bottom Cards (Lyrics & Queue) anchored directly to the bottom
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+        ) {
             FlagshipBottomCardStack(
                 onOpenLyrics = onOpenLyrics,
                 onOpenQueue = onOpenQueue,
@@ -375,6 +433,7 @@ private fun MochyTransportRow(
     onPreviousClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onNextClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val shapes = rememberTransportShapes(small = false)
     val playGlyph = remember { PlayGlyphState(isPlaying) }
@@ -384,7 +443,7 @@ private fun MochyTransportRow(
     }
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         // Design unit from Mochy: screen width divided by 1172
         val unit = (maxWidth / 1172f).coerceIn(0.27.dp, 0.42.dp)

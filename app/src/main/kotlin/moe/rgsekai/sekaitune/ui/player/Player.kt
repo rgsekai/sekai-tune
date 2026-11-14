@@ -1286,13 +1286,35 @@ fun BottomSheetPlayer(
                                 val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
                                 val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
                                 val formatTag = currentFormat?.let { "${it.codecLabel()} ${it.formattedBitrate()}".trim() } ?: "OPUS"
+
+                                val currentLyricsEntity by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
+                                val lyricsText = remember(currentLyricsEntity, currentTrackId) {
+                                    currentLyricsEntity?.takeIf { it.id == currentTrackId }?.lyrics
+                                }
+                                val liveLyric = remember(lyricsText, sliderPosition, position, lyricsSyncOffset, duration) {
+                                    if (!lyricsText.isNullOrBlank() && lyricsText != moe.rgsekai.sekaitune.db.entities.LyricsEntity.LYRICS_NOT_FOUND) {
+                                        val parsedLines = when {
+                                            moe.rgsekai.sekaitune.lyrics.LyricsUtils.isTtml(lyricsText) -> moe.rgsekai.sekaitune.lyrics.LyricsUtils.parseTtml(lyricsText, (duration / 1000L).toInt())
+                                            moe.rgsekai.sekaitune.lyrics.LyricsUtils.isLineSyncedLrc(lyricsText) -> moe.rgsekai.sekaitune.lyrics.LyricsUtils.parseLyrics(lyricsText)
+                                            else -> emptyList()
+                                        }
+                                        if (parsedLines.isNotEmpty()) {
+                                            val effectivePos = (sliderPosition ?: position) + lyricsSyncOffset.toLong()
+                                            val idx = moe.rgsekai.sekaitune.lyrics.LyricsUtils.findCurrentLineIndex(parsedLines, effectivePos, 300L)
+                                            if (idx in parsedLines.indices && parsedLines[idx] != moe.rgsekai.sekaitune.lyrics.LyricsEntry.HEAD_LYRICS_ENTRY) {
+                                                parsedLines[idx].text
+                                            } else ""
+                                        } else ""
+                                    } else ""
+                                }
+
                                 val previewData = PlayerPreviewData(
                                     title = enrichedMetadata?.title ?: mediaMetadata?.title ?: "",
                                     artist = enrichedMetadata?.artists?.joinToString { it.name } ?: mediaMetadata?.artists?.joinToString { it.name } ?: "",
                                     artworkModel = effectiveThumbnailUrl ?: R.drawable.ic_player_placeholder_art,
                                     durationMs = duration,
                                     progressMs = sliderPosition ?: position,
-                                    lyricLine = "",
+                                    lyricLine = liveLyric,
                                     formatTag = formatTag,
                                     isLiked = currentSongLiked,
                                     isPlaying = isPlaying,
