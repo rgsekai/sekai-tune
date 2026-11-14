@@ -48,7 +48,15 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -284,21 +292,81 @@ private fun BoxScope.DeckCard(
 
 @Composable
 private fun LyricCardContent(lyric: String?) {
+    val text = lyric?.takeIf { it.isNotBlank() } ?: "No lyrics for this song"
+    val isPresent = !lyric.isNullOrBlank()
+
+    // Mochy format: The main lyric text is bold and prominent, while background/backing vocals
+    // inside brackets like "(No, I don't...)" are slightly dimmer and regular weight.
+    val annotatedText = remember(text, isPresent) {
+        if (!isPresent) {
+            buildAnnotatedString {
+                append(text)
+            }
+        } else {
+            val parenStart = text.indexOf('(')
+            val bracketStart = text.indexOf('[')
+            val splitIdx = when {
+                parenStart >= 0 && bracketStart >= 0 -> minOf(parenStart, bracketStart)
+                parenStart >= 0 -> parenStart
+                bracketStart >= 0 -> bracketStart
+                else -> -1
+            }
+
+            if (splitIdx >= 0) {
+                val lead = text.substring(0, splitIdx).trimEnd()
+                val backing = text.substring(splitIdx).trim()
+                buildAnnotatedString {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) {
+                        append(lead)
+                    }
+                    if (backing.isNotEmpty()) {
+                        append(" ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Normal, color = Color.White.copy(alpha = 0.65f))) {
+                            append(backing)
+                        }
+                    }
+                }
+            } else {
+                buildAnnotatedString {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) {
+                        append(text)
+                    }
+                }
+            }
+        }
+    }
+
     Box(
         contentAlignment = Alignment.CenterStart,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .clipToBounds()
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                // Mochy exact horizontal right edge fade so text does not cross over the card's boundary
+                val fadeWidth = 24.dp.toPx()
+                val edge = (fadeWidth / size.width).coerceIn(0f, 0.5f)
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        0f to Color.Black,
+                        1f - edge to Color.Black,
+                        1f to Color.Transparent,
+                    ),
+                    blendMode = BlendMode.DstIn,
+                )
+            },
     ) {
         Text(
-            text = lyric?.takeIf { it.isNotBlank() } ?: "No lyrics for this song",
+            text = annotatedText,
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontSize = 17.sp,
                 lineHeight = 22.sp,
             ),
-            fontWeight = FontWeight.Bold,
-            color = if (!lyric.isNullOrBlank()) Color.White else Color.White.copy(alpha = 0.55f),
+            color = if (isPresent) Color.White else Color.White.copy(alpha = 0.55f),
             maxLines = 1,
             softWrap = false,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
         )
     }
 }
