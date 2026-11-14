@@ -1,8 +1,11 @@
 package moe.rgsekai.sekaitune.ui.player.flagship
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -20,13 +23,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,11 +40,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -46,13 +57,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -62,9 +69,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 // Mochy design constants
 internal val FlagshipCardHeight = 54.dp
@@ -296,7 +305,6 @@ private fun LyricCardContent(lyric: String?) {
     val isPresent = !lyric.isNullOrBlank()
 
     // Mochy format: The main lyric text is lead (bold), backing vocals inside brackets like "(No, I don't...)" are separate.
-    // If the line has backing vocals in parentheses/brackets, Mochy splits them so the main line shows first.
     val (leadText, backingText) = remember(text, isPresent) {
         if (!isPresent) {
             text to null
@@ -320,39 +328,87 @@ private fun LyricCardContent(lyric: String?) {
         }
     }
 
+    var textWidthPx by remember(leadText) { mutableFloatStateOf(0f) }
+    val viewportWidthPx = remember { mutableFloatStateOf(0f) }
+    val scrollOffset = remember(leadText) { Animatable(0f) }
+
+    // Mochy-exact horizontal sliding ticker for long lines:
+    // If the text width exceeds the card's viewport, slide across smoothly and pause at end, then loop back
+    LaunchedEffect(leadText, textWidthPx, viewportWidthPx.floatValue) {
+        val overflow = (textWidthPx - viewportWidthPx.floatValue).coerceAtLeast(0f)
+        if (overflow > 0f) {
+            scrollOffset.snapTo(0f)
+            delay(1200) // Initial reading pause at start
+            while (true) {
+                scrollOffset.animateTo(
+                    targetValue = overflow,
+                    animationSpec = tween(
+                        durationMillis = (overflow * 25f).roundToInt().coerceIn(3000, 10000),
+                        easing = LinearEasing,
+                    ),
+                )
+                delay(1800) // Pause at end so user can read the tail
+                scrollOffset.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                )
+                delay(1400) // Pause at start before next slide
+            }
+        } else {
+            scrollOffset.snapTo(0f)
+        }
+    }
+
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier = Modifier
             .fillMaxSize()
+            .onSizeChanged { viewportWidthPx.floatValue = it.width.toFloat() }
             .clipToBounds()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
-                // Mochy exact horizontal right edge fade so text does not cross over the card's boundary
-                val fadeWidth = 24.dp.toPx()
-                val edge = (fadeWidth / size.width).coerceIn(0f, 0.5f)
-                drawRect(
-                    brush = Brush.horizontalGradient(
-                        0f to Color.Black,
-                        1f - edge to Color.Black,
-                        1f to Color.Transparent,
-                    ),
-                    blendMode = BlendMode.DstIn,
-                )
+                val overflow = (textWidthPx - size.width).coerceAtLeast(0f)
+                if (overflow > 0f) {
+                    val fadeWidth = 18.dp.toPx()
+                    val currentScroll = scrollOffset.value
+                    val leftFadeAlpha = (currentScroll / fadeWidth).coerceIn(0f, 1f)
+                    val rightFadeAlpha = ((overflow - currentScroll) / fadeWidth).coerceIn(0f, 1f)
+                    val edgeFraction = (fadeWidth / size.width).coerceIn(0f, 0.4f)
+
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            0f to Color.Black.copy(alpha = 1f - leftFadeAlpha),
+                            edgeFraction to Color.Black,
+                            1f - edgeFraction to Color.Black,
+                            1f to Color.Black.copy(alpha = 1f - rightFadeAlpha),
+                        ),
+                        blendMode = BlendMode.DstIn,
+                    )
+                }
             },
     ) {
-        Text(
-            text = leadText,
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = 17.sp,
-                lineHeight = 22.sp,
-            ),
-            fontWeight = FontWeight.Bold,
-            color = if (isPresent) Color.White else Color.White.copy(alpha = 0.55f),
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Clip,
-        )
+        Box(
+            modifier = Modifier
+                .wrapContentWidth(align = Alignment.Start, unbounded = true)
+                .graphicsLayer { translationX = -scrollOffset.value },
+        ) {
+            Text(
+                text = leadText,
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 17.sp,
+                    lineHeight = 22.sp,
+                ),
+                fontWeight = FontWeight.Bold,
+                color = if (isPresent) Color.White else Color.White.copy(alpha = 0.55f),
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+                onTextLayout = { textLayoutResult ->
+                    textWidthPx = textLayoutResult.size.width.toFloat()
+                },
+            )
+        }
     }
 }
 
