@@ -47,6 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Immutable
@@ -307,6 +308,7 @@ private fun MiniPlayerArtwork(
     mediaMetadata: MediaMetadata?,
     position: Long,
     duration: Long,
+    isPlaying: Boolean,
     colors: MiniPlayerContentColors,
     modifier: Modifier = Modifier,
 ) {
@@ -316,6 +318,7 @@ private fun MiniPlayerArtwork(
     ) {
         CircularWavyProgressIndicator(
             progress = { if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f },
+            waveSpeed = if (isPlaying) WavyProgressIndicatorDefaults.CircularWavelength else 0.dp,
             modifier = Modifier.fillMaxSize(),
             color = colors.progress,
             trackColor = colors.progressTrack,
@@ -489,6 +492,7 @@ fun NewMiniPlayerContent(
             mediaMetadata = mediaMetadata,
             position = position,
             duration = duration,
+            isPlaying = isPlaying,
             colors = colors,
         )
 
