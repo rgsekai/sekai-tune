@@ -216,6 +216,13 @@ import moe.rgsekai.sekaitune.ui.component.rememberBottomSheetState
 import moe.rgsekai.sekaitune.ui.menu.PlayerMenu
 import moe.rgsekai.sekaitune.ui.screens.settings.DarkMode
 import moe.rgsekai.sekaitune.ui.theme.PlayerColorExtractor
+import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
+import moe.rgsekai.sekaitune.db.entities.codecLabel
+import moe.rgsekai.sekaitune.db.entities.formattedBitrate
+import moe.rgsekai.sekaitune.ui.player.flagship.FlagshipPlayerContent
+import moe.rgsekai.sekaitune.ui.player.poster.PosterPlayerContent
+import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
+import moe.rgsekai.sekaitune.ui.player.styles.PlayerStyle
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
 import moe.rgsekai.sekaitune.ui.utils.highRes
 import moe.rgsekai.sekaitune.ui.utils.resize
@@ -344,6 +351,8 @@ fun BottomSheetPlayer(
     val (themeBackdropBlurEnabled) = rememberPreference(ThemeBackdropBlurEnabledKey, defaultValue = false)
     val (themeBackdropBlurStrength) = rememberPreference(ThemeBackdropBlurStrengthKey, defaultValue = 60)
     val (showCodecOnPlayer) = rememberPreference(booleanPreferencesKey("show_codec_on_player"), false)
+    val (savedPlayerStyleId) = rememberPreference(PlayerDesignStyleKey, defaultValue = PlayerStyle.DEFAULT.id)
+    val activePlayerStyle = remember(savedPlayerStyleId) { PlayerStyle.fromPreference(savedPlayerStyleId) }
 
 
     val isSystemInDarkTheme = isSystemInDarkTheme()
@@ -724,7 +733,9 @@ fun BottomSheetPlayer(
     }
 
     val dynamicQueuePeekHeight =
-        if (showCodecOnPlayer) {
+        if (activePlayerStyle != PlayerStyle.IMMERSIVE) {
+            0.dp
+        } else if (showCodecOnPlayer) {
             88.dp
         } else {
             QueuePeekHeight
@@ -1270,78 +1281,185 @@ fun BottomSheetPlayer(
                     }
 
                     else -> {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxSize(),
-                        ) {
-                            val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
-                            val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
-                            val v7SwapState =
-                                rememberThumbnailSwapState(
-                                    videoId = currentTrackId,
-                                    ytmUrl = effectiveThumbnailUrl,
-                                    lowDataMode = lowDataModeActive,
-                                    isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
+                        when (activePlayerStyle) {
+                            PlayerStyle.FLAGSHIP -> {
+                                val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
+                                val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
+                                val formatTag = currentFormat?.let { "${it.codecLabel()} ${it.formattedBitrate()}".trim() } ?: "OPUS"
+                                val previewData = PlayerPreviewData(
+                                    title = enrichedMetadata?.title ?: mediaMetadata?.title ?: "",
+                                    artist = enrichedMetadata?.artists?.joinToString { it.name } ?: mediaMetadata?.artists?.joinToString { it.name } ?: "",
+                                    artworkModel = effectiveThumbnailUrl ?: R.drawable.ic_player_placeholder_art,
+                                    durationMs = duration,
+                                    progressMs = sliderPosition ?: position,
+                                    lyricLine = "",
+                                    formatTag = formatTag,
+                                    isLiked = currentSongLiked,
+                                    isPlaying = isPlaying,
                                 )
-                            V7PlayerBackdrop(
-                                trackId = currentTrackId,
-                                thumbnailUrl = v7SwapState.displayUrl,
-                                canvasStaticUrl = v7CanvasArtwork?.static,
-                                canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
-                                canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
-                                songVideo = ytVideoCanvasSong,
-                                isPlaying = isPlaying,
-                                disableBlur = disableBlur,
-                                themeBackdropMode = themeBackdropMode,
-                                themeBackdropBlurEnabled = themeBackdropBlurEnabled,
-                                themeBackdropBlurStrength = themeBackdropBlurStrength,
-                                gradientColors = gradientColors,
-                                label = "v7BackdropPortrait",
-                            )
 
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = queueSheetState.collapsedBound)
-                                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                                        .nestedScroll(state.preUpPostDownNestedScrollConnection),
-                            ) {
-                                enrichedMetadata?.let { metadata ->
-                                    V8PlayerControlsContent(
-                                        mediaMetadata = metadata,
-                                        queueTitle = "",
-                                        playbackState = playbackState,
-                                        isPlaying = isPlaying,
-                                        canSkipPrevious = canSkipPrevious,
-                                        canSkipNext = canSkipNext,
-                                        currentSongLiked = currentSongLiked,
-                                        sliderPosition = sliderPosition,
-                                        position = position,
-                                        duration = duration,
-                                        useYtVideoCanvas = useYtVideoCanvas,
-                                        inlineVideoActive = inlineVideoActive,
-                                        hasVideo = (videoLookup.video != null),
-                                        onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
-                                        onViewFullScreen = { isFullScreenVideo = true },
-                                        currentFormat = currentFormat,
-                                        playerConnection = playerConnection,
-                                        navController = navController,
-                                        state = state,
-                                        menuState = menuState,
-                                        bottomSheetPageState = bottomSheetPageState,
-                                        onSliderValueChange = onSliderValueChange,
-                                        onSliderValueChangeFinished = onSliderValueChangeFinished,
-                                        lyricsSyncOffset = lyricsSyncOffset,
-                                        showOneLineLyrics = showOneLineLyrics,
-                                        fallbackVideoId = videoLookup.video?.videoId,
-                                        onShowLyrics = { isLyricsScreenVisible = true },
-                                    )
+                                val onMenuClick: () -> Unit = {
+                                    mediaMetadata?.let { meta ->
+                                        menuState.show {
+                                            PlayerMenu(
+                                                mediaMetadata = meta,
+                                                navController = navController,
+                                                playerBottomSheetState = state,
+                                                hasVideo = (videoLookup.video != null),
+                                                useYtVideoCanvas = useYtVideoCanvas,
+                                                inlineVideoActive = inlineVideoActive,
+                                                onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
+                                                onViewFullScreen = { isFullScreenVideo = true },
+                                                onShowDetailsDialog = {
+                                                    bottomSheetPageState.show {
+                                                        ShowMediaInfo(meta.id)
+                                                    }
+                                                },
+                                                onShowComments = {},
+                                                onDismiss = menuState::dismiss,
+                                            )
+                                        }
+                                    }
                                 }
 
-                                Spacer(Modifier.height(24.dp))
+                                FlagshipPlayerContent(
+                                    data = previewData,
+                                    onMenuClick = onMenuClick,
+                                    onLikeClick = { playerConnection.toggleLike() },
+                                    onPreviousClick = { playerConnection.player.seekToPrevious() },
+                                    onPlayPauseClick = { playerConnection.player.togglePlayPause() },
+                                    onNextClick = { playerConnection.player.seekToNext() },
+                                    onOpenLyrics = { isLyricsScreenVisible = true },
+                                    onOpenQueue = { openQueue() },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+
+                            PlayerStyle.POSTER -> {
+                                val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
+                                val formatTag = currentFormat?.let { "${it.codecLabel()} ${it.formattedBitrate()}".trim() } ?: "OPUS"
+                                val previewData = PlayerPreviewData(
+                                    title = enrichedMetadata?.title ?: mediaMetadata?.title ?: "",
+                                    artist = enrichedMetadata?.artists?.joinToString { it.name } ?: mediaMetadata?.artists?.joinToString { it.name } ?: "",
+                                    artworkModel = effectiveThumbnailUrl ?: R.drawable.ic_player_placeholder_art,
+                                    durationMs = duration,
+                                    progressMs = sliderPosition ?: position,
+                                    lyricLine = "",
+                                    formatTag = formatTag,
+                                    isLiked = currentSongLiked,
+                                    isPlaying = isPlaying,
+                                )
+
+                                val onMenuClick: () -> Unit = {
+                                    mediaMetadata?.let { meta ->
+                                        menuState.show {
+                                            PlayerMenu(
+                                                mediaMetadata = meta,
+                                                navController = navController,
+                                                playerBottomSheetState = state,
+                                                hasVideo = (videoLookup.video != null),
+                                                useYtVideoCanvas = useYtVideoCanvas,
+                                                inlineVideoActive = inlineVideoActive,
+                                                onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
+                                                onViewFullScreen = { isFullScreenVideo = true },
+                                                onShowDetailsDialog = {
+                                                    bottomSheetPageState.show {
+                                                        ShowMediaInfo(meta.id)
+                                                    }
+                                                },
+                                                onShowComments = {},
+                                                onDismiss = menuState::dismiss,
+                                            )
+                                        }
+                                    }
+                                }
+
+                                PosterPlayerContent(
+                                    data = previewData,
+                                    onLikeClick = { playerConnection.toggleLike() },
+                                    onPreviousClick = { playerConnection.player.seekToPrevious() },
+                                    onPlayPauseClick = { playerConnection.player.togglePlayPause() },
+                                    onNextClick = { playerConnection.player.seekToNext() },
+                                    onMenuClick = onMenuClick,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+
+                            PlayerStyle.IMMERSIVE -> {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxSize(),
+                                ) {
+                                    val currentTrackId = enrichedMetadata?.id ?: mediaMetadata?.id
+                                    val effectiveThumbnailUrl = currentArtworkUrl ?: v7CanvasArtwork?.static ?: v7CanvasArtwork?.preferredVerticalAnimationUrl
+                                    val v7SwapState =
+                                        rememberThumbnailSwapState(
+                                            videoId = currentTrackId,
+                                            ytmUrl = effectiveThumbnailUrl,
+                                            lowDataMode = lowDataModeActive,
+                                            isMusicVideo = enrichedMetadata?.isMusicVideo ?: mediaMetadata?.isMusicVideo ?: false,
+                                        )
+                                    V7PlayerBackdrop(
+                                        trackId = currentTrackId,
+                                        thumbnailUrl = v7SwapState.displayUrl,
+                                        canvasStaticUrl = v7CanvasArtwork?.static,
+                                        canvasPrimaryUrl = v7CanvasArtwork?.animatedVertical,
+                                        canvasFallbackUrl = v7CanvasArtwork?.videoUrlVertical,
+                                        songVideo = ytVideoCanvasSong,
+                                        isPlaying = isPlaying,
+                                        disableBlur = disableBlur,
+                                        themeBackdropMode = themeBackdropMode,
+                                        themeBackdropBlurEnabled = themeBackdropBlurEnabled,
+                                        themeBackdropBlurStrength = themeBackdropBlurStrength,
+                                        gradientColors = gradientColors,
+                                        label = "v7BackdropPortrait",
+                                    )
+
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.BottomCenter)
+                                                .padding(bottom = queueSheetState.collapsedBound)
+                                                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                                                .nestedScroll(state.preUpPostDownNestedScrollConnection),
+                                    ) {
+                                        enrichedMetadata?.let { metadata ->
+                                            V8PlayerControlsContent(
+                                                mediaMetadata = metadata,
+                                                queueTitle = "",
+                                                playbackState = playbackState,
+                                                isPlaying = isPlaying,
+                                                canSkipPrevious = canSkipPrevious,
+                                                canSkipNext = canSkipNext,
+                                                currentSongLiked = currentSongLiked,
+                                                sliderPosition = sliderPosition,
+                                                position = position,
+                                                duration = duration,
+                                                useYtVideoCanvas = useYtVideoCanvas,
+                                                inlineVideoActive = inlineVideoActive,
+                                                hasVideo = (videoLookup.video != null),
+                                                onToggleInlineVideo = { inlineVideoActive = !inlineVideoActive },
+                                                onViewFullScreen = { isFullScreenVideo = true },
+                                                currentFormat = currentFormat,
+                                                playerConnection = playerConnection,
+                                                navController = navController,
+                                                state = state,
+                                                menuState = menuState,
+                                                bottomSheetPageState = bottomSheetPageState,
+                                                onSliderValueChange = onSliderValueChange,
+                                                onSliderValueChangeFinished = onSliderValueChangeFinished,
+                                                lyricsSyncOffset = lyricsSyncOffset,
+                                                showOneLineLyrics = showOneLineLyrics,
+                                                fallbackVideoId = videoLookup.video?.videoId,
+                                                onShowLyrics = { isLyricsScreenVisible = true },
+                                            )
+                                        }
+
+                                        Spacer(Modifier.height(24.dp))
+                                    }
+                                }
                             }
                         }
                     }

@@ -149,6 +149,8 @@ fun PlayerStyleConfigureSheet(
                         },
                     )
                 }
+
+                else -> {}
             }
 
             Spacer(Modifier.height(16.dp))

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the little chevron over the new flagship's card (the player design's Arrow 1), moved to the origin -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="11.36dp"
+    android:viewportWidth="58.912"
+    android:viewportHeight="33.456">
+    <group android:translateX="-556.544">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M586 9L590 9L590 4L586 4L582 4L582 9L586 9ZM588.828 1.17157C587.266 -0.390524 584.734 -0.390524 583.172 1.17157L557.716 26.6274C556.154 28.1895 556.154 30.7222 557.716 32.2843C559.278 33.8464 561.81 33.8464 563.373 32.2843L586 9.65685L608.627 32.2843C610.19 33.8464 612.722 33.8464 614.284 32.2843C615.846 30.7222 615.846 28.1895 614.284 26.6274L588.828 1.17157Z" />
+    </group>
+</vector>

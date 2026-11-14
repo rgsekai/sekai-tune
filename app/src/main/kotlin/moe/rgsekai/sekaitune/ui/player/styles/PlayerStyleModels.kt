@@ -19,14 +19,34 @@ enum class PlayerStyle(
 ) {
     IMMERSIVE(
         id = "IMMERSIVE",
-        displayNameRes = R.string.player_design_v7,
+        displayNameRes = R.string.player_style_immersive,
         hasOptions = true,
+    ),
+    FLAGSHIP(
+        id = "FLAGSHIP",
+        displayNameRes = R.string.player_style_flagship,
+        hasOptions = false,
+    ),
+    POSTER(
+        id = "POSTER",
+        displayNameRes = R.string.player_style_poster,
+        hasOptions = false,
     );
 
     companion object {
         val DEFAULT = IMMERSIVE
 
-        fun fromPreference(raw: String?): PlayerStyle = IMMERSIVE
+        // Columns for the style selector: column 0 has [IMMERSIVE, FLAGSHIP], column 1 has [POSTER]
+        val selectorColumns: List<List<PlayerStyle>> = listOf(
+            listOf(IMMERSIVE, FLAGSHIP),
+            listOf(POSTER),
+        )
+
+        fun fromPreference(raw: String?): PlayerStyle = when (raw) {
+            FLAGSHIP.id -> FLAGSHIP
+            POSTER.id -> POSTER
+            else -> IMMERSIVE
+        }
     }
 }
 

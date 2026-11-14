@@ -75,23 +75,21 @@ import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeState
 import moe.rgsekai.sekaitune.ui.component.PlayerSliderTrack
 import moe.rgsekai.sekaitune.ui.component.ResizableIconButton
-import moe.rgsekai.sekaitune.ui.player.PlayerColorExtractor
 import moe.rgsekai.sekaitune.ui.player.PlayerTimeLabel
 import moe.rgsekai.sekaitune.ui.player.PlaybackQualityBadge
 import moe.rgsekai.sekaitune.ui.theme.PlayerBackgroundColorUtils
+import moe.rgsekai.sekaitune.ui.theme.PlayerColorExtractor
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 
+import moe.rgsekai.sekaitune.ui.player.flagship.FlagshipPlayerContent
+import moe.rgsekai.sekaitune.ui.player.poster.PosterPlayerContent
+
 /**
- * Preview card representing Sekai Tune's Immersive Now Playing player.
- * Matches the real Immersive player layout & Theme Backdrop settings exactly:
- * - Live Theme Backdrop reflection: Glow Animated or Static Coloring, or Backdrop Blur!
- * - One-line lyric line (with live lyrics text from playback)
- * - Title + Artist row with Comment, More Options, and Like buttons
- * - Sleek pill track slider with live progress
- * - Centered quality badge (e.g. "Opus 144 >")
- * - Apple Music style transport controls with live Play/Pause state
- * - Bottom queue bar (Queue icon, Headset/Device pill, Sleep timer pill, Lyrics icon)
+ * Preview card representing Sekai Tune's Player styles:
+ * - IMMERSIVE: Standard full-bleed player layout with dynamic background reflection
+ * - FLAGSHIP: Ambient cover layout, format badge, real 3-dot menu, stacked bottom cards
+ * - POSTER: Big circular artwork swing, rim progress arc, bold lyrics, 4-pill stack
  */
 @Composable
 fun PlayerStylePreviewCard(
@@ -104,7 +102,27 @@ fun PlayerStylePreviewCard(
             .fillMaxSize()
             .inert(),
     ) {
-        ImmersiveStylePreview(data = data)
+        when (style) {
+            PlayerStyle.IMMERSIVE -> ImmersiveStylePreview(data = data)
+            PlayerStyle.FLAGSHIP -> FlagshipPlayerContent(
+                data = data,
+                onMenuClick = {},
+                onLikeClick = {},
+                onPreviousClick = {},
+                onPlayPauseClick = {},
+                onNextClick = {},
+                onOpenLyrics = {},
+                onOpenQueue = {},
+            )
+            PlayerStyle.POSTER -> PosterPlayerContent(
+                data = data,
+                onLikeClick = {},
+                onPreviousClick = {},
+                onPlayPauseClick = {},
+                onNextClick = {},
+                onMenuClick = {},
+            )
+        }
     }
 }
 

@@ -1,0 +1,68 @@
+<animated-vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector android:width="100dp" android:height="64dp" android:viewportWidth="100" android:viewportHeight="64">
+            <group android:translateX="25" android:translateY="16">
+                <!-- Left triangle (static) -->
+                <group android:name="left_triangle_group" android:pivotX="25" android:pivotY="16">
+                    <path android:pathData="M25.0421 10.1619c3.6671 2.0192 3.6671 7.3532 0 9.3724L7.77605 29.0416C4.26903 30.9728 0 28.4 0 24.3554V5.34085C.000002 1.29627 4.26903-1.27642 7.77605.654667L25.0421 10.1619z" android:fillColor="#ffffff"/>
+                </group>
+                
+                <!-- Middle triangle (starts at left, moves right and fades in) -->
+                <group android:name="middle_triangle_group" android:pivotX="25" android:pivotY="16">
+                    <path android:name="middle_triangle_path" android:pathData="M25.0421 10.1619c3.6671 2.0192 3.6671 7.3532 0 9.3724L7.77605 29.0416C4.26903 30.9728 0 28.4 0 24.3554V5.34085C.000002 1.29627 4.26903-1.27642 7.77605.654667L25.0421 10.1619z" android:fillColor="#ffffff" android:fillAlpha="0"/>
+                </group>
+
+                <!-- Right triangle (starts at right, moves right and fades out) -->
+                <group android:name="right_triangle_group" android:pivotX="25" android:pivotY="16">
+                    <path android:name="right_triangle_path" android:pathData="M46.0948 10.162c3.6671 2.0192 3.6671 7.3532 0 9.3723l-17.266 9.5073c-3.507 1.9312-7.7761-.6416-7.7761-4.6862V5.34091c0-4.04458 4.2691-6.61727 7.7761-4.686182L46.0948 10.162z" android:fillColor="#ffffff"/>
+                </group>
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <!-- Right triangle moves right and fades out -->
+    <target android:name="right_triangle_group">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="translateX"
+                android:valueFrom="0"
+                android:valueTo="21.05"
+                android:duration="400"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="right_triangle_path">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillAlpha"
+                android:valueFrom="1"
+                android:valueTo="0"
+                android:duration="400"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+
+    <!-- Middle triangle moves right and fades in -->
+    <target android:name="middle_triangle_group">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="translateX"
+                android:valueFrom="0"
+                android:valueTo="21.05"
+                android:duration="400"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="middle_triangle_path">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillAlpha"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:duration="400"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+</animated-vector>

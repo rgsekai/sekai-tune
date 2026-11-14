@@ -132,6 +132,8 @@ import moe.rgsekai.sekaitune.ui.menu.AddToPlaylistDialog
 import moe.rgsekai.sekaitune.ui.menu.PlayerMenu
 import moe.rgsekai.sekaitune.ui.utils.ShowMediaInfo
 import moe.rgsekai.sekaitune.utils.oem.SystemMediaControlResolver
+import moe.rgsekai.sekaitune.constants.PlayerDesignStyleKey
+import moe.rgsekai.sekaitune.ui.player.styles.PlayerStyle
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Brush
 import androidx.palette.graphics.Palette
@@ -499,6 +501,13 @@ fun Queue(
         }
     var sleepTimerTimeLeft by remember { mutableStateOf(0L) }
 
+    val (savedPlayerStyleId) =
+        rememberPreference(
+            key = PlayerDesignStyleKey,
+            defaultValue = PlayerStyle.DEFAULT.id,
+        )
+    val activePlayerStyle = remember(savedPlayerStyleId) { PlayerStyle.fromPreference(savedPlayerStyleId) }
+
     val (showCodecOnPlayer) =
         rememberPreference(
             key = booleanPreferencesKey("show_codec_on_player"),
@@ -546,26 +555,28 @@ fun Queue(
                 onDispose { view.viewTreeObserver.removeOnWindowFocusChangeListener(listener) }
             }
 
-            QueueCollapsedContentV7(
-                showCodecOnPlayer = showCodecOnPlayer,
-                currentFormat = currentFormat,
-                textBackgroundColor = TextBackgroundColor,
-                sleepTimerEnabled = sleepTimerEnabled,
-                sleepTimerTimeLeft = sleepTimerTimeLeft,
-                onExpandQueue = openQueue,
-                onShowLyrics = onShowLyrics,
-                onSleepTimerClick = {
-                    if (sleepTimerEnabled) {
-                        playerConnection.service.sleepTimer.clear()
-                    } else {
-                        showSleepTimerDialog = true
-                    }
-                },
-                onDeviceClick = {
-                    SystemMediaControlResolver.openMediaOutputSwitcher(context)
-                },
-                device = audioDevice,
-            )
+            if (activePlayerStyle == PlayerStyle.IMMERSIVE) {
+                QueueCollapsedContentV7(
+                    showCodecOnPlayer = showCodecOnPlayer,
+                    currentFormat = currentFormat,
+                    textBackgroundColor = TextBackgroundColor,
+                    sleepTimerEnabled = sleepTimerEnabled,
+                    sleepTimerTimeLeft = sleepTimerTimeLeft,
+                    onExpandQueue = openQueue,
+                    onShowLyrics = onShowLyrics,
+                    onSleepTimerClick = {
+                        if (sleepTimerEnabled) {
+                            playerConnection.service.sleepTimer.clear()
+                        } else {
+                            showSleepTimerDialog = true
+                        }
+                    },
+                    onDeviceClick = {
+                        SystemMediaControlResolver.openMediaOutputSwitcher(context)
+                    },
+                    device = audioDevice,
+                )
+            }
 
             if (showSleepTimerDialog) {
                 SleepTimerDialog(
