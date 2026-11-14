@@ -58,6 +58,7 @@ import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
 import kotlin.math.abs
 
+// Mochy design constants
 internal val FlagshipCardHeight = 54.dp
 internal val FlagshipCardCorner = 28.dp
 internal val FlagshipPeekOffset = 9.dp
@@ -65,6 +66,10 @@ internal val FlagshipPeekInset = 10.dp
 private const val BackCardScale = 0.94f
 private val BottomBleed = 100.dp
 private val FlipDistance = 70.dp
+private val LyricContentStart = 20.dp
+private val QueueContentStart = 14.dp
+private val ArtworkSize = 28.dp
+private val ArtworkShape = RoundedCornerShape(ArtworkSize * 0.3f)
 
 enum class FlagshipPage {
     NONE,
@@ -261,7 +266,7 @@ private fun BoxScope.DeckCard(
                     onSelect()
                 }
             }
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = if (isQueue) QueueContentStart else LyricContentStart),
         contentAlignment = Alignment.CenterStart,
     ) {
         Box(
@@ -279,31 +284,21 @@ private fun BoxScope.DeckCard(
 
 @Composable
 private fun LyricCardContent(lyric: String?) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier = Modifier.fillMaxSize(),
     ) {
-        Icon(
-            painter = painterResource(R.drawable.flagship_lyrics),
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.85f),
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(10.dp))
         Text(
-            text = lyric?.takeIf { it.isNotBlank() } ?: "Lyrics appear here",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = Color.White.copy(alpha = 0.90f),
+            text = lyric?.takeIf { it.isNotBlank() } ?: "No lyrics for this song",
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 17.sp,
+                lineHeight = 22.sp,
+            ),
+            fontWeight = FontWeight.Bold,
+            color = if (!lyric.isNullOrBlank()) Color.White else Color.White.copy(alpha = 0.55f),
             maxLines = 1,
+            softWrap = false,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            painter = painterResource(R.drawable.flagship_card_chevron),
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.60f),
-            modifier = Modifier.size(12.dp),
         )
     }
 }
@@ -324,42 +319,37 @@ private fun QueueCardContent(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(28.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .size(ArtworkSize)
+                    .clip(ArtworkShape),
             )
         } else {
-            Icon(
-                painter = painterResource(R.drawable.flagship_queue),
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.size(20.dp),
+            Box(
+                modifier = Modifier
+                    .size(ArtworkSize)
+                    .clip(ArtworkShape)
+                    .background(Color.White.copy(alpha = 0.10f)),
             )
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Next Song",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 11.sp),
                 color = Color.White.copy(alpha = 0.5f),
             )
             Text(
                 text = if (!title.isNullOrBlank()) {
                     listOfNotNull(title, artist?.takeIf { it.isNotBlank() }).joinToString(" - ")
                 } else {
-                    "Queue"
+                    "End of queue"
                 },
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.90f),
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 15.sp),
+                fontWeight = FontWeight.SemiBold,
+                color = if (!title.isNullOrBlank()) Color.White else Color.White.copy(alpha = 0.55f),
                 maxLines = 1,
+                softWrap = false,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Icon(
-            painter = painterResource(R.drawable.flagship_card_chevron),
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.60f),
-            modifier = Modifier.size(12.dp),
-        )
     }
 }
