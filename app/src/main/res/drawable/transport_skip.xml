@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- one triangle of the skip button from the transport frame (Frame 7.svg), moved to the origin; back is it mirrored -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="29.07dp"
+    android:viewportWidth="96.32"
+    android:viewportHeight="116.66">
+    <group
+        android:translateX="-756.25"
+        android:translateY="-22.67">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M845.767 68.4406C854.832 74.36 854.832 87.64 845.767 93.5594L779.451 136.864C769.474 143.379 756.25 136.22 756.25 124.304L756.25 37.6958C756.25 25.78 769.474 18.6214 779.451 25.1364L845.767 68.4406Z" />
+    </group>
+</vector>

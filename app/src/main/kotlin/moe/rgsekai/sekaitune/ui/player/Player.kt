@@ -1322,6 +1322,10 @@ fun BottomSheetPlayer(
                                     }
                                 }
 
+                                val nextSongTitle = nextUpMetadata?.title ?: nextMediaItem?.mediaMetadata?.title?.toString()
+                                val nextSongArtist = nextUpMetadata?.artists?.joinToString { it.name } ?: nextMediaItem?.mediaMetadata?.artist?.toString()
+                                val nextArtworkUrl = nextUpMetadata?.thumbnailUrl ?: nextMediaItem?.mediaMetadata?.artworkUri?.toString()
+
                                 FlagshipPlayerContent(
                                     data = previewData,
                                     onMenuClick = onMenuClick,
@@ -1331,6 +1335,11 @@ fun BottomSheetPlayer(
                                     onNextClick = { playerConnection.player.seekToNext() },
                                     onOpenLyrics = { isLyricsScreenVisible = true },
                                     onOpenQueue = { openQueue() },
+                                    onSliderValueChange = onSliderValueChange,
+                                    onSliderValueChangeFinished = onSliderValueChangeFinished,
+                                    nextSongTitle = nextSongTitle,
+                                    nextSongArtist = nextSongArtist,
+                                    nextArtworkUrl = nextArtworkUrl,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }

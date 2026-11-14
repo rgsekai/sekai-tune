@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the ten second row's play triangle, inside its white circle (the player design's Frame 5), moved to the origin -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="26.43dp"
+    android:viewportWidth="78.6"
+    android:viewportHeight="86.561">
+    <group
+        android:translateX="-63.25"
+        android:translateY="-50.719">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M135.813 83.5862C143.862 88.1954 143.862 99.8046 135.813 104.414L81.2127 135.676C73.2128 140.257 63.25 134.481 63.25 125.263L63.25 62.7373C63.25 53.5188 73.2128 47.7429 81.2127 52.3235L135.813 83.5862Z" />
+    </group>
+</vector>

@@ -1,9 +1,16 @@
 package moe.rgsekai.sekaitune.ui.player.flagship
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,8 +26,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,27 +44,36 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
+import kotlin.math.abs
 
 internal val FlagshipCardHeight = 54.dp
 internal val FlagshipCardCorner = 28.dp
 internal val FlagshipPeekOffset = 9.dp
 internal val FlagshipPeekInset = 10.dp
 private const val BackCardScale = 0.94f
+private val BottomBleed = 100.dp
+private val FlipDistance = 70.dp
+
+private fun mixF(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
 /**
- * Flagship bottom card stack showing two transparent stacked padding cards:
- * Card 0: Lyrics ticker / preview
- * Card 1: Queue peek (next song)
- *
- * Clicking either card or swiping up triggers opening the respective view (lyrics or queue).
+ * Mochy-exact Flagship bottom card deck:
+ * - Shows Lyrics card and Queue card in a stacked deck.
+ * - Upward drag flips between lyrics and queue with spring physics (`Spring.DampingRatioLowBouncy`).
+ * - Swiping up past threshold or tapping the front card opens the respective view.
+ * - Tapping the back peeking card brings it to the front.
  */
 @Composable
 fun FlagshipBottomCardStack(
@@ -67,113 +85,176 @@ fun FlagshipBottomCardStack(
     nextArtworkUrl: String?,
     modifier: Modifier = Modifier,
 ) {
-    // 0 = Lyrics in front, 1 = Queue in front
-    var frontIndex by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val flipDistancePx = with(density) { FlipDistance.toPx() }
+
+    var frontIndex by remember { mutableIntStateOf(0) } // 0 = lyrics, 1 = queue
+    val flipAnim = remember { Animatable(0f) }
+
+    val queueFrontness = flipAnim.value.coerceIn(0f, 1f)
+    val queueOnTop = queueFrontness >= 0.5f
+
+    val order = if (queueOnTop) listOf(0, 1) else listOf(1, 0)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(FlagshipCardHeight + FlagshipPeekOffset)
             .pointerInput(Unit) {
-                var pulledY = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { pulledY = 0f },
-                    onVerticalDrag = { _, amount ->
-                        pulledY += amount
-                        if (pulledY < -18f) {
-                            if (frontIndex == 0) onOpenLyrics() else onOpenQueue()
-                            pulledY = 0f
+                val slop = viewConfiguration.touchSlop
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var claimed = false
+                    var travelled = 0f
+                    var dragAccum = 0f
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+
+                        val dy = change.positionChange().y
+                        travelled += dy
+
+                        if (!claimed) {
+                            if (travelled < -slop) {
+                                claimed = true
+                                dragAccum = 0f
+                            } else if (travelled > slop) {
+                                break
+                            }
                         }
-                    },
-                )
+
+                        if (claimed) {
+                            change.consume()
+                            dragAccum += -dy
+                            val frac = (abs(dragAccum) / flipDistancePx).coerceIn(0f, 1f)
+                            val target = if (frontIndex == 0) frac else 1f - frac
+                            scope.launch { flipAnim.snapTo(target) }
+                        }
+                    }
+
+                    if (claimed) {
+                        if (abs(dragAccum) >= flipDistancePx * 0.4f) {
+                            frontIndex = 1 - frontIndex
+                        }
+                        scope.launch {
+                            flipAnim.animateTo(
+                                targetValue = frontIndex.toFloat(),
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            )
+                        }
+                    }
+                }
             },
         contentAlignment = Alignment.BottomCenter,
     ) {
-        // Render back card first, then front card
-        val backIndex = 1 - frontIndex
-
-        // Back card
-        DeckCardView(
-            isFront = false,
-            onClick = {
-                // Clicking back card flips or opens it
-                frontIndex = backIndex
-            },
-        ) {
-            if (backIndex == 0) {
-                LyricCardContent(currentLyric)
-            } else {
-                QueueCardContent(nextSongTitle, nextSongArtist, nextArtworkUrl)
-            }
-        }
-
-        // Front card
-        DeckCardView(
-            isFront = true,
-            onClick = {
-                if (frontIndex == 0) onOpenLyrics() else onOpenQueue()
-            },
-        ) {
-            if (frontIndex == 0) {
-                LyricCardContent(currentLyric)
-            } else {
-                QueueCardContent(nextSongTitle, nextSongArtist, nextArtworkUrl)
+        for (pageIdx in order) {
+            key(pageIdx) {
+                DeckCard(
+                    isQueue = (pageIdx == 1),
+                    frontnessProvider = {
+                        if (pageIdx == 1) queueFrontness else 1f - queueFrontness
+                    },
+                    onOpen = {
+                        if (it == 1) onOpenQueue() else onOpenLyrics()
+                    },
+                    onSelect = {
+                        frontIndex = pageIdx
+                        scope.launch {
+                            flipAnim.animateTo(
+                                targetValue = pageIdx.toFloat(),
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            )
+                        }
+                    },
+                    isTop = (pageIdx == (if (queueOnTop) 1 else 0)),
+                ) {
+                    if (pageIdx == 0) {
+                        LyricCardContent(currentLyric)
+                    } else {
+                        QueueCardContent(nextSongTitle, nextSongArtist, nextArtworkUrl)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun DeckCardView(
-    isFront: Boolean,
-    onClick: () -> Unit,
+private fun BoxScope.DeckCard(
+    isQueue: Boolean,
+    frontnessProvider: () -> Float,
+    onOpen: (Int) -> Unit,
+    onSelect: () -> Unit,
+    isTop: Boolean,
     content: @Composable () -> Unit,
 ) {
-    val f = if (isFront) 1f else 0f
-    val scale = if (isFront) 1f else BackCardScale
-    val peek = if (isFront) 0.dp else FlagshipPeekOffset
-    val inset = if (isFront) 0.dp else FlagshipPeekInset
-    val fillAlpha = if (isFront) 0.04f else 0.02f
-    val borderAlpha = if (isFront) 0.12f else 0.06f
+    val f = frontnessProvider().coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(FlagshipCardHeight)
+            .align(Alignment.BottomCenter)
             .graphicsLayer {
+                val scale = mixF(BackCardScale, 1f, f)
                 scaleX = scale
                 scaleY = scale
-                translationY = -peek.toPx()
+                translationY = -mixF(FlagshipPeekOffset.toPx(), 0f, f)
                 transformOrigin = TransformOrigin(0.5f, 1f)
             }
             .drawBehind {
-                val insetPx = inset.toPx()
-                val cornerPx = FlagshipCardCorner.toPx()
-                val topLeft = Offset(insetPx, 0f)
-                val cardSize = Size(size.width - insetPx * 2f, size.height + 40.dp.toPx())
+                val inset = mixF(FlagshipPeekInset.toPx(), 0f, f)
+                val corner = FlagshipCardCorner.toPx()
+                val bottom = size.height + BottomBleed.toPx()
 
                 clipRect(bottom = size.height) {
+                    val topLeft = Offset(inset, 0f)
+                    val cardSize = Size(size.width - inset * 2f, bottom)
                     drawRoundRect(
-                        color = Color.White.copy(alpha = fillAlpha),
+                        color = Color.White.copy(alpha = mixF(0.02f, 0.04f, f)),
                         topLeft = topLeft,
                         size = cardSize,
-                        cornerRadius = CornerRadius(cornerPx, cornerPx),
+                        cornerRadius = CornerRadius(corner, corner),
                     )
                     drawRoundRect(
-                        color = Color.White.copy(alpha = borderAlpha),
+                        color = Color.White.copy(alpha = mixF(0.06f, 0.12f, f)),
                         topLeft = topLeft,
                         size = cardSize,
-                        cornerRadius = CornerRadius(cornerPx, cornerPx),
+                        cornerRadius = CornerRadius(corner, corner),
                         style = Stroke(width = 1.35.dp.toPx()),
                     )
                 }
             }
             .clip(RoundedCornerShape(topStart = FlagshipCardCorner, topEnd = FlagshipCardCorner))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
+            .clickable {
+                if (isTop) {
+                    onOpen(if (isQueue) 1 else 0)
+                } else {
+                    onSelect()
+                }
+            }
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = (f * f * (3f - 2f * f)).coerceIn(0f, 1f)
+                },
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            content()
+        }
     }
 }
 
@@ -191,7 +272,7 @@ private fun LyricCardContent(lyric: String?) {
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            text = lyric?.takeIf { it.isNotBlank() } ?: "Lyrics",
+            text = lyric?.takeIf { it.isNotBlank() } ?: "Lyrics appear here",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = Color.White.copy(alpha = 0.90f),
@@ -249,8 +330,8 @@ private fun QueueCardContent(
                     "Queue"
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.90f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -263,4 +344,3 @@ private fun QueueCardContent(
         )
     }
 }
-

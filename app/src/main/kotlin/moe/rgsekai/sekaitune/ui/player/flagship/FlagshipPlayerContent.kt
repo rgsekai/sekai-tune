@@ -1,9 +1,26 @@
 package moe.rgsekai.sekaitune.ui.player.flagship
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Shader
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,28 +38,67 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.request.crossfade
+import coil3.request.transformations
+import coil3.size.Size as CoilSize
+import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.ui.player.BackdropBlurTransformation
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
 import moe.rgsekai.sekaitune.utils.makeTimeString
+import kotlin.math.roundToInt
+
+// Mochy design constants
+private const val ReflectionPx = 360
+private const val ReflectionBlurPx = 8
+private const val FrostedEdgeFadeFraction = 0.13f
+
+// Mochy ControlsShade: clear at top, 24% black by 46% down, then held
+private val ControlsShadeBrush = Brush.verticalGradient(
+    0f to Color.Transparent,
+    0.46f to Color.Black.copy(alpha = 0.24f),
+    1f to Color.Black.copy(alpha = 0.24f),
+)
 
 /**
- * Flagship Player UI layout:
- * - Cover art occupying the top portion with subtle bottom fade into ambient background.
- * - Title + Artist with format badge (e.g., OPUS), like heart button, and Sekai Tune's real 3-dot menu button.
- * - Clean slider bar with 0:00 elapsed and total duration.
- * - Transport buttons: Skip Previous, Play/Pause, Skip Next.
- * - Stacked bottom cards: Lyrics and Queue (two transparent pads with peek card behind).
+ * Mochy-exact Flagship Player UI:
+ * - Full screen blurred backdrop melting from album art colors.
+ * - Foreground sharp cover art (occupying upper 54% of height) with Mochy's 13% bottom fade mask.
+ * - Mochy ControlsShade (subtle 24% black gradient instead of thick dark cutoff).
+ * - Exact transport row using Mochy shapes, sizing, spacing, and squash-and-bounce spring animations.
+ * - Track Info Row with title, artist, format badge, and press-scaled Like and Chevron buttons.
+ * - Clean stacked bottom cards with zero text overlap.
  */
 @Composable
 fun FlagshipPlayerContent(
@@ -55,23 +111,70 @@ fun FlagshipPlayerContent(
     onOpenLyrics: () -> Unit,
     onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
+    onSliderValueChange: ((Long) -> Unit)? = null,
+    onSliderValueChangeFinished: (() -> Unit)? = null,
     nextSongTitle: String? = null,
     nextSongArtist: String? = null,
     nextArtworkUrl: String? = null,
 ) {
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
+    val context = LocalContext.current
 
-    Box(
+    val artworkUrl = (data.artworkModel as? String) ?: data.artworkModel?.toString()
+
+    // 1. Mochy BackdropBlurTransformation request for the full-screen blurred ambient copy
+    val blurredRequest = remember(context, artworkUrl) {
+        if (artworkUrl.isNullOrBlank()) null
+        else {
+            ImageRequest.Builder(context)
+                .data(artworkUrl)
+                .allowHardware(false)
+                .transformations(BackdropBlurTransformation(radiusPx = ReflectionBlurPx))
+                .crossfade(false)
+                .size(CoilSize(ReflectionPx, ReflectionPx))
+                .build()
+        }
+    }
+
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        // Top Artwork with ambient background
+        val screenHeight = maxHeight
+        val coverHeight = screenHeight * 0.538f
+
+        // Layer 1: Full-screen blurred ambient artwork reflection
+        if (blurredRequest != null) {
+            AsyncImage(
+                model = blurredRequest,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 0.95f },
+            )
+        } else {
+            // Fallback subtle gradient if no artwork yet
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF22262C), Color(0xFF14171A)),
+                        ),
+                    ),
+            )
+        }
+
+        // Layer 2: Foreground sharp cover picture fading softly into the blurred reflection at bottom 13%
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize(0.68f),
+                .height(coverHeight)
+                .align(Alignment.TopCenter)
+                .mochyCoverFade(bottomShare = FrostedEdgeFadeFraction),
         ) {
             AsyncImage(
                 model = data.artworkModel,
@@ -79,21 +182,20 @@ fun FlagshipPlayerContent(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-
-            // Vertical gradient fade at the bottom of the artwork
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            0f to Color.Transparent,
-                            0.55f to Color.Transparent,
-                            0.82f to Color.Black.copy(alpha = 0.65f),
-                            1f to Color.Black,
-                        ),
-                    ),
-            )
         }
+
+        // Layer 3: Mochy ControlsShade (subtle 24% black gradient for contrast without turning the background black)
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(screenHeight * (1f - 0.50f))
+                .align(Alignment.BottomCenter)
+                .drawWithCache {
+                    onDrawBehind {
+                        drawRect(ControlsShadeBrush)
+                    }
+                },
+        )
 
         // Bottom Controls Column
         Column(
@@ -102,9 +204,9 @@ fun FlagshipPlayerContent(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 18.dp),
+                .padding(bottom = 16.dp),
         ) {
-            // Track Info Row: Title, Artist, Badge, Heart, 3-dot Menu
+            // Track Info Row: Title, Artist, Badge, Like, Upward Chevron
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -143,6 +245,8 @@ fun FlagshipPlayerContent(
                         }
                     }
 
+                    Spacer(Modifier.height(2.dp))
+
                     Text(
                         text = data.artist,
                         style = MaterialTheme.typography.bodyMedium,
@@ -154,19 +258,14 @@ fun FlagshipPlayerContent(
 
                 Spacer(Modifier.width(12.dp))
 
-                // Action buttons: Like and Real 3-dot Menu
+                // Action buttons: Like and Chevron Dropdown
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Like button
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(foreground.copy(alpha = 0.15f))
-                            .clickable(onClick = onLikeClick),
-                        contentAlignment = Alignment.Center,
+                    PressScaleButton(
+                        onClick = onLikeClick,
+                        containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
                     ) {
                         Icon(
                             painter = painterResource(
@@ -178,20 +277,15 @@ fun FlagshipPlayerContent(
                         )
                     }
 
-                    // 3-dot menu button (Sekai Tune real more_vert menu)
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(foreground.copy(alpha = 0.15f))
-                            .clickable(onClick = onMenuClick),
-                        contentAlignment = Alignment.Center,
+                    PressScaleButton(
+                        onClick = onMenuClick,
+                        containerColor = Color.White.copy(alpha = 0.15f),
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.more_vert),
-                            contentDescription = "Menu",
-                            tint = foreground,
-                            modifier = Modifier.size(19.dp),
+                            painter = painterResource(R.drawable.expand_less),
+                            contentDescription = "More options",
+                            tint = Color.White.copy(alpha = 0.90f),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
@@ -200,12 +294,22 @@ fun FlagshipPlayerContent(
             Spacer(Modifier.height(14.dp))
 
             // Seek Bar
+            var draggingPosition by remember { mutableStateOf<Long?>(null) }
             val safeDuration = if (data.durationMs > 0L) data.durationMs.toFloat() else 1f
-            val safeProgress = data.progressMs.toFloat().coerceIn(0f, safeDuration)
+            val currentPos = draggingPosition ?: data.progressMs
+            val safeProgress = currentPos.toFloat().coerceIn(0f, safeDuration)
+
             Slider(
                 value = safeProgress,
                 valueRange = 0f..safeDuration,
-                onValueChange = {},
+                onValueChange = { newPos ->
+                    draggingPosition = newPos.toLong()
+                    onSliderValueChange?.invoke(newPos.toLong())
+                },
+                onValueChangeFinished = {
+                    draggingPosition = null
+                    onSliderValueChangeFinished?.invoke()
+                },
                 colors = SliderDefaults.colors(
                     activeTrackColor = foreground,
                     inactiveTrackColor = foreground.copy(alpha = 0.28f),
@@ -224,7 +328,7 @@ fun FlagshipPlayerContent(
                     .padding(horizontal = 2.dp, vertical = 2.dp),
             ) {
                 Text(
-                    text = makeTimeString(data.progressMs),
+                    text = makeTimeString(currentPos),
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 11.sp,
                     color = secondaryForeground,
@@ -237,65 +341,19 @@ fun FlagshipPlayerContent(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Transport Row: Previous, Play/Pause, Next
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth(0.92f),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onPreviousClick),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.flagship_skip_previous),
-                        contentDescription = "Previous",
-                        tint = foreground,
-                        modifier = Modifier.size(30.dp),
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onPlayPauseClick),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(
-                            if (data.isPlaying) R.drawable.flagship_pause else R.drawable.flagship_play,
-                        ),
-                        contentDescription = if (data.isPlaying) "Pause" else "Play",
-                        tint = foreground,
-                        modifier = Modifier.size(34.dp),
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onNextClick),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.flagship_skip_next),
-                        contentDescription = "Next",
-                        tint = foreground,
-                        modifier = Modifier.size(30.dp),
-                    )
-                }
-            }
+            // Transport Row: Mochy Flagship Vector Shapes & Layout
+            MochyTransportRow(
+                isPlaying = data.isPlaying,
+                onPreviousClick = onPreviousClick,
+                onPlayPauseClick = onPlayPauseClick,
+                onNextClick = onNextClick,
+            )
 
             Spacer(Modifier.height(18.dp))
 
-            // Stacked Bottom Cards (Lyrics & Queue with transparent paddings)
+            // Stacked Bottom Cards (Lyrics & Queue)
             FlagshipBottomCardStack(
                 onOpenLyrics = onOpenLyrics,
                 onOpenQueue = onOpenQueue,
@@ -308,3 +366,232 @@ fun FlagshipPlayerContent(
     }
 }
 
+/**
+ * Mochy's 3-button transport row with exact shapes, squash-and-bounce, and scale spring physics.
+ */
+@Composable
+private fun MochyTransportRow(
+    isPlaying: Boolean,
+    onPreviousClick: () -> Unit,
+    onPlayPauseClick: () -> Unit,
+    onNextClick: () -> Unit,
+) {
+    val shapes = rememberTransportShapes(small = false)
+    val playGlyph = remember { PlayGlyphState(isPlaying) }
+
+    LaunchedEffect(isPlaying) {
+        playGlyph.swapTo(isPlaying)
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        // Design unit from Mochy: screen width divided by 1172
+        val unit = (maxWidth / 1172f).coerceIn(0.27.dp, 0.42.dp)
+        val unitPx = unit.value * LocalContext.current.resources.displayMetrics.density
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Previous Button
+            MochySkipButton(
+                shapes = shapes,
+                unitPx = unitPx,
+                backwards = true,
+                onClick = onPreviousClick,
+            )
+
+            // Play/Pause Button
+            MochyPlayButton(
+                shapes = shapes,
+                glyph = playGlyph,
+                unitPx = unitPx,
+                onClick = onPlayPauseClick,
+            )
+
+            // Next Button
+            MochySkipButton(
+                shapes = shapes,
+                unitPx = unitPx,
+                backwards = false,
+                onClick = onNextClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MochyPlayButton(
+    shapes: TransportShapes,
+    glyph: PlayGlyphState,
+    unitPx: Float,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.86f else 1f,
+        animationSpec = spring(dampingRatio = 0.54f, stiffness = 720f),
+        label = "mochyPlayPress",
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(76.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
+    ) {
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    drawPlayGlyph(shapes, glyph, unitPx, Color.White)
+                },
+        )
+    }
+}
+
+@Composable
+private fun MochySkipButton(
+    shapes: TransportShapes,
+    unitPx: Float,
+    backwards: Boolean,
+    onClick: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val cycle = remember { SkipCycleState() }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.86f else 1f,
+        animationSpec = spring(dampingRatio = 0.54f, stiffness = 720f),
+        label = "mochySkipPress",
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(76.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    scope.launch { cycle.step() }
+                    onClick()
+                },
+            ),
+    ) {
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    drawSkipGlyph(shapes, cycle.phase(), unitPx, Color.White, backwards)
+                },
+        )
+    }
+}
+
+/**
+ * Mochy's cover fade modifier: uses PorterDuff DST_OUT to cleanly erase the bottom [bottomShare]
+ * of the sharp image so it seamlessly transitions into the blurred copy behind it.
+ */
+private fun Modifier.mochyCoverFade(bottomShare: Float = FrostedEdgeFadeFraction): Modifier = this
+    .graphicsLayer {
+        compositingStrategy = CompositingStrategy.Offscreen
+    }
+    .drawWithContent {
+        drawContent()
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            val w = size.width
+            val h = size.height
+            // Turned so the gradient runs up from the bottom edge
+            CoverFadeMask.erase(native, 1f) {
+                translate(0f, h)
+                rotate(-90f)
+                scale(h * bottomShare, w)
+            }
+        }
+    }
+
+private object CoverFadeMask {
+    val paint = Paint().apply {
+        val steps = 8
+        val colors = IntArray(steps + 1) { i ->
+            val t = i / steps.toFloat()
+            val eased = t * t * (3f - 2f * t)
+            AndroidColor.argb(((1f - eased) * 255f).roundToInt(), 0, 0, 0)
+        }
+        val positions = FloatArray(steps + 1) { it / steps.toFloat() }
+        shader = LinearGradient(
+            0f, 0f, 1f, 0f, colors, positions, Shader.TileMode.CLAMP,
+        )
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
+    }
+
+    inline fun erase(canvas: Canvas, strength: Float, place: Canvas.() -> Unit) {
+        val alpha = (strength * 255f).roundToInt().coerceIn(0, 255)
+        if (alpha == 0) return
+        paint.alpha = alpha
+        val saved = canvas.save()
+        canvas.place()
+        canvas.drawRect(0f, 0f, 1f, 1f, paint)
+        canvas.restoreToCount(saved)
+    }
+}
+
+@Composable
+private fun PressScaleButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = 34.dp,
+    containerColor: Color = Color.White.copy(alpha = 0.15f),
+    content: @Composable () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.86f else 1f,
+        animationSpec = spring(dampingRatio = 0.54f, stiffness = 720f),
+        label = "pressScaleButton",
+    )
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .clickable(
+                indication = null,
+                interactionSource = interactionSource,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .clip(CircleShape)
+                .background(containerColor),
+            contentAlignment = Alignment.Center,
+        ) {
+            content()
+        }
+    }
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- one triangle of the ten second row's skip button (the player design's Frame 4), moved to the origin; back is it mirrored -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="29.31dp"
+    android:viewportWidth="71.222"
+    android:viewportHeight="86.991">
+    <group
+        android:translateX="-113.5"
+        android:translateY="-50.504">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M180.193 85.6294C186.232 89.5762 186.232 98.4238 180.193 102.371L128.971 135.85C122.32 140.197 113.5 135.425 113.5 127.479L113.5 60.521C113.5 52.5752 122.32 47.8032 128.971 52.1504L180.193 85.6294Z" />
+    </group>
+</vector>
