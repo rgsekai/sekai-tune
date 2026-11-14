@@ -83,27 +83,36 @@ fun PlayerSliderTrack(
     val activeTickColor = colors.activeTickColor
     val valueRange = sliderState.valueRange
 
-    val infiniteTransition = rememberInfiniteTransition(label = "sliderBufferingTransition")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1.0f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "sliderPulseAlpha",
-    )
-    val shimmerOffsetFraction by infiniteTransition.animateFloat(
-        initialValue = -0.3f,
-        targetValue = 1.3f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1400, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "sliderShimmerOffset",
-    )
+    val pulseAlpha: Float
+    val shimmerOffsetFraction: Float
+    if (isBuffering) {
+        val infiniteTransition = rememberInfiniteTransition(label = "sliderBufferingTransition")
+        val pAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.55f,
+            targetValue = 1.0f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "sliderPulseAlpha",
+        )
+        val sOffset by infiniteTransition.animateFloat(
+            initialValue = -0.3f,
+            targetValue = 1.3f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 1400, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "sliderShimmerOffset",
+        )
+        pulseAlpha = pAlpha
+        shimmerOffsetFraction = sOffset
+    } else {
+        pulseAlpha = 1f
+        shimmerOffsetFraction = 0f
+    }
 
     Canvas(
         modifier

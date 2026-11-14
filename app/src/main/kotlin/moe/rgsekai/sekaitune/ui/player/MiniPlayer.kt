@@ -229,10 +229,12 @@ private fun NewMiniPlayer(
                     },
         ) {
             if (!useGlass) {
+                val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
                 MiniPlayerBackground(
                     style = effectiveBackgroundStyle,
                     palette = backgroundPalette,
                     thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                    isPlaying = isPlaying,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -321,6 +323,7 @@ private fun MiniPlayerBackground(
     style: MiniPlayerBackgroundStyle,
     palette: MiniPlayerBackgroundPalette?,
     thumbnailUrl: String?,
+    isPlaying: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -403,16 +406,21 @@ private fun MiniPlayerBackground(
         }
 
         MiniPlayerBackgroundStyle.LIVE_MESH -> {
-            val infiniteTransition = rememberInfiniteTransition(label = "miniLiveMesh")
-            val rotation by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 360f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(60000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart,
-                ),
-                label = "miniLiveMeshRotation",
-            )
+            val rotation = if (isPlaying) {
+                val infiniteTransition = rememberInfiniteTransition(label = "miniLiveMesh")
+                val rot by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(60000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "miniLiveMeshRotation",
+                )
+                rot
+            } else {
+                0f
+            }
 
             Box(
                 modifier =

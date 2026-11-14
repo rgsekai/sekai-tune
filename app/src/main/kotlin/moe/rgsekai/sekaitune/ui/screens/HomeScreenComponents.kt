@@ -538,8 +538,23 @@ fun QuickPicksSection(
 
     if (!isSingleItem) {
         val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
-        androidx.compose.runtime.LaunchedEffect(pagerState, distinctHeroItems.size, isDragged) {
-            if (isDragged) return@LaunchedEffect
+        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        var isResumed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+
+        androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                isResumed = (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) ||
+                    (lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            isResumed = lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+
+        androidx.compose.runtime.LaunchedEffect(pagerState, distinctHeroItems.size, isDragged, isResumed) {
+            if (isDragged || !isResumed) return@LaunchedEffect
             while (true) {
                 delay(HeroAdvanceMillis)
                 pagerState.animateScrollToPage(

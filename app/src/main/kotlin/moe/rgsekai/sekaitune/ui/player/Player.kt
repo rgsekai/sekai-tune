@@ -1971,16 +1971,21 @@ private fun V7PlayerBackdrop(
                             label = "GlowAnimatedBackdrop",
                         ) { colors ->
                             if (colors.isNotEmpty()) {
-                                val infiniteTransition = rememberInfiniteTransition(label = "BackdropGlowAnim")
-                                val progress by infiniteTransition.animateFloat(
-                                    initialValue = 0f,
-                                    targetValue = 1f,
-                                    animationSpec = infiniteRepeatable(
-                                        animation = tween(22000, easing = LinearEasing),
-                                        repeatMode = RepeatMode.Restart,
-                                    ),
-                                    label = "glowProgress",
-                                )
+                                val progress = if (isPlaying) {
+                                    val infiniteTransition = rememberInfiniteTransition(label = "BackdropGlowAnim")
+                                    val p by infiniteTransition.animateFloat(
+                                        initialValue = 0f,
+                                        targetValue = 1f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(22000, easing = LinearEasing),
+                                            repeatMode = RepeatMode.Restart,
+                                        ),
+                                        label = "glowProgress",
+                                    )
+                                    p
+                                } else {
+                                    0f
+                                }
 
                                 fun rotatedColorAt(index: Int): Color {
                                     val size = colors.size
