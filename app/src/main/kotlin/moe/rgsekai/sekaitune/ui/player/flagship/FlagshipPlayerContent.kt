@@ -672,11 +672,12 @@ fun FlagshipPlayerContent(
             )
         }
 
-        // Stacked Bottom Cards (Lyrics & Queue) anchored directly to the bottom
+        // Stacked Bottom Cards (Lyrics & Queue) anchored directly to the bottom with Mochy's 26.dp horizontal margin
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(horizontal = 26.dp),
         ) {
             FlagshipBottomCardStack(
                 onOpenLyrics = { activePage = FlagshipPage.LYRICS },
