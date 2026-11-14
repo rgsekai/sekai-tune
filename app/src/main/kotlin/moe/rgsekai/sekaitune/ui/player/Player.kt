@@ -1355,13 +1355,16 @@ fun BottomSheetPlayer(
                                     onPreviousClick = { playerConnection.player.seekToPrevious() },
                                     onPlayPauseClick = { playerConnection.player.togglePlayPause() },
                                     onNextClick = { playerConnection.player.seekToNext() },
-                                    onOpenLyrics = { isLyricsScreenVisible = true },
-                                    onOpenQueue = { openQueue() },
+                                    onOpenLyrics = { },
+                                    onOpenQueue = { },
                                     onSliderValueChange = onSliderValueChange,
                                     onSliderValueChangeFinished = onSliderValueChangeFinished,
                                     nextSongTitle = nextSongTitle,
                                     nextSongArtist = nextSongArtist,
                                     nextArtworkUrl = nextArtworkUrl,
+                                    lyricsSyncOffset = lyricsSyncOffset,
+                                    playerConnection = playerConnection,
+                                    navController = navController,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
@@ -1502,42 +1505,44 @@ fun BottomSheetPlayer(
 
             val (queueTextButtonColor, queueIconButtonColor) = Pair(queueOnBackgroundColor, queueSurfaceColor)
 
-            CompositionLocalProvider(LocalAppBackdrop provides queueBackdrop) {
-                Queue(
-                    state = queueSheetState,
-                    playerBottomSheetState = state,
-                    navController = navController,
-                    backgroundColor =
-                        if (useBlackBackground) {
-                            Color.Black
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer
-                        },
-                    onBackgroundColor = queueOnBackgroundColor,
-                    TextBackgroundColor = TextBackgroundColor,
-                    textButtonColor = textButtonColor,
-                    iconButtonColor = iconButtonColor,
-                    onShowLyrics = { isLyricsScreenVisible = true },
-                    pureBlack = pureBlack,
-                )
-            }
+            if (activePlayerStyle != PlayerStyle.FLAGSHIP) {
+                CompositionLocalProvider(LocalAppBackdrop provides queueBackdrop) {
+                    Queue(
+                        state = queueSheetState,
+                        playerBottomSheetState = state,
+                        navController = navController,
+                        backgroundColor =
+                            if (useBlackBackground) {
+                                Color.Black
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainer
+                            },
+                        onBackgroundColor = queueOnBackgroundColor,
+                        TextBackgroundColor = TextBackgroundColor,
+                        textButtonColor = textButtonColor,
+                        iconButtonColor = iconButtonColor,
+                        onShowLyrics = { isLyricsScreenVisible = true },
+                        pureBlack = pureBlack,
+                    )
+                }
 
-            mediaMetadata?.let { metadata ->
-                MikoLyricsTransition(
-                    visible = isLyricsScreenVisible,
-                    backHandlerEnabled = isLyricsScreenVisible && state.isExpandedOrExpanding,
-                    mediaMetadata = metadata,
-                    navController = navController,
-                    lyricsSyncOffset = lyricsSyncOffset,
-                    onLyricsSyncOffsetChange = { lyricsSyncOffset = it },
-                    onDismiss = { isLyricsScreenVisible = false },
-                    onQueueClick = openQueue,
-                    onNavigateToAiSettings = {
-                        isLyricsScreenVisible = false
-                        state.collapseSoft()
-                        navController.navigate("settings/ai_integration")
-                    },
-                )
+                mediaMetadata?.let { metadata ->
+                    MikoLyricsTransition(
+                        visible = isLyricsScreenVisible,
+                        backHandlerEnabled = isLyricsScreenVisible && state.isExpandedOrExpanding,
+                        mediaMetadata = metadata,
+                        navController = navController,
+                        lyricsSyncOffset = lyricsSyncOffset,
+                        onLyricsSyncOffsetChange = { lyricsSyncOffset = it },
+                        onDismiss = { isLyricsScreenVisible = false },
+                        onQueueClick = openQueue,
+                        onNavigateToAiSettings = {
+                            isLyricsScreenVisible = false
+                            state.collapseSoft()
+                            navController.navigate("settings/ai_integration")
+                        },
+                    )
+                }
             }
 
             AnimatedVisibility(

@@ -8,7 +8,25 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Shader
-import androidx.compose.animation.core.Animatable
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.zIndex
+import moe.rgsekai.sekaitune.constants.LyricsMode
+import moe.rgsekai.sekaitune.constants.LyricsModeKey
+import moe.rgsekai.sekaitune.utils.rememberEnumPreference
+import moe.rgsekai.sekaitune.extensions.metadata
+import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
+import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
+import moe.rgsekai.sekaitune.ui.player.LyricsContent
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -124,12 +142,52 @@ fun FlagshipPlayerContent(
     nextSongTitle: String? = null,
     nextSongArtist: String? = null,
     nextArtworkUrl: String? = null,
+    lyricsSyncOffset: Int = 0,
+    playerConnection: moe.rgsekai.sekaitune.playback.PlayerConnection? = null,
+    navController: androidx.navigation.NavController? = null,
 ) {
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
     val context = LocalContext.current
 
     val artworkUrl = (data.artworkModel as? String) ?: data.artworkModel?.toString()
+
+    var activePage by remember { mutableStateOf(FlagshipPage.NONE) }
+    BackHandler(enabled = activePage != FlagshipPage.NONE) {
+        activePage = FlagshipPage.NONE
+    }
+
+    val headerProgress by animateFloatAsState(
+        targetValue = if (activePage != FlagshipPage.NONE) 1f else 0f,
+        animationSpec = if (activePage != FlagshipPage.NONE) {
+            spring(dampingRatio = 0.82f, stiffness = 230f)
+        } else {
+            spring(dampingRatio = 1f, stiffness = 280f)
+        },
+        label = "flagshipHeaderProgress",
+    )
+
+    // Gesture detector on the whole screen:
+    // - Swiping UP when activePage == NONE opens the front card view (Lyrics or Queue)
+    // - Swiping DOWN when activePage != NONE closes the view back down to the resting cover art
+    var dragAccumY by remember { mutableStateOf(0f) }
+    val gestureModifier = Modifier.pointerInput(activePage) {
+        detectVerticalDragGestures(
+            onDragStart = { dragAccumY = 0f },
+            onDragEnd = {
+                if (activePage == FlagshipPage.NONE && dragAccumY < -60f) {
+                    activePage = FlagshipPage.LYRICS
+                } else if (activePage != FlagshipPage.NONE && dragAccumY > 60f) {
+                    activePage = FlagshipPage.NONE
+                }
+                dragAccumY = 0f
+            },
+            onDragCancel = { dragAccumY = 0f },
+            onVerticalDrag = { change, dragAmount ->
+                dragAccumY += dragAmount
+            },
+        )
+    }
 
     // 1. Mochy BackdropBlurTransformation request for the full-screen blurred ambient copy
     val blurredRequest = remember(context, artworkUrl) {
@@ -148,10 +206,26 @@ fun FlagshipPlayerContent(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .then(gestureModifier),
     ) {
         val screenHeight = maxHeight
+        val screenWidth = maxWidth
         val coverHeight = screenHeight * 0.538f
+        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+        // Mochy exact morph targets:
+        // Mini thumbnail in header: 60.dp size, 36.dp from left, statusBarTop + 28.dp from top, 12.dp corner radius
+        val miniArtSize = 60.dp
+        val miniArtX = 36.dp
+        val miniArtY = statusBarTop + 28.dp
+        val targetTitleX = 114.dp
+
+        val currentCoverWidth = lerp(screenWidth, miniArtSize, headerProgress)
+        val currentCoverHeight = lerp(coverHeight, miniArtSize, headerProgress)
+        val currentCoverX = lerp(0.dp, miniArtX, headerProgress)
+        val currentCoverY = lerp(0.dp, miniArtY, headerProgress)
+        val currentCornerRadius = lerp(0.dp, 12.dp, headerProgress)
 
         // Layer 1: Full-screen blurred ambient artwork reflection
         if (blurredRequest != null) {
@@ -176,13 +250,23 @@ fun FlagshipPlayerContent(
             )
         }
 
-        // Layer 2: Foreground sharp cover picture fading softly into the blurred reflection at bottom 13%
+        // Layer 2: Foreground sharp cover picture fading softly at bottom in resting mode,
+        // morphing into the mini thumbnail header when lyrics/queue is active
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(coverHeight)
-                .align(Alignment.TopCenter)
-                .mochyCoverFade(bottomShare = FrostedEdgeFadeFraction),
+                .offset(x = currentCoverX, y = currentCoverY)
+                .size(width = currentCoverWidth, height = currentCoverHeight)
+                .clip(RoundedCornerShape(currentCornerRadius))
+                .then(
+                    if (headerProgress < 0.95f) {
+                        Modifier.mochyCoverFade(bottomShare = FrostedEdgeFadeFraction * (1f - headerProgress))
+                    } else {
+                        Modifier
+                    }
+                )
+                .clickable(enabled = activePage != FlagshipPage.NONE) {
+                    activePage = FlagshipPage.NONE
+                },
         ) {
             AsyncImage(
                 model = data.artworkModel,
@@ -192,7 +276,108 @@ fun FlagshipPlayerContent(
             )
         }
 
-        // Layer 3: Mochy ControlsShade (subtle 24% black gradient for contrast without turning the background black)
+        // Morphing Song Info in header when a page is open (X = 114.dp, Y = miniArtY)
+        if (headerProgress > 0.05f) {
+            Column(
+                modifier = Modifier
+                    .offset(x = targetTitleX, y = miniArtY + 6.dp)
+                    .fillMaxWidth()
+                    .padding(end = 80.dp)
+                    .graphicsLayer { alpha = headerProgress },
+            ) {
+                Text(
+                    text = data.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = foreground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (data.artist.isNotBlank()) {
+                    Text(
+                        text = data.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.70f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        // Layer 3: Middle Content (Lyrics or Queue list) when a page is active
+        if (activePage != FlagshipPage.NONE && headerProgress > 0.1f) {
+            val middleTop = miniArtY + miniArtSize + 16.dp
+            val middleBottom = 210.dp // Above seek bar and bottom cards
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = middleTop, bottom = middleBottom)
+                    .graphicsLayer { alpha = headerProgress },
+            ) {
+                if (activePage == FlagshipPage.LYRICS) {
+                    val lyricsMode by rememberEnumPreference(LyricsModeKey, LyricsMode.ENHANCED)
+
+                    LyricsContent(
+                        lyricsMode = lyricsMode,
+                        sliderPositionProvider = { data.progressMs },
+                        lyricsSyncOffset = lyricsSyncOffset,
+                        textColor = Color.White,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = PlayerHorizontalPadding),
+                    )
+                } else if (activePage == FlagshipPage.QUEUE && playerConnection != null) {
+                    val queueWindows by playerConnection.queueWindows.collectAsState()
+                    val currentWindowIndex = playerConnection.player.currentMediaItemIndex
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                    ) {
+                        itemsIndexed(
+                            items = queueWindows,
+                            key = { idx, item -> item.uid.hashCode() + idx },
+                        ) { index, window ->
+                            val isCurrent = (index == currentWindowIndex)
+                            val meta = window.mediaItem.metadata
+
+                            if (meta != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isCurrent) Color.White.copy(alpha = 0.16f)
+                                            else Color.Transparent
+                                        )
+                                        .clickable {
+                                            playerConnection.player.seekToDefaultPosition(index)
+                                        }
+                                        .padding(vertical = 4.dp),
+                                ) {
+                                    MediaMetadataListItem(
+                                        mediaMetadata = meta,
+                                        isPlaying = isCurrent && data.isPlaying,
+                                        trailingContent = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.drag_handle),
+                                                contentDescription = null,
+                                                tint = Color.White.copy(alpha = 0.5f),
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Layer 4: Mochy ControlsShade (subtle 24% black gradient for contrast)
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
@@ -204,6 +389,83 @@ fun FlagshipPlayerContent(
                     }
                 },
         )
+
+        // Floating Vertical Action Button Column above the seek bar on the right (Mochy layout)
+        if (activePage != FlagshipPage.NONE && headerProgress > 0.2f) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = PlayerHorizontalPadding, bottom = 175.dp)
+                    .zIndex(2f)
+                    .graphicsLayer { alpha = headerProgress },
+            ) {
+                // Chevron Dropdown to collapse back
+                PressScaleButton(
+                    onClick = { activePage = FlagshipPage.NONE },
+                    containerColor = Color.White.copy(alpha = 0.15f),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.expand_less),
+                        contentDescription = "Collapse",
+                        tint = Color.White.copy(alpha = 0.90f),
+                        modifier = Modifier
+                            .size(18.dp)
+                            .graphicsLayer { rotationZ = 180f },
+                    )
+                }
+
+                // If Lyrics is open: Like button
+                if (activePage == FlagshipPage.LYRICS) {
+                    PressScaleButton(
+                        onClick = onLikeClick,
+                        containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
+                            ),
+                            contentDescription = "Like",
+                            tint = if (data.isLiked) Color.White else Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+
+                // If Queue is open: Shuffle & Repeat buttons
+                if (activePage == FlagshipPage.QUEUE && playerConnection != null) {
+                    val shuffleModeEnabled = playerConnection.player.shuffleModeEnabled
+                    val repeatMode = playerConnection.player.repeatMode
+
+                    PressScaleButton(
+                        onClick = { playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled },
+                        containerColor = if (shuffleModeEnabled) Color.White.copy(alpha = 0.32f) else Color.White.copy(alpha = 0.15f),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.shuffle),
+                            contentDescription = "Shuffle",
+                            tint = if (shuffleModeEnabled) Color.White else Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+
+                    PressScaleButton(
+                        onClick = { playerConnection.player.toggleRepeatMode() },
+                        containerColor = if (repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) Color.White.copy(alpha = 0.32f) else Color.White.copy(alpha = 0.15f),
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE) R.drawable.repeat_one else R.drawable.repeat
+                            ),
+                            contentDescription = "Repeat",
+                            tint = if (repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) Color.White else Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+        }
 
         // Bottom Controls Column
         val belowControls = PlayerDeckHeight
@@ -224,74 +486,78 @@ fun FlagshipPlayerContent(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Track Info Row: Title, Artist, Outlined StreamFormatBadge, Like, Upward Chevron
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = PlayerHorizontalPadding),
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = data.title,
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = foreground,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false),
-                            )
-
-                            Spacer(Modifier.width(8.dp))
-
-                            // Mochy-exact Outlined Stream Format Badge
-                            StreamFormatBadge(
-                                text = data.formatTag.ifBlank { "OPUS" },
-                            )
-                        }
-
-                        if (data.artist.isNotBlank()) {
-                            Text(
-                                text = data.artist,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White.copy(alpha = 0.70f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    // Action buttons: Like and Chevron Dropdown spaced by 7.dp
+                // Fades out and shrinks when activePage != NONE because it morphed to header
+                if (headerProgress < 0.95f) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(7.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = PlayerHorizontalPadding)
+                            .graphicsLayer { alpha = 1f - headerProgress },
                     ) {
-                        PressScaleButton(
-                            onClick = onLikeClick,
-                            containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
-                                ),
-                                contentDescription = "Like",
-                                tint = if (data.isLiked) Color.White else Color.White.copy(alpha = 0.85f),
-                                modifier = Modifier.size(18.dp),
-                            )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = data.title,
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = foreground,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+
+                                Spacer(Modifier.width(8.dp))
+
+                                // Mochy-exact Outlined Stream Format Badge
+                                StreamFormatBadge(
+                                    text = data.formatTag.ifBlank { "OPUS" },
+                                )
+                            }
+
+                            if (data.artist.isNotBlank()) {
+                                Text(
+                                    text = data.artist,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White.copy(alpha = 0.70f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
 
-                        PressScaleButton(
-                            onClick = onMenuClick,
-                            containerColor = Color.White.copy(alpha = 0.15f),
+                        Spacer(Modifier.width(12.dp))
+
+                        // Action buttons: Like and Chevron Dropdown spaced by 7.dp
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.expand_less),
-                                contentDescription = "More options",
-                                tint = Color.White.copy(alpha = 0.90f),
-                                modifier = Modifier.size(18.dp),
-                            )
+                            PressScaleButton(
+                                onClick = onLikeClick,
+                                containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
+                            ) {
+                                Icon(
+                                    painter = painterResource(
+                                        if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
+                                    ),
+                                    contentDescription = "Like",
+                                    tint = if (data.isLiked) Color.White else Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+
+                            PressScaleButton(
+                                onClick = onMenuClick,
+                                containerColor = Color.White.copy(alpha = 0.15f),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.expand_less),
+                                    contentDescription = "More options",
+                                    tint = Color.White.copy(alpha = 0.90f),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -413,12 +679,13 @@ fun FlagshipPlayerContent(
                 .fillMaxWidth(),
         ) {
             FlagshipBottomCardStack(
-                onOpenLyrics = onOpenLyrics,
-                onOpenQueue = onOpenQueue,
+                onOpenLyrics = { activePage = FlagshipPage.LYRICS },
+                onOpenQueue = { activePage = FlagshipPage.QUEUE },
                 currentLyric = data.lyricLine,
                 nextSongTitle = nextSongTitle,
                 nextSongArtist = nextSongArtist,
                 nextArtworkUrl = nextArtworkUrl,
+                activePage = activePage,
             )
         }
     }

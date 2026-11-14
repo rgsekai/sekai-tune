@@ -766,7 +766,7 @@ private fun AppleMusicSlider(
 }
 
 @Composable
-private fun LyricsContent(
+internal fun LyricsContent(
     lyricsMode: LyricsMode,
     sliderPositionProvider: () -> Long?,
     lyricsSyncOffset: Int,

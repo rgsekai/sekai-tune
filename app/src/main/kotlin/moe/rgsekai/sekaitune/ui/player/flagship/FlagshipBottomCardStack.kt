@@ -66,6 +66,12 @@ private const val BackCardScale = 0.94f
 private val BottomBleed = 100.dp
 private val FlipDistance = 70.dp
 
+enum class FlagshipPage {
+    NONE,
+    LYRICS,
+    QUEUE,
+}
+
 private fun mixF(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
 /**
@@ -84,6 +90,7 @@ fun FlagshipBottomCardStack(
     nextSongArtist: String?,
     nextArtworkUrl: String?,
     modifier: Modifier = Modifier,
+    activePage: FlagshipPage = FlagshipPage.NONE,
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -92,7 +99,14 @@ fun FlagshipBottomCardStack(
     var frontIndex by remember { mutableIntStateOf(0) } // 0 = lyrics, 1 = queue
     val flipAnim = remember { Animatable(0f) }
 
-    val queueFrontness = flipAnim.value.coerceIn(0f, 1f)
+    // When a page is open, flip the deck so the card on top is for the other view:
+    // If lyrics page is open -> Queue card is in front
+    // If queue page is open -> Lyrics card is in front
+    val queueFrontness = when (activePage) {
+        FlagshipPage.LYRICS -> 1f
+        FlagshipPage.QUEUE -> 0f
+        FlagshipPage.NONE -> flipAnim.value.coerceIn(0f, 1f)
+    }
     val queueOnTop = queueFrontness >= 0.5f
 
     val order = if (queueOnTop) listOf(0, 1) else listOf(1, 0)
@@ -101,7 +115,8 @@ fun FlagshipBottomCardStack(
         modifier = modifier
             .fillMaxWidth()
             .height(FlagshipCardHeight + FlagshipPeekOffset)
-            .pointerInput(Unit) {
+            .pointerInput(activePage) {
+                if (activePage != FlagshipPage.NONE) return@pointerInput
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -164,15 +179,19 @@ fun FlagshipBottomCardStack(
                         if (it == 1) onOpenQueue() else onOpenLyrics()
                     },
                     onSelect = {
-                        frontIndex = pageIdx
-                        scope.launch {
-                            flipAnim.animateTo(
-                                targetValue = pageIdx.toFloat(),
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
-                            )
+                        if (activePage == FlagshipPage.NONE) {
+                            frontIndex = pageIdx
+                            scope.launch {
+                                flipAnim.animateTo(
+                                    targetValue = pageIdx.toFloat(),
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                )
+                            }
+                        } else {
+                            if (pageIdx == 1) onOpenQueue() else onOpenLyrics()
                         }
                     },
                     isTop = (pageIdx == (if (queueOnTop) 1 else 0)),
