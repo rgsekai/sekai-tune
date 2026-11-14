@@ -295,13 +295,11 @@ private fun LyricCardContent(lyric: String?) {
     val text = lyric?.takeIf { it.isNotBlank() } ?: "No lyrics for this song"
     val isPresent = !lyric.isNullOrBlank()
 
-    // Mochy format: The main lyric text is bold and prominent, while background/backing vocals
-    // inside brackets like "(No, I don't...)" are slightly dimmer and regular weight.
-    val annotatedText = remember(text, isPresent) {
+    // Mochy format: The main lyric text is lead (bold), backing vocals inside brackets like "(No, I don't...)" are separate.
+    // If the line has backing vocals in parentheses/brackets, Mochy splits them so the main line shows first.
+    val (leadText, backingText) = remember(text, isPresent) {
         if (!isPresent) {
-            buildAnnotatedString {
-                append(text)
-            }
+            text to null
         } else {
             val parenStart = text.indexOf('(')
             val bracketStart = text.indexOf('[')
@@ -315,23 +313,9 @@ private fun LyricCardContent(lyric: String?) {
             if (splitIdx >= 0) {
                 val lead = text.substring(0, splitIdx).trimEnd()
                 val backing = text.substring(splitIdx).trim()
-                buildAnnotatedString {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) {
-                        append(lead)
-                    }
-                    if (backing.isNotEmpty()) {
-                        append(" ")
-                        withStyle(SpanStyle(fontWeight = FontWeight.Normal, color = Color.White.copy(alpha = 0.65f))) {
-                            append(backing)
-                        }
-                    }
-                }
+                lead.ifBlank { text } to backing.takeIf { it.isNotBlank() }
             } else {
-                buildAnnotatedString {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) {
-                        append(text)
-                    }
-                }
+                text to null
             }
         }
     }
@@ -358,11 +342,12 @@ private fun LyricCardContent(lyric: String?) {
             },
     ) {
         Text(
-            text = annotatedText,
+            text = leadText,
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontSize = 17.sp,
                 lineHeight = 22.sp,
             ),
+            fontWeight = FontWeight.Bold,
             color = if (isPresent) Color.White else Color.White.copy(alpha = 0.55f),
             maxLines = 1,
             softWrap = false,
