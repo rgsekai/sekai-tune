@@ -890,7 +890,7 @@ fun BottomSheetPlayer(
         },
         collapsedContent = {
             MiniPlayer(
-                position = position,
+                positionProvider = { position },
                 duration = duration,
                 pureBlack = pureBlack,
             )

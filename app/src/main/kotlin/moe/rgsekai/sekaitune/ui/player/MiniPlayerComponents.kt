@@ -306,7 +306,7 @@ fun RowScope.MiniPlayerInfo(
 @Composable
 private fun MiniPlayerArtwork(
     mediaMetadata: MediaMetadata?,
-    position: Long,
+    positionProvider: () -> Long,
     duration: Long,
     isPlaying: Boolean,
     colors: MiniPlayerContentColors,
@@ -317,7 +317,7 @@ private fun MiniPlayerArtwork(
         contentAlignment = Alignment.Center,
     ) {
         CircularWavyProgressIndicator(
-            progress = { if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f },
+            progress = { if (duration > 0) (positionProvider().toFloat() / duration).coerceIn(0f, 1f) else 0f },
             waveSpeed = if (isPlaying) WavyProgressIndicatorDefaults.CircularWavelength else 0.dp,
             modifier = Modifier.fillMaxSize(),
             color = colors.progress,
@@ -469,7 +469,7 @@ private fun MiniPlayerTransportControls(
 
 @Composable
 fun NewMiniPlayerContent(
-    position: Long,
+    positionProvider: () -> Long,
     duration: Long,
     playerConnection: PlayerConnection,
     colors: MiniPlayerContentColors,
@@ -490,7 +490,7 @@ fun NewMiniPlayerContent(
     ) {
         MiniPlayerArtwork(
             mediaMetadata = mediaMetadata,
-            position = position,
+            positionProvider = positionProvider,
             duration = duration,
             isPlaying = isPlaying,
             colors = colors,
