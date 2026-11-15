@@ -1272,6 +1272,7 @@ fun BottomSheetPlayer(
                         fallbackVideoId = videoLookup.video?.videoId,
                         showOneLineLyrics = showOneLineLyrics,
                         onShowLyrics = { isLyricsScreenVisible = true },
+                        positionProvider = { position },
                         )
                         }
                         
@@ -1488,6 +1489,7 @@ fun BottomSheetPlayer(
                                                 showOneLineLyrics = showOneLineLyrics,
                                                 fallbackVideoId = videoLookup.video?.videoId,
                                                 onShowLyrics = { isLyricsScreenVisible = true },
+                                                positionProvider = { position },
                                             )
                                         }
 

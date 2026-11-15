@@ -65,7 +65,7 @@ import timber.log.Timber
 @Composable
 fun OneLineLyrics(
     mediaMetadata: MediaMetadata?,
-    position: Long,
+    positionProvider: () -> Long,
     sliderPosition: Long?,
     lyricsSyncOffset: Int,
     showOneLineLyrics: Boolean,
@@ -76,7 +76,7 @@ fun OneLineLyrics(
 ) {
     if (!showOneLineLyrics || mediaMetadata == null) return
 
-    val currentPositionState = rememberUpdatedState(sliderPosition ?: position)
+    val currentPositionProviderState = rememberUpdatedState(sliderPosition?.let { { it } } ?: positionProvider)
 
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyricsEntity by playerConnection.currentLyrics.collectAsState(initial = null)
@@ -192,7 +192,7 @@ fun OneLineLyrics(
         derivedStateOf {
             if (lines.isEmpty()) -1
             else {
-                val effectivePosition = currentPositionState.value + lyricsSyncOffset.toLong()
+                val effectivePosition = currentPositionProviderState.value() + lyricsSyncOffset.toLong()
                 LyricsUtils.findCurrentLineIndex(lines, effectivePosition, leadMs)
             }
         }
@@ -224,7 +224,7 @@ fun OneLineLyrics(
         while (isActive) {
             delay(1000L)
             Timber.tag("OneLineLyrics").d(
-                "Expanded tick: mediaId=${mediaMetadata.id}, isExpandedOrExpanding=true, position=${currentPositionState.value}, linesCount=${lines.size}, lineIndex=$currentLineIndex, lineText=\"${currentLineText ?: ""}\""
+                "Expanded tick: mediaId=${mediaMetadata.id}, isExpandedOrExpanding=true, position=${currentPositionProviderState.value()}, linesCount=${lines.size}, lineIndex=$currentLineIndex, lineText=\"${currentLineText ?: ""}\""
             )
         }
     }

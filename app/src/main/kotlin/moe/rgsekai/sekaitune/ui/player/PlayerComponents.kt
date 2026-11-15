@@ -305,11 +305,36 @@ fun PlayerTimeLabel(
             .padding(horizontal = PlayerHorizontalPadding + 4.dp),
     centerContent: @Composable (() -> Unit)? = null,
 ) {
+    PlayerTimeLabel(
+        sliderPosition = sliderPosition,
+        positionProvider = { position },
+        duration = duration,
+        textBackgroundColor = textBackgroundColor,
+        showRemainingTime = showRemainingTime,
+        modifier = modifier,
+        centerContent = centerContent,
+    )
+}
+
+@Composable
+fun PlayerTimeLabel(
+    sliderPosition: Long?,
+    positionProvider: () -> Long,
+    duration: Long,
+    textBackgroundColor: Color,
+    showRemainingTime: Boolean = false,
+    modifier: Modifier =
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = PlayerHorizontalPadding + 4.dp),
+    centerContent: @Composable (() -> Unit)? = null,
+) {
+    val currentPosition = sliderPosition ?: positionProvider()
     Box(
         modifier = modifier,
     ) {
         Text(
-            text = makeTimeString(sliderPosition ?: position),
+            text = makeTimeString(currentPosition),
             style = MaterialTheme.typography.labelMedium,
             color = textBackgroundColor,
             maxLines = 1,
@@ -330,7 +355,7 @@ fun PlayerTimeLabel(
             text =
                 if (duration != C.TIME_UNSET) {
                     if (showRemainingTime) {
-                        val remaining = duration - (sliderPosition ?: position)
+                        val remaining = duration - currentPosition
                         "-${makeTimeString(remaining.coerceAtLeast(0))}"
                     } else {
                         makeTimeString(duration)
@@ -696,6 +721,7 @@ fun V8PlayerControlsContent(
     initialCommentsContinuation: String? = null,
     modifier: Modifier = Modifier,
     landscape: Boolean = false,
+    positionProvider: (() -> Long)? = null,
 ) {
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
@@ -766,6 +792,8 @@ fun V8PlayerControlsContent(
             { playerConnection.seekToNext() }
         }
 
+    val effectivePositionProvider = positionProvider ?: { position }
+
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val horizontalPadding =
             if (landscape) {
@@ -803,7 +831,7 @@ fun V8PlayerControlsContent(
 
             OneLineLyrics(
                 mediaMetadata = mediaMetadata,
-                position = position,
+                positionProvider = effectivePositionProvider,
                 sliderPosition = sliderPosition,
                 lyricsSyncOffset = lyricsSyncOffset,
                 showOneLineLyrics = showOneLineLyrics,
@@ -835,6 +863,7 @@ fun V8PlayerControlsContent(
                 playbackState = playbackState,
                 sliderPosition = sliderPosition,
                 position = position,
+                positionProvider = effectivePositionProvider,
                 duration = duration,
                 currentFormat = currentFormat,
                 foreground = foreground,
@@ -1026,6 +1055,7 @@ private fun V8PlaybackProgress(
     playbackState: Int,
     sliderPosition: Long?,
     position: Long,
+    positionProvider: (() -> Long)? = null,
     duration: Long,
     currentFormat: FormatEntity?,
     foreground: Color,
@@ -1035,7 +1065,8 @@ private fun V8PlaybackProgress(
     onBadgeClick: (() -> Unit)? = null,
 ) {
     val safeDuration = if (duration <= 0L || duration == C.TIME_UNSET) 0f else duration.toFloat()
-    val safeValue = (sliderPosition ?: position).toFloat().coerceIn(0f, safeDuration.coerceAtLeast(0f))
+    val effectivePos = sliderPosition ?: positionProvider?.invoke() ?: position
+    val safeValue = effectivePos.toFloat().coerceIn(0f, safeDuration.coerceAtLeast(0f))
 
     val trackInteractionSource = remember { MutableInteractionSource() }
     val isTrackDragged by trackInteractionSource.collectIsDraggedAsState()
@@ -1095,7 +1126,7 @@ private fun V8PlaybackProgress(
 
         PlayerTimeLabel(
             sliderPosition = sliderPosition,
-            position = position,
+            positionProvider = positionProvider ?: { position },
             duration = duration,
             textBackgroundColor = foreground,
             showRemainingTime = true,
