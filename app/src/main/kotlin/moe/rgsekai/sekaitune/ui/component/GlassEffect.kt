@@ -434,14 +434,23 @@ fun GlassModalBottomSheet(
             }
         }
     } else {
+        val effectiveContainerColor = if (containerColor == BottomSheetDefaults.ContainerColor) {
+            if (isLight) {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            } else {
+                Color(0xFF0B0B0C)
+            }
+        } else {
+            containerColor
+        }
         ModalBottomSheet(
             onDismissRequest = onDismissRequest,
             modifier = modifier,
             sheetState = sheetState,
             shape = shape,
-            containerColor = containerColor,
+            containerColor = effectiveContainerColor,
             contentColor = contentColor,
-            tonalElevation = tonalElevation,
+            tonalElevation = if (!isLight) 0.dp else tonalElevation,
             scrimColor = scrimColor,
             dragHandle = dragHandle,
             contentWindowInsets = contentWindowInsets,

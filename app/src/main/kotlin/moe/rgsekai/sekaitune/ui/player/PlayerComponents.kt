@@ -897,6 +897,8 @@ fun V8PlayerControlsContent(
             badgeInfo = displayBadge,
             currentFormat = currentFormat,
             artworkUrl = mediaMetadata.thumbnailUrl,
+            songTitle = mediaMetadata.title,
+            songArtist = mediaMetadata.artists.joinToString(", ") { it.name },
             isPlaying = isPlaying,
         )
     }

@@ -452,8 +452,15 @@ fun Bitmap.extractGradientColors(): List<Color> {
 fun ColorScheme.pureBlack(apply: Boolean) =
     if (apply) {
         copy(
-            surface = Color.Black,
-            background = Color.Black,
+            surface = Color(0xFF000000),
+            background = Color(0xFF000000),
+            surfaceContainerLowest = Color(0xFF000000),
+            surfaceContainerLow = Color(0xFF0B0B0C),
+            surfaceContainer = Color(0xFF141416),
+            surfaceContainerHigh = Color(0xFF1C1C1F),
+            surfaceContainerHighest = Color(0xFF26262B),
+            surfaceDim = Color(0xFF080809),
+            surfaceBright = Color(0xFF2A2A30),
         )
     } else {
         this
