@@ -144,10 +144,8 @@ fun HomeScreen(
     ) {
         when (val state = screenState) {
             HomeScreenState.Loading -> {
-                HomeStatePane(
-                    iconResId = null,
-                    messageResId = null,
-                    showLoadingIndicator = true,
+                HomeSkeleton(
+                    lazyListState = lazyListState,
                 )
             }
 
