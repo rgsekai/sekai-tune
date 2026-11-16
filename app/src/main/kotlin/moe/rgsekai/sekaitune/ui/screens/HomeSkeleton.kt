@@ -100,8 +100,8 @@ fun HomeSkeleton(
 }
 
 @Composable
-private fun HomeSectionBones(
-    titleWidth: androidx.compose.ui.unit.Dp,
+fun HomeSectionBones(
+    titleWidth: androidx.compose.ui.unit.Dp = 150.dp,
     modifier: Modifier = Modifier,
 ) {
     Column(

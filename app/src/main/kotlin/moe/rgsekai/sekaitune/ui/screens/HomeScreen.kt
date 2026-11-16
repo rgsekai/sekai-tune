@@ -490,18 +490,18 @@ private fun HomeContent(
 
                     if (uiState.isLoadingMore) {
                         item(
-                            key = "home_loading_more",
-                            contentType = "loading",
+                            key = "home_loading_more_bones",
+                            contentType = "loading_bones",
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp)
-                                        .animateItem(),
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp)
+                                    .animateItem(),
                             ) {
-                                LoadingIndicator()
+                                HomeSectionBones(titleWidth = 160.dp)
+                                Spacer(Modifier.height(14.dp))
+                                HomeSectionBones(titleWidth = 130.dp)
                             }
                         }
                     }

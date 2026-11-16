@@ -56,7 +56,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
@@ -1315,8 +1317,11 @@ fun AccountPlaylistsSection(
     modifier: Modifier = Modifier,
 ) {
     val distinctPlaylists = remember(accountPlaylists) { accountPlaylists.distinctBy { it.id } }
+    val prefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 4) }
+    val rowState = rememberLazyListState(prefetchStrategy = prefetchStrategy)
 
     LazyRow(
+        state = rowState,
         contentPadding =
             WindowInsets.systemBars
                 .only(WindowInsetsSides.Horizontal)
@@ -1358,7 +1363,11 @@ fun SimilarRecommendationsSection(
     scope: CoroutineScope,
     modifier: Modifier = Modifier,
 ) {
+    val prefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 4) }
+    val rowState = rememberLazyListState(prefetchStrategy = prefetchStrategy)
+
     LazyRow(
+        state = rowState,
         contentPadding =
             WindowInsets.systemBars
                 .only(WindowInsetsSides.Horizontal)
@@ -1401,7 +1410,11 @@ fun HomePageSectionContent(
     modifier: Modifier = Modifier,
     revealSeen: RevealSeenState = rememberRevealSeenState(),
 ) {
+    val prefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 4) }
+    val rowState = rememberLazyListState(prefetchStrategy = prefetchStrategy)
+
     LazyRow(
+        state = rowState,
         contentPadding =
             WindowInsets.systemBars
                 .only(WindowInsetsSides.Horizontal)
