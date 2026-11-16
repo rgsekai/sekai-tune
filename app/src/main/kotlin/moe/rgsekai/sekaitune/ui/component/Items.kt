@@ -1619,7 +1619,8 @@ fun ItemThumbnail(
             modifier
                 .fillMaxSize()
                 .aspectRatio(thumbnailRatio)
-                .clip(shape),
+                .clip(shape)
+                .background(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.BoneColor),
     ) {
         val (cropThumbnailToSquare, _) = rememberPreference(CropThumbnailToSquareKey, false)
         val isYouTubeThumb = thumbnailUrl?.contains("ytimg.com", ignoreCase = true) == true
