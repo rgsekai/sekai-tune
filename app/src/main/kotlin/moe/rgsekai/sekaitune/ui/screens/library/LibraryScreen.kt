@@ -92,29 +92,15 @@ fun LibraryScreen(navController: NavController) {
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
     var showTagsManagementDialog by rememberSaveable { mutableStateOf(false) }
     val activeSelectedTagIds = if (showTagsInLibrary) selectedTagIds else emptySet()
-    val showSpotifyChip = showSpotifyPlaylists || showSpotifyFollowArtist
     val libraryFilters =
-        remember(showSpotifyChip) {
-            if (showSpotifyChip) {
-                listOf(
-                    LibraryFilter.LIBRARY,
-                    LibraryFilter.PLAYLISTS,
-                    LibraryFilter.SPOTIFY,
-                    LibraryFilter.SONGS,
-                    LibraryFilter.ARTISTS,
-                    LibraryFilter.ALBUMS,
-                    LibraryFilter.AI_MIXES,
-                )
-            } else {
-                listOf(
-                    LibraryFilter.LIBRARY,
-                    LibraryFilter.PLAYLISTS,
-                    LibraryFilter.SONGS,
-                    LibraryFilter.ARTISTS,
-                    LibraryFilter.ALBUMS,
-                    LibraryFilter.AI_MIXES,
-                )
-            }
+        remember {
+            listOf(
+                LibraryFilter.LIBRARY,
+                LibraryFilter.PLAYLISTS,
+                LibraryFilter.ARTISTS,
+                LibraryFilter.ALBUMS,
+                LibraryFilter.AI_MIXES,
+            )
         }
 
     if (showTagsManagementDialog) {

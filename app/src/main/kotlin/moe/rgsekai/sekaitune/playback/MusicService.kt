@@ -177,6 +177,7 @@ import moe.rgsekai.sekaitune.constants.PauseListenHistoryKey
 import moe.rgsekai.sekaitune.constants.PauseOnDeviceMuteKey
 import moe.rgsekai.sekaitune.constants.PermanentShuffleKey
 import moe.rgsekai.sekaitune.constants.PersistentQueueKey
+import moe.rgsekai.sekaitune.constants.PlayAlongsideOtherAppsKey
 import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
 import moe.rgsekai.sekaitune.constants.PlayerVolumeKey
@@ -363,6 +364,9 @@ class MusicService :
     private var audioFocusRequest: AudioFocusRequest? = null
     private var lastAudioFocusState = AudioManager.AUDIOFOCUS_NONE
     private var wasPlayingBeforeAudioFocusLoss = false
+    private var playAlongsideOtherApps = false
+    private var wasPlayingBeforeCall = false
+    private val callWatcher by lazy { CallWatcher(this, ::onCallChanged) }
     private var pauseOnDeviceMuteEnabled = false
     private var deviceMutePlaybackRecoveryVolumePercent = 0
     private var wasAutoPausedByDeviceMute = false
@@ -1417,6 +1421,18 @@ class MusicService :
             .collectLatest(scope) {
                 localPlayer.skipSilenceEnabled = it
                 secondaryCrossfadePlayer?.skipSilenceEnabled = it
+            }
+
+        dataStore.data
+            .map { it[PlayAlongsideOtherAppsKey] ?: false }
+            .distinctUntilChanged()
+            .collectLatest(scope) { playAlongside ->
+                playAlongsideOtherApps = playAlongside
+                if (playAlongside) {
+                    startPlayingAlongsideOtherApps()
+                } else {
+                    stopPlayingAlongsideOtherApps()
+                }
             }
 
         dataStore.data
@@ -2930,6 +2946,11 @@ class MusicService :
     }
 
     private fun requestAudioFocus(): Boolean {
+        if (playAlongsideOtherApps) {
+            restoreAudioFocusVolume()
+            return true
+        }
+
         if (hasAudioFocus) {
             if (audioFocusVolumeFactor.value != 1f || lastAudioFocusState == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
                 restoreAudioFocusVolume()
@@ -2953,6 +2974,36 @@ class MusicService :
             audioFocusRequest?.let { request ->
                 audioManager.abandonAudioFocusRequest(request)
                 hasAudioFocus = false
+            }
+        }
+    }
+
+    private fun startPlayingAlongsideOtherApps() {
+        abandonAudioFocus()
+        wasPlayingBeforeAudioFocusLoss = false
+        restoreAudioFocusVolume()
+        lastAudioFocusState = AudioManager.AUDIOFOCUS_NONE
+        callWatcher.start()
+    }
+
+    private fun stopPlayingAlongsideOtherApps() {
+        callWatcher.stop()
+        wasPlayingBeforeCall = false
+        if (player.playWhenReady) {
+            requestAudioFocus()
+        }
+    }
+
+    private fun onCallChanged(inCall: Boolean) {
+        if (inCall) {
+            wasPlayingBeforeCall = player.playWhenReady
+            if (wasPlayingBeforeCall) {
+                player.pause()
+            }
+        } else {
+            if (wasPlayingBeforeCall) {
+                wasPlayingBeforeCall = false
+                player.play()
             }
         }
     }
@@ -6914,6 +6965,15 @@ class MusicService :
             if (::player.isInitialized && !isCrossfading && !crossfadeHandoffInProgress) {
                 player.volume = 0f
             }
+        } else {
+            // When resuming, if a fade-in should occur, pre-mute before audio buffers reach AudioTrack
+            if (::player.isInitialized && !isCrossfading && !crossfadeHandoffInProgress && !isQualityUpgradeSwapInProgress) {
+                val shouldFadeIn = (isFirstSongStart || (isUserPaused && !suppressFadeInForNextTrack))
+                if (shouldFadeIn) {
+                    player.volume = 0f
+                    isResumeFadeInActive = true
+                }
+            }
         }
         secondaryCrossfadePlayer?.let { secondaryPlayer ->
             if (isCrossfading && !crossfadeHandoffInProgress) {
@@ -9106,6 +9166,10 @@ class MusicService :
         }
         unregisterBluetoothReceiver()
         unregisterMuteRecoveryObserver()
+        try {
+            callWatcher.stop()
+        } catch (_: Exception) {
+        }
         try {
             scope.launch { stopTogetherInternal() }
         } catch (_: Exception) {

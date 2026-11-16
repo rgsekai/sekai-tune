@@ -70,6 +70,7 @@ import moe.rgsekai.sekaitune.constants.MaxQualityNetwork
 import moe.rgsekai.sekaitune.constants.PauseOnDeviceMuteKey
 import moe.rgsekai.sekaitune.constants.PermanentShuffleKey
 import moe.rgsekai.sekaitune.constants.PersistentQueueKey
+import moe.rgsekai.sekaitune.constants.PlayAlongsideOtherAppsKey
 import moe.rgsekai.sekaitune.constants.PlayMaxQualityOnKey
 import moe.rgsekai.sekaitune.constants.PlayerStreamClient
 import moe.rgsekai.sekaitune.constants.PlayerStreamClientKey
@@ -118,6 +119,11 @@ fun PlayerSettings(navController: NavController) {
     val (permanentShuffle, onPermanentShuffleChange) =
         rememberPreference(
             PermanentShuffleKey,
+            defaultValue = false,
+        )
+    val (playAlongsideOtherApps, onPlayAlongsideOtherAppsChange) =
+        rememberPreference(
+            PlayAlongsideOtherAppsKey,
             defaultValue = false,
         )
     val (dontRepeatSongsInSession, onDontRepeatSongsInSessionChange) =
@@ -506,6 +512,16 @@ fun PlayerSettings(navController: NavController) {
             }
 
             PreferenceGroup(title = stringResource(R.string.player_section_playback_controls)) {
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.play_alongside_other_apps)) },
+                        description = stringResource(R.string.play_alongside_other_apps_desc),
+                        icon = { Icon(painterResource(R.drawable.layers), null) },
+                        checked = playAlongsideOtherApps,
+                        onCheckedChange = onPlayAlongsideOtherAppsChange,
+                    )
+                }
+
                 item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.pause_on_device_mute)) },

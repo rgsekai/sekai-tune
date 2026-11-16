@@ -481,7 +481,6 @@ fun AppearanceSettings(navController: NavController) {
                             listOf(
                                 LibraryFilter.LIBRARY,
                                 LibraryFilter.PLAYLISTS,
-                                LibraryFilter.SONGS,
                                 LibraryFilter.ALBUMS,
                                 LibraryFilter.ARTISTS,
                                 LibraryFilter.AI_MIXES,

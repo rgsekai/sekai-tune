@@ -581,6 +581,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_play_alongside_other_apps",
+                title = context.getString(R.string.play_alongside_other_apps),
+                subtitle = context.getString(R.string.play_alongside_other_apps_desc),
+                category = playbackCategory,
+                iconRes = R.drawable.layers,
+                route = "settings/player",
+                keywords = listOf("play alongside other apps", "mix audio", "play with other apps", "audio focus", "ignore other apps"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_audio_normalization",
                 title = "Audio normalization",
                 subtitle = "Level and balance volume across all songs (ReplayGain / loudness)",
