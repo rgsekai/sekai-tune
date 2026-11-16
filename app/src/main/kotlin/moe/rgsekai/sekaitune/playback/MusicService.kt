@@ -550,6 +550,11 @@ class MusicService :
     var playerVolume = MutableStateFlow(1f)
     private val audioFocusVolumeFactor = MutableStateFlow(1f)
     private var effectiveVolumeRampJob: Job? = null
+    private var resumeFadeInJob: Job? = null
+    private var isResumeFadeInActive = false
+    private var isFirstSongStart = true
+    private var isUserPaused = true
+    private var suppressFadeInForNextTrack = false
     private var crossfadeEnabled = false
     private var crossfadeDurationMs = 0L
     private var crossfadeGapless = false
@@ -2006,11 +2011,58 @@ class MusicService :
     }
 
     private fun shouldRampEffectiveVolume(finalVolume: Float): Boolean {
+        if (isResumeFadeInActive) return false
         if (isCrossfading || crossfadeHandoffInProgress) return false
         if (!shouldKeepPlaybackAudible()) return false
         if (!finalVolume.isFinite()) return false
         if (player.volume <= STUCK_MUTED_VOLUME_EPSILON) return false
         return true
+    }
+
+    private fun startResumeFadeIn(durationMs: Long = 3000L) {
+        if (!::player.isInitialized || isCrossfading || crossfadeHandoffInProgress) return
+        resumeFadeInJob?.cancel()
+        effectiveVolumeRampJob?.cancel()
+        effectiveVolumeRampJob = null
+
+        val targetVolume = currentEffectivePlayerVolume().coerceIn(0f, maxSafeGainFactor)
+        if (targetVolume <= 0f) {
+            applyEffectiveVolumeImmediately(targetVolume)
+            return
+        }
+
+        Timber.tag("FadeInDebug").i("[FadeIn] Starting resume fade-in: targetVolume=$targetVolume, durationMs=$durationMs")
+        isResumeFadeInActive = true
+        player.volume = 0f
+
+        resumeFadeInJob = scope.launch {
+            try {
+                val startedAtMs = android.os.SystemClock.elapsedRealtime()
+                while (isActive && player.isPlaying) {
+                    val elapsedMs = android.os.SystemClock.elapsedRealtime() - startedAtMs
+                    val progress = (elapsedMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+                    val currentTarget = currentEffectivePlayerVolume().coerceIn(0f, maxSafeGainFactor)
+                    player.volume = (currentTarget * progress).coerceIn(0f, maxSafeGainFactor)
+                    if (progress >= 1f) break
+                    delay(16L)
+                }
+                if (isActive) {
+                    applyEffectiveVolumeImmediately()
+                }
+            } finally {
+                isResumeFadeInActive = false
+                resumeFadeInJob = null
+            }
+        }
+    }
+
+    private fun cancelResumeFadeIn(resetToCurrentTarget: Boolean = false) {
+        resumeFadeInJob?.cancel()
+        resumeFadeInJob = null
+        isResumeFadeInActive = false
+        if (resetToCurrentTarget && ::player.isInitialized && !isCrossfading && !crossfadeHandoffInProgress) {
+            applyEffectiveVolumeImmediately()
+        }
     }
 
     private fun applyEffectiveVolumeImmediately(finalVolume: Float = currentEffectivePlayerVolume()) {
@@ -2038,6 +2090,7 @@ class MusicService :
 
     private fun ensureAudiblePlaybackVolume(reason: String) {
         if (!::player.isInitialized) return
+        if (isResumeFadeInActive) return
         if (isCrossfading || crossfadeHandoffInProgress) return
         if (!shouldKeepPlaybackAudible()) return
         if (playerVolume.value <= 0f) return
@@ -6521,6 +6574,12 @@ class MusicService :
             super.onMediaItemTransition(mediaItem, reason)
             return
         }
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK || reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+            if (!isFirstSongStart) {
+                suppressFadeInForNextTrack = true
+            }
+            cancelResumeFadeIn(resetToCurrentTarget = true)
+        }
         lastTransitionTimeMs = android.os.SystemClock.elapsedRealtime()
         lastTransitionMediaId = mediaItem?.mediaId
         Timber.tag("PlaybackTiming").i("[PlaybackTiming] onMediaItemTransition for %s (reason=%d) at elapsedRealtime=%d", lastTransitionMediaId, reason, lastTransitionTimeMs)
@@ -6848,6 +6907,14 @@ class MusicService :
         reason: Int,
     ) {
         super.onPlayWhenReadyChanged(playWhenReady, reason)
+        if (!playWhenReady) {
+            isUserPaused = true
+            suppressFadeInForNextTrack = false
+            cancelResumeFadeIn(resetToCurrentTarget = false)
+            if (::player.isInitialized && !isCrossfading && !crossfadeHandoffInProgress) {
+                player.volume = 0f
+            }
+        }
         secondaryCrossfadePlayer?.let { secondaryPlayer ->
             if (isCrossfading && !crossfadeHandoffInProgress) {
                 val isEndOfOutgoingItemPause =
@@ -6882,6 +6949,7 @@ class MusicService :
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
+        val wasActive = safeIsPlaybackActive
         super.onIsPlayingChanged(isPlaying)
         safeIsPlaybackActive = isPlaying
         safeLastPlaybackPositionMs = try { player.currentPosition.coerceAtLeast(0L) } catch (e: Exception) { 0L }
@@ -6893,6 +6961,33 @@ class MusicService :
                 } else {
                     secondaryPlayer.pause()
                 }
+            }
+        }
+        if (isPlaying) {
+            val shouldFadeIn = (isFirstSongStart || (isUserPaused && !suppressFadeInForNextTrack)) &&
+                !isCrossfading &&
+                !crossfadeHandoffInProgress &&
+                !isQualityUpgradeSwapInProgress
+
+            Timber.tag("FadeInDebug").i(
+                "[FadeIn] onIsPlayingChanged: isPlaying=true, shouldFadeIn=%b (isFirst=%b, isUserPaused=%b, suppressNext=%b, isCrossfading=%b)",
+                shouldFadeIn, isFirstSongStart, isUserPaused, suppressFadeInForNextTrack, isCrossfading
+            )
+
+            isUserPaused = false
+            suppressFadeInForNextTrack = false
+            if (isFirstSongStart) {
+                isFirstSongStart = false
+            }
+
+            if (shouldFadeIn) {
+                startResumeFadeIn()
+            }
+        } else {
+            Timber.tag("FadeInDebug").i("[FadeIn] onIsPlayingChanged: isPlaying=false, playWhenReady=%b", player.playWhenReady)
+            if (!player.playWhenReady) {
+                isUserPaused = true
+                cancelResumeFadeIn(resetToCurrentTarget = false)
             }
         }
         if (isPlaying && !isCrossfading) {
