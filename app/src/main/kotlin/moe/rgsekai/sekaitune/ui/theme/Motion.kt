@@ -106,3 +106,24 @@ fun AnimatedContentTransitionScope<NavBackStackEntry>.motionExit(
     transition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition?,
 ): ExitTransition? = if (SekaiMotion.enabled) transition() else ExitTransition.None
 
+/**
+ * Reusable press-scale modifier driven by [interactionSource].
+ * Operates purely in the graphics layer (draw phase) to ensure zero per-frame recomposition.
+ */
+@androidx.compose.runtime.Composable
+fun androidx.compose.ui.Modifier.pressScale(
+    interactionSource: androidx.compose.foundation.interaction.InteractionSource,
+    targetScale: Float = 0.94f,
+): androidx.compose.ui.Modifier {
+    val isPressed by androidx.compose.foundation.interaction.collectIsPressedAsState(interactionSource)
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isPressed && SekaiMotion.enabled) targetScale else 1f,
+        animationSpec = SekaiMotion.PressBounce,
+        label = "pressScale",
+    )
+    return androidx.compose.ui.graphics.graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
+}
+
