@@ -752,6 +752,11 @@
     <string name="latest_version_format">Latest: %s</string>
     <string name="updates_status_checking">Checking for the latest release</string>
     <string name="updates_status_current">You are on the latest available release</string>
+    <string name="downgrade_to_version">Downgrade to %s</string>
+    <string name="downgrade_warning_title">Downgrade Notice</string>
+    <string name="downgrade_warning_message">Android may require uninstalling the current version to install an older release. We strongly recommend creating a backup first so your songs and settings remain safe.</string>
+    <string name="backup_and_continue">Backup and Continue</string>
+    <string name="continue_downgrade">Continue Downgrade</string>
     <string name="enable_update_notification">Enable Update Notification</string>
     <string name="enable_update_notification_channel_desc">Get notified when a new release is available on the selected channel</string>
     <string name="update_channel">Update Channel</string>

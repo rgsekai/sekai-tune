@@ -345,6 +345,34 @@ object Updater {
             commits
         }
 
+    suspend fun getPreviousRelease(forceRefresh: Boolean = false): Result<ReleaseInfo?> =
+        runCatching {
+            if (!isUpdaterDistribution) {
+                return@runCatching null
+            }
+            val releases = getAllReleases(forceRefresh = forceRefresh).getOrThrow()
+            findPreviousRelease(releases, BuildConfig.VERSION_NAME)
+        }
+
+    internal fun findPreviousRelease(
+        releases: List<ReleaseInfo>,
+        currentVersion: String,
+    ): ReleaseInfo? {
+        val currentSemVer = parseSemVerOrNull(currentVersion) ?: return null
+        val parsed = releases.mapNotNull { release ->
+            parseReleaseSemVerOrNull(release)?.let { semVer -> semVer to release }
+        }
+        val olderReleases = parsed.filter { (semVer, _) -> semVer < currentSemVer }
+        return olderReleases.maxWithOrNull(compareBy({ it.first }, { it.second.publishedAt }))?.second
+    }
+
+    fun getDownloadUrlForRelease(release: ReleaseInfo): String {
+        if (!isUpdaterDistribution) return ""
+        if (!canDownloadUpdatesDirectly) return release.htmlUrl.ifBlank { "$StableReleaseBaseUrl/tag/${release.tagName}" }
+        val artifactName = stableReleaseArtifactName()
+        return "$StableReleaseBaseUrl/download/${release.tagName}/$artifactName"
+    }
+
     fun getLatestDownloadUrl(): String {
         if (!isUpdaterDistribution) {
             return ""

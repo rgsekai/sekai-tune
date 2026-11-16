@@ -136,6 +136,8 @@ fun UpdateScreen(
         )
 
     var latestVersion by remember { mutableStateOf<String?>(null) }
+    var previousRelease by remember { mutableStateOf<moe.rgsekai.sekaitune.utils.ReleaseInfo?>(null) }
+    var showDowngradeWarningDialog by remember { mutableStateOf(false) }
     var hasNotificationPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -284,6 +286,9 @@ fun UpdateScreen(
             Updater.getLatestReleaseNotes(forceRefresh = true).onSuccess { notes ->
                 updateSheetNotes = notes
             }
+            Updater.getPreviousRelease(forceRefresh = true).onSuccess { older ->
+                previousRelease = older
+            }
             val versionResult = Updater.getLatestVersionName(forceRefresh = true)
 
             updateSheetLoading = false
@@ -327,6 +332,9 @@ fun UpdateScreen(
             if (!Updater.isUpdateAvailable(it, BuildConfig.VERSION_NAME)) {
                 onUpToDate()
             }
+        }
+        Updater.getPreviousRelease().onSuccess {
+            previousRelease = it
         }
     }
 
@@ -402,6 +410,10 @@ fun UpdateScreen(
                         navController.navigate("settings/changelog")
                     },
                     onCheckForUpdate = onCheckForUpdate,
+                    previousRelease = previousRelease,
+                    onDowngrade = {
+                        showDowngradeWarningDialog = true
+                    },
                 )
             }
 
@@ -652,6 +664,85 @@ fun UpdateScreen(
             )
         }
     }
+
+    if (showDowngradeWarningDialog) {
+        val older = previousRelease
+        DefaultDialog(
+            onDismiss = { showDowngradeWarningDialog = false },
+            icon = {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(R.drawable.history),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.downgrade_warning_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+            },
+            buttons = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            showDowngradeWarningDialog = false
+                            navController.navigate("settings/backup_restore")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.backup),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.backup_and_continue))
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            showDowngradeWarningDialog = false
+                            if (older != null) {
+                                val downloadUrl = Updater.getDownloadUrlForRelease(older)
+                                installUpdate(downloadUrl)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(text = stringResource(R.string.continue_downgrade))
+                    }
+
+                    TextButton(
+                        onClick = { showDowngradeWarningDialog = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(text = stringResource(android.R.string.cancel))
+                    }
+                }
+            },
+        ) {
+            Text(
+                text = stringResource(R.string.downgrade_warning_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable
@@ -736,6 +827,8 @@ private fun UpdateSummaryCard(
 private fun UpdateActionPanel(
     onOpenChangelog: () -> Unit,
     onCheckForUpdate: () -> Unit,
+    previousRelease: moe.rgsekai.sekaitune.utils.ReleaseInfo? = null,
+    onDowngrade: () -> Unit = {},
 ) {
     val isTv = LocalIsTv.current
     Card(
@@ -787,6 +880,25 @@ private fun UpdateActionPanel(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(R.string.check_for_update))
+                }
+
+                if (previousRelease != null) {
+                    val prevVersionDisplay = previousRelease.name.ifBlank { previousRelease.tagName }
+                    OutlinedButton(
+                        onClick = onDowngrade,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.history),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.downgrade_to_version, prevVersionDisplay))
+                    }
                 }
             } else {
                 FilledTonalButton(
