@@ -37,7 +37,8 @@ android {
     compileSdk = 37
 
     defaultConfig {
-    applicationId = "moe.rgsekai.sekaitune"
+        val isPerfTest = System.getenv("PERF_TEST_BUILD") == "true"
+        applicationId = if (isPerfTest) "moe.rgsekai.sekaitune.perf" else "moe.rgsekai.sekaitune"
         minSdk = 26
         targetSdk = 37
         versionCode = 22

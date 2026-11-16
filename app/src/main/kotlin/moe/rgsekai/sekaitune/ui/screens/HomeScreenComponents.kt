@@ -63,6 +63,7 @@ import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerState
@@ -159,6 +160,9 @@ import moe.rgsekai.sekaitune.playback.queues.YouTubeAlbumRadio
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
 import moe.rgsekai.sekaitune.ui.component.AlbumGridItem
 import moe.rgsekai.sekaitune.ui.component.ArtistGridItem
+import moe.rgsekai.sekaitune.ui.component.RevealSeenState
+import moe.rgsekai.sekaitune.ui.component.rememberRevealSeenState
+import moe.rgsekai.sekaitune.ui.component.revealOnAppear
 import moe.rgsekai.sekaitune.ui.component.MenuState
 import moe.rgsekai.sekaitune.ui.component.SongGridItem
 import moe.rgsekai.sekaitune.ui.component.SongListItem
@@ -1395,6 +1399,7 @@ fun HomePageSectionContent(
     haptic: HapticFeedback,
     scope: CoroutineScope,
     modifier: Modifier = Modifier,
+    revealSeen: RevealSeenState = rememberRevealSeenState(),
 ) {
     LazyRow(
         contentPadding =
@@ -1403,21 +1408,29 @@ fun HomePageSectionContent(
                 .asPaddingValues(),
         modifier = modifier,
     ) {
-        items(
+        itemsIndexed(
             items = section.items,
-            key = { it.id },
-            contentType = { item -> item::class },
-        ) { item ->
-            YouTubeGridItemWrapper(
-                item = item,
-                mediaMetadata = mediaMetadata,
-                isPlaying = isPlaying,
-                navController = navController,
-                playerConnection = playerConnection,
-                menuState = menuState,
-                haptic = haptic,
-                scope = scope,
-            )
+            key = { _, item -> item.id },
+            contentType = { _, item -> item::class },
+        ) { index, item ->
+            Box(
+                modifier = Modifier.revealOnAppear(
+                    key = "row_${section.title}_${item.id}",
+                    seenState = revealSeen,
+                    delayMillis = kotlin.math.min(index, 4) * 60,
+                ),
+            ) {
+                YouTubeGridItemWrapper(
+                    item = item,
+                    mediaMetadata = mediaMetadata,
+                    isPlaying = isPlaying,
+                    navController = navController,
+                    playerConnection = playerConnection,
+                    menuState = menuState,
+                    haptic = haptic,
+                    scope = scope,
+                )
+            }
         }
     }
 }
