@@ -2417,43 +2417,77 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             },
                                         enterTransition = {
-                                            if (disableAnimations) {
+                                            if (disableAnimations || !moe.rgsekai.sekaitune.ui.theme.SekaiMotion.enabled) {
                                                 fadeIn(tween(0))
                                             } else if (initialState.destination.route in topLevelScreens &&
                                                 targetState.destination.route in topLevelScreens
                                             ) {
-                                                fadeIn(tween(250))
+                                                fadeIn(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort))
                                             } else {
-                                                fadeIn(tween(250)) + slideInHorizontally { it / 2 }
+                                                fadeIn(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort)) + slideInHorizontally { it / 2 }
                                             }
                                         },
                                         exitTransition = {
-                                            if (disableAnimations) {
+                                            val targetRoute = targetState.destination.route
+                                            val isCoverTarget = targetRoute?.startsWith("album/") == true ||
+                                                targetRoute?.startsWith("artist/") == true ||
+                                                targetRoute?.startsWith("online_playlist/") == true ||
+                                                targetRoute?.startsWith("local_playlist/") == true ||
+                                                targetRoute?.startsWith("auto_playlist/") == true
+                                            if (disableAnimations || !moe.rgsekai.sekaitune.ui.theme.SekaiMotion.enabled) {
                                                 fadeOut(tween(0))
+                                            } else if (isCoverTarget && initialState.destination.route in topLevelScreens) {
+                                                androidx.compose.animation.scaleOut(
+                                                    animationSpec = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.NavRecede,
+                                                    targetScale = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.RecedeScale,
+                                                ) + fadeOut(
+                                                    animationSpec = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.NavRecede,
+                                                    targetAlpha = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.RecedeAlpha,
+                                                )
                                             } else if (initialState.destination.route in topLevelScreens &&
                                                 targetState.destination.route in topLevelScreens
                                             ) {
-                                                fadeOut(tween(200))
+                                                fadeOut(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort))
                                             } else {
-                                                fadeOut(tween(200)) + slideOutHorizontally { -it / 2 }
+                                                fadeOut(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort)) + slideOutHorizontally { -it / 2 }
                                             }
                                         },
                                         popEnterTransition = {
-                                            if (disableAnimations) {
+                                            val fromRoute = initialState.destination.route
+                                            val isCoverSource = fromRoute?.startsWith("album/") == true ||
+                                                fromRoute?.startsWith("artist/") == true ||
+                                                fromRoute?.startsWith("online_playlist/") == true ||
+                                                fromRoute?.startsWith("local_playlist/") == true ||
+                                                fromRoute?.startsWith("auto_playlist/") == true
+                                            if (disableAnimations || !moe.rgsekai.sekaitune.ui.theme.SekaiMotion.enabled) {
                                                 fadeIn(tween(0))
+                                            } else if (isCoverSource && targetState.destination.route in topLevelScreens) {
+                                                androidx.compose.animation.scaleIn(
+                                                    animationSpec = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(
+                                                        baseMillis = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationReturn,
+                                                        easing = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.Decelerate,
+                                                    ),
+                                                    initialScale = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.RecedeScale,
+                                                ) + fadeIn(
+                                                    animationSpec = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(
+                                                        baseMillis = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationReturn,
+                                                        easing = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.Decelerate,
+                                                    ),
+                                                    initialAlpha = moe.rgsekai.sekaitune.ui.theme.SekaiMotion.RecedeAlpha,
+                                                )
                                             } else if ((
                                                     initialState.destination.route in topLevelScreens ||
                                                         initialState.destination.route?.startsWith(OnlineSearchResultRoutePrefix) == true
                                                 ) &&
                                                 targetState.destination.route in topLevelScreens
                                             ) {
-                                                fadeIn(tween(250))
+                                                fadeIn(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort))
                                             } else {
-                                                fadeIn(tween(250)) + slideInHorizontally { -it / 2 }
+                                                fadeIn(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort)) + slideInHorizontally { -it / 2 }
                                             }
                                         },
                                         popExitTransition = {
-                                            if (disableAnimations) {
+                                            if (disableAnimations || !moe.rgsekai.sekaitune.ui.theme.SekaiMotion.enabled) {
                                                 fadeOut(tween(0))
                                             } else if ((
                                                     initialState.destination.route in topLevelScreens ||
@@ -2461,9 +2495,9 @@ class MainActivity : ComponentActivity() {
                                                 ) &&
                                                 targetState.destination.route in topLevelScreens
                                             ) {
-                                                fadeOut(tween(200))
+                                                fadeOut(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort))
                                             } else {
-                                                fadeOut(tween(200)) + slideOutHorizontally { it / 2 }
+                                                fadeOut(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.tweenSpec(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.DurationShort)) + slideOutHorizontally { it / 2 }
                                             }
                                         },
                                         modifier =
