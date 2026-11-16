@@ -281,7 +281,7 @@ fun AppearanceSettings(navController: NavController) {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.disable_animations)) },
                         description = stringResource(R.string.disable_animations_desc),
-                        icon = { Icon(painterResource(R.drawable.motion_mode), null) },
+                        icon = { Icon(painterResource(R.drawable.animation), null) },
                         checked = disableAnimations,
                         onCheckedChange = onDisableAnimationsChange,
                     )
