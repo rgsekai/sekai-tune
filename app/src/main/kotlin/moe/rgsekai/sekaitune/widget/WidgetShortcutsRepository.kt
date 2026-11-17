@@ -27,15 +27,12 @@ internal class WidgetShortcutsRepository
             withContext(Dispatchers.IO) {
                 val fromMs = nowMs - Duration.ofDays(60).toMillis()
 
-                // 1. Liked Songs (Slot 1)
-                val likedSongs = database.likedSongs(
-                    sortType = SongSortType.CREATE_DATE,
-                    descending = true
-                ).first()
-                val likedArt = likedSongs.firstOrNull()?.thumbnailUrl
+                // 1. Liked Songs (Slot 1) - avoid loading all liked songs into memory
+                val likedCount = database.likedSongsCount().first()
+                val likedArt = database.firstLikedSong().first()?.song?.thumbnailUrl
                 val slot1 = WidgetShortcutItem(
                     title = "Liked Songs",
-                    subtitle = "${likedSongs.size} songs",
+                    subtitle = "$likedCount songs",
                     artPathOrUrl = likedArt,
                     type = WidgetShortcutType.LIKED_SONGS,
                     targetId = PlaylistEntity.LIKED_PLAYLIST_ID,
@@ -69,7 +66,7 @@ internal class WidgetShortcutsRepository
                 } catch (_: Exception) {
                     emptyList<Song>()
                 }.ifEmpty {
-                    database.songsByNameAsc().first().take(10)
+                    database.sampleSongs(limit = 10).first()
                 }
 
                 val result = mutableListOf<WidgetShortcutItem>()

@@ -362,6 +362,10 @@ interface DatabaseDao {
     fun likedSongsCount(): Flow<Int>
 
     @Transaction
+    @Query("SELECT * FROM song WHERE liked ORDER BY likedDate DESC, rowId DESC LIMIT 1")
+    fun firstLikedSong(): Flow<Song?>
+
+    @Transaction
     @Query("SELECT song.* FROM song JOIN song_album_map ON song.id = song_album_map.songId WHERE song_album_map.albumId = :albumId")
     fun albumSongs(albumId: String): Flow<List<Song>>
 

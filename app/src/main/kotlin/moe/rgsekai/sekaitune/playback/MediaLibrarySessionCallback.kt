@@ -1882,22 +1882,21 @@ class MediaLibrarySessionCallback
             startPositionMs,
         )
 
-        private fun downloadedSongs(): Flow<List<Song>> {
-            val downloads = downloadUtil.downloads.value
-            return database
-                .allSongs()
-                .flowOn(Dispatchers.IO)
-                .map { songs ->
-                    songs.filter {
-                        downloads[it.id]?.state == Download.STATE_COMPLETED
+        private fun downloadedSongs(): Flow<List<Song>> =
+            downloadUtil.downloads
+                .map { downloads ->
+                    val completed = downloads.filterValues { it.state == Download.STATE_COMPLETED }
+                    if (completed.isEmpty()) {
+                        emptyList()
+                    } else {
+                        val songs = database.getSongsByIds(completed.keys.toList())
+                        songs
+                            .map { it to completed[it.id] }
+                            .sortedBy { it.second?.updateTimeMs ?: 0L }
+                            .map { it.first }
                     }
-                }.map { songs ->
-                    songs
-                        .map { it to downloads[it.id] }
-                        .sortedBy { it.second?.updateTimeMs ?: 0L }
-                        .map { it.first }
                 }
-        }
+                .flowOn(Dispatchers.IO)
 
         private data class OfflineSongSearchResult(
             val items: List<MediaItem>,
