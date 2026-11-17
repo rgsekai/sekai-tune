@@ -178,6 +178,7 @@ val EnablePaxsenixYouTubeLyricsKey = booleanPreferencesKey("enablePaxsenixYouTub
 val EnableUnisonLyricsKey = booleanPreferencesKey("enableUnisonLyrics")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoKey = booleanPreferencesKey("hideVideo")
+val FilterAiSongsKey = booleanPreferencesKey("filterAiSongs")
 val ProxyEnabledKey = booleanPreferencesKey("proxyEnabled")
 val ProxyHostKey = stringPreferencesKey("proxyHost")
 val ProxyPortKey = intPreferencesKey("proxyPort")

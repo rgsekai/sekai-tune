@@ -149,6 +149,30 @@ fun <T : YTItem> List<T>.filterVideo(enabled: Boolean = true) =
         this
     }
 
+// words that give away music made with ai; "suno" alone is hindi for "listen", so only "suno ai" counts
+private val AI_GENERATED_PATTERN = Regex(
+    "(?i)\\b(ai[\\s-]*(covers?|generated|music|remix|version|voice|vocals?)|suno\\s*ai|udio|(made|created|generated|produced)\\s*(with|by|using)\\s*ai)\\b|[(\\[]\\s*ai\\s*[)\\]]"
+)
+
+// whether a title or a name says it was made with ai
+fun isAiGeneratedText(text: String?): Boolean = text != null && AI_GENERATED_PATTERN.containsMatchIn(text)
+
+// the title, and the artist, album or playlist owner's name too: most ai channels say so in their name, not in every title
+fun YTItem.looksAiGenerated(): Boolean = isAiGeneratedText(title) || when (this) {
+    is SongItem -> artists.any { isAiGeneratedText(it.name) } || isAiGeneratedText(album?.name)
+    is AlbumItem -> artists.orEmpty().any { isAiGeneratedText(it.name) }
+    is PlaylistItem -> isAiGeneratedText(author?.name)
+    is ArtistItem -> isAiGeneratedText(title)
+}
+
+fun <T : YTItem> List<T>.filterAiGenerated(enabled: Boolean = false) =
+    if (enabled) {
+        filterNot { it.looksAiGenerated() }
+    } else {
+        this
+    }
+
+
 
 
 

@@ -29,6 +29,7 @@ object QueueFilterProvider {
         database: MusicDatabase,
         hideExplicit: Boolean = false,
         hideVideo: Boolean = false,
+        filterAi: Boolean = false,
     ): Pair<List<MediaItem>, Queue> = withContext(Dispatchers.IO) {
         val seedId = seedSong.id.trim()
         val artistId = seedSong.artists.firstOrNull()?.id?.trim()
@@ -44,6 +45,7 @@ object QueueFilterProvider {
                 val initialStatus = baseRadioQueue.getInitialStatus()
                     .filterExplicit(hideExplicit)
                     .filterVideo(hideVideo)
+                    .filterAiGenerated(filterAi)
                 val items = initialStatus.items.filter { it.mediaId != seedId }
                 Pair(items, baseRadioQueue)
             }
@@ -53,6 +55,7 @@ object QueueFilterProvider {
                     baseRadioQueue.getInitialStatus()
                         .filterExplicit(hideExplicit)
                         .filterVideo(hideVideo)
+                        .filterAiGenerated(filterAi)
                         .items
                 } catch (e: Exception) {
                     Timber.w(e, "QueueFilterProvider: Failed to load initial radio for DISCOVER")
@@ -61,6 +64,7 @@ object QueueFilterProvider {
 
                 val relatedItems = fetchRelatedSongItems(seedId, hideExplicit)
                 val allCandidates = (radioItems + relatedItems.map { it.toMediaItem() })
+                    .filterAiGenerated(filterAi)
                     .filter { it.mediaId != seedId }
                     .distinctBy { it.mediaId }
 
@@ -105,13 +109,14 @@ object QueueFilterProvider {
                     val radioStatus = baseRadioQueue.getInitialStatus()
                         .filterExplicit(hideExplicit)
                         .filterVideo(hideVideo)
+                        .filterAiGenerated(filterAi)
                     val radioItems = radioStatus.items.filter { it.mediaId != seedId }
                     familiarMediaItems.addAll(radioItems)
                 } catch (e: Exception) {
                     Timber.w(e, "QueueFilterProvider: Failed to load radio for FAMILIAR")
                 }
 
-                val finalItems = familiarMediaItems.distinctBy { it.mediaId }.take(50)
+                val finalItems = familiarMediaItems.filterAiGenerated(filterAi).distinctBy { it.mediaId }.take(50)
                 Pair(finalItems, baseRadioQueue)
             }
 
@@ -142,12 +147,13 @@ object QueueFilterProvider {
                     val radioStatus = baseRadioQueue.getInitialStatus()
                         .filterExplicit(hideExplicit)
                         .filterVideo(hideVideo)
+                        .filterAiGenerated(filterAi)
                     popularItems.addAll(radioStatus.items.filter { it.mediaId != seedId })
                 } catch (e: Exception) {
                     Timber.w(e, "QueueFilterProvider: Failed to blend radio for POPULAR")
                 }
 
-                val finalItems = popularItems.distinctBy { it.mediaId }.take(50)
+                val finalItems = popularItems.filterAiGenerated(filterAi).distinctBy { it.mediaId }.take(50)
                 Pair(finalItems, baseRadioQueue)
             }
 
@@ -183,6 +189,7 @@ object QueueFilterProvider {
                     val radioStatus = baseRadioQueue.getInitialStatus()
                         .filterExplicit(hideExplicit)
                         .filterVideo(hideVideo)
+                        .filterAiGenerated(filterAi)
                     val radioItems = radioStatus.items.filter { it.mediaId != seedId }
                     // Reverse/shuffle or take deeper items
                     val deeperRadio = if (radioItems.size > 8) radioItems.drop(4) else radioItems
@@ -191,7 +198,7 @@ object QueueFilterProvider {
                     Timber.w(e, "QueueFilterProvider: Failed to load radio for DEEP_CUTS")
                 }
 
-                val finalItems = deepCutItems.distinctBy { it.mediaId }.take(50)
+                val finalItems = deepCutItems.filterAiGenerated(filterAi).distinctBy { it.mediaId }.take(50)
                 Pair(finalItems, baseRadioQueue)
             }
         }

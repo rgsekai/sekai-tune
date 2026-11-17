@@ -570,6 +570,8 @@
     <string name="device_volume_zero_playback_paused">Playback paused because device volume is 0. Raise volume to resume.</string>
     <string name="auto_skip_next_on_error">Auto skip to next song when error occurs</string>
     <string name="auto_skip_next_on_error_desc">Ensure your continuous playback experience</string>
+    <string name="filter_ai_songs_title">AI Artist filter</string>
+    <string name="filter_ai_songs_desc">Filter AI-generated songs and artists from playback and recommendations</string>
     <string name="stop_music_on_task_clear">Stop music on task clear</string>
     <string name="wakelock">Keep CPU awake during playback</string>
     <string name="wakelock_desc">Prevents the system from interrupting music by holding a CPU wake lock</string>

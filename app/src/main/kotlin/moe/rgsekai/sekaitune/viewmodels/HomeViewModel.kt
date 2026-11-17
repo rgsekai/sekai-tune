@@ -29,6 +29,7 @@ import moe.rgsekai.sekaitune.constants.AccountNameKey
 import moe.rgsekai.sekaitune.constants.DataSyncIdKey
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
 import moe.rgsekai.sekaitune.constants.HideVideoKey
+import moe.rgsekai.sekaitune.constants.FilterAiSongsKey
 import moe.rgsekai.sekaitune.constants.InnerTubeCookieKey
 import moe.rgsekai.sekaitune.constants.SpeedDialSongIdsKey
 import moe.rgsekai.sekaitune.constants.YtmSyncKey
@@ -48,9 +49,10 @@ import moe.rgsekai.sekaitune.innertube.models.PlaylistItem
 import moe.rgsekai.sekaitune.innertube.models.WatchEndpoint
 import moe.rgsekai.sekaitune.innertube.models.YTItem
 import moe.rgsekai.sekaitune.innertube.models.filterExplicit
+import moe.rgsekai.sekaitune.innertube.models.filterVideo
+import moe.rgsekai.sekaitune.innertube.models.filterAiGenerated
 import moe.rgsekai.sekaitune.models.HeroCardItem
 import moe.rgsekai.sekaitune.repository.NewReleaseRepository
-import moe.rgsekai.sekaitune.innertube.models.filterVideo
 import moe.rgsekai.sekaitune.innertube.pages.HomePage
 import moe.rgsekai.sekaitune.innertube.utils.completed
 import moe.rgsekai.sekaitune.innertube.utils.hasYouTubeLoginCookie
@@ -546,6 +548,7 @@ class HomeViewModel
                 supervisorScope {
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                     val hideVideo = context.dataStore.get(HideVideoKey, false)
+                    val filterAi = context.dataStore.get(FilterAiSongsKey, false)
                     val blockedArtistIds = database.getBlockedArtistIds().toSet()
                     val fromTimeStamp = System.currentTimeMillis() - 86400000 * 7 * 2
 
@@ -602,6 +605,7 @@ class HomeViewModel
                                                         section.items
                                                             .filterExplicit(hideExplicit)
                                                             .filterVideo(hideVideo)
+                                                            .filterAiGenerated(filterAi)
                                                             .filterBlockedArtists(blockedArtistIds),
                                                 )
                                             },
@@ -640,6 +644,7 @@ class HomeViewModel
         private suspend fun loadSimilarRecommendations() {
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
             val hideVideo = context.dataStore.get(HideVideoKey, false)
+            val filterAi = context.dataStore.get(FilterAiSongsKey, false)
             val blockedArtistIds = database.getBlockedArtistIds().toSet()
             val fromTimeStamp = System.currentTimeMillis() - 86400000 * 7 * 2
 
@@ -670,6 +675,7 @@ class HomeViewModel
                                 items
                                     .filterExplicit(hideExplicit)
                                     .filterVideo(hideVideo)
+                                    .filterAiGenerated(filterAi)
                                     .filterBlockedArtists(blockedArtistIds)
                                     .shuffled()
                                     .ifEmpty { return@mapNotNull null },
@@ -698,6 +704,7 @@ class HomeViewModel
                                         page.playlists.shuffled().take(4)
                                 ).filterExplicit(hideExplicit)
                                     .filterVideo(hideVideo)
+                                    .filterAiGenerated(filterAi)
                                     .filterBlockedArtists(blockedArtistIds)
                                     .shuffled()
                                     .ifEmpty { return@mapNotNull null },
@@ -803,6 +810,7 @@ class HomeViewModel
             if (continuation == null || isLoadingMore.value) return
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
             val hideVideo = context.dataStore.get(HideVideoKey, false)
+            val filterAi = context.dataStore.get(FilterAiSongsKey, false)
 
             viewModelScope.launch(Dispatchers.IO) {
                 isLoadingMore.value = true
@@ -818,6 +826,7 @@ class HomeViewModel
                                             section.items
                                                 .filterExplicit(hideExplicit)
                                                 .filterVideo(hideVideo)
+                                                .filterAiGenerated(filterAi)
                                                 .filterBlockedArtists(blockedArtistIds),
                                     )
                                 },

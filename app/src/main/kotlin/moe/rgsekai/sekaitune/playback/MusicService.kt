@@ -166,6 +166,7 @@ import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MAX
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_MIN
 import moe.rgsekai.sekaitune.constants.HideExplicitKey
 import moe.rgsekai.sekaitune.constants.HideVideoKey
+import moe.rgsekai.sekaitune.constants.FilterAiSongsKey
 import moe.rgsekai.sekaitune.constants.HistoryDuration
 import moe.rgsekai.sekaitune.constants.MaxSongCacheSizeKey
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants.CommandToggleLike
@@ -244,6 +245,7 @@ import moe.rgsekai.sekaitune.playback.queues.Queue
 import moe.rgsekai.sekaitune.playback.queues.YouTubeQueue
 import moe.rgsekai.sekaitune.playback.queues.filterExplicit
 import moe.rgsekai.sekaitune.playback.queues.filterVideo
+import moe.rgsekai.sekaitune.playback.queues.filterAiGenerated
 import moe.rgsekai.sekaitune.storage.StorageFolderKind
 import moe.rgsekai.sekaitune.storage.StorageLocationRepository
 import moe.rgsekai.sekaitune.together.TogetherPlaybackSync
@@ -1732,11 +1734,13 @@ class MusicService :
         val continuationQueue = persistedQueue.toContinuationQueue()
         val hideExplicit = dataStore.get(HideExplicitKey, false)
         val hideVideo = dataStore.get(HideVideoKey, false)
+        val filterAi = dataStore.get(FilterAiSongsKey, false)
         val initialStatus =
             itemQueue
                 .getInitialStatus()
                 .filterExplicit(hideExplicit)
                 .filterVideo(hideVideo)
+                .filterAiGenerated(filterAi)
 
         withContext(Dispatchers.Main) {
             if (hydrationGeneration != restoredQueueHydrationGeneration.get()) {
@@ -3509,6 +3513,7 @@ class MusicService :
                             .getInitialStatus()
                             .filterExplicit(dataStore.get(HideExplicitKey, false))
                             .filterVideo(dataStore.get(HideVideoKey, false))
+                            .filterAiGenerated(dataStore.get(FilterAiSongsKey, false))
                     }
 
                 val targetItem =
@@ -3623,6 +3628,7 @@ class MusicService :
         scope.launch(SilentHandler) {
             val hideExplicit = dataStore.get(HideExplicitKey, false)
             val hideVideo = dataStore.get(HideVideoKey, false)
+            val filterAi = dataStore.get(FilterAiSongsKey, false)
             val autoLoadMoreEnabled = dataStore.get(AutoLoadMoreKey, true)
             var initialStatus =
                 withContext(Dispatchers.IO) {
@@ -3630,6 +3636,7 @@ class MusicService :
                         .getInitialStatus()
                         .filterExplicit(hideExplicit)
                         .filterVideo(hideVideo)
+                        .filterAiGenerated(filterAi)
                 }
             val firstItemIsLocal = initialStatus.items.firstOrNull()?.let {
                 it.metadata?.id?.isLocalMediaId() == true || it.mediaId.isLocalMediaId() || it.localConfiguration?.uri?.toString()?.isLocalMediaId() == true
@@ -3651,6 +3658,7 @@ class MusicService :
                                 .nextPage()
                                 .filterExplicit(hideExplicit)
                                 .filterVideo(hideVideo)
+                                .filterAiGenerated(filterAi)
                         }
                     if (nextItems.isNotEmpty()) {
                         expandedItems += nextItems
@@ -3789,6 +3797,7 @@ class MusicService :
                         .filterExplicit(
                             dataStore.get(HideExplicitKey, false),
                         ).filterVideo(dataStore.get(HideVideoKey, false))
+                        .filterAiGenerated(dataStore.get(FilterAiSongsKey, false))
                 }
 
             if (initialStatus.title != null) {
@@ -3861,6 +3870,7 @@ class MusicService :
                 try {
                     val hideExplicit = dataStore.get(HideExplicitKey, false)
                     val hideVideo = dataStore.get(HideVideoKey, false)
+                    val filterAi = dataStore.get(FilterAiSongsKey, false)
                     val filter = currentQueueFilter.value
 
                     val seedId = seedVideoIdOverride
@@ -3877,6 +3887,7 @@ class MusicService :
                             database = database,
                             hideExplicit = hideExplicit,
                             hideVideo = hideVideo,
+                            filterAi = filterAi,
                         )
 
                     val dontRepeatInSession = dataStore.get(DontRepeatSongsInSessionKey, false)
@@ -3933,6 +3944,7 @@ class MusicService :
                                     .nextPage()
                                     .filterExplicit(hideExplicit)
                                     .filterVideo(hideVideo)
+                                    .filterAiGenerated(filterAi)
                             }
                         val uniquePage = page.filterNot { isDuplicateOfCurrent(it) }
                         uniquePage.forEach { knownIds.add(it.mediaId.trim()) }
@@ -4004,6 +4016,7 @@ class MusicService :
                 try {
                     val hideExplicit = dataStore.get(HideExplicitKey, false)
                     val hideVideo = dataStore.get(HideVideoKey, false)
+                    val filterAi = dataStore.get(FilterAiSongsKey, false)
 
                     val (filteredItems, queue) =
                         QueueFilterProvider.fetchFilteredQueue(
@@ -4012,6 +4025,7 @@ class MusicService :
                             database = database,
                             hideExplicit = hideExplicit,
                             hideVideo = hideVideo,
+                            filterAi = filterAi,
                         )
 
                     val knownIds =
@@ -6729,6 +6743,7 @@ class MusicService :
                         .filterExplicit(
                             dataStore.get(HideExplicitKey, false),
                         ).filterVideo(dataStore.get(HideVideoKey, false))
+                        .filterAiGenerated(dataStore.get(FilterAiSongsKey, false))
                 if (player.playbackState != STATE_IDLE) {
                     player.addMediaItems(mediaItems.drop(1))
                 }

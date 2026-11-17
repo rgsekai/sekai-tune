@@ -63,6 +63,7 @@ import moe.rgsekai.sekaitune.constants.DeviceMutePlaybackRecoveryVolumeKey
 import moe.rgsekai.sekaitune.constants.DontRepeatSongsInSessionKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderEnabledKey
 import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
+import moe.rgsekai.sekaitune.constants.FilterAiSongsKey
 import moe.rgsekai.sekaitune.constants.HISTORY_DURATION_DEFAULT
 import moe.rgsekai.sekaitune.constants.HistoryDuration
 import moe.rgsekai.sekaitune.constants.LowDataModeKey
@@ -241,6 +242,11 @@ fun PlayerSettings(navController: NavController) {
     val (wakelockEnabled, onWakelockChange) =
         rememberPreference(
             WakelockKey,
+            defaultValue = false,
+        )
+    val (filterAiSongs, onFilterAiSongsChange) =
+        rememberPreference(
+            FilterAiSongsKey,
             defaultValue = false,
         )
     var showArtistSeparatorsDialog by remember { mutableStateOf(false) }
@@ -583,6 +589,16 @@ fun PlayerSettings(navController: NavController) {
                         icon = { Icon(painterResource(R.drawable.skip_next), null) },
                         checked = autoSkipNextOnError,
                         onCheckedChange = onAutoSkipNextOnErrorChange,
+                    )
+                }
+
+                item {
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.filter_ai_songs_title)) },
+                        description = stringResource(R.string.filter_ai_songs_desc),
+                        icon = { Icon(painterResource(R.drawable.filter_alt), null) },
+                        checked = filterAiSongs,
+                        onCheckedChange = onFilterAiSongsChange,
                     )
                 }
             }

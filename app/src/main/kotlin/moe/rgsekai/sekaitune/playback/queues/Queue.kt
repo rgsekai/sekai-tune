@@ -10,6 +10,7 @@ package moe.rgsekai.sekaitune.playback.queues
 import androidx.media3.common.MediaItem
 import moe.rgsekai.sekaitune.extensions.ExtraIsMusicVideo
 import moe.rgsekai.sekaitune.extensions.metadata
+import moe.rgsekai.sekaitune.innertube.models.isAiGeneratedText
 import moe.rgsekai.sekaitune.models.MediaMetadata
 
 enum class ActiveQueueType {
@@ -44,6 +45,13 @@ interface Queue {
         fun filterVideo(enabled: Boolean = true) =
             if (enabled) {
                 filterItems { it.mediaMetadata.extras?.getBoolean(ExtraIsMusicVideo, false) != true }
+            } else {
+                this
+            }
+
+        fun filterAiGenerated(enabled: Boolean = true) =
+            if (enabled) {
+                filterItems { !it.looksAiGenerated() }
             } else {
                 this
             }
@@ -94,6 +102,23 @@ fun List<MediaItem>.filterVideo(enabled: Boolean = true) =
     } else {
         this
     }
+
+fun MediaItem.looksAiGenerated(): Boolean {
+    val title = mediaMetadata.title?.toString()
+    val artist = mediaMetadata.artist?.toString()
+    val album = mediaMetadata.albumTitle?.toString()
+    return isAiGeneratedText(title) || isAiGeneratedText(artist) || isAiGeneratedText(album)
+}
+
+fun List<MediaItem>.filterAiGenerated(enabled: Boolean = true) =
+    if (enabled) {
+        filterNot {
+            it.looksAiGenerated()
+        }
+    } else {
+        this
+    }
+
 
 
 

@@ -667,6 +667,17 @@ object SettingsSearchRepository {
                 keywords = listOf("external downloader", "seal", "ytdlnis", "download manager", "save songs"),
             ),
         )
+        add(
+            SettingsSearchEntry(
+                id = "sub_filter_ai_songs",
+                title = context.getString(R.string.filter_ai_songs_title),
+                subtitle = context.getString(R.string.filter_ai_songs_desc),
+                category = playbackCategory,
+                iconRes = R.drawable.filter_alt,
+                route = "settings/player",
+                keywords = listOf("ai artist filter", "filter ai songs", "ai music", "ai slop", "suno", "udio", "filter ai", "ai"),
+            ),
+        )
 
         // ==========================================
         // 6. LYRICS SUB-SETTINGS
