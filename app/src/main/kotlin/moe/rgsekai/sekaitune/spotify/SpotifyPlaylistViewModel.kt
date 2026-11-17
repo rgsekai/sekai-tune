@@ -7,12 +7,14 @@
 
 package moe.rgsekai.sekaitune.spotify
 
+import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,7 +25,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.spotify.models.SpotifyImage
 import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylist
+import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylistOwner
+import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylistTracksRef
 import moe.rgsekai.sekaitune.spotify.models.SpotifyTrack
 import moe.rgsekai.sekaitune.utils.reportException
 import javax.inject.Inject
@@ -35,6 +41,7 @@ class SpotifyPlaylistViewModel
         savedStateHandle: SavedStateHandle,
         private val repository: SpotifyLibraryRepository,
         private val resolveSpotifyPlaylistDownloads: ResolveSpotifyPlaylistDownloadsUseCase,
+        @ApplicationContext private val context: Context,
     ) : ViewModel() {
         private val playlistId: String = savedStateHandle.get<String>("playlistId").orEmpty()
 
@@ -45,6 +52,7 @@ class SpotifyPlaylistViewModel
         val events = eventChannel.receiveAsFlow()
 
         private var reloadJob: Job? = null
+        private var loadMoreJob: Job? = null
         private var downloadResolutionJob: Job? = null
 
         init {
@@ -57,11 +65,14 @@ class SpotifyPlaylistViewModel
                 return
             }
             reloadJob?.cancel()
+            loadMoreJob?.cancel()
             downloadResolutionJob?.cancel()
             downloadResolutionJob = null
             _uiState.update {
                 it.copy(
                     isLoading = true,
+                    isLoadingMore = false,
+                    hasMore = false,
                     errorMessage = null,
                     downloadItems = ImmutableList.of(),
                     isResolvingDownloads = false,
@@ -70,14 +81,40 @@ class SpotifyPlaylistViewModel
             reloadJob =
                 viewModelScope.launch(Dispatchers.IO) {
                     try {
-                        val playlist = repository.playlist(playlistId)
-                        val tracks = repository.playlistTracks(playlistId)
-                        _uiState.value =
-                            SpotifyPlaylistUiState(
-                                playlist = playlist,
-                                tracks = tracks,
-                                isLoading = false,
-                            )
+                        if (playlistId == SPOTIFY_LIKED_SONGS_ID) {
+                            val page = repository.likedSongs(limit = 50, offset = 0)
+                            val playlist =
+                                SpotifyPlaylist(
+                                    id = SPOTIFY_LIKED_SONGS_ID,
+                                    name = context.getString(R.string.spotify_liked_songs),
+                                    description = context.getString(R.string.spotify_liked_songs_desc),
+                                    images =
+                                        listOf(
+                                            SpotifyImage(
+                                                url = "android.resource://${context.packageName}/${R.drawable.spotify_liked_songs}",
+                                            ),
+                                        ),
+                                    owner = SpotifyPlaylistOwner(displayName = context.getString(R.string.spotify_account)),
+                                    tracks = SpotifyPlaylistTracksRef(total = page.total),
+                                )
+                            _uiState.value =
+                                SpotifyPlaylistUiState(
+                                    playlist = playlist,
+                                    tracks = page.items,
+                                    isLoading = false,
+                                    hasMore = page.items.size < page.total && page.items.isNotEmpty(),
+                                )
+                        } else {
+                            val playlist = repository.playlist(playlistId)
+                            val tracks = repository.playlistTracks(playlistId)
+                            _uiState.value =
+                                SpotifyPlaylistUiState(
+                                    playlist = playlist,
+                                    tracks = tracks,
+                                    isLoading = false,
+                                    hasMore = false,
+                                )
+                        }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Throwable) {
@@ -88,6 +125,36 @@ class SpotifyPlaylistViewModel
                                 errorMessage = error.message,
                             )
                         }
+                    }
+                }
+        }
+
+        fun loadMore() {
+            val state = _uiState.value
+            if (playlistId != SPOTIFY_LIKED_SONGS_ID || state.isLoading || state.isLoadingMore || !state.hasMore) {
+                return
+            }
+            if (loadMoreJob?.isActive == true) return
+
+            val offset = state.tracks.size
+            loadMoreJob =
+                viewModelScope.launch(Dispatchers.IO) {
+                    _uiState.update { it.copy(isLoadingMore = true) }
+                    try {
+                        val page = repository.likedSongs(limit = 50, offset = offset)
+                        _uiState.update { current ->
+                            val combinedTracks = current.tracks + page.items
+                            current.copy(
+                                tracks = combinedTracks,
+                                isLoadingMore = false,
+                                hasMore = combinedTracks.size < page.total && page.items.isNotEmpty(),
+                            )
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Throwable) {
+                        reportException(error)
+                        _uiState.update { it.copy(isLoadingMore = false) }
                     }
                 }
         }
@@ -143,6 +210,8 @@ data class SpotifyPlaylistUiState(
     val playlist: SpotifyPlaylist? = null,
     val tracks: List<SpotifyTrack> = emptyList(),
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val hasMore: Boolean = false,
     val errorMessage: String? = null,
     val downloadItems: ImmutableList<SpotifyDownloadItem> = ImmutableList.of(),
     val isResolvingDownloads: Boolean = false,

@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.spotify.SPOTIFY_LIKED_SONGS_ID
 import moe.rgsekai.sekaitune.spotify.SpotifyLibraryViewModel
 import moe.rgsekai.sekaitune.ui.tv.components.TvShelfItem
 import moe.rgsekai.sekaitune.ui.tv.components.TvShelfRow
@@ -58,9 +59,11 @@ fun TvLibraryScreen(
 ) {
     val allPlaylists by playlistsViewModel.allPlaylists.collectAsStateWithLifecycle()
     val spotifyPlaylists by spotifyViewModel.playlists.collectAsStateWithLifecycle()
+    val likedSongsCount by spotifyViewModel.likedSongsCount.collectAsStateWithLifecycle()
     val isPlaylistsRefreshing by playlistsViewModel.isRefreshing.collectAsStateWithLifecycle()
     val isSpotifyRefreshing by spotifyViewModel.isRefreshing.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
         playlistsViewModel.sync()
@@ -99,8 +102,18 @@ fun TvLibraryScreen(
         }
     }
 
-    val spotifyShelfItems = remember(spotifyPlaylists) {
-        spotifyPlaylists.map { playlist ->
+    val spotifyShelfItems = remember(spotifyPlaylists, likedSongsCount, context) {
+        val likedItem =
+            TvShelfItem(
+                id = SPOTIFY_LIKED_SONGS_ID,
+                title = context.getString(R.string.spotify_liked_songs),
+                subtitle = likedSongsCount?.let { count -> if (count > 0) "$count ${if (count == 1) "song" else "songs"}" else "0 songs" },
+                thumbnailUrl = "android.resource://${context.packageName}/${R.drawable.spotify_liked_songs}",
+                onClick = {
+                    navController.navigate("spotify_playlist/$SPOTIFY_LIKED_SONGS_ID")
+                },
+            )
+        listOf(likedItem) + spotifyPlaylists.map { playlist ->
             val count = playlist.tracks?.total ?: 0
             TvShelfItem(
                 id = playlist.id,

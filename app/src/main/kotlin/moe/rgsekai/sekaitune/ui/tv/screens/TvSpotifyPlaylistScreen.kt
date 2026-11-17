@@ -87,6 +87,7 @@ fun TvSpotifyPlaylistScreen(
                     initialTracks = queueTracks,
                     startIndex = boundedStartIndex,
                     preloadItem = preloadItem,
+                    totalTracksCount = currentPlaylist.tracks?.total,
                 ),
             )
         }

@@ -32,6 +32,9 @@ class SpotifyLibraryViewModel
         val followedArtists: StateFlow<List<SpotifyArtist>> =
             repository.followedArtists.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+        val likedSongsCount: StateFlow<Int?> =
+            repository.likedSongsTotal.stateIn(viewModelScope, SharingStarted.Lazily, null)
+
         val isRefreshing: StateFlow<Boolean> =
             repository.isRefreshing.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
@@ -41,6 +44,7 @@ class SpotifyLibraryViewModel
         init {
             viewModelScope.launch(Dispatchers.IO) {
                 repository.restoreCachedPlaylists()
+                runCatching { repository.getLikedSongsCount() }
                 if (repository.followedArtists.value.isEmpty()) {
                     runCatching { repository.refreshFollowedArtists() }
                 }

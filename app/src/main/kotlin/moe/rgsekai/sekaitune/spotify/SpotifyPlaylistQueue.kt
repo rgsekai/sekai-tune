@@ -23,6 +23,7 @@ class SpotifyPlaylistQueue(
     private val initialTracks: List<SpotifyTrack> = emptyList(),
     private val startIndex: Int = 0,
     override val preloadItem: MediaMetadata? = null,
+    private val totalTracksCount: Int? = null,
 ) : Queue {
     private val allTracks = mutableListOf<SpotifyTrack>()
     private var resolveOffset = 0
@@ -34,9 +35,9 @@ class SpotifyPlaylistQueue(
         withContext(Dispatchers.IO) {
             if (initialTracks.isNotEmpty()) {
                 allTracks += initialTracks
-                apiTotal = initialTracks.size
-                apiFetchOffset = apiTotal
-                apiHasMore = false
+                apiTotal = totalTracksCount ?: initialTracks.size
+                apiFetchOffset = initialTracks.size
+                apiHasMore = apiFetchOffset < apiTotal
             } else {
                 fetchNextApiPage()
             }
@@ -108,18 +109,30 @@ class SpotifyPlaylistQueue(
 
     private suspend fun fetchNextApiPage() {
         if (!apiHasMore) return
-        val result =
-            Spotify
-                .playlistTracks(
-                    playlistId = playlistId,
-                    limit = SPOTIFY_PAGE_SIZE,
-                    offset = apiFetchOffset,
-                ).getOrThrow()
-        apiTotal = result.total
-        val fetched = result.items.mapNotNull { it.track?.takeUnless(SpotifyTrack::isLocal) }
+        val fetched: List<SpotifyTrack>
+        if (playlistId == SPOTIFY_LIKED_SONGS_ID) {
+            val result =
+                Spotify
+                    .likedSongs(
+                        limit = SPOTIFY_PAGE_SIZE,
+                        offset = apiFetchOffset,
+                    ).getOrThrow()
+            apiTotal = totalTracksCount ?: result.total
+            fetched = result.items.mapNotNull { it.track.takeUnless(SpotifyTrack::isLocal) }
+        } else {
+            val result =
+                Spotify
+                    .playlistTracks(
+                        playlistId = playlistId,
+                        limit = SPOTIFY_PAGE_SIZE,
+                        offset = apiFetchOffset,
+                    ).getOrThrow()
+            apiTotal = totalTracksCount ?: result.total
+            fetched = result.items.mapNotNull { it.track?.takeUnless(SpotifyTrack::isLocal) }
+        }
         allTracks += fetched
-        apiFetchOffset += result.items.size
-        apiHasMore = apiFetchOffset < apiTotal
+        apiFetchOffset += fetched.size
+        apiHasMore = apiFetchOffset < apiTotal && fetched.isNotEmpty()
     }
 
     companion object {

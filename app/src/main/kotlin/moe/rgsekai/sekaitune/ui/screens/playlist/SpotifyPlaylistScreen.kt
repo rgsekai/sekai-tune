@@ -309,6 +309,20 @@ fun SpotifyPlaylistScreen(
         }
     }
 
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisibleItemIndex = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItemsCount = lazyListState.layoutInfo.totalItemsCount
+            totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 5
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore, state.hasMore, state.isLoadingMore) {
+        if (shouldLoadMore && state.hasMore && !state.isLoadingMore && query.text.isBlank()) {
+            viewModel.loadMore()
+        }
+    }
+
     val loadedDurationMs =
         remember(tracks) {
             tracks.sumOf { track -> track.durationMs.toLong() }
@@ -432,6 +446,7 @@ fun SpotifyPlaylistScreen(
                         initialTracks = queueTracks,
                         startIndex = boundedStartIndex,
                         preloadItem = preloadItem,
+                        totalTracksCount = currentPlaylist.tracks?.total,
                     ),
                 )
             } finally {
@@ -958,6 +973,20 @@ fun SpotifyPlaylistScreen(
                                 },
                             ),
                 )
+            }
+
+            if (state.isLoadingMore) {
+                item(key = "loading_more", contentType = "loading_more") {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularWavyProgressIndicator(modifier = Modifier.size(28.dp))
+                    }
+                }
             }
         }
 

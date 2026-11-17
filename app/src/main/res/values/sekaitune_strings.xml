@@ -581,6 +581,8 @@
     <string name="spotify_no_sources">No Spotify playlists found</string>
     <string name="spotify_account">Spotify account</string>
     <string name="spotify_playlists">Spotify Playlist</string>
+    <string name="spotify_liked_songs">Liked Songs</string>
+    <string name="spotify_liked_songs_desc">Your saved songs on Spotify.</string>
     <string name="spotify_waiting_for_login">Waiting for Spotify login</string>
     <string name="spotify_show_playlist">Show Playlist</string>
     <string name="spotify_show_playlist_desc">Show Spotify playlists in Library.</string>

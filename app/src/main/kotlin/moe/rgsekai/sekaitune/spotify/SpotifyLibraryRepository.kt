@@ -30,6 +30,7 @@ import moe.rgsekai.sekaitune.constants.SpotifyLibraryPlaylistsCacheKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
 import moe.rgsekai.sekaitune.constants.SpotifySpKeyKey
 import moe.rgsekai.sekaitune.spotify.models.SpotifyArtist
+import moe.rgsekai.sekaitune.spotify.models.SpotifyPaging
 import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylist
 import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylistTracksRef
 import moe.rgsekai.sekaitune.spotify.models.SpotifyTrack
@@ -38,6 +39,8 @@ import moe.rgsekai.sekaitune.utils.dataStore
 import moe.rgsekai.sekaitune.utils.reportException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+const val SPOTIFY_LIKED_SONGS_ID = "liked"
 
 @Singleton
 class SpotifyLibraryRepository
@@ -50,6 +53,9 @@ class SpotifyLibraryRepository
 
         private val _followedArtists = MutableStateFlow<List<SpotifyArtist>>(emptyList())
         val followedArtists: StateFlow<List<SpotifyArtist>> = _followedArtists.asStateFlow()
+
+        private val _likedSongsTotal = MutableStateFlow<Int?>(null)
+        val likedSongsTotal: StateFlow<Int?> = _likedSongsTotal.asStateFlow()
 
         private val _isRefreshing = MutableStateFlow(false)
         val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -191,6 +197,7 @@ class SpotifyLibraryRepository
                 }
                 _playlists.value = emptyList()
                 _followedArtists.value = emptyList()
+                _likedSongsTotal.value = null
                 _errorMessage.value = null
                 Spotify.accessToken = null
                 runCatching { clearWebAuthSession(context) }
@@ -217,6 +224,10 @@ class SpotifyLibraryRepository
                     runCatching {
                         val artistsLoaded = fetchAllFollowedArtists()
                         _followedArtists.value = artistsLoaded
+                    }
+                    runCatching {
+                        val likedCount = fetchLikedSongsCount()
+                        _likedSongsTotal.value = likedCount
                     }
                     loaded
                 } catch (error: CancellationException) {
@@ -306,6 +317,46 @@ class SpotifyLibraryRepository
                 }
 
                 tracks
+            }
+
+        suspend fun likedSongs(
+            limit: Int = 50,
+            offset: Int = 0,
+        ): SpotifyPaging<SpotifyTrack> =
+            withContext(Dispatchers.IO) {
+                ensureAuthenticated()
+                spotifyCallWithTokenRetry {
+                    val response =
+                        Spotify
+                            .likedSongs(
+                                limit = limit,
+                                offset = offset,
+                            ).getOrThrow()
+                    if (offset == 0) {
+                        _likedSongsTotal.value = response.total
+                    }
+                    SpotifyPaging(
+                        items = response.items.mapNotNull { it.track.takeUnless(SpotifyTrack::isLocal) },
+                        total = response.total,
+                        limit = response.limit,
+                        offset = response.offset,
+                    )
+                }
+            }
+
+        suspend fun getLikedSongsCount(): Int? =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    ensureAuthenticated()
+                    val count = fetchLikedSongsCount()
+                    _likedSongsTotal.value = count
+                    count
+                }.getOrNull()
+            }
+
+        private suspend fun fetchLikedSongsCount(): Int =
+            spotifyCallWithTokenRetry {
+                Spotify.likedSongs(limit = 1, offset = 0).getOrThrow().total
             }
 
         suspend fun followArtist(artistId: String): Result<Unit> =

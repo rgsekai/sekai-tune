@@ -60,9 +60,14 @@ import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.ShowSpotifyFollowArtistKey
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
+import moe.rgsekai.sekaitune.spotify.SPOTIFY_LIKED_SONGS_ID
 import moe.rgsekai.sekaitune.spotify.SpotifyArtistResolver
 import moe.rgsekai.sekaitune.spotify.SpotifyLibraryViewModel
 import moe.rgsekai.sekaitune.spotify.YtmArtistResolution
+import moe.rgsekai.sekaitune.spotify.models.SpotifyImage
+import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylist
+import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylistOwner
+import moe.rgsekai.sekaitune.spotify.models.SpotifyPlaylistTracksRef
 import moe.rgsekai.sekaitune.ui.component.ExpressivePullToRefreshBox
 import moe.rgsekai.sekaitune.ui.component.SpotifyLibraryArtistListItem
 import moe.rgsekai.sekaitune.ui.component.SpotifyLibraryPlaylistListItem
@@ -86,6 +91,24 @@ fun LibrarySpotifyPlaylistsScreen(
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val followedArtists by viewModel.followedArtists.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val likedSongsCount by viewModel.likedSongsCount.collectAsStateWithLifecycle()
+
+    val likedSongsPlaylist =
+        remember(likedSongsCount, context) {
+            SpotifyPlaylist(
+                id = SPOTIFY_LIKED_SONGS_ID,
+                name = context.getString(R.string.spotify_liked_songs),
+                description = context.getString(R.string.spotify_liked_songs_desc),
+                images =
+                    listOf(
+                        SpotifyImage(
+                            url = "android.resource://${context.packageName}/${R.drawable.spotify_liked_songs}",
+                        ),
+                    ),
+                tracks = SpotifyPlaylistTracksRef(total = likedSongsCount),
+                owner = SpotifyPlaylistOwner(displayName = context.getString(R.string.spotify_account)),
+            )
+        }
 
     var selectedSection by rememberSaveable {
         mutableStateOf(
@@ -156,6 +179,13 @@ fun LibrarySpotifyPlaylistsScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 if (activeSection == SpotifySection.PLAYLISTS) {
+                    item(key = "spotify_liked_songs", contentType = "spotify_playlist") {
+                        SpotifyLibraryPlaylistListItem(
+                            playlist = likedSongsPlaylist,
+                            navController = navController,
+                        )
+                    }
+
                     if (playlists.isEmpty()) {
                         item(key = "spotify_empty_playlists", contentType = "spotify_empty") {
                             Text(
