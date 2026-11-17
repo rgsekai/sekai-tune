@@ -37,6 +37,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import moe.rgsekai.sekaitune.ui.theme.pressScale
 import moe.rgsekai.sekaitune.ui.utils.LocalIsTv
 
 @Composable
@@ -46,6 +47,7 @@ fun ResizableIconButton(
     color: Color = MaterialTheme.colorScheme.onSurface,
     enabled: Boolean = true,
     indication: Indication? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onClick: () -> Unit = {},
 ) {
     val isTv = LocalIsTv.current
@@ -63,9 +65,10 @@ fun ResizableIconButton(
                         Modifier
                     }
                 )
+                .pressScale(interactionSource, targetScale = 0.94f)
                 .clickable(
                     indication = indication ?: ripple(bounded = false),
-                    interactionSource = remember { MutableInteractionSource() },
+                    interactionSource = interactionSource,
                     enabled = enabled,
                     onClick = onClick,
                 ).alpha(if (enabled) 1f else 0.5f),
@@ -95,6 +98,7 @@ fun IconButton(
                         Modifier
                     }
                 )
+                .pressScale(interactionSource, targetScale = 0.94f)
                 .minimumInteractiveComponentSize()
                 .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                 .clip(CircleShape)

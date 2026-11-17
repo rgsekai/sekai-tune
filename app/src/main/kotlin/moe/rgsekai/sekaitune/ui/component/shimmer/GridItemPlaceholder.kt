@@ -51,7 +51,7 @@ fun GridItemPlaceHolder(
                     Modifier.height(GridThumbnailHeight)
                 }.aspectRatio(1f)
                     .clip(thumbnailShape)
-                    .background(MaterialTheme.colorScheme.onSurface),
+                    .background(moe.rgsekai.sekaitune.ui.theme.SekaiMotion.BoneColor),
         )
 
         Spacer(modifier = Modifier.height(6.dp))

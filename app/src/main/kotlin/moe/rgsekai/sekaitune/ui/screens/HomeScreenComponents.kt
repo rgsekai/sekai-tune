@@ -107,6 +107,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.HorizontalCenteredHeroCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -128,10 +129,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import coil3.imageLoader
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import androidx.compose.material3.ripple
+import moe.rgsekai.sekaitune.ui.theme.SekaiMotion
+import moe.rgsekai.sekaitune.ui.theme.pressScale
 import kotlinx.coroutines.CoroutineScope
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.GridThumbnailHeight
@@ -581,6 +586,24 @@ fun QuickPicksSection(
 
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val heroHeight = screenHeight * 0.60f
+    val heroContext = LocalContext.current
+
+    LaunchedEffect(pagerState.currentPage, distinctHeroItems) {
+        if (distinctHeroItems.isNotEmpty()) {
+            val curr = pagerState.currentPage
+            val prev = (curr - 1).mod(distinctHeroItems.size)
+            val next = (curr + 1).mod(distinctHeroItems.size)
+            listOf(prev, next).forEach { idx ->
+                val preloadUrl = distinctHeroItems.getOrNull(idx)?.thumbnailUrl
+                if (!preloadUrl.isNullOrBlank()) {
+                    val req = ImageRequest.Builder(heroContext)
+                        .data(preloadUrl)
+                        .build()
+                    heroContext.imageLoader.enqueue(req)
+                }
+            }
+        }
+    }
 
     Box(
         modifier =
@@ -675,6 +698,7 @@ fun QuickPicksSection(
                         modifier =
                             Modifier
                                 .fillMaxSize()
+                                .background(SekaiMotion.BoneColor)
                                 .pageMediaDrift(pageOffset),
                     )
 
@@ -1241,6 +1265,7 @@ fun ForgottenFavoritesSection(
             key = { it.id },
             contentType = { "forgotten_favorite_song" },
         ) { song ->
+            val songInteractionSource = remember { MutableInteractionSource() }
             SongListItem(
                 song = song,
                 showInLibraryIcon = true,
@@ -1269,8 +1294,11 @@ fun ForgottenFavoritesSection(
                 modifier =
                     Modifier
                         .width(horizontalLazyGridItemWidth)
+                        .pressScale(songInteractionSource, targetScale = 0.97f)
                         .focusable()
                         .combinedClickable(
+                            interactionSource = songInteractionSource,
+                            indication = ripple(bounded = true),
                             onClick = {
                                 if (song.id == mediaMetadata?.id) {
                                     playerConnection.player.togglePlayPause()
@@ -1466,6 +1494,7 @@ private fun YouTubeGridItemWrapper(
     scope: CoroutineScope,
     modifier: Modifier = Modifier,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     YouTubeGridItem(
         item = item,
         isActive = item.id in listOf(mediaMetadata?.album?.id, mediaMetadata?.id),
@@ -1474,8 +1503,11 @@ private fun YouTubeGridItemWrapper(
         thumbnailRatio = 1f,
         modifier =
             modifier
+                .pressScale(interactionSource, targetScale = 0.97f)
                 .focusable()
                 .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = ripple(bounded = true),
                     onClick = {
                         when (item) {
                             is SongItem -> {

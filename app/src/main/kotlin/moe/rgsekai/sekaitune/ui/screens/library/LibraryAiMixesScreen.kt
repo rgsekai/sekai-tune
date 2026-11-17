@@ -40,6 +40,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import moe.rgsekai.sekaitune.ui.component.shimmer.ListItemPlaceHolder
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -121,14 +122,10 @@ fun LibraryAiMixesScreen(
             when (val state = topMixesUiState) {
                 LibraryTopMixesUiState.Loading -> {
                     item(key = "ai_mixes_loading") {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            repeat(4) {
+                                ListItemPlaceHolder()
+                            }
                         }
                     }
                 }

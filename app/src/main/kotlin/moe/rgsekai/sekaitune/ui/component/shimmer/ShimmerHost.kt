@@ -37,7 +37,6 @@ fun ShimmerHost(
         verticalArrangement = verticalArrangement,
         modifier =
             modifier
-                .shimmer()
                 .graphicsLayer(alpha = 0.99f)
                 .drawWithContent {
                     drawContent()

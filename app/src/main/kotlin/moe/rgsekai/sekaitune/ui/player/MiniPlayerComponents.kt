@@ -21,6 +21,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
+import moe.rgsekai.sekaitune.ui.theme.pressScale
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -388,24 +391,32 @@ private fun MiniPlayerTransportButton(
     val iconTint =
         iconTintOverride ?: if (enabled) colors.buttonIcon else colors.disabledButtonIcon
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
                 .then(modifier)
                 .size(if (isPrimary) 40.dp else 36.dp)
+                .pressScale(interactionSource, targetScale = 0.94f)
                 .clip(CircleShape)
                 .background(containerColor)
                 .border(width = 1.dp, color = borderColor, shape = CircleShape)
-                .clickable(enabled = enabled, onClick = {
-                    if (enableHapticFeedback) {
-                        view.performHapticFeedback(
-                            android.view.HapticFeedbackConstants.CONTEXT_CLICK,
-                            android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
-                        )
-                    }
-                    onClick()
-                }),
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = ripple(bounded = true),
+                    enabled = enabled,
+                    onClick = {
+                        if (enableHapticFeedback) {
+                            view.performHapticFeedback(
+                                android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                                android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                            )
+                        }
+                        onClick()
+                    },
+                ),
     ) {
         Icon(
             painter = painterResource(iconResId),

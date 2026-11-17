@@ -112,7 +112,7 @@ fun HomeScreen(
         snapshotFlow {
             val layoutInfo = lazyListState.layoutInfo
             val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index
-            lastVisibleIndex != null && lastVisibleIndex >= layoutInfo.totalItemsCount - 3
+            lastVisibleIndex != null && lastVisibleIndex >= layoutInfo.totalItemsCount - 6
         }.collect { shouldLoadMore ->
             if (shouldLoadMore) {
                 viewModel.onAction(HomeAction.LoadMore(continuation))
