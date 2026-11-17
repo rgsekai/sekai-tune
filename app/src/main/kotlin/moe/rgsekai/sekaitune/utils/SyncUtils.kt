@@ -8,6 +8,7 @@
 package moe.rgsekai.sekaitune.utils
 
 import android.content.Context
+import androidx.datastore.preferences.core.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import moe.rgsekai.sekaitune.constants.InnerTubeCookieKey
+import moe.rgsekai.sekaitune.constants.LastFullSyncKey
+import moe.rgsekai.sekaitune.constants.SYNC_COOLDOWN
 import moe.rgsekai.sekaitune.constants.SelectedYtmPlaylistsKey
 import moe.rgsekai.sekaitune.constants.YtmSyncKey
 import moe.rgsekai.sekaitune.db.MusicDatabase
@@ -82,6 +85,25 @@ class SyncUtils
             }
         }
 
+        suspend fun tryAutoSync() =
+            withContext(Dispatchers.IO) {
+                if (!isLoggedIn()) {
+                    Timber.d("Skipping auto sync - user not logged in")
+                    return@withContext
+                }
+                if (!isYtmSyncEnabled()) {
+                    Timber.d("Skipping auto sync - sync disabled")
+                    return@withContext
+                }
+                val lastSync = context.dataStore.data.first()[LastFullSyncKey] ?: 0L
+                val currentTime = java.time.LocalDateTime.now().toEpochSecond(java.time.ZoneOffset.UTC)
+                if (lastSync > 0 && (currentTime - lastSync) < SYNC_COOLDOWN) {
+                    Timber.d("Skipping auto sync - within cooldown (${currentTime - lastSync}s / ${SYNC_COOLDOWN}s)")
+                    return@withContext
+                }
+                performFullSync()
+            }
+
         suspend fun performFullSync(authoritative: Boolean = false) =
             withContext(Dispatchers.IO) {
                 if (authoritative) {
@@ -116,6 +138,11 @@ class SyncUtils
                         if (!authoritative) {
                             syncAutoSyncPlaylists()
                         }
+                    }
+
+                    context.dataStore.edit { settings ->
+                        settings[LastFullSyncKey] =
+                            java.time.LocalDateTime.now().toEpochSecond(java.time.ZoneOffset.UTC)
                     }
                 } catch (e: Exception) {
                     Timber.e(e, "Error during full sync")

@@ -371,6 +371,9 @@ val LastLibSongSyncKey = longPreferencesKey("last_library_song_sync")
 val LastAlbumSyncKey = longPreferencesKey("last_album_sync")
 val LastArtistSyncKey = longPreferencesKey("last_artist_sync")
 val LastPlaylistSyncKey = longPreferencesKey("last_playlist_sync")
+val LastFullSyncKey = longPreferencesKey("last_full_sync")
+
+const val SYNC_COOLDOWN = 30 * 60L
 
 val ArtistViewTypeKey = stringPreferencesKey("artistViewType")
 val AlbumViewTypeKey = stringPreferencesKey("albumViewType")

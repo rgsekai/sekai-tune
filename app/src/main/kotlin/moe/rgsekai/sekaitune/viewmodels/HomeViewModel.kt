@@ -467,7 +467,7 @@ class HomeViewModel
             val recentPicks = database.recentSongs(limit = 60).first().toQuickPickSample()
             if (recentPicks.isNotEmpty()) return recentPicks
 
-            return database.allSongs().first().toQuickPickSample()
+            return database.sampleSongs(limit = 50).first().toQuickPickSample()
         }
 
         private fun observeQuickPicks() {
@@ -1007,13 +1007,21 @@ class HomeViewModel
             }
 
             viewModelScope.launch(Dispatchers.IO) {
+                // Allow initial Home layout, thumbnails, and first scroll interactions to settle
+                kotlinx.coroutines.delay(5000)
+                syncUtils.tryAutoSync()
+            }
+
+            viewModelScope.launch(Dispatchers.IO) {
+                var isFirstCookie = true
                 context.dataStore.data
                     .map { it[InnerTubeCookieKey] }
                     .distinctUntilChanged()
                     .collect { cookie ->
                         try {
                             val isLoggedIn = hasYouTubeLoginCookie(cookie)
-                            val loginTransition = isLoggedIn && !wasLoggedIn
+                            val signedInLater = !isFirstCookie && isLoggedIn && !wasLoggedIn
+                            isFirstCookie = false
                             wasLoggedIn = isLoggedIn
 
                             if (isLoggedIn && cookie != null && cookie.isNotEmpty()) {
@@ -1028,11 +1036,11 @@ class HomeViewModel
                                     launch { refreshAccountPlaylistsInternal() }
                                 }
 
-                                if (loginTransition) {
+                                if (signedInLater) {
                                     launch {
                                         try {
                                             if (context.dataStore.get(YtmSyncKey, true)) {
-                                                syncUtils.performFullSync()
+                                                syncUtils.tryAutoSync()
                                             }
                                         } catch (e: Exception) {
                                             Timber.e(e, "Error during login-triggered sync")
