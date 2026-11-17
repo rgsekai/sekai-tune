@@ -197,14 +197,27 @@ private fun FullArtCoverLayout(
 
                         Spacer(modifier = GlanceModifier.width(8.dp))
 
+                        val likeIcon =
+                            if (state.syncLikesToSpotify) {
+                                if (state.isLiked) R.drawable.check else R.drawable.add
+                            } else {
+                                if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border
+                            }
+                        val likeColor =
+                            if (state.isLiked) {
+                                if (state.syncLikesToSpotify) ColorProvider(Color(0xFF1DB954)) else ColorProvider(Color(0xFFFF1744))
+                            } else {
+                                ColorProvider(Color.White)
+                            }
+
                         // Heart Button (Red when liked, white border when unliked)
                         WidgetControlButton(
                             modifier = GlanceModifier.size(42.dp),
                             action = likeToggleAction(),
-                            icon = if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                            icon = likeIcon,
                             contentDescription = context.getString(if (state.isLiked) R.string.liked else R.string.filter_liked),
                             backgroundColor = ColorProvider(Color(0x40FFFFFF)),
-                            contentColor = if (state.isLiked) ColorProvider(Color(0xFFFF1744)) else ColorProvider(Color.White),
+                            contentColor = likeColor,
                             cornerRadius = 21.dp,
                             iconSize = 22.dp,
                         )
@@ -501,14 +514,27 @@ private fun FullLyricsLayout(
 
                 Spacer(modifier = GlanceModifier.width(8.dp))
 
+                val compactLikeIcon =
+                    if (state.syncLikesToSpotify) {
+                        if (state.isLiked) R.drawable.check else R.drawable.add
+                    } else {
+                        if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border
+                    }
+                val compactLikeColor =
+                    if (state.isLiked) {
+                        if (state.syncLikesToSpotify) ColorProvider(Color(0xFF1DB954)) else ColorProvider(Color(0xFFFF1744))
+                    } else {
+                        ColorProvider(Color.White)
+                    }
+
                 // Heart Button
                 WidgetControlButton(
                     modifier = GlanceModifier.size(40.dp),
                     action = likeToggleAction(),
-                    icon = if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                    icon = compactLikeIcon,
                     contentDescription = context.getString(if (state.isLiked) R.string.liked else R.string.filter_liked),
                     backgroundColor = ColorProvider(Color(0x40FFFFFF)),
-                    contentColor = if (state.isLiked) ColorProvider(Color(0xFFFF1744)) else ColorProvider(Color.White),
+                    contentColor = compactLikeColor,
                     cornerRadius = 20.dp,
                     iconSize = 22.dp,
                 )

@@ -63,6 +63,7 @@ import moe.rgsekai.sekaitune.LocalSyncUtils
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
 import moe.rgsekai.sekaitune.constants.SpotifyAccessTokenKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.db.entities.PlaylistSongMap
 import moe.rgsekai.sekaitune.db.entities.Song
 import moe.rgsekai.sekaitune.extensions.toMediaItem
@@ -101,6 +102,7 @@ fun SelectionSongMenu(
     val coroutineScope = rememberCoroutineScope()
     val playerConnection = LocalPlayerConnection.current ?: return
     val syncUtils = LocalSyncUtils.current
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
 
     val allInLibrary by remember {
         mutableStateOf(
@@ -468,11 +470,14 @@ fun SelectionSongMenu(
                             )
                         },
                         leadingContent = {
+                            val selectionLikeIcon =
+                                if (syncLikesToSpotify) {
+                                    if (allLiked) R.drawable.check else R.drawable.add
+                                } else {
+                                    if (allLiked) R.drawable.favorite else R.drawable.favorite_border
+                                }
                             Icon(
-                                painter =
-                                    painterResource(
-                                        if (allLiked) R.drawable.favorite else R.drawable.favorite_border,
-                                    ),
+                                painter = painterResource(selectionLikeIcon),
                                 contentDescription = null,
                             )
                         },
@@ -850,6 +855,7 @@ fun SelectionMediaMetadataMenu(
     val coroutineScope = rememberCoroutineScope()
     val playerConnection = LocalPlayerConnection.current ?: return
     val syncUtils = LocalSyncUtils.current
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
     val resolveUploadedCatalogMatchUseCase = LocalResolveUploadedCatalogMatchUseCase.current
 
     val allLiked by remember(songSelection) {
@@ -1211,11 +1217,14 @@ fun SelectionMediaMetadataMenu(
                             )
                         },
                         leadingContent = {
+                            val selectionLikeIcon =
+                                if (syncLikesToSpotify) {
+                                    if (allLiked) R.drawable.check else R.drawable.add
+                                } else {
+                                    if (allLiked) R.drawable.favorite else R.drawable.favorite_border
+                                }
                             Icon(
-                                painter =
-                                    painterResource(
-                                        if (allLiked) R.drawable.favorite else R.drawable.favorite_border,
-                                    ),
+                                painter = painterResource(selectionLikeIcon),
                                 contentDescription = null,
                             )
                         },

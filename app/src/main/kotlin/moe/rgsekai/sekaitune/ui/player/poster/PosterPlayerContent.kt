@@ -22,7 +22,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
+import moe.rgsekai.sekaitune.utils.rememberPreference
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +67,7 @@ fun PosterPlayerContent(
 ) {
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
 
     BoxWithConstraints(
         modifier = modifier
@@ -247,9 +251,16 @@ fun PosterPlayerContent(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            val posterLikeIcon =
+                if (syncLikesToSpotify) {
+                    if (data.isLiked) R.drawable.check else R.drawable.add
+                } else {
+                    if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill
+                }
+
             // Heart / Like Pill
             PosterPillButton(
-                icon = if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
+                icon = posterLikeIcon,
                 onClick = onLikeClick,
                 iconSize = 20.dp,
             )

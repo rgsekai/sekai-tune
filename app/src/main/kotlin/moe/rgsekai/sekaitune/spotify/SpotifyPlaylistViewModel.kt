@@ -57,6 +57,13 @@ class SpotifyPlaylistViewModel
 
         init {
             reload()
+            if (playlistId == SPOTIFY_LIKED_SONGS_ID) {
+                viewModelScope.launch {
+                    repository.likedSongsUpdated.collect {
+                        reload()
+                    }
+                }
+            }
         }
 
         fun reload() {

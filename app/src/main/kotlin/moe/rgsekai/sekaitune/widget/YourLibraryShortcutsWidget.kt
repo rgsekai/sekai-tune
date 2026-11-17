@@ -294,14 +294,27 @@ private fun ShortcutsNowPlayingHeader(
 
             Spacer(modifier = GlanceModifier.defaultWeight())
 
+            val likeIcon =
+                if (state.syncLikesToSpotify) {
+                    if (state.isLiked) R.drawable.check else R.drawable.add
+                } else {
+                    if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border
+                }
+            val likeColor =
+                if (state.isLiked) {
+                    if (state.syncLikesToSpotify) ColorProvider(Color(0xFF1DB954)) else ColorProvider(Color(0xFFFF3B30))
+                } else {
+                    palette.onSurface
+                }
+
             // Like / Heart Button (Vibrant Red when liked)
             WidgetControlButton(
                 modifier = GlanceModifier.size(38.dp),
                 action = likeToggleAction(),
-                icon = if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                icon = likeIcon,
                 contentDescription = context.getString(if (state.isLiked) R.string.liked else R.string.liked_songs),
                 backgroundColor = ColorProvider(Color.Transparent),
-                contentColor = if (state.isLiked) ColorProvider(Color(0xFFFF3B30)) else palette.onSurface,
+                contentColor = likeColor,
                 cornerRadius = 19.dp,
                 iconSize = 30.dp,
             )

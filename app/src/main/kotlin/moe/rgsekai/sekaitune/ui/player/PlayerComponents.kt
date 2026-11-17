@@ -151,6 +151,7 @@ import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.constants.PlayerHorizontalPadding
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.db.entities.FormatEntity
 import moe.rgsekai.sekaitune.db.entities.codecLabel
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
@@ -958,6 +959,7 @@ private fun V8MetadataActions(
             Spacer(Modifier.width(16.dp))
 
             val useGlass = rememberPlayerGlassEnabled()
+            val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1024,11 +1026,14 @@ private fun V8MetadataActions(
                             .clickable(onClick = onToggleLike),
                     contentAlignment = Alignment.Center,
                 ) {
+                    val likeIconRes =
+                        if (syncLikesToSpotify) {
+                            if (liked) R.drawable.check else R.drawable.add
+                        } else {
+                            if (liked) R.drawable.favorite else R.drawable.favorite_border
+                        }
                     Icon(
-                        painter =
-                            painterResource(
-                                if (liked) R.drawable.favorite else R.drawable.favorite_border,
-                            ),
+                        painter = painterResource(likeIconRes),
                         contentDescription = stringResource(R.string.action_like),
                         tint = foreground,
                         modifier = Modifier.size(20.dp),

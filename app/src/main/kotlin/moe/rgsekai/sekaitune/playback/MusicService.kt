@@ -200,6 +200,7 @@ import moe.rgsekai.sekaitune.playback.audio.SpatialAudioProcessor
 import moe.rgsekai.sekaitune.constants.SmartTrimmerKey
 import moe.rgsekai.sekaitune.utils.isTvDevice
 import moe.rgsekai.sekaitune.constants.StopMusicOnTaskClearKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.constants.TogetherClientIdKey
 import moe.rgsekai.sekaitune.constants.WakelockKey
 import moe.rgsekai.sekaitune.db.MusicDatabase
@@ -370,6 +371,8 @@ class MusicService :
     private var wasPlayingBeforeCall = false
     private val callWatcher by lazy { CallWatcher(this, ::onCallChanged) }
     private var pauseOnDeviceMuteEnabled = false
+    var syncLikesToSpotifyEnabled = false
+        private set
     private var deviceMutePlaybackRecoveryVolumePercent = 0
     private var wasAutoPausedByDeviceMute = false
     private var muteRecoveryObserver: ContentObserver? = null
@@ -1467,6 +1470,15 @@ class MusicService :
                 } else {
                     unregisterBluetoothReceiver()
                 }
+            }
+
+        dataStore.data
+            .map { it[SyncLikesToSpotifyKey] ?: false }
+            .distinctUntilChanged()
+            .collectLatest(scope) { enabled ->
+                syncLikesToSpotifyEnabled = enabled
+                updateNotification()
+                widgetUpdater.update()
             }
 
         combine(
@@ -3377,6 +3389,12 @@ class MusicService :
 
     fun buildCustomLayout(): List<CommandButton> {
         val isLiked = currentSong.value?.song?.liked == true
+        val likeIconResId =
+            if (syncLikesToSpotifyEnabled) {
+                if (isLiked) R.drawable.check else R.drawable.add
+            } else {
+                if (isLiked) R.drawable.favorite else R.drawable.favorite_border
+            }
         return listOf(
             CommandButton
                 .Builder()
@@ -3389,7 +3407,7 @@ class MusicService :
                         },
                     ),
                 )
-                .setIconResId(if (isLiked) R.drawable.favorite else R.drawable.favorite_border)
+                .setIconResId(likeIconResId)
                 .setSessionCommand(CommandToggleLike)
                 .setSlots(CommandButton.SLOT_OVERFLOW)
                 .setEnabled(true)

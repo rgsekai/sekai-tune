@@ -116,6 +116,7 @@ import moe.rgsekai.sekaitune.constants.CanvasSourceKey
 import moe.rgsekai.sekaitune.constants.LyricsMode
 import moe.rgsekai.sekaitune.constants.LyricsModeKey
 import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.di.LyricsHelperEntryPoint
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.lyrics.LyricsFetchManager
@@ -334,6 +335,7 @@ fun TvNowPlayingScreen(
 
     // Canvas settings
     val spotifySpDc by rememberPreference(SpotifySpDcKey, "")
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
     val canvasSource by rememberEnumPreference(CanvasSourceKey, CanvasSource.TIDAL)
     val canvasMetered by rememberPreference(CanvasMeteredKey, true)
     val canvasFallback by rememberPreference(CanvasFallbackKey, true)
@@ -663,8 +665,14 @@ fun TvNowPlayingScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        val tvLikeIcon =
+                            if (syncLikesToSpotify) {
+                                if (isLiked) R.drawable.check else R.drawable.add
+                            } else {
+                                if (isLiked) R.drawable.favorite else R.drawable.favorite_border
+                            }
                         TvActionButton(
-                            iconRes = if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                            iconRes = tvLikeIcon,
                             contentDescription = if (isLiked) "Unlike song" else "Like song",
                             onClick = { playerConnection.toggleLike() },
                             focusRequester = fullLyricsLikeFocusRequester,
@@ -953,8 +961,14 @@ fun TvNowPlayingScreen(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                val tvLikeIcon2 =
+                                    if (syncLikesToSpotify) {
+                                        if (isLiked) R.drawable.check else R.drawable.add
+                                    } else {
+                                        if (isLiked) R.drawable.favorite else R.drawable.favorite_border
+                                    }
                                 TvActionButton(
-                                    iconRes = if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                                    iconRes = tvLikeIcon2,
                                     contentDescription = if (isLiked) "Unlike song" else "Like song",
                                     onClick = { playerConnection.toggleLike() },
                                     focusRequester = likeFocusRequester,

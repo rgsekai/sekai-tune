@@ -1517,13 +1517,14 @@ internal fun ExpressiveSwitchRow(
     subtitle: String? = null,
     checked: Boolean,
     tintIcon: Boolean = true,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val isTv = LocalIsTv.current
     val interactionSource = remember { MutableInteractionSource() }
     val containerColor by animateColorAsState(
         targetValue =
-            if (checked) {
+            if (checked && enabled) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
             } else {
                 Color.Transparent
@@ -1540,16 +1541,18 @@ internal fun ExpressiveSwitchRow(
                 .tvSettingsItemFocus(
                     shape = InnerTileShape,
                     interactionSource = interactionSource,
-                    onClick = { onCheckedChange(!checked) },
+                    onClick = { if (enabled) onCheckedChange(!checked) },
                 )
                 .clip(InnerTileShape)
                 .background(containerColor)
                 .clickable(
+                    enabled = enabled,
                     interactionSource = interactionSource,
                     indication = androidx.compose.material3.ripple(),
                     onClick = { onCheckedChange(!checked) },
                 ),
     ) {
+        val contentAlpha = if (enabled) 1f else 0.38f
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -1557,8 +1560,8 @@ internal fun ExpressiveSwitchRow(
         ) {
             ExpressiveRowIcon(
                 icon = icon,
-                tint = MaterialTheme.colorScheme.primary,
-                emphasized = checked,
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha),
+                emphasized = checked && enabled,
                 tintIcon = tintIcon,
             )
 
@@ -1570,7 +1573,7 @@ internal fun ExpressiveSwitchRow(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1578,7 +1581,7 @@ internal fun ExpressiveSwitchRow(
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1588,6 +1591,7 @@ internal fun ExpressiveSwitchRow(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
+                enabled = enabled,
                 modifier = if (isTv) Modifier.focusProperties { canFocus = false } else Modifier,
                 colors =
                     SwitchDefaults.colors(

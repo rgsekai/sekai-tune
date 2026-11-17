@@ -12,8 +12,11 @@ import androidx.datastore.preferences.core.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -57,12 +60,16 @@ class SpotifyLibraryRepository
         private val _likedSongsTotal = MutableStateFlow<Int?>(null)
         val likedSongsTotal: StateFlow<Int?> = _likedSongsTotal.asStateFlow()
 
+        private val _likedSongsUpdated = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val likedSongsUpdated: SharedFlow<Unit> = _likedSongsUpdated.asSharedFlow()
+
         private val _isRefreshing = MutableStateFlow(false)
         val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
         private val _errorMessage = MutableStateFlow<String?>(null)
         val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-        init {
+
+        init {
             Spotify.onTokenExpired = {
                 runCatching {
                     val session = restoreSession(forceRefresh = false)
@@ -389,6 +396,40 @@ class SpotifyLibraryRepository
                     }
                     SpotifyArtistResolver.updateCachedFollowState(cleanId, false)
                     _followedArtists.value = _followedArtists.value.filterNot { it.id == cleanId }
+                }
+            }
+
+        suspend fun addTrackToLibrary(trackUri: String): Result<Unit> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    ensureAuthenticated()
+                    val uri = if (trackUri.startsWith("spotify:track:")) trackUri else "spotify:track:$trackUri"
+                    spotifyCallWithTokenRetry {
+                        Spotify.addToLibrary(listOf(uri)).getOrThrow()
+                    }
+                    runCatching {
+                        val count = fetchLikedSongsCount()
+                        _likedSongsTotal.value = count
+                    }
+                    _likedSongsUpdated.tryEmit(Unit)
+                    Unit
+                }
+            }
+
+        suspend fun removeTrackFromLibrary(trackUri: String): Result<Unit> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    ensureAuthenticated()
+                    val uri = if (trackUri.startsWith("spotify:track:")) trackUri else "spotify:track:$trackUri"
+                    spotifyCallWithTokenRetry {
+                        Spotify.removeFromLibrary(listOf(uri)).getOrThrow()
+                    }
+                    runCatching {
+                        val count = fetchLikedSongsCount()
+                        _likedSongsTotal.value = count
+                    }
+                    _likedSongsUpdated.tryEmit(Unit)
+                    Unit
                 }
             }
 

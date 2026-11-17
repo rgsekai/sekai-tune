@@ -232,11 +232,18 @@ private fun NowPlayingCardCompactLayout(
 
             Spacer(GlanceModifier.width(8.dp))
 
+            val likeIcon =
+                if (state.syncLikesToSpotify) {
+                    if (state.isLiked) R.drawable.check else R.drawable.add
+                } else {
+                    if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border
+                }
+
             // 3. Right Like/Heart Toggle
             WidgetControlButton(
                 modifier = GlanceModifier.size(40.dp),
                 action = likeToggleAction(),
-                icon = if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                icon = likeIcon,
                 contentDescription = context.getString(if (state.isLiked) R.string.liked else R.string.filter_liked),
                 backgroundColor = ColorProvider(Color.Transparent),
                 contentColor = if (state.isLiked) palette.primary else palette.onSurfaceVariant,
@@ -311,10 +318,17 @@ private fun NowPlayingCardLargeLayout(
 
                     Spacer(GlanceModifier.width(8.dp))
 
+                    val largeLikeIcon =
+                        if (state.syncLikesToSpotify) {
+                            if (state.isLiked) R.drawable.check else R.drawable.add
+                        } else {
+                            if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border
+                        }
+
                     WidgetControlButton(
                         modifier = GlanceModifier.size(42.dp),
                         action = likeToggleAction(),
-                        icon = if (state.isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                        icon = largeLikeIcon,
                         contentDescription = context.getString(if (state.isLiked) R.string.liked else R.string.filter_liked),
                         backgroundColor = palette.secondaryContainer,
                         contentColor = if (state.isLiked) palette.primary else palette.onSecondaryContainer,

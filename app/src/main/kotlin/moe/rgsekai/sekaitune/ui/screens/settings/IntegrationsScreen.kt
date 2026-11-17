@@ -90,6 +90,7 @@ import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.ShowSpotifyFollowArtistKey
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.spotify.SpotifyAccountUiState
 import moe.rgsekai.sekaitune.spotify.SpotifyAccountViewModel
 import moe.rgsekai.sekaitune.spotify.SpotifyAuth
@@ -127,6 +128,10 @@ fun IntegrationsScreen(
     )
     val (showSpotifyFollowArtist, onShowSpotifyFollowArtistChange) = rememberPreference(
         key = ShowSpotifyFollowArtistKey,
+        defaultValue = false,
+    )
+    val (syncLikesToSpotify, onSyncLikesToSpotifyChange) = rememberPreference(
+        key = SyncLikesToSpotifyKey,
         defaultValue = false,
     )
     val spotifyState by spotifyAccountViewModel.uiState.collectAsStateWithLifecycle()
@@ -190,6 +195,17 @@ fun IntegrationsScreen(
                                 }
                             },
                         )
+
+                        ExpressiveDivider()
+
+                        ExpressiveSwitchRow(
+                            icon = painterResource(R.drawable.favorite),
+                            title = stringResource(R.string.spotify_sync_likes),
+                            subtitle = stringResource(R.string.spotify_sync_likes_disabled_hint),
+                            checked = false,
+                            enabled = false,
+                            onCheckedChange = {},
+                        )
                     } else {
                         ExpressiveSpotifyAccountRow(
                             state = spotifyState,
@@ -203,6 +219,17 @@ fun IntegrationsScreen(
                             subtitle = stringResource(R.string.spotify_show_playlist_desc),
                             checked = showSpotifyPlaylists,
                             onCheckedChange = onShowSpotifyPlaylistsChange,
+                        )
+
+                        ExpressiveDivider()
+
+                        ExpressiveSwitchRow(
+                            icon = painterResource(R.drawable.favorite),
+                            title = stringResource(R.string.spotify_sync_likes),
+                            subtitle = stringResource(R.string.spotify_sync_likes_desc),
+                            checked = syncLikesToSpotify,
+                            enabled = true,
+                            onCheckedChange = onSyncLikesToSpotifyChange,
                         )
 
                         if (!isTv) {

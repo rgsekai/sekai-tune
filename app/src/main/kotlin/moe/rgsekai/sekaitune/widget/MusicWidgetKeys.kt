@@ -21,6 +21,7 @@ object MusicWidgetKeys {
     val IS_AVAILABLE = booleanPreferencesKey("widget_is_available")
     val DOMINANT_COLOR = intPreferencesKey("widget_dominant_color")
     val IS_LIKED = booleanPreferencesKey("widget_is_liked")
+    val SYNC_LIKES_TO_SPOTIFY = booleanPreferencesKey("widget_sync_likes_to_spotify")
     val PLAYBACK_POSITION = floatPreferencesKey("widget_position")
     val LISTENING_TIME = stringPreferencesKey("widget_listening_time")
     val TOTAL_PLAYS = stringPreferencesKey("widget_total_plays")

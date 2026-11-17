@@ -673,12 +673,20 @@ fun SpotifyPlaylistScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 val trackCount = currentPlaylist.tracks?.total ?: tracks.size
+                                val isLikedSongs = currentPlaylist.id == moe.rgsekai.sekaitune.spotify.SPOTIFY_LIKED_SONGS_ID
+                                val allTracksLoaded = tracks.size >= trackCount
+
                                 MetadataChip(
                                     icon = R.drawable.music_note,
                                     text = pluralStringResource(R.plurals.n_song, trackCount, trackCount),
                                 )
 
-                                if (loadedDurationMs > 0L) {
+                                if (isLikedSongs && !allTracksLoaded) {
+                                    MetadataChip(
+                                        icon = R.drawable.sync,
+                                        text = "${tracks.size} loaded",
+                                    )
+                                } else if (loadedDurationMs > 0L) {
                                     MetadataChip(
                                         icon = R.drawable.timer,
                                         text = makeTimeString(loadedDurationMs),

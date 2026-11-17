@@ -80,6 +80,7 @@ import moe.rgsekai.sekaitune.constants.ListItemHeight
 import moe.rgsekai.sekaitune.constants.ListThumbnailSize
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
 import moe.rgsekai.sekaitune.constants.SpotifyAccessTokenKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.constants.SpeedDialSongIdsKey
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadius
 import moe.rgsekai.sekaitune.db.entities.SongEntity
@@ -174,6 +175,7 @@ fun YouTubeSongMenu(
     val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
     val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
     val (spotifySpDc) = rememberPreference(moe.rgsekai.sekaitune.constants.SpotifySpDcKey, defaultValue = "")
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, defaultValue = false)
     val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken, spotifySpDc) {
         showSpotifyPlaylists && (spotifyAccessToken.isNotBlank() || spotifySpDc.isNotBlank())
     }
@@ -296,6 +298,19 @@ fun YouTubeSongMenu(
                 }
             },
             trailingContent = {
+                val isLiked = librarySong?.song?.liked == true
+                val ytMenuLikeIcon =
+                    if (syncLikesToSpotify) {
+                        if (isLiked) R.drawable.check else R.drawable.add
+                    } else {
+                        if (isLiked) R.drawable.favorite else R.drawable.favorite_border
+                    }
+                val ytMenuLikeTint =
+                    if (isLiked) {
+                        if (syncLikesToSpotify) androidx.compose.ui.graphics.Color(0xFF1DB954) else MaterialTheme.colorScheme.error
+                    } else {
+                        LocalContentColor.current
+                    }
                 IconButton(
                     onClick = {
                         database.transaction {
@@ -314,17 +329,8 @@ fun YouTubeSongMenu(
                     },
                 ) {
                     Icon(
-                        painter =
-                            painterResource(
-                                if (librarySong?.song?.liked ==
-                                    true
-                                ) {
-                                    R.drawable.favorite
-                                } else {
-                                    R.drawable.favorite_border
-                                },
-                            ),
-                        tint = if (librarySong?.song?.liked == true) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                        painter = painterResource(ytMenuLikeIcon),
+                        tint = ytMenuLikeTint,
                         contentDescription = null,
                     )
                 }

@@ -81,6 +81,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.constants.MiniPlayerHeight
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.models.MediaMetadata
@@ -436,19 +437,29 @@ private fun MiniPlayerTransportControls(
     colors: MiniPlayerContentColors,
 ) {
     val haptic = LocalHapticFeedback.current
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
+
+    val likeIconResId =
+        if (syncLikesToSpotify) {
+            if (isLiked) R.drawable.check else R.drawable.add
+        } else {
+            if (isLiked) R.drawable.favorite else R.drawable.favorite_border
+        }
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MiniPlayerTransportButton(
-            iconResId = if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
+            iconResId = likeIconResId,
             contentDescription = stringResource(R.string.action_like),
             onClick = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 playerConnection.toggleLike()
             },
-            iconTintOverride = if (isLiked) MaterialTheme.colorScheme.primary else null,
+            iconTintOverride = if (isLiked) {
+                if (syncLikesToSpotify) Color(0xFF1DB954) else MaterialTheme.colorScheme.primary
+            } else null,
             colors = colors,
         )
 

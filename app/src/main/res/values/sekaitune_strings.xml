@@ -583,6 +583,13 @@
     <string name="spotify_playlists">Spotify Playlist</string>
     <string name="spotify_liked_songs">Liked Songs</string>
     <string name="spotify_liked_songs_desc">Your saved songs on Spotify.</string>
+    <string name="spotify_sync_likes">Sync likes to Spotify</string>
+    <string name="spotify_sync_likes_desc">Likes and unlikes also update your Spotify Liked Songs. Existing YouTube Music likes are not uploaded.</string>
+    <string name="spotify_sync_likes_disabled_hint">Connect Spotify to enable syncing likes.</string>
+    <string name="spotify_liked_added">Added to Spotify Liked Songs</string>
+    <string name="spotify_liked_removed">Removed from Spotify Liked Songs</string>
+    <string name="spotify_no_confident_match">Could not find a confident match on Spotify</string>
+    <string name="spotify_sync_failed">Failed to sync like to Spotify</string>
     <string name="spotify_waiting_for_login">Waiting for Spotify login</string>
     <string name="spotify_show_playlist">Show Playlist</string>
     <string name="spotify_show_playlist_desc">Show Spotify playlists in Library.</string>

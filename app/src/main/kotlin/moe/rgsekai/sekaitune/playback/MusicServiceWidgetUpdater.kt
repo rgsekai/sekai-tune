@@ -232,6 +232,7 @@ internal class MusicServiceWidgetUpdater(
         this[MusicWidgetKeys.IS_BUFFERING] = snapshot.isBuffering
         this[MusicWidgetKeys.IS_AVAILABLE] = snapshot.isAvailable
         this[MusicWidgetKeys.IS_LIKED] = snapshot.isLiked
+        this[MusicWidgetKeys.SYNC_LIKES_TO_SPOTIFY] = service.syncLikesToSpotifyEnabled
         this[MusicWidgetKeys.PLAYBACK_POSITION] = snapshot.playbackPosition
 
         val mediaId = snapshot.mediaId

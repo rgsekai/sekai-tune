@@ -49,6 +49,7 @@ import moe.rgsekai.sekaitune.innertube.utils.hasYouTubeLoginCookie
 import moe.rgsekai.sekaitune.innertube.utils.parseSongCount
 import moe.rgsekai.sekaitune.models.toMediaMetadata
 import moe.rgsekai.sekaitune.scrobble.ScrobbleManager
+import moe.rgsekai.sekaitune.spotify.SpotifyLikeSyncManager
 import timber.log.Timber
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicLong
@@ -62,6 +63,7 @@ class SyncUtils
         private val database: MusicDatabase,
         @ApplicationContext private val context: Context,
         private val scrobbleManager: ScrobbleManager,
+        private val spotifyLikeSyncManager: SpotifyLikeSyncManager,
     ) {
         private val syncScope = CoroutineScope(Dispatchers.IO)
         private val syncEnabled = MutableStateFlow(true)
@@ -246,6 +248,7 @@ class SyncUtils
         private fun isSyncStillEnabled(gen: Long): Boolean = syncEnabled.value && syncGeneration.get() == gen
 
         fun likeSong(s: SongEntity) {
+            spotifyLikeSyncManager.syncLike(s)
             syncScope.launch {
                 val artist = database.song(s.id).firstOrNull()?.artists?.firstOrNull()?.name
                 if (!artist.isNullOrBlank()) {
@@ -274,6 +277,7 @@ class SyncUtils
         }
 
         fun likeSongs(songs: Collection<SongEntity>) {
+            songs.forEach { spotifyLikeSyncManager.syncLike(it) }
             val uniqueSongs = songs.filterNot(SongEntity::isLocal).distinctBy { it.id }
             if (uniqueSongs.isEmpty()) return
 

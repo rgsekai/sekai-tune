@@ -87,6 +87,7 @@ import moe.rgsekai.sekaitune.constants.ExternalDownloaderPackageKey
 import moe.rgsekai.sekaitune.constants.ListThumbnailSize
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
 import moe.rgsekai.sekaitune.constants.SpotifyAccessTokenKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.constants.SpeedDialSongIdsKey
 import moe.rgsekai.sekaitune.db.entities.ArtistEntity
 import moe.rgsekai.sekaitune.db.entities.Event
@@ -282,6 +283,7 @@ fun SongMenu(
     val (showSpotifyPlaylists) = rememberPreference(ShowSpotifyPlaylistsKey, defaultValue = false)
     val (spotifyAccessToken) = rememberPreference(SpotifyAccessTokenKey, defaultValue = "")
     val (spotifySpDc) = rememberPreference(moe.rgsekai.sekaitune.constants.SpotifySpDcKey, defaultValue = "")
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, defaultValue = false)
     val canAddToSpotify = remember(showSpotifyPlaylists, spotifyAccessToken, spotifySpDc) {
         showSpotifyPlaylists && (spotifyAccessToken.isNotBlank() || spotifySpDc.isNotBlank())
     }
@@ -407,6 +409,18 @@ fun SongMenu(
             badges = {},
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             trailingContent = {
+                val songMenuLikeIcon =
+                    if (syncLikesToSpotify) {
+                        if (song.song.liked) R.drawable.check else R.drawable.add
+                    } else {
+                        if (song.song.liked) R.drawable.favorite else R.drawable.favorite_border
+                    }
+                val songMenuLikeTint =
+                    if (song.song.liked) {
+                        if (syncLikesToSpotify) androidx.compose.ui.graphics.Color(0xFF1DB954) else MaterialTheme.colorScheme.error
+                    } else {
+                        LocalContentColor.current
+                    }
                 IconButton(
                     onClick = {
                         val s = song.song.toggleLike()
@@ -417,8 +431,8 @@ fun SongMenu(
                     },
                 ) {
                     Icon(
-                        painter = painterResource(if (song.song.liked) R.drawable.favorite else R.drawable.favorite_border),
-                        tint = if (song.song.liked) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                        painter = painterResource(songMenuLikeIcon),
+                        tint = songMenuLikeTint,
                         contentDescription = null,
                     )
                 }

@@ -86,6 +86,7 @@ import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.EnableHapticFeedbackKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.db.entities.FormatEntity
 import moe.rgsekai.sekaitune.db.entities.containerLabel
 import moe.rgsekai.sekaitune.db.entities.formattedBitrate
@@ -135,6 +136,7 @@ fun CurrentSongHeader(
 ) {
     val view = LocalView.current
     val (enableHapticFeedback) = rememberPreference(EnableHapticFeedbackKey, true)
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
     val glassConfig = LocalGlassEffectConfig.current
     val isGlassQueue = glassConfig.isEnabledFor(GlassComponent.QUEUE)
 
@@ -234,28 +236,29 @@ fun CurrentSongHeader(
                     )
                 }
 
+                val queueLikeIcon =
+                    if (syncLikesToSpotify) {
+                        if (liked) R.drawable.check else R.drawable.add
+                    } else {
+                        if (liked) R.drawable.favorite else R.drawable.favorite_border
+                    }
+                val queueLikeColor =
+                    if (liked) {
+                        if (syncLikesToSpotify) androidx.compose.ui.graphics.Color(0xFF1DB954) else MaterialTheme.colorScheme.primary
+                    } else {
+                        onBackgroundColor
+                    }
+
                 IconButton(
                     onClick = onToggleLike,
                     modifier = Modifier.size(44.dp),
                     colors =
                         IconButtonDefaults.iconButtonColors(
-                            contentColor =
-                                if (liked) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    onBackgroundColor
-                                },
+                            contentColor = queueLikeColor,
                         ),
                 ) {
                     Icon(
-                        painter =
-                            painterResource(
-                                if (liked) {
-                                    R.drawable.favorite
-                                } else {
-                                    R.drawable.favorite_border
-                                },
-                            ),
+                        painter = painterResource(queueLikeIcon),
                         contentDescription = stringResource(R.string.action_like),
                         modifier = Modifier.size(26.dp),
                     )

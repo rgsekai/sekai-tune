@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.zIndex
 import moe.rgsekai.sekaitune.constants.LyricsMode
 import moe.rgsekai.sekaitune.constants.LyricsModeKey
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
+import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
@@ -149,6 +151,7 @@ fun FlagshipPlayerContent(
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
     val context = LocalContext.current
+    val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
 
     val artworkUrl = (data.artworkModel as? String) ?: data.artworkModel?.toString()
 
@@ -418,14 +421,18 @@ fun FlagshipPlayerContent(
 
                 // If Lyrics is open: Like button
                 if (activePage == FlagshipPage.LYRICS) {
+                    val lyricsLikeIcon =
+                        if (syncLikesToSpotify) {
+                            if (data.isLiked) R.drawable.check else R.drawable.add
+                        } else {
+                            if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill
+                        }
                     PressScaleButton(
                         onClick = onLikeClick,
                         containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
                     ) {
                         Icon(
-                            painter = painterResource(
-                                if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
-                            ),
+                            painter = painterResource(lyricsLikeIcon),
                             contentDescription = "Like",
                             tint = if (data.isLiked) Color.White else Color.White.copy(alpha = 0.85f),
                             modifier = Modifier.size(18.dp),
@@ -528,6 +535,12 @@ fun FlagshipPlayerContent(
 
                         Spacer(Modifier.width(12.dp))
 
+                        val bottomLikeIcon =
+                            if (syncLikesToSpotify) {
+                                if (data.isLiked) R.drawable.check else R.drawable.add
+                            } else {
+                                if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill
+                            }
                         // Action buttons: Like and Chevron Dropdown spaced by 7.dp
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(7.dp),
@@ -538,9 +551,7 @@ fun FlagshipPlayerContent(
                                 containerColor = if (data.isLiked) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.15f),
                             ) {
                                 Icon(
-                                    painter = painterResource(
-                                        if (data.isLiked) R.drawable.ic_untitled_heart else R.drawable.ic_untitled_heart_unfill,
-                                    ),
+                                    painter = painterResource(bottomLikeIcon),
                                     contentDescription = "Like",
                                     tint = if (data.isLiked) Color.White else Color.White.copy(alpha = 0.85f),
                                     modifier = Modifier.size(18.dp),

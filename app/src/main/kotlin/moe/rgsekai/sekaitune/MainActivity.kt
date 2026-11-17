@@ -100,6 +100,8 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RichTooltip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Surface
@@ -1026,6 +1028,13 @@ class MainActivity : ComponentActivity() {
                                     MiniPlayerHeight,
                             expandedBound = maxHeight,
                         )
+
+                    val spotifySyncSnackbarHostState = remember { SnackbarHostState() }
+                    LaunchedEffect(Unit) {
+                        moe.rgsekai.sekaitune.spotify.SpotifyLikeSyncManager.feedbackEvents.collect { message ->
+                            spotifySyncSnackbarHostState.showSnackbar(message)
+                        }
+                    }
 
                     val playerBackground by rememberEnumPreference(
                         key = PlayerBackgroundStyleKey,
@@ -2590,6 +2599,22 @@ class MainActivity : ComponentActivity() {
                                         start = 16.dp,
                                         end = 16.dp,
                                     ).zIndex(10f),
+                        )
+
+                        SnackbarHost(
+                            hostState = spotifySyncSnackbarHostState,
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(
+                                        bottom =
+                                            if (!playerBottomSheetState.isDismissed) {
+                                                bottomInset + 72.dp
+                                            } else {
+                                                bottomInset + 16.dp
+                                            },
+                                    ).navigationBarsPadding()
+                                    .zIndex(99f),
                         )
 
                         // Floating Home Action Pill Overlay
