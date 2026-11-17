@@ -16,6 +16,12 @@ data class WordTimestamp(
     val isBackground: Boolean = false,
 )
 
+data class RubyToken(
+    val start: Int,
+    val end: Int,
+    val text: String,
+)
+
 data class LyricsEntry(
     val time: Long,
     val text: String,
@@ -28,6 +34,9 @@ data class LyricsEntry(
     val providerRomanizedLanguage: String? = null,
     val providerTranslationText: String? = null,
     val romanizedTextFlow: MutableStateFlow<String?> = MutableStateFlow(null),
+    val isBackground: Boolean = false,
+    val syllables: List<WordTimestamp>? = null,
+    val ruby: List<RubyToken>? = null,
 ) : Comparable<LyricsEntry> {
     override fun compareTo(other: LyricsEntry): Int = (time - other.time).toInt()
 

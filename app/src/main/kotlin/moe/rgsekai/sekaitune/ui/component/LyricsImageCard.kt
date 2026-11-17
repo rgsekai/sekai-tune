@@ -62,6 +62,7 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.ui.theme.rememberLyricsFontFamily
 import moe.rgsekai.sekaitune.ui.theme.rememberSekaiTuneLyricsFontFamily
 
 @Stable
@@ -157,7 +158,7 @@ fun LyricsImageCard(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val lyricsFontFamily = rememberSekaiTuneLyricsFontFamily()
+    val lyricsFontFamily = rememberLyricsFontFamily()
     val colors =
         remember(glassStyle, textColor, secondaryTextColor) {
             LyricsShareColors(

@@ -119,7 +119,9 @@ import moe.rgsekai.sekaitune.constants.SpotifySpDcKey
 import moe.rgsekai.sekaitune.di.LyricsHelperEntryPoint
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.lyrics.LyricsFetchManager
+import moe.rgsekai.sekaitune.constants.LyricsMotionStyle
 import moe.rgsekai.sekaitune.ui.component.LyricsEnhanced
+import moe.rgsekai.sekaitune.ui.component.LyricsStyleView
 import moe.rgsekai.sekaitune.ui.component.LyricsV2
 import moe.rgsekai.sekaitune.ui.component.PlayerSliderTrack
 import moe.rgsekai.sekaitune.ui.player.CanvasArtworkPlayer
@@ -550,6 +552,24 @@ fun TvNowPlayingScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         when (lyricsMode) {
+                            LyricsMode.STYLE_1 -> {
+                                LyricsStyleView(
+                                    motionStyle = LyricsMotionStyle.MOTION,
+                                    sliderPositionProvider = { sliderPosition },
+                                    lyricsSyncOffset = 0,
+                                    textColorOverride = Color.White,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                            LyricsMode.STYLE_2 -> {
+                                LyricsStyleView(
+                                    motionStyle = LyricsMotionStyle.LEGACY,
+                                    sliderPositionProvider = { sliderPosition },
+                                    lyricsSyncOffset = 0,
+                                    textColorOverride = Color.White,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                             LyricsMode.V2 -> {
                                 LyricsV2(
                                     sliderPositionProvider = { sliderPosition },
@@ -992,6 +1012,24 @@ fun TvNowPlayingScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             when (lyricsMode) {
+                                LyricsMode.STYLE_1 -> {
+                                    LyricsStyleView(
+                                        motionStyle = LyricsMotionStyle.MOTION,
+                                        sliderPositionProvider = { sliderPosition },
+                                        lyricsSyncOffset = 0,
+                                        textColorOverride = Color.White,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+                                LyricsMode.STYLE_2 -> {
+                                    LyricsStyleView(
+                                        motionStyle = LyricsMotionStyle.LEGACY,
+                                        sliderPositionProvider = { sliderPosition },
+                                        lyricsSyncOffset = 0,
+                                        textColorOverride = Color.White,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
                                 LyricsMode.V2 -> {
                                     LyricsV2(
                                         sliderPositionProvider = { sliderPosition },

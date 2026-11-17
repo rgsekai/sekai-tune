@@ -7,6 +7,7 @@
 
 package moe.rgsekai.sekaitune.constants
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -629,6 +630,27 @@ enum class LyricsAnimationStyle {
 
 val LyricsTextSizeKey = floatPreferencesKey("lyricsTextSize")
 val LyricsLineSpacingKey = floatPreferencesKey("lyricsLineSpacing")
+val LyricsBoldnessKey = stringPreferencesKey("lyricsBoldness")
+val LyricsCustomFontUriKey = stringPreferencesKey("lyricsCustomFontUri")
+val LyricsCustomFontNameKey = stringPreferencesKey("lyricsCustomFontName")
+
+enum class LyricsBoldness {
+    NORMAL,
+    MEDIUM,
+    SEMI_BOLD,
+    BOLD,
+    EXTRA_BOLD,
+    BLACK;
+
+    fun toFontWeight(): FontWeight = when (this) {
+        NORMAL -> FontWeight.Normal
+        MEDIUM -> FontWeight.Medium
+        SEMI_BOLD -> FontWeight.SemiBold
+        BOLD -> FontWeight.Bold
+        EXTRA_BOLD -> FontWeight.ExtraBold
+        BLACK -> FontWeight.Black
+    }
+}
 val LyricsLineBlurKey = booleanPreferencesKey("lyricsLineBlur")
 val ShowLyricsPlayerControlsKey = booleanPreferencesKey("showLyricsPlayerControls")
 
@@ -656,9 +678,30 @@ val UseLyricsV2Key = booleanPreferencesKey("useLyricsV2")
 val LyricsModeKey = stringPreferencesKey("lyricsMode")
 
 enum class LyricsMode {
+    STYLE_1,
+    STYLE_2,
     V2,
     ENHANCED,
 }
+
+val LyricsMotionStyleKey = stringPreferencesKey("lyricsMotionStyle")
+
+enum class LyricsMotionStyle(
+    val displayName: String,
+    val description: String,
+    val risesWords: Boolean,
+    val shaded: Boolean,
+) {
+    MOTION("Style 1", "Words rise as they're sung, long notes swell, lines cascade", risesWords = true, shaded = true),
+    LEGACY("Style 2", "The original wave across the sung letters", risesWords = false, shaded = true),
+    BORING("Boring", "Style 1's rise, without the glow", risesWords = true, shaded = false),
+    PLAIN("Plain", "Style 2's sweep, without the glow or the wave", risesWords = false, shaded = false);
+
+    val withoutShader: LyricsMotionStyle get() = if (risesWords) BORING else PLAIN
+}
+
+val LyricsHighBloomKey = booleanPreferencesKey("lyricsHighBloom")
+val LyricsWaveAnimationKey = booleanPreferencesKey("lyricsWaveAnimation")
 
 val LyricsV2BounceFactorKey = floatPreferencesKey("lyricsV2BounceFactor")
 val LyricsV2GlowFactorKey = floatPreferencesKey("lyricsV2GlowFactor")

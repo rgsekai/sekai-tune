@@ -23,6 +23,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -48,6 +49,9 @@ import moe.rgsekai.sekaitune.constants.AppFontPreference
 import kotlin.math.abs
 import kotlin.math.min
 
+import moe.rgsekai.sekaitune.constants.LyricsCustomFontUriKey
+import moe.rgsekai.sekaitune.utils.rememberPreference
+
 val DefaultThemeColor = Color(0xFF000000)
 val LocalSekaiTuneFontPreference = staticCompositionLocalOf { AppFontPreference.DEFAULT }
 val LocalSekaiTuneFontFamily = staticCompositionLocalOf { AppFontFamily }
@@ -59,6 +63,26 @@ fun rememberSekaiTuneLyricsFontFamily(): FontFamily {
     return remember(fontPreference, fontFamily) {
         if (fontPreference == AppFontPreference.DEFAULT) LyricsFontFamily else fontFamily
     }
+}
+
+@Composable
+fun rememberLyricsFontFamily(
+    customFontUri: String = rememberPreference(LyricsCustomFontUriKey, defaultValue = "").value,
+): FontFamily {
+    val context = LocalContext.current
+    val defaultLyricsFont = rememberSekaiTuneLyricsFontFamily()
+    val customFont by produceState<FontFamily?>(
+        initialValue = null,
+        context,
+        customFontUri,
+    ) {
+        value = if (customFontUri.isNotBlank()) {
+            CustomFontLoader.loadFontFamily(context.applicationContext, customFontUri)
+        } else {
+            null
+        }
+    }
+    return customFont ?: defaultLyricsFont
 }
 
 data class ThemeSeedPalette(

@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import moe.rgsekai.sekaitune.ui.theme.AppFontFamily
 
 /**
- * "OPUS", or "OPUS 144 kbps": an outlined tag in the Mochy design's proportions,
+ * "OPUS", or "OPUS 144 kbps": an outlined tag in flagship proportions,
  * every one of them a fraction of [height], so it reads the same at any size and font scale.
  */
 @Composable

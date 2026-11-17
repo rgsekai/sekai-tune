@@ -100,7 +100,7 @@ import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
 import moe.rgsekai.sekaitune.utils.makeTimeString
 import kotlin.math.roundToInt
 
-// Mochy design constants
+// Flagship design constants
 private const val ReflectionPx = 360
 private const val ReflectionBlurPx = 8
 private const val FrostedEdgeFadeFraction = 0.13f
@@ -110,7 +110,7 @@ private val SeekBarLift = 6.dp
 private val PlayerDeckHeight = 54.dp + 9.dp // 63.dp
 private val TransportGapAboveRow = 24.dp + SeekBarLift
 
-// Mochy ControlsShade: clear at top, 24% black by 46% down, then held
+// Flagship ControlsShade: clear at top, 24% black by 46% down, then held
 private val ControlsShadeBrush = Brush.verticalGradient(
     0f to Color.Transparent,
     0.46f to Color.Black.copy(alpha = 0.24f),
@@ -118,11 +118,11 @@ private val ControlsShadeBrush = Brush.verticalGradient(
 )
 
 /**
- * Mochy-exact Flagship Player UI:
+ * Flagship Player UI:
  * - Full screen blurred backdrop melting from album art colors.
- * - Foreground sharp cover art (occupying upper 54% of height) with Mochy's 13% bottom fade mask.
- * - Mochy ControlsShade (subtle 24% black gradient instead of thick dark cutoff).
- * - Exact transport row using Mochy shapes, sizing, spacing, and squash-and-bounce spring animations.
+ * - Foreground sharp cover art (occupying upper 54% of height) with 13% bottom fade mask.
+ * - ControlsShade (subtle 24% black gradient instead of thick dark cutoff).
+ * - Exact transport row with vector shapes, sizing, spacing, and squash-and-bounce spring animations.
  * - Track Info Row with title, artist, format badge, and press-scaled Like and Chevron buttons.
  * - Clean stacked bottom cards with zero text overlap.
  */
@@ -189,7 +189,7 @@ fun FlagshipPlayerContent(
         )
     }
 
-    // 1. Mochy BackdropBlurTransformation request for the full-screen blurred ambient copy
+    // 1. BackdropBlurTransformation request for the full-screen blurred ambient copy
     val blurredRequest = remember(context, artworkUrl) {
         if (artworkUrl.isNullOrBlank()) null
         else {
@@ -214,7 +214,7 @@ fun FlagshipPlayerContent(
         val coverHeight = screenHeight * 0.538f
         val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-        // Mochy exact morph targets:
+        // Exact morph targets:
         // Mini thumbnail in header: 60.dp size, 36.dp from left, statusBarTop + 28.dp from top, 12.dp corner radius
         val miniArtSize = 60.dp
         val miniArtX = 36.dp
@@ -259,7 +259,7 @@ fun FlagshipPlayerContent(
                 .clip(RoundedCornerShape(currentCornerRadius))
                 .then(
                     if (headerProgress < 0.95f) {
-                        Modifier.mochyCoverFade(bottomShare = FrostedEdgeFadeFraction * (1f - headerProgress))
+                        Modifier.flagshipCoverFade(bottomShare = FrostedEdgeFadeFraction * (1f - headerProgress))
                     } else {
                         Modifier
                     }
@@ -377,7 +377,7 @@ fun FlagshipPlayerContent(
             }
         }
 
-        // Layer 4: Mochy ControlsShade (subtle 24% black gradient for contrast)
+        // Layer 4: Flagship ControlsShade (subtle 24% black gradient for contrast)
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
@@ -390,7 +390,7 @@ fun FlagshipPlayerContent(
                 },
         )
 
-        // Floating Vertical Action Button Column above the seek bar on the right (Mochy layout)
+        // Floating Vertical Action Button Column above the seek bar on the right (Flagship layout)
         if (activePage != FlagshipPage.NONE && headerProgress > 0.2f) {
             Column(
                 horizontalAlignment = Alignment.End,
@@ -509,7 +509,7 @@ fun FlagshipPlayerContent(
 
                                 Spacer(Modifier.width(8.dp))
 
-                                // Mochy-exact Outlined Stream Format Badge
+                                // Flagship Outlined Stream Format Badge
                                 StreamFormatBadge(
                                     text = data.formatTag.ifBlank { "OPUS" },
                                 )
@@ -582,7 +582,7 @@ fun FlagshipPlayerContent(
                         label = "flagshipSeekExpand",
                     )
 
-                    // Seek Slider with Mochy DefaultTrack drawing (7.dp rest, 14.dp held, round caps, 0dp thumb)
+                    // Seek Slider with DefaultTrack drawing (7.dp rest, 14.dp held, round caps, 0dp thumb)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -662,8 +662,8 @@ fun FlagshipPlayerContent(
 
             Spacer(Modifier.height(transportSpacer))
 
-            // Transport Row: Mochy Flagship Vector Shapes & Layout
-            MochyTransportRow(
+            // Transport Row: Flagship Vector Shapes & Layout
+            FlagshipTransportRow(
                 isPlaying = data.isPlaying,
                 onPreviousClick = onPreviousClick,
                 onPlayPauseClick = onPlayPauseClick,
@@ -672,7 +672,7 @@ fun FlagshipPlayerContent(
             )
         }
 
-        // Stacked Bottom Cards (Lyrics & Queue) anchored directly to the bottom with Mochy's 26.dp horizontal margin
+        // Stacked Bottom Cards (Lyrics & Queue) anchored directly to the bottom with 26.dp horizontal margin
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -693,10 +693,10 @@ fun FlagshipPlayerContent(
 }
 
 /**
- * Mochy's 3-button transport row with exact shapes, squash-and-bounce, and scale spring physics.
+ * 3-button transport row with exact shapes, squash-and-bounce, and scale spring physics.
  */
 @Composable
-private fun MochyTransportRow(
+private fun FlagshipTransportRow(
     isPlaying: Boolean,
     onPreviousClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
@@ -713,7 +713,7 @@ private fun MochyTransportRow(
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
     ) {
-        // Design unit from Mochy: screen width divided by 1172
+        // Design unit: screen width divided by 1172
         val unit = (maxWidth / 1172f).coerceIn(0.27.dp, 0.42.dp)
         val unitPx = unit.value * LocalContext.current.resources.displayMetrics.density
 
@@ -723,7 +723,7 @@ private fun MochyTransportRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Previous Button
-            MochySkipButton(
+            FlagshipSkipButton(
                 shapes = shapes,
                 unitPx = unitPx,
                 backwards = true,
@@ -731,7 +731,7 @@ private fun MochyTransportRow(
             )
 
             // Play/Pause Button
-            MochyPlayButton(
+            FlagshipPlayButton(
                 shapes = shapes,
                 glyph = playGlyph,
                 unitPx = unitPx,
@@ -739,7 +739,7 @@ private fun MochyTransportRow(
             )
 
             // Next Button
-            MochySkipButton(
+            FlagshipSkipButton(
                 shapes = shapes,
                 unitPx = unitPx,
                 backwards = false,
@@ -750,7 +750,7 @@ private fun MochyTransportRow(
 }
 
 @Composable
-private fun MochyPlayButton(
+private fun FlagshipPlayButton(
     shapes: TransportShapes,
     glyph: PlayGlyphState,
     unitPx: Float,
@@ -761,7 +761,7 @@ private fun MochyPlayButton(
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.86f else 1f,
         animationSpec = spring(dampingRatio = 0.54f, stiffness = 720f),
-        label = "mochyPlayPress",
+        label = "flagshipPlayPress",
     )
 
     Box(
@@ -789,7 +789,7 @@ private fun MochyPlayButton(
 }
 
 @Composable
-private fun MochySkipButton(
+private fun FlagshipSkipButton(
     shapes: TransportShapes,
     unitPx: Float,
     backwards: Boolean,
@@ -802,7 +802,7 @@ private fun MochySkipButton(
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.86f else 1f,
         animationSpec = spring(dampingRatio = 0.54f, stiffness = 720f),
-        label = "mochySkipPress",
+        label = "flagshipSkipPress",
     )
 
     Box(
@@ -833,10 +833,10 @@ private fun MochySkipButton(
 }
 
 /**
- * Mochy's cover fade modifier: uses PorterDuff DST_OUT to cleanly erase the bottom [bottomShare]
+ * Cover fade modifier: uses PorterDuff DST_OUT to cleanly erase the bottom [bottomShare]
  * of the sharp image so it seamlessly transitions into the blurred copy behind it.
  */
-private fun Modifier.mochyCoverFade(bottomShare: Float = FrostedEdgeFadeFraction): Modifier = this
+private fun Modifier.flagshipCoverFade(bottomShare: Float = FrostedEdgeFadeFraction): Modifier = this
     .graphicsLayer {
         compositingStrategy = CompositingStrategy.Offscreen
     }

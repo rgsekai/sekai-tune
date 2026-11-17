@@ -140,7 +140,16 @@ private fun buildTypography(fontFamily: FontFamily) =
     )
 
 val AppFontFamily = FontFamily(Font(R.font.poppins))
-val LyricsFontFamily = FontFamily(Font(R.font.sfprodisplaybold))
+val LyricsFontFamily =
+    FontFamily(
+        Font(R.font.sf_pro_display_regular, FontWeight.Light),
+        Font(R.font.sf_pro_display_regular, FontWeight.Normal),
+        Font(R.font.sf_pro_display_medium, FontWeight.Medium),
+        Font(R.font.sf_pro_display_semibold, FontWeight.SemiBold),
+        Font(R.font.sf_pro_display_bold, FontWeight.Bold),
+        Font(R.font.sf_pro_display_heavy, FontWeight.ExtraBold),
+        Font(R.font.sf_pro_display_heavy, FontWeight.Black),
+    )
 val AppTypography = buildTypography(AppFontFamily)
 val SystemTypography = buildTypography(FontFamily.Default)
 

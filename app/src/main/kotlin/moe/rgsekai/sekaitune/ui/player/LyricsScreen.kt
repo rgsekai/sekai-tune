@@ -109,7 +109,9 @@ import moe.rgsekai.sekaitune.constants.ShowLyricsPlayerControlsKey
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.models.MediaMetadata
 import moe.rgsekai.sekaitune.ui.component.LocalMenuState
+import moe.rgsekai.sekaitune.constants.LyricsMotionStyle
 import moe.rgsekai.sekaitune.ui.component.LyricsEnhanced
+import moe.rgsekai.sekaitune.ui.component.LyricsStyleView
 import moe.rgsekai.sekaitune.ui.component.LyricsV2
 import moe.rgsekai.sekaitune.ui.component.PlayerSliderTrack
 import moe.rgsekai.sekaitune.ui.menu.LyricsMenu
@@ -774,6 +776,26 @@ internal fun LyricsContent(
     modifier: Modifier = Modifier,
 ) {
     when (lyricsMode) {
+        LyricsMode.STYLE_1 -> {
+            LyricsStyleView(
+                motionStyle = LyricsMotionStyle.MOTION,
+                sliderPositionProvider = sliderPositionProvider,
+                lyricsSyncOffset = lyricsSyncOffset,
+                modifier = modifier,
+                textColorOverride = textColor,
+            )
+        }
+
+        LyricsMode.STYLE_2 -> {
+            LyricsStyleView(
+                motionStyle = LyricsMotionStyle.LEGACY,
+                sliderPositionProvider = sliderPositionProvider,
+                lyricsSyncOffset = lyricsSyncOffset,
+                modifier = modifier,
+                textColorOverride = textColor,
+            )
+        }
+
         LyricsMode.V2 -> {
             LyricsV2(
                 sliderPositionProvider = sliderPositionProvider,

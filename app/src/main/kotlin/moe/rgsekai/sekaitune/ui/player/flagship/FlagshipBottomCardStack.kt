@@ -75,7 +75,7 @@ import moe.rgsekai.sekaitune.R
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-// Mochy design constants
+// Flagship design constants
 internal val FlagshipCardHeight = 54.dp
 internal val FlagshipCardCorner = 28.dp
 internal val FlagshipPeekOffset = 9.dp
@@ -97,7 +97,7 @@ enum class FlagshipPage {
 private fun mixF(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
 /**
- * Mochy-exact Flagship bottom card deck:
+ * Flagship bottom card deck:
  * - Shows Lyrics card and Queue card in a stacked deck.
  * - Upward drag flips between lyrics and queue with spring physics (`Spring.DampingRatioLowBouncy`).
  * - Swiping up past threshold or tapping the front card opens the respective view.
@@ -304,7 +304,7 @@ private fun LyricCardContent(lyric: String?) {
     val text = lyric?.takeIf { it.isNotBlank() } ?: "No lyrics for this song"
     val isPresent = !lyric.isNullOrBlank()
 
-    // Mochy format: The main lyric text is lead (bold), backing vocals inside brackets like "(No, I don't...)" are separate.
+    // Flagship format: The main lyric text is lead (bold), backing vocals inside brackets like "(No, I don't...)" are separate.
     val (leadText, backingText) = remember(text, isPresent) {
         if (!isPresent) {
             text to null
@@ -332,7 +332,7 @@ private fun LyricCardContent(lyric: String?) {
     val viewportWidthPx = remember { mutableFloatStateOf(0f) }
     val scrollOffset = remember(leadText) { Animatable(0f) }
 
-    // Mochy-exact horizontal sliding ticker for long lines:
+    // Horizontal sliding ticker for long lines:
     // If the text width exceeds the card's viewport, slide across smoothly and pause at end, then loop back
     LaunchedEffect(leadText, textWidthPx, viewportWidthPx.floatValue) {
         val overflow = (textWidthPx - viewportWidthPx.floatValue).coerceAtLeast(0f)

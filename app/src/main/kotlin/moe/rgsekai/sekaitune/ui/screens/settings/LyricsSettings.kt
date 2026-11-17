@@ -67,6 +67,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
@@ -83,7 +89,11 @@ import moe.rgsekai.sekaitune.constants.EnablePaxsenixYouTubeLyricsKey
 import moe.rgsekai.sekaitune.constants.EnableSimpMusicLyricsKey
 import moe.rgsekai.sekaitune.constants.EnableUnisonLyricsKey
 import moe.rgsekai.sekaitune.constants.EnableYouLyPlusLyricsKey
+import moe.rgsekai.sekaitune.constants.LyricsBoldness
+import moe.rgsekai.sekaitune.constants.LyricsBoldnessKey
 import moe.rgsekai.sekaitune.constants.LyricsClickKey
+import moe.rgsekai.sekaitune.constants.LyricsCustomFontNameKey
+import moe.rgsekai.sekaitune.constants.LyricsCustomFontUriKey
 import moe.rgsekai.sekaitune.constants.LyricsLineBlurKey
 import moe.rgsekai.sekaitune.constants.LyricsLineSpacingKey
 import moe.rgsekai.sekaitune.constants.LyricsMode
@@ -112,6 +122,7 @@ import moe.rgsekai.sekaitune.ui.component.NumberPickerPreference
 import moe.rgsekai.sekaitune.ui.component.PreferenceEntry
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
 import moe.rgsekai.sekaitune.ui.component.SwitchPreference
+import moe.rgsekai.sekaitune.ui.theme.CustomFontLoader
 import moe.rgsekai.sekaitune.ui.utils.LocalIsTv
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
@@ -159,10 +170,49 @@ fun LyricsSettings(
         )
     }
 
+    val context = LocalContext.current
     val (lyricsClick, onLyricsClickChange) = rememberPreference(LyricsClickKey, defaultValue = true)
     val (lyricsScroll, onLyricsScrollChange) = rememberPreference(LyricsScrollKey, defaultValue = true)
-    val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = if (isTv) 32f else 26f)
+    val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = 36f)
     val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.3f)
+    val (lyricsBoldness, onLyricsBoldnessChange) = rememberEnumPreference(LyricsBoldnessKey, defaultValue = LyricsBoldness.BOLD)
+    val (lyricsCustomFontUri, onLyricsCustomFontUriChange) = rememberPreference(LyricsCustomFontUriKey, defaultValue = "")
+    val (lyricsCustomFontName, onLyricsCustomFontNameChange) = rememberPreference(LyricsCustomFontNameKey, defaultValue = "")
+
+    val lyricsCustomFontPickerLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            if (!CustomFontLoader.isSupportedTtf(context, uri)) {
+                Toast.makeText(context, context.getString(R.string.custom_font_invalid), Toast.LENGTH_SHORT).show()
+                return@rememberLauncherForActivityResult
+            }
+
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            if (lyricsCustomFontUri.isNotBlank() && lyricsCustomFontUri != uri.toString()) {
+                runCatching {
+                    context.contentResolver.releasePersistableUriPermission(
+                        Uri.parse(lyricsCustomFontUri),
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                }
+            }
+
+            onLyricsCustomFontUriChange(uri.toString())
+            onLyricsCustomFontNameChange(CustomFontLoader.displayName(context, uri))
+        }
+
+    val pickLyricsCustomFont =
+        remember(lyricsCustomFontPickerLauncher) {
+            {
+                lyricsCustomFontPickerLauncher.launch(CustomFontLoader.supportedMimeTypes)
+            }
+        }
+
     val (lyricsMode, onLyricsModeChange) = rememberEnumPreference(LyricsModeKey, defaultValue = LyricsMode.ENHANCED)
     val (enableLrclib, onEnableLrclibChange) = rememberPreference(key = EnableLrcLibKey, defaultValue = true)
     val (enableKugou, onEnableKugouChange) = rememberPreference(key = EnableKugouKey, defaultValue = true)
@@ -224,6 +274,7 @@ fun LyricsSettings(
     val (queueLyricsPreloadCount, onQueueLyricsPreloadCountChange) = rememberPreference(QueueLyricsPreloadCountKey, defaultValue = 1)
 
     var showProviderOrderDialog by rememberSaveable { mutableStateOf(false) }
+    var providersExpanded by rememberSaveable { mutableStateOf(false) }
 
     if (showProviderOrderDialog) {
         LyricsProviderOrderDialog(
@@ -280,7 +331,7 @@ fun LyricsSettings(
                 },
                 buttons = {
                     TextButton(
-                        onClick = { tempTextSize = 24f },
+                        onClick = { tempTextSize = 36f },
                         shapes = ButtonDefaults.shapes(),
                     ) {
                         Text(stringResource(R.string.reset))
@@ -327,8 +378,8 @@ fun LyricsSettings(
                     Slider(
                         value = tempTextSize,
                         onValueChange = { tempTextSize = it },
-                        valueRange = 16f..36f,
-                        steps = 19,
+                        valueRange = 16f..48f,
+                        steps = 31,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -411,22 +462,12 @@ fun LyricsSettings(
                     onValueSelected = onLyricsModeChange,
                     valueText = {
                         when (it) {
+                            LyricsMode.STYLE_1 -> stringResource(R.string.lyrics_mode_style_1)
+                            LyricsMode.STYLE_2 -> stringResource(R.string.lyrics_mode_style_2)
                             LyricsMode.V2 -> stringResource(R.string.lyrics_mode_v2)
                             LyricsMode.ENHANCED -> stringResource(R.string.lyrics_mode_enhanced)
                         }
                     },
-                )
-            }
-
-            item {
-                val animationSettingsEnabled = lyricsMode == LyricsMode.V2
-
-                PreferenceEntry(
-                    title = { Text(stringResource(R.string.lyrics_animation_style)) },
-                    description = if (animationSettingsEnabled) null else stringResource(R.string.lyrics_animation_style_v2_only),
-                    icon = { Icon(painterResource(R.drawable.animation), null) },
-                    onClick = { navController.navigate("settings/appearance/lyrics_animations") },
-                    isEnabled = animationSettingsEnabled,
                 )
             }
 
@@ -474,10 +515,92 @@ fun LyricsSettings(
                     onClick = { showLyricsLineSpacingDialog = true },
                 )
             }
+
+            item {
+                EnumListPreference(
+                    title = { Text(stringResource(R.string.lyrics_boldness)) },
+                    icon = { Icon(painterResource(R.drawable.format_bold), null) },
+                    selectedValue = lyricsBoldness,
+                    onValueSelected = onLyricsBoldnessChange,
+                    valueText = {
+                        when (it) {
+                            LyricsBoldness.NORMAL -> stringResource(R.string.lyrics_boldness_normal)
+                            LyricsBoldness.MEDIUM -> stringResource(R.string.lyrics_boldness_medium)
+                            LyricsBoldness.SEMI_BOLD -> stringResource(R.string.lyrics_boldness_semi_bold)
+                            LyricsBoldness.BOLD -> stringResource(R.string.lyrics_boldness_bold)
+                            LyricsBoldness.EXTRA_BOLD -> stringResource(R.string.lyrics_boldness_extra_bold)
+                            LyricsBoldness.BLACK -> stringResource(R.string.lyrics_boldness_black)
+                        }
+                    },
+                )
+            }
+
+            item {
+                val customFontDesc =
+                    if (lyricsCustomFontName.isNotBlank()) {
+                        lyricsCustomFontName
+                    } else if (lyricsCustomFontUri.isBlank()) {
+                        stringResource(R.string.lyrics_custom_font_desc)
+                    } else {
+                        lyricsCustomFontUri
+                    }
+                PreferenceEntry(
+                    title = { Text(stringResource(R.string.lyrics_custom_font)) },
+                    description = customFontDesc,
+                    icon = { Icon(painterResource(R.drawable.text_fields), null) },
+                    trailingContent = if (lyricsCustomFontUri.isNotBlank()) {
+                        {
+                            androidx.compose.material3.IconButton(
+                                onClick = {
+                                    runCatching {
+                                        context.contentResolver.releasePersistableUriPermission(
+                                            Uri.parse(lyricsCustomFontUri),
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                                        )
+                                    }
+                                    onLyricsCustomFontUriChange("")
+                                    onLyricsCustomFontNameChange("")
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.close),
+                                    contentDescription = stringResource(R.string.reset),
+                                )
+                            }
+                        }
+                    } else null,
+                    onClick = pickLyricsCustomFont,
+                )
+            }
         }
 
         PreferenceGroup(title = stringResource(R.string.providers)) {
+            val enabledProvidersCount = listOf(
+                enableBetterLyrics,
+                enableYouLyPlusLyrics,
+                enableLrclib,
+                enableKugou,
+                enableUnisonLyrics,
+                enableSimpMusicLyrics,
+                enablePaxsenixLyrics,
+            ).count { it }
+
             item {
+                PreferenceEntry(
+                    title = { Text(stringResource(R.string.lyrics_providers)) },
+                    description = "$enabledProvidersCount active • " + stringResource(if (providersExpanded) R.string.tap_to_collapse else R.string.tap_to_expand),
+                    icon = { Icon(painterResource(R.drawable.lyrics), null) },
+                    trailingContent = {
+                        Icon(
+                            painter = painterResource(if (providersExpanded) R.drawable.expand_less else R.drawable.expand_more),
+                            contentDescription = null,
+                        )
+                    },
+                    onClick = { providersExpanded = !providersExpanded },
+                )
+            }
+
+            item(visible = providersExpanded) {
                 SwitchPreference(
                     title = { Text(stringResource(R.string.enable_betterlyrics)) },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -486,7 +609,7 @@ fun LyricsSettings(
                 )
             }
 
-            item {
+            item(visible = providersExpanded) {
                 SwitchPreference(
                     title = { Text(stringResource(R.string.enable_youlyplus_lyrics)) },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -495,7 +618,7 @@ fun LyricsSettings(
                 )
             }
 
-            item {
+            item(visible = providersExpanded) {
                 SwitchPreference(
                     title = { Text(stringResource(R.string.enable_lrclib)) },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -504,7 +627,7 @@ fun LyricsSettings(
                 )
             }
 
-            item {
+            item(visible = providersExpanded) {
                 SwitchPreference(
                     title = { Text(stringResource(R.string.enable_kugou)) },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -513,7 +636,7 @@ fun LyricsSettings(
                 )
             }
 
-            item {
+            item(visible = providersExpanded) {
                 SwitchPreference(
                     title = { Text(stringResource(R.string.enable_unison_lyrics)) },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -522,7 +645,7 @@ fun LyricsSettings(
                 )
             }
 
-            item {
+            item(visible = providersExpanded) {
                 SwitchPreference(
                     title = { Text(stringResource(R.string.enable_simpmusic_lyrics)) },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -531,7 +654,7 @@ fun LyricsSettings(
                 )
             }
 
-            item {
+            item(visible = providersExpanded) {
                 SwitchPreference(
                     title = { Text(stringResource(R.string.enable_paxsenix_lyrics)) },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -540,7 +663,7 @@ fun LyricsSettings(
                 )
             }
 
-            item(visible = enablePaxsenixLyrics) {
+            item(visible = providersExpanded && enablePaxsenixLyrics) {
                 PreferenceEntry(
                     title = { Text(stringResource(R.string.paxsenix_stats)) },
                     icon = { Icon(painterResource(R.drawable.stats), null) },
@@ -548,7 +671,7 @@ fun LyricsSettings(
                 )
             }
 
-            item(visible = enablePaxsenixLyrics) {
+            item(visible = providersExpanded && enablePaxsenixLyrics) {
                 SwitchPreference(
                     title = { Text("Paxsenix: Apple Music") },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -557,7 +680,7 @@ fun LyricsSettings(
                 )
             }
 
-            item(visible = enablePaxsenixLyrics) {
+            item(visible = providersExpanded && enablePaxsenixLyrics) {
                 SwitchPreference(
                     title = { Text("Paxsenix: NetEase") },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -566,7 +689,7 @@ fun LyricsSettings(
                 )
             }
 
-            item(visible = enablePaxsenixLyrics) {
+            item(visible = providersExpanded && enablePaxsenixLyrics) {
                 SwitchPreference(
                     title = { Text("Paxsenix: Spotify") },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -575,7 +698,7 @@ fun LyricsSettings(
                 )
             }
 
-            item(visible = enablePaxsenixLyrics) {
+            item(visible = providersExpanded && enablePaxsenixLyrics) {
                 SwitchPreference(
                     title = { Text("Paxsenix: Musixmatch") },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -584,7 +707,7 @@ fun LyricsSettings(
                 )
             }
 
-            item(visible = enablePaxsenixLyrics) {
+            item(visible = providersExpanded && enablePaxsenixLyrics) {
                 SwitchPreference(
                     title = { Text("Paxsenix: YouTube") },
                     icon = { Icon(painterResource(R.drawable.lyrics), null) },
@@ -593,7 +716,7 @@ fun LyricsSettings(
                 )
             }
 
-            item {
+            item(visible = providersExpanded) {
                 PreferenceEntry(
                     title = { Text(stringResource(R.string.set_first_lyrics_provider)) },
                     description = providerOrder.firstOrNull()?.displayName(),

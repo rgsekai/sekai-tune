@@ -135,6 +135,7 @@ import moe.rgsekai.sekaitune.lyrics.LyricsUtils.shouldRomanizeLyricsLine
 import moe.rgsekai.sekaitune.lyrics.WordTimestamp
 import moe.rgsekai.sekaitune.ui.component.shimmer.ShimmerHost
 import moe.rgsekai.sekaitune.ui.component.shimmer.TextPlaceholder
+import moe.rgsekai.sekaitune.ui.theme.rememberLyricsFontFamily
 import moe.rgsekai.sekaitune.ui.theme.rememberSekaiTuneLyricsFontFamily
 import moe.rgsekai.sekaitune.ui.utils.LocalIsTv
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
@@ -180,7 +181,7 @@ fun LyricsEnhanced(
 
     val isTv = LocalIsTv.current
     val (lyricsClick) = rememberPreference(LyricsClickKey, defaultValue = true)
-    val (lyricsTextSize) = rememberPreference(LyricsTextSizeKey, defaultValue = if (isTv) 32f else 26f)
+    val (lyricsTextSize) = rememberPreference(LyricsTextSizeKey, defaultValue = 36f)
     val (lyricsLineBlurPreference) = rememberPreference(LyricsLineBlurKey, defaultValue = true)
     val (romanizeChinese) = rememberPreference(LyricsRomanizeChineseKey, defaultValue = true)
     val (romanizeHindi) = rememberPreference(LyricsRomanizeHindiKey, defaultValue = true)
@@ -205,7 +206,7 @@ fun LyricsEnhanced(
             )
         }
 
-    val lyricsFontFamily = rememberSekaiTuneLyricsFontFamily()
+    val lyricsFontFamily = rememberLyricsFontFamily()
 
     val playerBackground by rememberEnumPreference(PlayerBackgroundStyleKey, PlayerBackgroundStyle.DEFAULT)
     val textColor =

@@ -95,7 +95,7 @@ private class CardGeometry(val w: Float, val h: Float, gapPx: Float) {
 }
 
 /**
- * Player Styles selector screen replicating Mochy's PlayerSelector exact layout, geometry and interaction model.
+ * Player Styles selector screen with card carousel layout, geometry and interaction model.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
