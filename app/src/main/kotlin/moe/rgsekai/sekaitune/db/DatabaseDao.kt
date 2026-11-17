@@ -448,7 +448,7 @@ interface DatabaseDao {
                                ORDER BY totalPlayTime DESC
                                LIMIT 10))
         ORDER BY referredCount DESC
-        LIMIT 100
+        LIMIT 30
     """,
     )
     fun quickPicks(now: Long = System.currentTimeMillis()): Flow<List<Song>>
@@ -703,7 +703,7 @@ interface DatabaseDao {
               ORDER BY oldPlayTime) AS t
                  JOIN song on song.id = t.eid
         WHERE 0.2 * t.oldPlayTime > t.newPlayTime
-        LIMIT 100
+        LIMIT 30
     """,
     )
     fun forgottenFavorites(now: Long = System.currentTimeMillis()): Flow<List<Song>>
