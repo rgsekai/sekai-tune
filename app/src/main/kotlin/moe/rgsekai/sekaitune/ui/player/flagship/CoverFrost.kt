@@ -31,8 +31,10 @@ private const val FullAt = (FrostFull - FrostTop) / (FrostBottom - FrostTop)
 private val FrostRadius = 40.dp
 
 private val ProgressiveMask = Brush.verticalGradient(
-    0f to Color.Transparent,
-    0.04f to Color.Black,
+    *Array(9) { i ->
+        val t = i / 8f
+        t * FlatFullAt to Color.Black.copy(alpha = t * t * (3f - 2f * t))
+    },
     1f to Color.Black,
 )
 

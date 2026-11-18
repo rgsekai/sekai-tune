@@ -2,12 +2,6 @@ package moe.rgsekai.sekaitune.ui.player.flagship
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color as AndroidColor
-import android.graphics.LinearGradient
-import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
-import android.graphics.Shader
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
@@ -94,11 +88,6 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.allowHardware
-import coil3.request.crossfade
-import coil3.request.transformations
-import coil3.size.Size as CoilSize
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
@@ -109,7 +98,6 @@ import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
-import moe.rgsekai.sekaitune.ui.player.BackdropBlurTransformation
 import moe.rgsekai.sekaitune.ui.player.LyricsContent
 import moe.rgsekai.sekaitune.ui.player.StreamFormatBadge
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
@@ -120,9 +108,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 // Flagship design constants
-private const val UprightBlurPx = 360
-private const val UprightBlurRadiusPx = 8
-private const val FrostedEdgeFadeFraction = 0.13f
 private val PlayerHorizontalPadding = 32.dp
 private val ControlsDrawShift = 64.dp
 private val SeekBarLift = 6.dp
@@ -222,19 +207,6 @@ fun FlagshipPlayerContent(
     FollowPicture(ambientColors, artworkUrl)
     val ambientClock = rememberAmbientClock(running = data.isPlaying)
 
-    val blurredRequest = remember(context, artworkUrl) {
-        if (artworkUrl.isNullOrBlank()) null
-        else {
-            ImageRequest.Builder(context)
-                .data(artworkUrl)
-                .allowHardware(false)
-                .transformations(BackdropBlurTransformation(radiusPx = UprightBlurRadiusPx))
-                .crossfade(false)
-                .size(CoilSize(UprightBlurPx, UprightBlurPx))
-                .build()
-        }
-    }
-
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
@@ -244,8 +216,8 @@ fun FlagshipPlayerContent(
         val screenWidth = maxWidth
         val density = LocalDensity.current
         val screenHeightPx = with(density) { screenHeight.toPx() }
-        val coverHeight = screenHeight * 0.538f
-        val coverHeightPx = with(density) { coverHeight.toPx() }
+        val coverExtendedHeight = screenHeight * 0.68f
+        val coverExtendedHeightPx = with(density) { coverExtendedHeight.toPx() }
 
         val lyricsScrollWatcher = remember {
             object : NestedScrollConnection {
@@ -342,10 +314,9 @@ fun FlagshipPlayerContent(
         val headerTitleWidth = (screenWidth - targetTitleX - PlayerHorizontalPadding).coerceAtLeast(0.dp)
 
         val currentCoverWidth = lerp(screenWidth, miniArtSize, headerProgress)
-        val currentCoverHeight = lerp(coverHeight, miniArtSize, headerProgress)
+        val currentCoverHeight = lerp(coverExtendedHeight, miniArtSize, headerProgress)
         val currentCoverX = lerp(0.dp, miniArtX, headerProgress)
         val currentCoverY = lerp(0.dp, miniArtY, headerProgress)
-        val currentCornerRadius = lerp(0.dp, 12.dp, headerProgress)
 
         val reflectionFade = 1f - smoothstep(headerProgress / 0.45f)
 
@@ -356,35 +327,44 @@ fun FlagshipPlayerContent(
             time = ambientClock,
         )
 
-        // Layer 1: Full-screen blurred ambient cover continuation
-        if (blurredRequest != null && !disableBlur && reflectionFade > 0.004f) {
-            AsyncImage(
-                model = blurredRequest,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.95f * reflectionFade },
-            )
-        }
-
-        // Layer 1.5: Mirror cover reflection under the cover
+        // Layer 1: Mirror cover reflection under the fading cover (starts at 36% height and cross-fades in)
         if (reflectionFade > 0.004f) {
-            val tuck = 2.dp
-            val reflectionTop = coverHeight - tuck
+            val reflectionTop = screenHeight * 0.36f
             val reflectionHeight = (screenHeight - reflectionTop).coerceAtLeast(1.dp)
 
             Box(
                 modifier = Modifier
                     .offset(y = reflectionTop)
-                    .size(width = screenWidth, height = reflectionHeight),
+                    .size(width = screenWidth, height = reflectionHeight)
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to Color.Transparent,
+                                    0.15f to Color.Black.copy(alpha = 0.35f),
+                                    0.28f to Color.Black,
+                                    1.00f to Color.Black,
+                                ),
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    },
             ) {
                 if (!disableBlur) {
                     FlagshipCoverReflection(
                         url = artworkUrl,
-                        coverHeight = { coverHeightPx },
+                        coverHeight = { coverExtendedHeightPx },
                         alpha = { reflectionFade },
                         steady = false,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    CoverVeil(
+                        colors = ambientColors,
+                        alpha = { reflectionFade },
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
@@ -397,49 +377,70 @@ fun FlagshipPlayerContent(
             }
         }
 
-        // Layer 2: Foreground sharp cover picture fading softly at bottom in resting mode,
-        // morphing into the mini thumbnail header when lyrics/queue is active
+        // Layer 2: Foreground sharp cover picture extending to 68% height and smoothly feathered
+        // with Immersive's exact multi-stop vertical gradient, morphing into the mini thumbnail header
+        val currentTopCornerRadius = lerp(0.dp, 12.dp, headerProgress)
+        val currentBottomCornerRadius = if (headerProgress > 0.05f) {
+            lerp(0.dp, 12.dp, (headerProgress - 0.05f) / 0.95f)
+        } else {
+            0.dp
+        }
+        val coverShape = RoundedCornerShape(
+            topStart = currentTopCornerRadius,
+            topEnd = currentTopCornerRadius,
+            bottomStart = currentBottomCornerRadius,
+            bottomEnd = currentBottomCornerRadius,
+        )
+
         Box(
             modifier = Modifier
                 .offset(x = currentCoverX, y = currentCoverY)
                 .size(width = currentCoverWidth, height = currentCoverHeight)
-                .clip(RoundedCornerShape(currentCornerRadius)),
+                .clip(coverShape)
+                .then(
+                    if (headerProgress < 0.99f) {
+                        val fadeProgress = headerProgress.coerceIn(0f, 1f)
+                        val coverFadeBrush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to Color.Black,
+                                0.25f to Color.Black,
+                                0.40f to Color.Black.copy(alpha = 0.94f + (1f - 0.94f) * fadeProgress),
+                                0.55f to Color.Black.copy(alpha = 0.80f + (1f - 0.80f) * fadeProgress),
+                                0.70f to Color.Black.copy(alpha = 0.55f + (1f - 0.55f) * fadeProgress),
+                                0.82f to Color.Black.copy(alpha = 0.30f + (1f - 0.30f) * fadeProgress),
+                                0.92f to Color.Black.copy(alpha = 0.12f + (1f - 0.12f) * fadeProgress),
+                                0.97f to Color.Black.copy(alpha = 0.04f + (1f - 0.04f) * fadeProgress),
+                                1.00f to Color.Black.copy(alpha = 0.00f + (1f - 0.00f) * fadeProgress),
+                            ),
+                        )
+                        Modifier
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(brush = coverFadeBrush, blendMode = BlendMode.DstIn)
+                            }
+                    } else {
+                        Modifier
+                    }
+                )
+                .clickable(enabled = activePage != FlagshipPage.NONE) {
+                    if (controlsHidden >= 0.5f) {
+                        lyricsImmersive = false
+                        queueImmersive = false
+                    } else {
+                        transition.close()
+                    }
+                },
         ) {
-            if (headerProgress < 0.95f && !disableBlur && blurredRequest != null) {
-                AsyncImage(
-                    model = blurredRequest,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (headerProgress < 0.95f) {
-                            Modifier.flagshipCoverFade(bottomShare = FrostedEdgeFadeFraction * (1f - headerProgress))
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .clickable(enabled = activePage != FlagshipPage.NONE) {
-                        if (controlsHidden >= 0.5f) {
-                            lyricsImmersive = false
-                            queueImmersive = false
-                        } else {
-                            transition.close()
-                        }
-                    },
-            ) {
-                AsyncImage(
-                    model = data.artworkModel,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            AsyncImage(
+                model = data.artworkModel,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         // Morphing Song Info in header when a page is open (X = 114.dp, Y = miniArtY)
@@ -1109,54 +1110,6 @@ private fun FlagshipSkipButton(
     }
 }
 
-/**
- * Cover fade modifier: uses PorterDuff DST_OUT to cleanly erase the bottom [bottomShare]
- * of the sharp image so it seamlessly transitions into the blurred copy behind it.
- */
-private fun Modifier.flagshipCoverFade(bottomShare: Float = FrostedEdgeFadeFraction): Modifier = this
-    .graphicsLayer {
-        compositingStrategy = CompositingStrategy.Offscreen
-    }
-    .drawWithContent {
-        drawContent()
-        drawIntoCanvas { canvas ->
-            val native = canvas.nativeCanvas
-            val w = size.width
-            val h = size.height
-            // Turned so the gradient runs up from the bottom edge
-            CoverFadeMask.erase(native, 1f) {
-                translate(0f, h)
-                rotate(-90f)
-                scale(h * bottomShare, w)
-            }
-        }
-    }
-
-private object CoverFadeMask {
-    val paint = Paint().apply {
-        val steps = 8
-        val colors = IntArray(steps + 1) { i ->
-            val t = i / steps.toFloat()
-            val eased = t * t * (3f - 2f * t)
-            AndroidColor.argb(((1f - eased) * 255f).roundToInt(), 0, 0, 0)
-        }
-        val positions = FloatArray(steps + 1) { it / steps.toFloat() }
-        shader = LinearGradient(
-            0f, 0f, 1f, 0f, colors, positions, Shader.TileMode.CLAMP,
-        )
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
-    }
-
-    inline fun erase(canvas: Canvas, strength: Float, place: Canvas.() -> Unit) {
-        val alpha = (strength * 255f).roundToInt().coerceIn(0, 255)
-        if (alpha == 0) return
-        paint.alpha = alpha
-        val saved = canvas.save()
-        canvas.place()
-        canvas.drawRect(0f, 0f, 1f, 1f, paint)
-        canvas.restoreToCount(saved)
-    }
-}
 
 @Composable
 private fun PressScaleButton(
