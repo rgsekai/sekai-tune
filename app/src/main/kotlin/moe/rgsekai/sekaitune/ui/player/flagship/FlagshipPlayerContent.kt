@@ -102,13 +102,13 @@ import coil3.size.Size as CoilSize
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.constants.LyricsMode
 import moe.rgsekai.sekaitune.constants.LyricsModeKey
 import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
-import moe.rgsekai.sekaitune.ui.player.BackdropBlurTransformation
 import moe.rgsekai.sekaitune.ui.player.LyricsContent
 import moe.rgsekai.sekaitune.ui.player.StreamFormatBadge
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
@@ -119,8 +119,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 // Flagship design constants
-private const val ReflectionPx = 360
-private const val ReflectionBlurPx = 8
 private const val FrostedEdgeFadeFraction = 0.13f
 private val PlayerHorizontalPadding = 32.dp
 private val ControlsDrawShift = 64.dp
@@ -128,12 +126,10 @@ private val SeekBarLift = 6.dp
 private val PlayerDeckHeight = 54.dp + 9.dp // 63.dp
 private val TransportGapAboveRow = 24.dp + SeekBarLift
 
-// Flagship ControlsShade: clear at top, 24% black by 46% down, then held
-private val ControlsShadeBrush = Brush.verticalGradient(
-    0f to Color.Transparent,
-    0.46f to Color.Black.copy(alpha = 0.24f),
-    1f to Color.Black.copy(alpha = 0.24f),
-)
+private fun smoothstep(t: Float): Float {
+    val x = t.coerceIn(0f, 1f)
+    return x * x * (3f - 2f * x)
+}
 
 /**
  * Flagship Player UI:
@@ -218,19 +214,10 @@ fun FlagshipPlayerContent(
         derivedStateOf { controlsHidden < 0.99f || transition.page == FlagshipPage.NONE }
     }
 
-    // 1. BackdropBlurTransformation request for the full-screen blurred ambient copy
-    val blurredRequest = remember(context, artworkUrl) {
-        if (artworkUrl.isNullOrBlank()) null
-        else {
-            ImageRequest.Builder(context)
-                .data(artworkUrl)
-                .allowHardware(false)
-                .transformations(BackdropBlurTransformation(radiusPx = ReflectionBlurPx))
-                .crossfade(false)
-                .size(CoilSize(ReflectionPx, ReflectionPx))
-                .build()
-        }
-    }
+    val (disableBlur) = rememberPreference(DisableBlurKey, defaultValue = false)
+    val ambientColors = rememberAmbientColors()
+    FollowPicture(ambientColors, artworkUrl)
+    val ambientClock = rememberAmbientClock(running = data.isPlaying)
 
     BoxWithConstraints(
         modifier = modifier
@@ -241,6 +228,8 @@ fun FlagshipPlayerContent(
         val screenWidth = maxWidth
         val density = LocalDensity.current
         val screenHeightPx = with(density) { screenHeight.toPx() }
+        val coverHeight = screenHeight * 0.538f
+        val coverHeightPx = with(density) { coverHeight.toPx() }
 
         val lyricsScrollWatcher = remember {
             object : NestedScrollConnection {
@@ -325,7 +314,6 @@ fun FlagshipPlayerContent(
                 .fillMaxSize()
                 .then(swipeModifier),
         ) {
-            val coverHeight = screenHeight * 0.538f
         val statusBarTop = WindowInsets.statusBars.union(WindowInsets.displayCutout)
             .asPaddingValues().calculateTopPadding().coerceAtLeast(24.dp)
 
@@ -343,27 +331,41 @@ fun FlagshipPlayerContent(
         val currentCoverY = lerp(0.dp, miniArtY, headerProgress)
         val currentCornerRadius = lerp(0.dp, 12.dp, headerProgress)
 
-        // Layer 1: Full-screen blurred ambient artwork reflection
-        if (blurredRequest != null) {
-            AsyncImage(
-                model = blurredRequest,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.95f },
-            )
-        } else {
-            // Fallback subtle gradient if no artwork yet
+        val reflectionFade = 1f - smoothstep(headerProgress / 0.45f)
+
+        // Layer 0: Full-screen ambient backdrop drifting softly
+        AmbientBackdrop(
+            colors = ambientColors,
+            modifier = Modifier.fillMaxSize(),
+            time = ambientClock,
+        )
+
+        // Layer 1: Mirror cover reflection & cover veil under the cover
+        if (reflectionFade > 0.004f) {
+            val tuck = 2.dp
+            val reflectionTop = coverHeight - tuck
+            val reflectionHeight = (screenHeight - reflectionTop).coerceAtLeast(1.dp)
+
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF22262C), Color(0xFF14171A)),
-                        ),
-                    ),
-            )
+                    .offset(y = reflectionTop)
+                    .size(width = screenWidth, height = reflectionHeight),
+            ) {
+                if (!disableBlur) {
+                    FlagshipCoverReflection(
+                        url = artworkUrl,
+                        coverHeight = { coverHeightPx },
+                        alpha = { reflectionFade },
+                        steady = true,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                CoverVeil(
+                    colors = ambientColors,
+                    alpha = { reflectionFade },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
 
         // Layer 2: Foreground sharp cover picture fading softly at bottom in resting mode,
@@ -565,18 +567,18 @@ fun FlagshipPlayerContent(
             }
         }
 
-        // Layer 4: Flagship ControlsShade (subtle 24% black gradient for contrast)
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(screenHeight * (1f - 0.50f))
-                .align(Alignment.BottomCenter)
-                .graphicsLayer { alpha = (1f - controlsHidden).coerceIn(0f, 1f) }
-                .drawWithCache {
-                    onDrawBehind {
-                        drawRect(ControlsShadeBrush)
-                    }
-                },
+        // Layer 4: Glare-compensated ControlsShade and CoverFrost
+        CoverFrost(
+            progressProvider = { 1f },
+            maxHeight = screenHeight,
+            fadeProvider = { (1f - controlsHidden) * (1f - headerProgress) },
+            disableBlur = disableBlur,
+        )
+        ControlsShade(
+            progressProvider = { 1f },
+            maxHeight = screenHeight,
+            fadeProvider = { (1f - controlsHidden) * (1f - headerProgress) },
+            glareProvider = { ambientColors.glare() },
         )
 
 
