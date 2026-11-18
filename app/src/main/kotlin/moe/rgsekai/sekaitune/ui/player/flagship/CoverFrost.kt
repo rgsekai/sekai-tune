@@ -11,8 +11,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -59,6 +61,25 @@ fun CoverFrost(
     if (disableBlur) return
     val drawn by remember { derivedStateOf { progressProvider() > 0.5f && fadeProvider() > 0f } }
     if (!drawn) return
-    // CoverFrost slot: On API 33+ with blur enabled, provides frost over the seam
+    val smooth = Build.VERSION.SDK_INT >= 33
+    val top = if (smooth) FrostTop else FlatTop
+    val mask = if (smooth) ProgressiveMask else FlatMask
+    val currentProgress by rememberUpdatedState(progressProvider)
+    val currentFade by rememberUpdatedState(fadeProvider)
+
+    Spacer(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(maxHeight * (FrostBottom - top))
+            .offset { IntOffset(0, (maxHeight.toPx() * top + offsetProvider()).roundToInt()) }
+            .graphicsLayer {
+                alpha = (((currentProgress() - 0.5f) / 0.45f).coerceIn(0f, 1f) * currentFade().coerceIn(0f, 1f) * 0.12f)
+            }
+            .drawWithCache {
+                onDrawBehind {
+                    drawRect(mask)
+                }
+            },
+    )
 }
 

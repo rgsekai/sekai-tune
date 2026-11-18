@@ -43,7 +43,7 @@ fun FlagshipCoverReflection(
     val context = LocalContext.current
     val request = remember(context, url) {
         ImageRequest.Builder(context)
-            .data(url.resize(ReflectionPx, ReflectionPx))
+            .data(url)
             .allowHardware(false)
             .transformations(BackdropBlurTransformation(radiusPx = ReflectionBlurPx))
             .crossfade(false)

@@ -109,6 +109,7 @@ import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
+import moe.rgsekai.sekaitune.ui.player.BackdropBlurTransformation
 import moe.rgsekai.sekaitune.ui.player.LyricsContent
 import moe.rgsekai.sekaitune.ui.player.StreamFormatBadge
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
@@ -119,6 +120,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 // Flagship design constants
+private const val UprightBlurPx = 360
+private const val UprightBlurRadiusPx = 8
 private const val FrostedEdgeFadeFraction = 0.13f
 private val PlayerHorizontalPadding = 32.dp
 private val ControlsDrawShift = 64.dp
@@ -218,6 +221,19 @@ fun FlagshipPlayerContent(
     val ambientColors = rememberAmbientColors()
     FollowPicture(ambientColors, artworkUrl)
     val ambientClock = rememberAmbientClock(running = data.isPlaying)
+
+    val blurredRequest = remember(context, artworkUrl) {
+        if (artworkUrl.isNullOrBlank()) null
+        else {
+            ImageRequest.Builder(context)
+                .data(artworkUrl)
+                .allowHardware(false)
+                .transformations(BackdropBlurTransformation(radiusPx = UprightBlurRadiusPx))
+                .crossfade(false)
+                .size(CoilSize(UprightBlurPx, UprightBlurPx))
+                .build()
+        }
+    }
 
     BoxWithConstraints(
         modifier = modifier
@@ -340,7 +356,19 @@ fun FlagshipPlayerContent(
             time = ambientClock,
         )
 
-        // Layer 1: Mirror cover reflection & cover veil under the cover
+        // Layer 1: Full-screen blurred ambient cover continuation
+        if (blurredRequest != null && !disableBlur && reflectionFade > 0.004f) {
+            AsyncImage(
+                model = blurredRequest,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 0.95f * reflectionFade },
+            )
+        }
+
+        // Layer 1.5: Mirror cover reflection under the cover
         if (reflectionFade > 0.004f) {
             val tuck = 2.dp
             val reflectionTop = coverHeight - tuck
@@ -356,15 +384,16 @@ fun FlagshipPlayerContent(
                         url = artworkUrl,
                         coverHeight = { coverHeightPx },
                         alpha = { reflectionFade },
-                        steady = true,
+                        steady = false,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    CoverVeil(
+                        colors = ambientColors,
+                        alpha = { reflectionFade },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                CoverVeil(
-                    colors = ambientColors,
-                    alpha = { reflectionFade },
-                    modifier = Modifier.fillMaxSize(),
-                )
             }
         }
 
@@ -374,29 +403,43 @@ fun FlagshipPlayerContent(
             modifier = Modifier
                 .offset(x = currentCoverX, y = currentCoverY)
                 .size(width = currentCoverWidth, height = currentCoverHeight)
-                .clip(RoundedCornerShape(currentCornerRadius))
-                .then(
-                    if (headerProgress < 0.95f) {
-                        Modifier.flagshipCoverFade(bottomShare = FrostedEdgeFadeFraction * (1f - headerProgress))
-                    } else {
-                        Modifier
-                    }
-                )
-                .clickable(enabled = activePage != FlagshipPage.NONE) {
-                    if (controlsHidden >= 0.5f) {
-                        lyricsImmersive = false
-                        queueImmersive = false
-                    } else {
-                        transition.close()
-                    }
-                },
+                .clip(RoundedCornerShape(currentCornerRadius)),
         ) {
-            AsyncImage(
-                model = data.artworkModel,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+            if (headerProgress < 0.95f && !disableBlur && blurredRequest != null) {
+                AsyncImage(
+                    model = blurredRequest,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (headerProgress < 0.95f) {
+                            Modifier.flagshipCoverFade(bottomShare = FrostedEdgeFadeFraction * (1f - headerProgress))
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .clickable(enabled = activePage != FlagshipPage.NONE) {
+                        if (controlsHidden >= 0.5f) {
+                            lyricsImmersive = false
+                            queueImmersive = false
+                        } else {
+                            transition.close()
+                        }
+                    },
+            ) {
+                AsyncImage(
+                    model = data.artworkModel,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
 
         // Morphing Song Info in header when a page is open (X = 114.dp, Y = miniArtY)
