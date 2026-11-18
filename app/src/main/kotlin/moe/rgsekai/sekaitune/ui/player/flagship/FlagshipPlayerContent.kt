@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -183,6 +185,7 @@ fun FlagshipPlayerContent(
     val seekBarTop = remember { floatArrayOf(Float.NaN) }
     val cardTop = remember { floatArrayOf(Float.NaN) }
     var lyricsBottomInset by remember { mutableStateOf(210.dp) }
+    var draggingPosition by remember { mutableStateOf<Long?>(null) }
 
     var lyricsImmersive by remember { mutableStateOf(false) }
     var queueImmersive by remember { mutableStateOf(false) }
@@ -212,7 +215,7 @@ fun FlagshipPlayerContent(
     }
 
     val deckMounted by remember {
-        derivedStateOf { controlsHidden < 0.99f || activePage == FlagshipPage.NONE }
+        derivedStateOf { controlsHidden < 0.99f || transition.page == FlagshipPage.NONE }
     }
 
     // 1. BackdropBlurTransformation request for the full-screen blurred ambient copy
@@ -248,6 +251,7 @@ fun FlagshipPlayerContent(
                     available: Offset,
                     source: NestedScrollSource,
                 ): Offset {
+                    if (source != NestedScrollSource.UserInput) return Offset.Zero
                     val dy = consumed.y
                     if (dy == 0f) return Offset.Zero
                     travel = if ((travel < 0f) == (dy < 0f)) travel + dy else dy
@@ -282,6 +286,7 @@ fun FlagshipPlayerContent(
                     available: Offset,
                     source: NestedScrollSource,
                 ): Offset {
+                    if (source != NestedScrollSource.UserInput) return Offset.Zero
                     val dy = consumed.y
                     if (dy == 0f) return Offset.Zero
                     travel = if ((travel < 0f) == (dy < 0f)) travel + dy else dy
@@ -321,7 +326,8 @@ fun FlagshipPlayerContent(
                 .then(swipeModifier),
         ) {
             val coverHeight = screenHeight * 0.538f
-        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val statusBarTop = WindowInsets.statusBars.union(WindowInsets.displayCutout)
+            .asPaddingValues().calculateTopPadding().coerceAtLeast(24.dp)
 
         // Exact morph targets:
         // Mini thumbnail in header: 60.dp size, 36.dp from left, statusBarTop + 28.dp from top, 12.dp corner radius
@@ -329,6 +335,7 @@ fun FlagshipPlayerContent(
         val miniArtX = 36.dp
         val miniArtY = statusBarTop + 28.dp
         val targetTitleX = 114.dp
+        val headerTitleWidth = (screenWidth - targetTitleX - PlayerHorizontalPadding).coerceAtLeast(0.dp)
 
         val currentCoverWidth = lerp(screenWidth, miniArtSize, headerProgress)
         val currentCoverHeight = lerp(coverHeight, miniArtSize, headerProgress)
@@ -395,8 +402,7 @@ fun FlagshipPlayerContent(
             Column(
                 modifier = Modifier
                     .offset(x = targetTitleX, y = miniArtY + 6.dp)
-                    .fillMaxWidth()
-                    .padding(end = 80.dp)
+                    .width(headerTitleWidth)
                     .graphicsLayer { alpha = headerProgress },
             ) {
                 Text(
@@ -460,7 +466,7 @@ fun FlagshipPlayerContent(
 
                     LyricsContent(
                         lyricsMode = lyricsMode,
-                        sliderPositionProvider = { data.progressMs },
+                        sliderPositionProvider = { draggingPosition },
                         lyricsSyncOffset = lyricsSyncOffset,
                         textColor = Color.White,
                         modifier = Modifier
@@ -785,7 +791,6 @@ fun FlagshipPlayerContent(
                             }
                         },
                 ) {
-                    var draggingPosition by remember { mutableStateOf<Long?>(null) }
                     val safeDuration = if (data.durationMs > 0L) data.durationMs.toFloat() else 1f
                     val currentPos = draggingPosition ?: data.progressMs
                     val safeProgress = currentPos.toFloat().coerceIn(0f, safeDuration)
@@ -896,6 +901,10 @@ fun FlagshipPlayerContent(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .padding(horizontal = 26.dp)
+                    .graphicsLayer {
+                        alpha = (1f - controlsHidden).coerceIn(0f, 1f)
+                        translationY = controlsHidden * size.height * 0.75f
+                    }
                     .onGloballyPositioned { coords ->
                         cardTop[0] = coords.positionInRoot().y
                     },
