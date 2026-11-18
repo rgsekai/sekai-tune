@@ -548,6 +548,28 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_audio_effects",
+                title = context.getString(R.string.audio_effects_title),
+                subtitle = context.getString(R.string.audio_effects_desc),
+                category = playbackCategory,
+                iconRes = R.drawable.waves,
+                route = "settings/audio_effects",
+                keywords = listOf("audio effects", "reverb", "loudness", "spatial audio", "mono", "atmos", "playback speed", "exponential volume"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
+                id = "sub_spatial_audio",
+                title = context.getString(R.string.fx_spatial_title),
+                subtitle = context.getString(R.string.fx_spatial_desc),
+                category = playbackCategory,
+                iconRes = R.drawable.waves,
+                route = "settings/audio_effects",
+                keywords = listOf("spatial audio", "surround", "binaural", "crossfeed", "headphone simulation"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_pitch_speed",
                 title = "Pitch and playback speed",
                 subtitle = "Modify playback tempo and audio pitch",

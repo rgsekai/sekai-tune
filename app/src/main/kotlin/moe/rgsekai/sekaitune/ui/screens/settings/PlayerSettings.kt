@@ -472,31 +472,12 @@ fun PlayerSettings(navController: NavController) {
                 }
 
                 item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.spatial_audio_title)) },
-                        description = stringResource(R.string.spatial_audio_description),
+                    PreferenceEntry(
+                        title = { Text(stringResource(R.string.audio_effects_title)) },
+                        description = stringResource(R.string.audio_effects_desc),
                         icon = { Icon(painterResource(R.drawable.waves), null) },
-                        checked = spatialAudioEnabled,
-                        onCheckedChange = { enabled ->
-                            onSpatialAudioEnabledChange(enabled)
-                            if (enabled) {
-                                onAudioOffloadChange(false)
-                            }
-                        },
-                        isEnabled = !audioOffload,
+                        onClick = { navController.navigate("settings/audio_effects") },
                     )
-                }
-
-                if (spatialAudioEnabled) {
-                    item {
-                        SwitchPreference(
-                            title = { Text(stringResource(R.string.spatial_audio_disable_speaker_title)) },
-                            description = stringResource(R.string.spatial_audio_disable_speaker_description),
-                            icon = { Icon(painterResource(R.drawable.volume_off), null) },
-                            checked = spatialAudioDisableOnPhoneSpeaker,
-                            onCheckedChange = onSpatialAudioDisableOnPhoneSpeakerChange,
-                        )
-                    }
                 }
 
                 item {

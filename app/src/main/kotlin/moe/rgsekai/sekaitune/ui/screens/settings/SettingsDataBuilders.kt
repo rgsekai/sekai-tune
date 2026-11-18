@@ -91,6 +91,14 @@ fun buildSettingsGroups(
                             onClick = { navController.navigate("settings/player") },
                         ),
                         SettingsItem(
+                            key = "audio_effects",
+                            icon = painterResource(R.drawable.waves),
+                            title = stringResource(R.string.audio_effects_title),
+                            subtitle = stringResource(R.string.audio_effects_desc),
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            onClick = { navController.navigate("settings/audio_effects") },
+                        ),
+                        SettingsItem(
                             key = "lyrics",
                             icon = painterResource(R.drawable.lyrics),
                             title = stringResource(R.string.lyrics),

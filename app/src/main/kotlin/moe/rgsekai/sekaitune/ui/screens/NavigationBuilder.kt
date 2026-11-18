@@ -410,6 +410,9 @@ fun NavGraphBuilder.navigationBuilder(
     composable("settings/player") {
         PlayerSettings(navController)
     }
+    composable("settings/audio_effects") {
+        moe.rgsekai.sekaitune.ui.screens.audioeffects.AudioEffectsScreen(navController)
+    }
     composable("settings/player/chiper") {
         ChiperSettings(navController)
     }

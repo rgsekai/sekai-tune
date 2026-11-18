@@ -73,6 +73,7 @@ import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.REPEAT_MODE_ONE
 import androidx.media3.common.Player.STATE_IDLE
 import androidx.media3.common.Timeline
+import androidx.media3.common.Tracks
 import androidx.media3.common.audio.SonicAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
@@ -92,6 +93,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.SilenceSkippingAudioProcessor
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -698,13 +700,24 @@ class MusicService :
     lateinit var equalizerService: moe.rgsekai.sekaitune.eq.EqualizerService
     @Inject
     lateinit var equalizerStore: moe.rgsekai.sekaitune.eq.EqualizerStore
+    @Inject
+    lateinit var audioEffectsService: moe.rgsekai.sekaitune.eq.AudioEffectsService
+    @Inject
+    lateinit var audioEffectsStore: moe.rgsekai.sekaitune.eq.AudioEffectsStore
 
     lateinit var localPlayer: ExoPlayer
         private set
     lateinit var player: Player
         private set
-    val spatialAudioProcessorPrimary = SpatialAudioProcessor()
-    val spatialAudioProcessorSecondary = SpatialAudioProcessor()
+    lateinit var spatialAudioProcessorPrimary: SpatialAudioProcessor
+    lateinit var spatialAudioProcessorSecondary: SpatialAudioProcessor
+    lateinit var reverbAudioProcessorPrimary: moe.rgsekai.sekaitune.eq.audio.ReverbAudioProcessor
+    lateinit var reverbAudioProcessorSecondary: moe.rgsekai.sekaitune.eq.audio.ReverbAudioProcessor
+    lateinit var loudnessAudioProcessorPrimary: moe.rgsekai.sekaitune.eq.audio.LoudnessAudioProcessor
+    lateinit var loudnessAudioProcessorSecondary: moe.rgsekai.sekaitune.eq.audio.LoudnessAudioProcessor
+    var primaryClockSink: moe.rgsekai.sekaitune.playback.audio.AudioEffectsClockSink? = null
+    var secondaryClockSink: moe.rgsekai.sekaitune.playback.audio.AudioEffectsClockSink? = null
+    val replayGainTags = moe.rgsekai.sekaitune.eq.audio.ReplayGainTags()
     val eqProcessorPrimary = moe.rgsekai.sekaitune.eq.audio.CustomEqualizerAudioProcessor()
     val eqProcessorSecondary = moe.rgsekai.sekaitune.eq.audio.CustomEqualizerAudioProcessor()
     private lateinit var castPlaybackRepository: CastPlaybackRepository
@@ -1169,12 +1182,26 @@ class MusicService :
             reportException(e)
         }
 
+        spatialAudioProcessorPrimary = SpatialAudioProcessor(audioEffectsService)
+        spatialAudioProcessorSecondary = SpatialAudioProcessor(audioEffectsService)
+        reverbAudioProcessorPrimary = moe.rgsekai.sekaitune.eq.audio.ReverbAudioProcessor(audioEffectsService)
+        reverbAudioProcessorSecondary = moe.rgsekai.sekaitune.eq.audio.ReverbAudioProcessor(audioEffectsService)
+        loudnessAudioProcessorPrimary = moe.rgsekai.sekaitune.eq.audio.LoudnessAudioProcessor(audioEffectsService)
+        loudnessAudioProcessorSecondary = moe.rgsekai.sekaitune.eq.audio.LoudnessAudioProcessor(audioEffectsService)
+
         ColdStartTimer.addStage("MusicService: Initializing ExoPlayer")
         localPlayer =
             ExoPlayer
                 .Builder(this)
                 .setMediaSourceFactory(createMediaSourceFactory())
-                .setRenderersFactory(createRenderersFactory(eqProcessorPrimary, spatialAudioProcessorPrimary))
+                .setRenderersFactory(
+                    createRenderersFactory(
+                        eqProcessorPrimary,
+                        spatialAudioProcessorPrimary,
+                        reverbAudioProcessorPrimary,
+                        loudnessAudioProcessorPrimary,
+                    ) { primaryClockSink = it },
+                )
                 .setLoadControl(createPrimaryLoadControl())
                 .setTrackSelector(DefaultTrackSelector(this, SafeTrackSelectionFactory()))
                 .setHandleAudioBecomingNoisy(true)
@@ -1508,6 +1535,31 @@ class MusicService :
         }.distinctUntilChanged()
             .collectLatest(scope) { (enabled, disableOnSpeaker) ->
                 updateSpatialAudioState(enabled, disableOnSpeaker)
+            }
+
+        audioEffectsStore.spatial
+            .collectLatest(scope) { spatial ->
+                updateSpatialAudioState(spatial.enabled, spatial.disableOnSpeaker)
+            }
+
+        audioEffectsStore.playback
+            .collectLatest(scope) { playback ->
+                val params = androidx.media3.common.PlaybackParameters(playback.speed, playback.pitch)
+                if (::player.isInitialized && player.playbackParameters != params) {
+                    player.playbackParameters = params
+                }
+            }
+
+        audioEffectsStore.volume
+            .collectLatest(scope) {
+                primaryClockSink?.applyVolume()
+                secondaryClockSink?.applyVolume()
+            }
+
+        audioEffectsStore.normalize
+            .collectLatest(scope) {
+                primaryClockSink?.applyVolume()
+                secondaryClockSink?.applyVolume()
             }
 
         combine(dataStore.data, togetherSessionState) { prefs, togetherState ->
@@ -2345,7 +2397,14 @@ class MusicService :
         ExoPlayer
             .Builder(this)
             .setMediaSourceFactory(createMediaSourceFactory())
-            .setRenderersFactory(createRenderersFactory(eqProcessorSecondary, spatialAudioProcessorSecondary))
+            .setRenderersFactory(
+                createRenderersFactory(
+                    eqProcessorSecondary,
+                    spatialAudioProcessorSecondary,
+                    reverbAudioProcessorSecondary,
+                    loudnessAudioProcessorSecondary,
+                ) { secondaryClockSink = it },
+            )
             .setLoadControl(createCrossfadeLoadControl())
             .setTrackSelector(DefaultTrackSelector(this, SafeTrackSelectionFactory()))
             .setHandleAudioBecomingNoisy(false)
@@ -7035,6 +7094,13 @@ class MusicService :
         }
     }
 
+    override fun onTracksChanged(tracks: Tracks) {
+        super.onTracksChanged(tracks)
+        replayGainTags.update(tracks)
+        primaryClockSink?.applyVolume()
+        secondaryClockSink?.applyVolume()
+    }
+
     override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
         super.onPlaybackParametersChanged(playbackParameters)
         secondaryCrossfadePlayer?.playbackParameters = playbackParameters
@@ -8620,40 +8686,60 @@ class MusicService :
     private fun createRenderersFactory(
         eqProcessor: moe.rgsekai.sekaitune.eq.audio.CustomEqualizerAudioProcessor,
         spatialAudioProcessor: SpatialAudioProcessor,
+        reverbAudioProcessor: moe.rgsekai.sekaitune.eq.audio.ReverbAudioProcessor,
+        loudnessAudioProcessor: moe.rgsekai.sekaitune.eq.audio.LoudnessAudioProcessor,
+        onClockSinkCreated: (moe.rgsekai.sekaitune.playback.audio.AudioEffectsClockSink) -> Unit = {},
     ) =
         object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(
                 context: Context,
                 enableFloatOutput: Boolean,
                 enableAudioTrackPlaybackParams: Boolean,
-            ) = DefaultAudioSink
-                .Builder(context)
-                .setEnableFloatOutput(false)
-                .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                .setAudioProcessorChain(
-                    DefaultAudioSink.DefaultAudioProcessorChain(
-                        eqProcessor,
-                        SilenceSkippingAudioProcessor(
-                            1_500_000L,
-                            0.35f,
-                            500_000L,
-                            10,
-                            150.toShort(),
+            ): AudioSink {
+                val sink = DefaultAudioSink
+                    .Builder(context)
+                    .setEnableFloatOutput(false)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioProcessorChain(
+                        DefaultAudioSink.DefaultAudioProcessorChain(
+                            eqProcessor,
+                            SilenceSkippingAudioProcessor(
+                                1_500_000L,
+                                0.35f,
+                                500_000L,
+                                10,
+                                150.toShort(),
+                            ),
+                            SonicAudioProcessor(),
+                            spatialAudioProcessor,
+                            reverbAudioProcessor,
+                            loudnessAudioProcessor,
                         ),
-                        SonicAudioProcessor(),
-                        spatialAudioProcessor,
-                    ),
-                ).build()
+                    ).build()
+                val clockSink = moe.rgsekai.sekaitune.playback.audio.AudioEffectsClockSink(
+                    sink,
+                    audioEffectsService,
+                    replayGainTags,
+                )
+                onClockSinkCreated(clockSink)
+                return clockSink
+            }
         }
 
     fun updateSpatialAudioState(
-        userEnabled: Boolean = dataStore.get(SpatialAudioEnabledKey, false),
-        disableOnSpeaker: Boolean = dataStore.get(SpatialAudioDisableOnPhoneSpeakerKey, true),
+        userEnabled: Boolean = audioEffectsService.spatial.enabled,
+        disableOnSpeaker: Boolean = audioEffectsService.spatial.disableOnSpeaker,
     ) {
         val isHeadphonesOrExternal = AudioOutputDetector.isHeadphonesOrExternal(this)
-        val effective = userEnabled && (!disableOnSpeaker || isHeadphonesOrExternal)
-        spatialAudioProcessorPrimary.enabled = effective
-        spatialAudioProcessorSecondary.enabled = effective
+        val allowed = (!disableOnSpeaker || isHeadphonesOrExternal)
+        if (::spatialAudioProcessorPrimary.isInitialized) {
+            spatialAudioProcessorPrimary.outputAllowed = allowed
+            spatialAudioProcessorPrimary.enabled = userEnabled && allowed
+        }
+        if (::spatialAudioProcessorSecondary.isInitialized) {
+            spatialAudioProcessorSecondary.outputAllowed = allowed
+            spatialAudioProcessorSecondary.enabled = userEnabled && allowed
+        }
     }
 
     override fun onPlaybackStatsReady(
