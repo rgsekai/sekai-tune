@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -219,6 +220,8 @@ private fun NewMiniPlayer(
     }
     val bgTint = if (useGlass) Color.Transparent else if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
 
+    var slideDistance by remember { mutableFloatStateOf(0f) }
+
     SwipeableMiniPlayerBox(
         modifier = modifier,
         swipeSensitivity = swipeSensitivity,
@@ -228,13 +231,13 @@ private fun NewMiniPlayer(
         coroutineScope = coroutineScope,
         pureBlack = pureBlack,
         useLegacyBackground = false,
+        slideDistanceProvider = { slideDistance },
     ) { offsetX ->
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .height(64.dp)
-                    .offset { IntOffset(offsetX.roundToInt(), 0) }
                     .let { base ->
                         if (useGlass) {
                             base.clip(shape).liquidGlass(config = glassConfig, shape = shape)
@@ -258,6 +261,8 @@ private fun NewMiniPlayer(
                 duration = duration,
                 playerConnection = playerConnection,
                 colors = contentColors,
+                offsetX = offsetX,
+                onSlideDistanceChanged = { slideDistance = it },
             )
         }
     }
