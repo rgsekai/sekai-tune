@@ -144,3 +144,4 @@ fun Modifier.flagshipSwipeHandler(
         }
     }
 }
+

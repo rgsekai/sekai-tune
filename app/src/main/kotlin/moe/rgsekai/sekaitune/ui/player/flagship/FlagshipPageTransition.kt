@@ -262,3 +262,4 @@ fun rememberFlagshipPageTransition(): FlagshipPageTransition {
 fun rememberFlagshipDeckState(): FlagshipDeckState {
     return remember { FlagshipDeckState() }
 }
+
