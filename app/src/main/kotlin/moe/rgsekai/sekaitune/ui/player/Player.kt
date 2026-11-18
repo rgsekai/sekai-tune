@@ -1366,6 +1366,9 @@ fun BottomSheetPlayer(
                                     lyricsSyncOffset = lyricsSyncOffset,
                                     playerConnection = playerConnection,
                                     navController = navController,
+                                    songVideo = ytVideoCanvasSong,
+                                    canvasArtwork = v7CanvasArtwork,
+                                    isPlayerExpanded = state.isExpanded,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }

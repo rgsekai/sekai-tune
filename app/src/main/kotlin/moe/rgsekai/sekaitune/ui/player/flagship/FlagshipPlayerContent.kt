@@ -98,11 +98,18 @@ import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.ui.AspectRatioFrameLayout
+import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
+import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
 import moe.rgsekai.sekaitune.ui.player.AudioPipelineDetailsBottomSheet
+import moe.rgsekai.sekaitune.ui.player.CanvasArtworkPlayer
+import moe.rgsekai.sekaitune.ui.player.CanvasRenderMode
 import moe.rgsekai.sekaitune.ui.player.LyricsContent
+import moe.rgsekai.sekaitune.ui.player.SongVideo
 import moe.rgsekai.sekaitune.ui.player.StreamFormatBadge
+import moe.rgsekai.sekaitune.ui.player.YouTubeVideoBackground
 import moe.rgsekai.sekaitune.ui.player.deriveDisplayBadge
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
 import moe.rgsekai.sekaitune.utils.makeTimeString
@@ -132,6 +139,7 @@ private fun smoothstep(t: Float): Float {
  * - Track Info Row with title, artist, format badge, and press-scaled Like and Chevron buttons.
  * - Clean stacked bottom cards with zero text overlap.
  */
+@OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun FlagshipPlayerContent(
     data: PlayerPreviewData,
@@ -151,6 +159,9 @@ fun FlagshipPlayerContent(
     lyricsSyncOffset: Int = 0,
     playerConnection: moe.rgsekai.sekaitune.playback.PlayerConnection? = null,
     navController: androidx.navigation.NavController? = null,
+    songVideo: SongVideo? = null,
+    canvasArtwork: CanvasArtwork? = null,
+    isPlayerExpanded: Boolean = true,
 ) {
     val foreground = Color.White
     val secondaryForeground = foreground.copy(alpha = 0.72f)
@@ -168,6 +179,22 @@ fun FlagshipPlayerContent(
     val currentMediaId = playerConnection?.mediaMetadata?.value?.id
     val displayBadge = remember(qualityBadgeInfo, currentFormat, currentMediaId) {
         deriveDisplayBadge(qualityBadgeInfo, currentFormat, currentMediaId)
+    }
+
+    val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, true)
+    val canvasPrimary = canvasArtwork?.animatedVertical?.takeIf { it.isNotBlank() }
+    val canvasFallback = canvasArtwork?.videoUrlVertical?.takeIf { it.isNotBlank() }
+    val hasCanvas = !canvasPrimary.isNullOrBlank() || !canvasFallback.isNullOrBlank()
+
+    val canvasRenderMode = remember(SekaiTuneCanvasEnabled, hasCanvas, canvasPrimary, canvasFallback) {
+        if (SekaiTuneCanvasEnabled && hasCanvas) {
+            CanvasRenderMode.Video(
+                primaryUrl = canvasPrimary ?: canvasFallback!!,
+                fallbackUrl = canvasFallback,
+            )
+        } else {
+            CanvasRenderMode.None
+        }
     }
 
     val transition = rememberFlagshipPageTransition()
@@ -203,6 +230,19 @@ fun FlagshipPlayerContent(
         ) 1f else 0f,
         animationSpec = tween(durationMillis = 420, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)),
         label = "controlsHidden",
+    )
+
+    val hasLiveContent = songVideo != null || canvasRenderMode !is CanvasRenderMode.None
+    val isCoverInView = activePage == FlagshipPage.NONE && headerProgress < 0.05f
+    val shouldPlayLive = data.isPlaying && isPlayerExpanded && isCoverInView
+
+    val liveSourceKey = songVideo?.videoId ?: canvasPrimary ?: canvasFallback ?: ""
+    var isLiveReady by remember(liveSourceKey) { mutableStateOf(false) }
+
+    val liveAlpha by animateFloatAsState(
+        targetValue = if (isLiveReady && hasLiveContent) 1f else 0f,
+        animationSpec = tween(durationMillis = 350),
+        label = "liveAlpha",
     )
 
     // Lyrics 3.5s auto-hide timer
@@ -456,6 +496,33 @@ fun FlagshipPlayerContent(
                 alignment = Alignment.TopCenter,
                 modifier = Modifier.fillMaxSize(),
             )
+
+            if (hasLiveContent) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = liveAlpha * (1f - headerProgress).coerceIn(0f, 1f)
+                        },
+                ) {
+                    if (songVideo != null) {
+                        YouTubeVideoBackground(
+                            video = songVideo,
+                            isPlaying = shouldPlayLive,
+                            onShowingChange = { shown -> isLiveReady = shown },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else if (canvasRenderMode !is CanvasRenderMode.None) {
+                        CanvasArtworkPlayer(
+                            renderMode = canvasRenderMode,
+                            isPlaying = shouldPlayLive,
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                            onReady = { isLiveReady = true },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+            }
         }
 
         // Morphing Song Info in header when a page is open (X = 114.dp, Y = miniArtY)
