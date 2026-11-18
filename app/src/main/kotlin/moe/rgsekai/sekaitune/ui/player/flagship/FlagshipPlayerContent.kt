@@ -668,23 +668,14 @@ fun FlagshipPlayerContent(
                             .graphicsLayer { alpha = 1f - headerProgress },
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = data.title,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = foreground,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false),
-                                )
-
-                                Spacer(Modifier.width(8.dp))
-
-                                // Flagship Outlined Stream Format Badge
-                                StreamFormatBadge(
-                                    text = data.formatTag.ifBlank { "OPUS" },
-                                )
-                            }
+                            Text(
+                                text = data.title,
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = foreground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
 
                             if (data.artist.isNotBlank()) {
                                 Text(
@@ -693,6 +684,7 @@ fun FlagshipPlayerContent(
                                     color = Color.White.copy(alpha = 0.70f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
                         }
@@ -906,24 +898,39 @@ fun FlagshipPlayerContent(
                         )
                     }
 
-                    // Elapsed & Total Time Labels
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                    // Elapsed & Total Time Labels + Centered Format Badge
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = PlayerHorizontalPadding + 4.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = makeTimeString(currentPos),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.70f + 0.30f * expand),
-                        )
-                        Text(
-                            text = makeTimeString(data.durationMs),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.70f + 0.30f * expand),
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = makeTimeString(currentPos),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.70f + 0.30f * expand),
+                            )
+                            Text(
+                                text = makeTimeString(data.durationMs),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.70f + 0.30f * expand),
+                            )
+                        }
+
+                        val badgeText = data.formatTag.ifBlank { "OPUS" }
+                        if (badgeText.isNotBlank()) {
+                            StreamFormatBadge(
+                                text = badgeText,
+                                height = 16.dp,
+                                color = Color.White.copy(alpha = 0.65f),
+                                modifier = Modifier.padding(horizontal = 48.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -963,6 +970,8 @@ fun FlagshipPlayerContent(
                     nextSongArtist = nextSongArtist,
                     nextArtworkUrl = nextArtworkUrl,
                     activePage = activePage,
+                    lyricsProgress = transition.lyricsProgress,
+                    queueProgress = transition.queueProgress,
                 )
             }
         }

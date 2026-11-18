@@ -109,6 +109,8 @@ fun FlagshipBottomCardStack(
     nextArtworkUrl: String?,
     modifier: Modifier = Modifier,
     activePage: FlagshipPage = FlagshipPage.NONE,
+    lyricsProgress: Float = 0f,
+    queueProgress: Float = 0f,
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -120,10 +122,11 @@ fun FlagshipBottomCardStack(
     // When a page is open, flip the deck so the card on top is for the other view:
     // If lyrics page is open -> Queue card is in front
     // If queue page is open -> Lyrics card is in front
-    val queueFrontness = when (activePage) {
-        FlagshipPage.LYRICS -> 1f
-        FlagshipPage.QUEUE -> 0f
-        FlagshipPage.NONE -> flipAnim.value.coerceIn(0f, 1f)
+    val queueFrontness = when {
+        activePage == FlagshipPage.LYRICS -> lyricsProgress.coerceIn(0f, 1f)
+        lyricsProgress > 0.001f -> lyricsProgress.coerceIn(0f, 1f)
+        activePage == FlagshipPage.QUEUE -> 0f
+        else -> flipAnim.value.coerceIn(0f, 1f)
     }
     val queueOnTop = queueFrontness >= 0.5f
 
@@ -247,6 +250,7 @@ private fun BoxScope.DeckCard(
                 scaleY = scale
                 translationY = -mixF(FlagshipPeekOffset.toPx(), 0f, f)
                 transformOrigin = TransformOrigin(0.5f, 1f)
+                alpha = f
             }
             .drawBehind {
                 val inset = mixF(FlagshipPeekInset.toPx(), 0f, f)
@@ -272,13 +276,19 @@ private fun BoxScope.DeckCard(
                 }
             }
             .clip(RoundedCornerShape(topStart = FlagshipCardCorner, topEnd = FlagshipCardCorner))
-            .clickable {
-                if (isTop) {
-                    onOpen(if (isQueue) 1 else 0)
+            .then(
+                if (f > 0.05f) {
+                    Modifier.clickable {
+                        if (isTop) {
+                            onOpen(if (isQueue) 1 else 0)
+                        } else {
+                            onSelect()
+                        }
+                    }
                 } else {
-                    onSelect()
+                    Modifier
                 }
-            }
+            )
             .padding(horizontal = if (isQueue) QueueContentStart else LyricContentStart),
         contentAlignment = Alignment.CenterStart,
     ) {
