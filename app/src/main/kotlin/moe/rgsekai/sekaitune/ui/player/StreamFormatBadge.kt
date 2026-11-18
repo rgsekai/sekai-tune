@@ -1,14 +1,19 @@
 package moe.rgsekai.sekaitune.ui.player
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.PlatformTextStyle
@@ -29,14 +34,26 @@ fun StreamFormatBadge(
     modifier: Modifier = Modifier,
     height: Dp = 19.dp,
     color: Color = Color.White.copy(alpha = 0.55f),
+    onClick: (() -> Unit)? = null,
 ) {
     val fontSize = with(LocalDensity.current) { (height * 0.52f).toSp() }
+    val shape = RoundedCornerShape(height * 0.31f)
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .height(height)
-            .border(height * 0.0625f, color, RoundedCornerShape(height * 0.31f))
-            .padding(horizontal = height * 0.32f),
+            .border(height * 0.0625f, color, shape)
+            .clip(shape)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = true, color = Color.White),
+                        onClick = onClick,
+                    )
+                } else Modifier
+            )
+            .padding(horizontal = height * 0.36f),
     ) {
         Text(
             text = text,

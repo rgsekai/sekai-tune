@@ -97,9 +97,13 @@ import moe.rgsekai.sekaitune.constants.LyricsModeKey
 import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
+import moe.rgsekai.sekaitune.ui.player.AudioPipelineDetailsBottomSheet
 import moe.rgsekai.sekaitune.ui.player.LyricsContent
 import moe.rgsekai.sekaitune.ui.player.StreamFormatBadge
+import moe.rgsekai.sekaitune.ui.player.deriveDisplayBadge
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
 import moe.rgsekai.sekaitune.utils.makeTimeString
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
@@ -154,6 +158,17 @@ fun FlagshipPlayerContent(
     val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
 
     val artworkUrl = (data.artworkModel as? String) ?: data.artworkModel?.toString()
+
+    val currentFormat by playerConnection?.currentFormat?.collectAsStateWithLifecycle(initialValue = null)
+        ?: remember { mutableStateOf(null) }
+    val qualityBadgeInfo by playerConnection?.qualityBadgeFlow?.collectAsStateWithLifecycle(initialValue = PlaybackQualityBadgeInfo())
+        ?: remember { mutableStateOf(PlaybackQualityBadgeInfo()) }
+    var showPipelineDetails by remember { mutableStateOf(false) }
+
+    val currentMediaId = playerConnection?.mediaMetadata?.value?.id
+    val displayBadge = remember(qualityBadgeInfo, currentFormat, currentMediaId) {
+        deriveDisplayBadge(qualityBadgeInfo, currentFormat, currentMediaId)
+    }
 
     val transition = rememberFlagshipPageTransition()
     val deckState = rememberFlagshipDeckState()
@@ -922,12 +937,13 @@ fun FlagshipPlayerContent(
                             )
                         }
 
-                        val badgeText = data.formatTag.ifBlank { "OPUS" }
+                        val badgeText = displayBadge.label.ifBlank { data.formatTag.ifBlank { "OPUS" } }
                         if (badgeText.isNotBlank()) {
                             StreamFormatBadge(
                                 text = badgeText,
-                                height = 16.dp,
-                                color = Color.White.copy(alpha = 0.65f),
+                                height = 18.5.dp,
+                                color = Color.White.copy(alpha = 0.70f),
+                                onClick = { showPipelineDetails = true },
                                 modifier = Modifier.padding(horizontal = 48.dp),
                             )
                         }
@@ -976,6 +992,18 @@ fun FlagshipPlayerContent(
             }
         }
         }
+    }
+
+    if (showPipelineDetails) {
+        AudioPipelineDetailsBottomSheet(
+            onDismiss = { showPipelineDetails = false },
+            badgeInfo = displayBadge,
+            currentFormat = currentFormat,
+            artworkUrl = artworkUrl,
+            songTitle = data.title,
+            songArtist = data.artist,
+            isPlaying = data.isPlaying,
+        )
     }
 }
 
