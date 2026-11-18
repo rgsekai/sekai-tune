@@ -479,12 +479,12 @@ fun ColorScheme.pureBlack(apply: Boolean) =
             surface = Color(0xFF000000),
             background = Color(0xFF000000),
             surfaceContainerLowest = Color(0xFF000000),
-            surfaceContainerLow = Color(0xFF0B0B0C),
-            surfaceContainer = Color(0xFF141416),
-            surfaceContainerHigh = Color(0xFF1C1C1F),
-            surfaceContainerHighest = Color(0xFF26262B),
-            surfaceDim = Color(0xFF080809),
-            surfaceBright = Color(0xFF2A2A30),
+            surfaceContainerLow = Color(0xFF1C1C1E),
+            surfaceContainer = Color(0xFF242426),
+            surfaceContainerHigh = Color(0xFF2C2C2E),
+            surfaceContainerHighest = Color(0xFF333338),
+            surfaceDim = Color(0xFF141416),
+            surfaceBright = Color(0xFF3A3A3E),
         )
     } else {
         this
