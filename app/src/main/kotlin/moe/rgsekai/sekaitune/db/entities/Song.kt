@@ -53,6 +53,8 @@ data class Song
             get() = song.title
         override val thumbnailUrl: String?
             get() = song.thumbnailUrl
+        val lyricsOffset: Int
+            get() = song.lyricsOffset
     }
 
 

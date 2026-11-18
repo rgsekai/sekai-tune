@@ -143,6 +143,14 @@ fun buildSettingsGroups(
                             onClick = { navController.navigate("settings/ai_integration") },
                         ),
                         SettingsItem(
+                            key = "device_integration",
+                            icon = painterResource(R.drawable.cast),
+                            title = stringResource(R.string.devices_title),
+                            subtitle = stringResource(R.string.devices_row_detail),
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            onClick = { navController.navigate("settings/device_integration") },
+                        ),
+                        SettingsItem(
                             key = "advanced",
                             icon = painterResource(R.drawable.tune),
                             title = stringResource(R.string.advanced),

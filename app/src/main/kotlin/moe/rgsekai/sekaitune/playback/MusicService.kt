@@ -9314,6 +9314,9 @@ class MusicService :
         }
     }
 
+    val platformSessionToken: android.media.session.MediaSession.Token
+        get() = mediaSession.platformToken
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = mediaSession
 
     override fun onStartCommand(

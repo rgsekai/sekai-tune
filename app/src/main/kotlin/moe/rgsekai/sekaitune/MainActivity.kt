@@ -31,6 +31,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import moe.rgsekai.sekaitune.constants.UpdateDismissedVersionKey
+import moe.rgsekai.sekaitune.link.LinkPlayer
+import moe.rgsekai.sekaitune.link.phone.PhoneLinkHost
 import moe.rgsekai.sekaitune.ui.component.UpdatePromptDialog
 import moe.rgsekai.sekaitune.utils.AppUpdateInstaller
 import moe.rgsekai.sekaitune.utils.UpdateDownloadState
@@ -354,6 +356,9 @@ class MainActivity : ComponentActivity() {
     lateinit var database: MusicDatabase
 
     @Inject
+    lateinit var phoneLink: dagger.Lazy<PhoneLinkHost>
+
+    @Inject
     lateinit var downloadUtil: DownloadUtil
 
     @Inject
@@ -392,6 +397,7 @@ class MainActivity : ComponentActivity() {
                 if (service is MusicBinder) {
                     playerConnection =
                         PlayerConnection(this@MainActivity, service, database, lifecycleScope)
+                    LinkPlayer.connection = playerConnection
                     playPendingDeepLinkQueueIfReady()
                     playPendingVoiceSearchIfReady()
                     openPendingAodModeIfReady()
@@ -404,6 +410,7 @@ class MainActivity : ComponentActivity() {
                 isMusicServiceBound = false
                 pendingAodModeJob?.cancel()
                 pendingAodModeJob = null
+                playerConnection?.let { LinkPlayer.release(it) }
                 playerConnection?.dispose()
                 playerConnection = null
             }
@@ -498,6 +505,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        phoneLink.get().appShown()
         isMusicServiceBound =
             bindService(
                 Intent(this, MusicService::class.java),
@@ -529,6 +537,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        phoneLink.get().appHidden()
         safeUnbindMusicService()
         super.onStop()
     }

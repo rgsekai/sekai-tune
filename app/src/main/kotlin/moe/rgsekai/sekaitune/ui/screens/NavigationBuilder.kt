@@ -34,6 +34,7 @@ import moe.rgsekai.sekaitune.ui.screens.artist.ArtistItemsScreen
 import moe.rgsekai.sekaitune.utils.isTvDevice
 import moe.rgsekai.sekaitune.ui.screens.artist.ArtistScreen
 import moe.rgsekai.sekaitune.ui.screens.artist.ArtistSongsScreen
+import moe.rgsekai.sekaitune.ui.screens.devices.DeviceIntegrationSheet
 import moe.rgsekai.sekaitune.ui.screens.library.LibraryScreen
 import moe.rgsekai.sekaitune.ui.screens.library.LocalSongScreen
 import moe.rgsekai.sekaitune.ui.screens.library.SpotifyPlaylistsScreen
@@ -423,6 +424,9 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/ai_integration") {
         AiIntegrationSettings(navController)
+    }
+    composable("settings/device_integration") {
+        DeviceIntegrationSheet(onDismissRequest = { navController.popBackStack() })
     }
     composable("settings/integrations") {
         IntegrationsScreen(navController)

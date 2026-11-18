@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- device integration: the sheet that lists paired devices -->
+    <string name="devices_title">Device integration</string>
+    <string name="devices_row_detail">Link your TV, another phone or a tablet on the same Wi-Fi</string>
+    <string name="devices_hero">Connect up to 10 devices on your Wi-Fi: your other phone, tablet, TV, car head unit and more.</string>
+    <string name="devices_mine">My devices</string>
+    <string name="devices_add_more">Add more devices here</string>
+    <string name="devices_full">That\'s 10 devices, the most one phone keeps. Unlink one to add another.</string>
+    <string name="devices_options">Options</string>
+    <string name="devices_control">Control</string>
+    <string name="devices_controlling_button">Controlling</string>
+    <string name="devices_device_settings">Device settings</string>
+    <string name="devices_status_controlling">Controlling it from here</string>
+    <string name="devices_status_connected_detail">You can control each other</string>
+    <string name="devices_stay_reachable">Stay reachable in the background</string>
+    <string name="devices_stay_reachable_detail">Your devices can sync, stream and control even when Sekai Tune is closed. Shows a quiet notification.</string>
+    <string name="devices_in_player_menu">Show my devices in the player menu</string>
+    <string name="devices_in_player_menu_detail">Play on them, line songs up there, or control them from the player\'s menu</string>
+    <string name="devices_notification_title">Your devices can reach this phone</string>
+    <string name="devices_notification_text">%1$s can sync, stream and control from here</string>
+    <string name="devices_kind_phone">Phone</string>
+    <string name="devices_kind_tablet">Tablet</string>
+    <string name="devices_kind_tv">TV</string>
+    <string name="devices_kind_car">Car</string>
+
+    <!-- one device's own sheet -->
+    <string name="devices_ok">OK</string>
+    <string name="devices_remote_control">Enable remote control</string>
+    <string name="devices_remote_control_tv_detail">Play, skip and change its settings from this phone</string>
+    <string name="devices_remote_control_phone_detail">Play, skip and change settings on each other from either phone</string>
+    <string name="devices_auto_control">Take control when it connects</string>
+    <string name="devices_auto_control_detail">As soon as Sekai Tune opens on it, this phone becomes its remote</string>
+    <string name="devices_stream_local">Stream local from this device</string>
+    <string name="devices_stream_local_detail">Your downloads and song files play on it straight from this phone</string>
+    <string name="devices_override_library">Override device library</string>
+    <string name="devices_override_library_detail">Its library is replaced by this phone\'s and kept in step</string>
+    <string name="devices_sync_now">Sync now</string>
+    <string name="devices_sync_asked">%1$s is getting your latest library</string>
+    <string name="devices_unlink_question">Unlink %1$s? It keeps what it already has.</string>
+
+    <!-- adding a device -->
+    <string name="devices_add_title">Add device</string>
+    <string name="devices_pairing_code">Pairing mode code</string>
+    <string name="devices_detected">Detected</string>
+    <string name="devices_looking">Looking for devices…</string>
+    <string name="devices_looking_detail">Open Add device on your other phone, or the phone page in Sekai Tune on your TV</string>
+    <string name="devices_connect">Connect</string>
+    <string name="devices_or">Or</string>
+    <string name="devices_enter_code">Enter code</string>
+    <string name="devices_enter_code_none">Nothing\'s in pairing mode on this Wi-Fi yet. Open it on the other device first.</string>
+    <string name="devices_pair_detail">Type the code %1$s shows</string>
+    <string name="devices_paired_with">Paired with %1$s</string>
+    <string name="devices_wrong_code">That code didn\'t match. Check the other screen and try again.</string>
+    <string name="devices_pair_full">One of you already has 10 devices. Unlink one first.</string>
+    <string name="devices_pair_failed">Couldn\'t reach it. Make sure both are on the same Wi-Fi.</string>
+    <string name="devices_pair_outdated">That device runs an older Sekai Tune. Update it, then try the code again</string>
+
+    <!-- remote control mode -->
+    <string name="remote_controlling">Controlling %1$s</string>
+    <string name="remote_stop">Stop controlling</string>
+    <string name="remote_playing">Playing</string>
+    <string name="remote_paused">Paused</string>
+    <string name="remote_connecting">Asking what\'s on…</string>
+    <string name="remote_unreachable">Can\'t reach it right now. Is Sekai Tune open on it?</string>
+    <string name="remote_up_next">Up next</string>
+    <string name="remote_hand_over">Play this phone\'s queue on %1$s</string>
+    <string name="remote_queued_on">Added to the queue on %1$s</string>
+    <string name="remote_like">Like</string>
+    <string name="remote_add_to_playlist">Add to playlist</string>
+    <string name="remote_previous">Previous</string>
+    <string name="remote_play_pause">Play or pause</string>
+    <string name="remote_next">Next</string>
+    <string name="remote_remove_from_queue">Remove from the queue</string>
+    <string name="remote_settings_on">Settings on %1$s</string>
+    <string name="remote_settings_loading">Getting its settings…</string>
+    <string name="remote_settings_failed">Couldn\'t get its settings. Make sure Sekai Tune is open there and lets this phone control it.</string>
+    <string name="remote_settings_retry">Try again</string>
+    <string name="remote_setting_failed">Couldn\'t change that on %1$s</string>
+    <string name="remote_seconds">%1$d s</string>
+
+    <string name="tv_menu_play_on">Play on %1$s</string>
+    <string name="tv_menu_play_next_on">Play next on %1$s</string>
+    <string name="tv_menu_control">Control %1$s</string>
+    <string name="tv_menu_sent">Playing on %1$s</string>
+    <string name="tv_menu_next_sent">Lined up next on %1$s</string>
+    <string name="tv_menu_unreachable">Couldn\'t reach %1$s. Make sure Sekai Tune is open on it.</string>
+    <string name="tv_menu_nothing_on">Nothing playing</string>
+
+    <!-- the settings a controlling phone sees, sent by the device that has them -->
+    <string name="link_section_playback">Playback</string>
+    <string name="link_section_audio_lab">Audio</string>
+    <string name="link_section_youtube">YouTube</string>
+    <string name="link_section_player">Player</string>
+    <string name="link_setting_transition">Song transitions</string>
+    <string name="link_transition_off">Off</string>
+    <string name="link_transition_auto">Auto crossfade</string>
+    <string name="link_transition_manual">Crossfade</string>
+    <string name="link_transition_crossmix">Crossmix</string>
+    <string name="link_setting_crossfade_length">Crossfade length</string>
+    <string name="link_setting_transport_fade">Fade on play, pause and skip</string>
+    <string name="link_setting_skip_silence">Skip silence</string>
+    <string name="link_setting_normalize">Even out song volume</string>
+    <string name="link_setting_autoplay">Keep playing similar songs</string>
+    <string name="link_setting_eq">Equalizer</string>
+    <string name="link_setting_eq_preset">Equalizer curve</string>
+    <string name="link_setting_loudness">Loudness boost</string>
+    <string name="link_setting_reverb">Reverb</string>
+    <string name="link_setting_spatial">Spatial audio</string>
+    <string name="link_setting_speed">Speed</string>
+    <string name="link_speed_times">%1$s×</string>
+    <string name="link_setting_audio_quality">Audio quality</string>
+    <string name="link_quality_auto">Auto</string>
+    <string name="link_quality_high">High</string>
+    <string name="link_quality_medium">Medium</string>
+    <string name="link_quality_low">Low</string>
+    <string name="link_setting_video_quality">Video quality</string>
+    <string name="link_video_lines">%1$dp</string>
+    <string name="link_setting_studio_for_videos">Play the studio version of music videos</string>
+    <string name="link_setting_data_saver">Data saver</string>
+    <string name="link_setting_player_style">Player look</string>
+
+    <string name="tv_done">Done</string>
+    <string name="tv_cancel">Cancel</string>
+    <string name="tv_unlink">Unlink</string>
+    <string name="tv_back">Back</string>
+    <string name="tv_pair_sheet_title">Link %1$s</string>
+    <string name="tv_pair_sheet_by_address">Link by address</string>
+    <string name="tv_pair_sheet_address_detail">Type the address your device shows under its code, then the code</string>
+    <string name="tv_link_channel">Device integration</string>
+    <string name="tv_link_notify">Tell me when the TV syncs</string>
+    <string name="tv_link_notify_detail">A short note when your TV connects and when it has your latest library</string>
+    <string name="tv_link_status_open">Open now</string>
+    <string name="tv_link_status_open_synced">Open now · synced %1$s</string>
+    <string name="tv_link_status_seen">Last open %1$s</string>
+    <string name="tv_link_status_waiting">Waiting for Sekai Tune to open on it</string>
+    <string name="tv_link_status_connected">Connected to %1$s</string>
+    <string name="tv_link_status_connected_detail">Your library is in step</string>
+    <string name="tv_link_status_streaming">Streaming to %1$s</string>
+    <string name="tv_link_status_streaming_detail">Your downloads are playing on the TV from this phone</string>
+    <string name="tv_link_events_channel">TV sync</string>
+    <string name="tv_link_notice_connected">Connected to %1$s</string>
+    <string name="tv_link_notice_connected_detail">Your TV can sync and stream from this phone</string>
+    <string name="tv_link_notice_synced">%1$s is in step</string>
+    <string name="tv_link_notice_synced_detail">Your TV has your latest likes, playlists and downloads</string>
+</resources>

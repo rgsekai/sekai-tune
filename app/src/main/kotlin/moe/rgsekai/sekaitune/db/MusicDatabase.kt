@@ -130,6 +130,17 @@ class MusicDatabase(
         }
     }
 
+    val invalidationTracker: androidx.room.InvalidationTracker
+        get() {
+            ensureWarmedUp()
+            return delegate.invalidationTracker
+        }
+
+    fun refreshVersionsAsync() {
+        ensureWarmedUp()
+        delegate.invalidationTracker.refreshVersionsAsync()
+    }
+
     suspend fun <R> withTransaction(block: suspend MusicDatabase.() -> R): R {
         ensureWarmedUp()
         return delegate.withTransaction {

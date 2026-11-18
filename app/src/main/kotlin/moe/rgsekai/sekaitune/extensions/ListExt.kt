@@ -59,6 +59,8 @@ fun List<Song>.filterBlockedArtists() = filter { song -> song.artists.none { it.
 
 // No-op for local songs: local Song entities do not contain video metadata to filter reliably
 fun List<Song>.filterVideo(enabled: Boolean = true) = this
+fun List<Song>.filterVideoSongs(enabled: Boolean = true) = this
+
 
 
 

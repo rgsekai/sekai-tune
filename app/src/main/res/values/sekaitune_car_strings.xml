@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="car_tab_home">Home</string>
+    <string name="car_tab_remote">Remote</string>
+    <string name="car_tab_recent">Recent</string>
+    <string name="car_tab_library">Library</string>
+
+    <string name="car_quick_picks">Quick picks</string>
+    <string name="car_categories">Categories</string>
+    <string name="car_home_empty">Play a few songs on your phone and your picks show up here!</string>
+
+    <string name="car_recent_songs">Songs</string>
+    <string name="car_recent_lists">Albums and playlists</string>
+    <string name="car_recent_empty">Songs you play show up here.</string>
+
+    <string name="car_liked">Liked songs</string>
+    <string name="car_downloaded">Downloaded</string>
+    <string name="car_playlists">Playlists</string>
+    <string name="car_albums">Albums</string>
+    <string name="car_artists">Artists</string>
+    <string name="car_list_empty">Nothing in here yet.</string>
+    <string name="car_couldnt_load">Couldn\'t load this. Check your connection and try again.</string>
+    <string name="car_shuffle">Shuffle</string>
+
+    <string name="car_lyrics">Lyrics</string>
+    <string name="car_lyrics_on_player">On the player</string>
+    <string name="car_lyrics_none">No lyrics for this song.</string>
+    <string name="car_lyrics_player_on">Lyrics now show on the player.</string>
+    <string name="car_lyrics_player_off">Lyrics on the player are off.</string>
+
+    <string name="car_pair_getting_code">Getting a code ready…</string>
+    <string name="car_pair_code">Pairing code</string>
+    <string name="car_pair_status">Status</string>
+    <string name="car_pair_how">How to pair</string>
+    <string name="car_pair_steps">On the other phone, open Sekai Tune and go to Settings › Device integration › Add device, then type this code. Both phones need the same Wi-Fi.</string>
+    <string name="car_pair_waiting">Not connected. Waiting for a phone to pair.</string>
+    <string name="car_pair_connected">Connected to %1$s</string>
+    <plurals name="car_pair_connected_more">
+        <item quantity="one">Connected to %1$s and 1 other</item>
+        <item quantity="other">Connected to %1$s and %2$d others</item>
+    </plurals>
+    <string name="car_remote_title">Steer playback</string>
+    <string name="car_remote_empty">No paired phones connected right now.</string>
+</resources>

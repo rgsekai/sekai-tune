@@ -10,6 +10,7 @@ package moe.rgsekai.sekaitune.db.entities
 import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +57,9 @@ data class SongEntity(
     @ColumnInfo(name = "matchAttemptedAt", defaultValue = "NULL")
     val matchAttemptedAt: LocalDateTime? = null,
 ) {
+    @get:Ignore
+    val lyricsOffset: Int get() = 0
+
     fun localToggleLike() =
         copy(
             liked = !liked,
@@ -93,6 +97,9 @@ data class SongEntity(
 
 fun SongEntity.downloadLookupKey(): String = matchedCatalogId ?: id
 fun Song.downloadLookupKey(): String = song.matchedCatalogId ?: song.id
+
+val SongEntity.lyricsOffset: Int get() = 0
+val Song.lyricsOffset: Int get() = song.lyricsOffset
 
 
 
