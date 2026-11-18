@@ -88,11 +88,7 @@ private val QueueContentStart = 14.dp
 private val ArtworkSize = 28.dp
 private val ArtworkShape = RoundedCornerShape(ArtworkSize * 0.3f)
 
-enum class FlagshipPage {
-    NONE,
-    LYRICS,
-    QUEUE,
-}
+
 
 private fun mixF(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 

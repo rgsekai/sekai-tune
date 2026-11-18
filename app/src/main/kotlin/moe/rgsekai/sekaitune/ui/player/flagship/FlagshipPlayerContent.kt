@@ -10,7 +10,6 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Shader
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,6 +17,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.zIndex
 import moe.rgsekai.sekaitune.constants.LyricsMode
@@ -155,42 +157,19 @@ fun FlagshipPlayerContent(
 
     val artworkUrl = (data.artworkModel as? String) ?: data.artworkModel?.toString()
 
-    var activePage by remember { mutableStateOf(FlagshipPage.NONE) }
-    BackHandler(enabled = activePage != FlagshipPage.NONE) {
-        activePage = FlagshipPage.NONE
+    val transition = rememberFlagshipPageTransition()
+    val deckState = rememberFlagshipDeckState()
+
+    BackHandler(enabled = transition.page != FlagshipPage.NONE) {
+        transition.back()
     }
 
-    val headerProgress by animateFloatAsState(
-        targetValue = if (activePage != FlagshipPage.NONE) 1f else 0f,
-        animationSpec = if (activePage != FlagshipPage.NONE) {
-            spring(dampingRatio = 0.82f, stiffness = 230f)
-        } else {
-            spring(dampingRatio = 1f, stiffness = 280f)
-        },
-        label = "flagshipHeaderProgress",
-    )
+    val headerProgress = transition.headerProgress
+    val activePage = transition.page
 
-    // Gesture detector on the whole screen:
-    // - Swiping UP when activePage == NONE opens the front card view (Lyrics or Queue)
-    // - Swiping DOWN when activePage != NONE closes the view back down to the resting cover art
-    var dragAccumY by remember { mutableStateOf(0f) }
-    val gestureModifier = Modifier.pointerInput(activePage) {
-        detectVerticalDragGestures(
-            onDragStart = { dragAccumY = 0f },
-            onDragEnd = {
-                if (activePage == FlagshipPage.NONE && dragAccumY < -60f) {
-                    activePage = FlagshipPage.LYRICS
-                } else if (activePage != FlagshipPage.NONE && dragAccumY > 60f) {
-                    activePage = FlagshipPage.NONE
-                }
-                dragAccumY = 0f
-            },
-            onDragCancel = { dragAccumY = 0f },
-            onVerticalDrag = { change, dragAmount ->
-                dragAccumY += dragAmount
-            },
-        )
-    }
+    val controlsTop = remember { floatArrayOf(Float.NaN) }
+    val seekBarTop = remember { floatArrayOf(Float.NaN) }
+    val cardTop = remember { floatArrayOf(Float.NaN) }
 
     // 1. BackdropBlurTransformation request for the full-screen blurred ambient copy
     val blurredRequest = remember(context, artworkUrl) {
@@ -209,12 +188,29 @@ fun FlagshipPlayerContent(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
-            .then(gestureModifier),
+            .background(Color.Black),
     ) {
         val screenHeight = maxHeight
         val screenWidth = maxWidth
-        val coverHeight = screenHeight * 0.538f
+        val density = LocalDensity.current
+        val screenHeightPx = with(density) { screenHeight.toPx() }
+
+        val swipeModifier = Modifier.flagshipSwipeHandler(
+            transition = transition,
+            focusedPageProvider = { deckState.focusedPage },
+            controlsTopProvider = { controlsTop[0] },
+            seekBarTopProvider = { seekBarTop[0] },
+            screenHeightPx = screenHeightPx,
+            cardTopProvider = { if (cardTop[0].isNaN()) null else cardTop[0] },
+            controlsHiddenProvider = { 0f },
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(swipeModifier),
+        ) {
+            val coverHeight = screenHeight * 0.538f
         val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
         // Exact morph targets:
@@ -268,7 +264,7 @@ fun FlagshipPlayerContent(
                     }
                 )
                 .clickable(enabled = activePage != FlagshipPage.NONE) {
-                    activePage = FlagshipPage.NONE
+                    transition.close()
                 },
         ) {
             AsyncImage(
@@ -406,7 +402,7 @@ fun FlagshipPlayerContent(
             ) {
                 // Chevron Dropdown to collapse back
                 PressScaleButton(
-                    onClick = { activePage = FlagshipPage.NONE },
+                    onClick = { transition.back() },
                     containerColor = Color.White.copy(alpha = 0.15f),
                 ) {
                     Icon(
@@ -489,7 +485,15 @@ fun FlagshipPlayerContent(
                 .fillMaxWidth()
                 .padding(bottom = belowControls + transportGap.coerceAtLeast(0.dp)),
         ) {
-            Column(modifier = Modifier.offset(y = -ControlsDrawShift)) {
+            Column(
+                modifier = Modifier
+                    .offset(y = -ControlsDrawShift)
+                    .onGloballyPositioned { coords ->
+                        if (controlsTop[0].isNaN() || activePage == FlagshipPage.NONE) {
+                            controlsTop[0] = coords.positionInRoot().y
+                        }
+                    },
+            ) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Track Info Row: Title, Artist, Outlined StreamFormatBadge, Like, Upward Chevron
@@ -577,7 +581,13 @@ fun FlagshipPlayerContent(
 
                 // Seek Bar Column: lifted by -SeekBarLift (-6.dp)
                 Column(
-                    modifier = Modifier.offset(y = -SeekBarLift),
+                    modifier = Modifier
+                        .offset(y = -SeekBarLift)
+                        .onGloballyPositioned { coords ->
+                            if (seekBarTop[0].isNaN() || activePage == FlagshipPage.NONE) {
+                                seekBarTop[0] = coords.positionInRoot().y
+                            }
+                        },
                 ) {
                     var draggingPosition by remember { mutableStateOf<Long?>(null) }
                     val safeDuration = if (data.durationMs > 0L) data.durationMs.toFloat() else 1f
@@ -688,17 +698,21 @@ fun FlagshipPlayerContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 26.dp),
+                .padding(horizontal = 26.dp)
+                .onGloballyPositioned { coords ->
+                    cardTop[0] = coords.positionInRoot().y
+                },
         ) {
             FlagshipBottomCardStack(
-                onOpenLyrics = { activePage = FlagshipPage.LYRICS },
-                onOpenQueue = { activePage = FlagshipPage.QUEUE },
+                onOpenLyrics = { transition.open(FlagshipPage.LYRICS) },
+                onOpenQueue = { transition.open(FlagshipPage.QUEUE) },
                 currentLyric = data.lyricLine,
                 nextSongTitle = nextSongTitle,
                 nextSongArtist = nextSongArtist,
                 nextArtworkUrl = nextArtworkUrl,
                 activePage = activePage,
             )
+        }
         }
     }
 }
