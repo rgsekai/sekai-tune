@@ -78,6 +78,7 @@ val AodTitleMaxLinesKey = intPreferencesKey("aodTitleMaxLines")
 val AodAmbientIntensityKey = floatPreferencesKey("aodAmbientIntensity")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
 val DisableBlurKey = booleanPreferencesKey("disableBlur")
+val DisableLiveMirrorKey = booleanPreferencesKey("disableLiveMirror")
 val BlurRadiusKey = floatPreferencesKey("blurRadius")
 
 // Backdrop blur for detail pages

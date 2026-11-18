@@ -2,6 +2,7 @@ package moe.rgsekai.sekaitune.ui.player.flagship
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
@@ -98,8 +99,10 @@ import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
 import moe.rgsekai.sekaitune.extensions.metadata
 import moe.rgsekai.sekaitune.extensions.toggleRepeatMode
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import moe.rgsekai.sekaitune.canvas.models.CanvasArtwork
+import moe.rgsekai.sekaitune.constants.DisableLiveMirrorKey
 import moe.rgsekai.sekaitune.constants.SekaiTuneCanvasKey
 import moe.rgsekai.sekaitune.playback.sources.PlaybackQualityBadgeInfo
 import moe.rgsekai.sekaitune.ui.component.MediaMetadataListItem
@@ -258,6 +261,8 @@ fun FlagshipPlayerContent(
     }
 
     val (disableBlur) = rememberPreference(DisableBlurKey, defaultValue = false)
+    val (disableLiveMirror) = rememberPreference(DisableLiveMirrorKey, defaultValue = false)
+    val liveCoverLayer = rememberGraphicsLayer()
     val ambientColors = rememberAmbientColors()
     FollowPicture(ambientColors, artworkUrl)
     val ambientClock = rememberAmbientClock(running = data.isPlaying)
@@ -417,6 +422,13 @@ fun FlagshipPlayerContent(
                         steady = false,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    if (hasLiveContent && !disableLiveMirror && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        FlagshipLiveCoverMirror(
+                            coverLayer = liveCoverLayer,
+                            alpha = { reflectionFade * liveAlpha * (1f - headerProgress).coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     CoverVeil(
                         colors = ambientColors,
                         alpha = { reflectionFade },
@@ -473,6 +485,11 @@ fun FlagshipPlayerContent(
                                 compositingStrategy = CompositingStrategy.Offscreen
                             }
                             .drawWithContent {
+                                if (hasLiveContent && !disableBlur && !disableLiveMirror && headerProgress < 0.05f) {
+                                    liveCoverLayer.record {
+                                        this@drawWithContent.drawContent()
+                                    }
+                                }
                                 drawContent()
                                 drawRect(brush = coverFadeBrush, blendMode = BlendMode.DstIn)
                             }

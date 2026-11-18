@@ -21,6 +21,19 @@ import coil3.size.Size as CoilSize
 import coil3.toBitmap
 import moe.rgsekai.sekaitune.ui.player.BackdropBlurTransformation
 import moe.rgsekai.sekaitune.ui.utils.resize
+import android.os.Build
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -29,6 +42,72 @@ internal const val ReflectionBlurPx = 6
 private const val ReflectionStrength = 0.92f
 private const val ReflectionFadeEnd = 0.9f
 private const val MeshRows = 32
+private const val LiveMirrorBlurRadius = 120f
+private const val LiveMirrorDownscale = 4
+
+@Composable
+fun FlagshipLiveCoverMirror(
+    coverLayer: GraphicsLayer,
+    alpha: () -> Float,
+    modifier: Modifier = Modifier,
+) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val currentAlpha = alpha()
+    if (currentAlpha <= 0.004f) return
+
+    val blurRadius = LiveMirrorBlurRadius / LiveMirrorDownscale.toFloat()
+
+    Spacer(
+        modifier = modifier
+            .graphicsLayer {
+                this.alpha = currentAlpha
+            }
+            .layout { measurable, constraints ->
+                val fullW = if (constraints.hasBoundedWidth) constraints.maxWidth else 0
+                val fullH = if (constraints.hasBoundedHeight) constraints.maxHeight else 0
+                val placeable = measurable.measure(
+                    Constraints.fixed(
+                        (fullW + LiveMirrorDownscale - 1) / LiveMirrorDownscale,
+                        (fullH + LiveMirrorDownscale - 1) / LiveMirrorDownscale,
+                    )
+                )
+                layout(fullW, fullH) {
+                    placeable.place(0, 0)
+                }
+            }
+            .graphicsLayer {
+                val k = LiveMirrorDownscale.toFloat()
+                scaleX = k
+                scaleY = k
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                renderEffect = BlurEffect(blurRadius, blurRadius, TileMode.Clamp)
+                compositingStrategy = CompositingStrategy.Offscreen
+            }
+            .drawBehind {
+                val w = size.width
+                val h = size.height
+                if (w <= 0f || h <= 0f) return@drawBehind
+
+                val layerW = coverLayer.size.width.toFloat()
+                val layerH = coverLayer.size.height.toFloat()
+                if (layerW <= 0f || layerH <= 0f) return@drawBehind
+
+                val scaleToFit = max(w / layerW, h / layerH)
+                val pivot = Offset(layerW / 2f, layerH / 2f)
+
+                withTransform({
+                    translate(left = (w - layerW) / 2f, top = 0f)
+                    scale(
+                        scaleX = scaleToFit * 1.04f,
+                        scaleY = -scaleToFit * 1.04f,
+                        pivot = pivot,
+                    )
+                }) {
+                    drawLayer(coverLayer)
+                }
+            },
+    )
+}
 
 @Composable
 fun FlagshipCoverReflection(
