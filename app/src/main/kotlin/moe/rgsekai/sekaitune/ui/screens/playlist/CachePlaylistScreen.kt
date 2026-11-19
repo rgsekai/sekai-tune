@@ -1,6 +1,6 @@
 /*
  * Sekai Tune (2026)
- * Â© Sekai Tune - github.com/rgsekai/sekai-tune
+ * © Sekai Tune - github.com/rgsekai/sekai-tune
  * GPL-3.0 License | Contributors: see git history
  * Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
  */
@@ -19,7 +19,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -30,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,8 +40,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import moe.rgsekai.sekaitune.ui.component.PlaylistHeroBackdrop
+import moe.rgsekai.sekaitune.ui.component.PlaylistHeroTitleArea
+import moe.rgsekai.sekaitune.ui.component.PlaylistTopBarOverlay
+import moe.rgsekai.sekaitune.ui.component.rememberPlaylistCoverHeight
+import moe.rgsekai.sekaitune.ui.screens.playlist.PlaylistHeroImageResult
+import moe.rgsekai.sekaitune.ui.screens.playlist.ResolvePlaylistHeroImage
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -107,32 +112,22 @@ import moe.rgsekai.sekaitune.constants.SongSortTypeKey
 import moe.rgsekai.sekaitune.extensions.toMediaItem
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.playback.queues.ListQueue
-import androidx.compose.foundation.layout.statusBars
 import moe.rgsekai.sekaitune.ui.component.DraggableScrollbar
 import moe.rgsekai.sekaitune.ui.component.EmptyPlaceholder
-import moe.rgsekai.sekaitune.ui.component.FeaturedArtistItem
-import moe.rgsekai.sekaitune.ui.component.FeaturedArtistsRow
 import moe.rgsekai.sekaitune.ui.component.IconButton
 import moe.rgsekai.sekaitune.ui.component.LocalMenuState
-import moe.rgsekai.sekaitune.ui.component.PlaylistEndOfLine
-import moe.rgsekai.sekaitune.ui.component.PlaylistHeroBackdrop
-import moe.rgsekai.sekaitune.ui.component.PlaylistHeroHeader
-import moe.rgsekai.sekaitune.ui.component.PlaylistSortTextControl
-import moe.rgsekai.sekaitune.ui.component.PlaylistTopBarOverlay
-import moe.rgsekai.sekaitune.ui.component.rememberPlaylistCoverHeight
 import moe.rgsekai.sekaitune.ui.component.SongListItem
 import moe.rgsekai.sekaitune.ui.component.SortHeader
-import moe.rgsekai.sekaitune.ui.utils.navigateToArtist
 import moe.rgsekai.sekaitune.ui.menu.SelectionSongMenu
 import moe.rgsekai.sekaitune.ui.menu.SongMenu
-import moe.rgsekai.sekaitune.ui.screens.playlist.PlaylistHeroImageResult
-import moe.rgsekai.sekaitune.ui.screens.playlist.ResolvePlaylistHeroImage
 import moe.rgsekai.sekaitune.ui.theme.PlayerColorExtractor
 import moe.rgsekai.sekaitune.ui.utils.ItemWrapper
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
 import moe.rgsekai.sekaitune.viewmodels.CachePlaylistViewModel
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamicColorScheme
 import java.time.LocalDateTime
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -240,28 +235,17 @@ fun CachePlaylistScreen(
     val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
     val surfaceColor = MaterialTheme.colorScheme.surface
 
+    val coverHeight = rememberPlaylistCoverHeight()
+
     val heroImageResult = remember(cachedSongs) {
         ResolvePlaylistHeroImage.resolve(
-            customImageUri = null,
-            platformCoverUrl = null,
             firstSongThumbnailUrl = cachedSongs.firstOrNull()?.thumbnailUrl,
         )
     }
 
-    val heroImageSource = remember(heroImageResult) {
-        when (heroImageResult) {
-            is PlaylistHeroImageResult.Image -> heroImageResult.urlOrUri
-            is PlaylistHeroImageResult.Placeholder -> null
-        }
-    }
-
-    val effectiveThumbnailUrl = remember(heroImageSource) {
-        heroImageSource
-    }
-
     // Extract gradient colors from playlist cover (first song thumbnail)
-    LaunchedEffect(effectiveThumbnailUrl) {
-        val thumbnailUrl = effectiveThumbnailUrl
+    LaunchedEffect(cachedSongs) {
+        val thumbnailUrl = cachedSongs.firstOrNull()?.thumbnailUrl
         if (thumbnailUrl != null) {
             val request =
                 ImageRequest
@@ -301,21 +285,38 @@ fun CachePlaylistScreen(
         }
     }
 
-    // Calculate gradient opacity based on scroll position
-    val gradientAlpha by remember {
-        derivedStateOf {
-            if (lazyListState.firstVisibleItemIndex == 0) {
-                val offset = lazyListState.firstVisibleItemScrollOffset
-                (1f - (offset / 600f)).coerceIn(0f, 1f)
+    val extractedThemeColor =
+        remember(gradientColors) {
+            if (gradientColors.isEmpty()) {
+                null
             } else {
-                0f
+                val seed = gradientColors.first()
+                val scheme =
+                    dynamicColorScheme(
+                        seedColor = seed,
+                        isDark = true,
+                        style = PaletteStyle.Vibrant,
+                    )
+                Color(
+                    red = (seed.red * 0.35f + scheme.surfaceVariant.red * 0.65f).coerceIn(0f, 1f),
+                    green = (seed.green * 0.35f + scheme.surfaceVariant.green * 0.65f).coerceIn(0f, 1f),
+                    blue = (seed.blue * 0.35f + scheme.surfaceVariant.blue * 0.65f).coerceIn(0f, 1f),
+                    alpha = 1f,
+                )
             }
         }
-    }
+
+    val effectivePageBackgroundColor = extractedThemeColor ?: surfaceColor
+
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = effectivePageBackgroundColor,
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label = "cachePlaylistBg",
+    )
 
     val showTopBarTitle by remember {
         derivedStateOf {
-            lazyListState.firstVisibleItemIndex > 0
+            lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 300
         }
     }
 
@@ -334,58 +335,30 @@ fun CachePlaylistScreen(
     // System bars padding
     val systemBarsTopPadding = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
 
-    val animatedBackgroundColor by animateColorAsState(
-        targetValue = surfaceColor,
-        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-        label = "cachePlaylistBgColor",
-    )
-
-    val animatedDominantColor by animateColorAsState(
-        targetValue = gradientColors.firstOrNull() ?: surfaceColor,
-        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-        label = "cachePlaylistDominantColor",
-    )
-
-    val insetsPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime).asPaddingValues()
-    val listContentPadding = remember(insetsPadding, isSearching) {
-        if (!isSearching) {
-            PaddingValues(
-                start = insetsPadding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
-                top = 0.dp,
-                end = insetsPadding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
-                bottom = insetsPadding.calculateBottomPadding(),
-            )
-        } else {
-            insetsPadding
-        }
-    }
-
-    val coverHeight = rememberPlaylistCoverHeight()
-
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(animatedBackgroundColor),
     ) {
-        if (!selection && !isSearching) {
+        if (!isSearching) {
             PlaylistHeroBackdrop(
                 heroImage = heroImageResult,
-                dominantColor = animatedDominantColor,
+                dominantColor = gradientColors.firstOrNull() ?: MaterialTheme.colorScheme.primary,
                 backgroundColor = animatedBackgroundColor,
                 coverHeight = coverHeight,
                 scrollOffset = {
                     if (lazyListState.firstVisibleItemIndex == 0) {
                         lazyListState.firstVisibleItemScrollOffset
                     } else {
-                        10000
+                        1000
                     }
                 },
             )
         }
         LazyColumn(
             state = lazyListState,
-            contentPadding = listContentPadding,
+            contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
         ) {
             if (filteredSongs.isEmpty() && !isSearching) {
                 item {
@@ -405,68 +378,145 @@ fun CachePlaylistScreen(
                 }
             } else {
                 if (filteredSongs.isNotEmpty() && !isSearching) {
+                    // Hero Header Item
                     item(key = "header") {
-                        val durationText = remember(filteredSongs) {
-                            val totalSeconds = filteredSongs.sumOf { it.item.song.duration ?: 0 }
-                            val minutes = (totalSeconds + 30) / 60
-                            if (minutes >= 60) {
-                                val hours = minutes / 60
-                                val remMin = minutes % 60
-                                if (remMin > 0) "${hours}h ${remMin}m" else "${hours}h"
-                            } else {
-                                "${minutes}m"
-                            }
-                        }
-                        val statsText = "${filteredSongs.size} ${if (filteredSongs.size == 1) "song" else "songs"} · $durationText"
+                        Column(
+                            horizontalAlignment = Alignment.Start,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            val songCountStr = pluralStringResource(R.plurals.n_song, filteredSongs.size, filteredSongs.size)
 
-                        PlaylistHeroHeader(
-                            title = stringResource(R.string.cached_playlist),
-                            stats = statsText,
-                            isPlaying = isPlaying,
-                            onPlayClick = {
-                                playerConnection.playQueue(
-                                    ListQueue(
-                                        title = "Cache Songs",
-                                        items = filteredSongs.map { it.item.toMediaItem() },
-                                    ),
-                                )
-                            },
-                            onShuffleClick = {
-                                playerConnection.playQueue(
-                                    ListQueue(
-                                        title = "Cache Songs",
-                                        items = filteredSongs.shuffled().map { it.item.toMediaItem() },
-                                    ),
-                                )
-                            },
-                            onSearchClick = { isSearching = true },
-                            coverHeight = coverHeight,
-                            sortControl = {
-                                PlaylistSortTextControl(
-                                    current = sortType,
-                                    descending = sortDescending,
-                                    options = listOf(
-                                        SongSortType.CREATE_DATE,
-                                        SongSortType.NAME,
-                                        SongSortType.ARTIST,
-                                        SongSortType.PLAY_TIME,
-                                    ),
-                                    label = { type: SongSortType ->
-                                        when (type) {
-                                            SongSortType.CREATE_DATE -> context.getString(R.string.sort_by_create_date)
-                                            SongSortType.NAME -> context.getString(R.string.sort_by_name)
-                                            SongSortType.ARTIST -> context.getString(R.string.sort_by_artist)
-                                            SongSortType.PLAY_TIME -> context.getString(R.string.sort_by_play_time)
-                                        }
+                            PlaylistHeroTitleArea(
+                                title = stringResource(R.string.cached_playlist),
+                                subtitle = songCountStr,
+                                coverHeight = coverHeight,
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Action buttons row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                ToggleButton(
+                                    checked = false,
+                                    onCheckedChange = {
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = "Cache Songs",
+                                                items = filteredSongs.map { it.item.toMediaItem() },
+                                            ),
+                                        )
                                     },
-                                    onSelect = onSortTypeChange,
-                                    onToggleDirection = { onSortDescendingChange(!sortDescending) },
-                                )
-                            },
-                            modifier = Modifier.animateItem(),
-                        )
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .height(48.dp),
+                                    shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                                    colors =
+                                        ToggleButtonDefaults.toggleButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                            checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.play),
+                                        contentDescription = stringResource(R.string.play),
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+
+                                ToggleButton(
+                                    checked = false,
+                                    onCheckedChange = {
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = "Cache Songs",
+                                                items = filteredSongs.shuffled().map { it.item.toMediaItem() },
+                                            ),
+                                        )
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .height(48.dp),
+                                    shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                                    colors =
+                                        ToggleButtonDefaults.toggleButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                            checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.shuffle),
+                                        contentDescription = stringResource(R.string.shuffle),
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+
+                                ToggleButton(
+                                    checked = false,
+                                    onCheckedChange = {
+                                        playerConnection.addToQueue(
+                                            items = filteredSongs.map { it.item.toMediaItem() },
+                                        )
+                                    },
+                                    modifier = Modifier.size(48.dp),
+                                    shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                    colors =
+                                        ToggleButtonDefaults.toggleButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            checkedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            checkedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        ),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.queue_music),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
                     }
                 }
+
+                if (filteredSongs.isNotEmpty()) {
+                    // Sort Header
+                    item(key = "sortHeader") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(start = 16.dp),
+                        ) {
+                            SortHeader(
+                                sortType = sortType,
+                                sortDescending = sortDescending,
+                                onSortTypeChange = onSortTypeChange,
+                                onSortDescendingChange = onSortDescendingChange,
+                                sortTypeText = { sortType ->
+                                    when (sortType) {
+                                        SongSortType.CREATE_DATE -> R.string.sort_by_create_date
+                                        SongSortType.NAME -> R.string.sort_by_name
+                                        SongSortType.ARTIST -> R.string.sort_by_artist
+                                        SongSortType.PLAY_TIME -> R.string.sort_by_play_time
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+
+                // Song items
                 itemsIndexed(filteredSongs, key = { _, song -> song.item.id }) { index, songWrapper ->
                     SongListItem(
                         song = songWrapper.item,
@@ -538,70 +588,54 @@ fun CachePlaylistScreen(
             headerItems = headerItems,
         )
 
-        if (!selection && !isSearching) {
-            PlaylistTopBarOverlay(
-                title = stringResource(R.string.cached_playlist),
-                scrolled = showTopBarTitle,
-                backgroundColor = animatedBackgroundColor,
-                onBackClick = { navController.navigateUp() },
-                onMoreClick = null,
-            )
-        } else {
-        TopAppBar(
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (transparentAppBar) Color.Transparent else MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
-            title = {
-                when {
-                    selection -> {
-                        val count = wrappedSongs.count { it.isSelected }
-                        Text(
-                            text = pluralStringResource(R.plurals.n_song, count, count),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    }
+        if (selection || isSearching) {
+            TopAppBar(
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = if (transparentAppBar) Color.Transparent else MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                title = {
+                    when {
+                        selection -> {
+                            val count = wrappedSongs.count { it.isSelected }
+                            Text(
+                                text = pluralStringResource(R.plurals.n_song, count, count),
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                        }
 
-                    isSearching -> {
-                        TextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.search),
-                                    style = MaterialTheme.typography.titleLarge,
-                                )
-                            },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.titleLarge,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            colors =
-                                TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    disabledIndicatorColor = Color.Transparent,
-                                ),
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester),
-                        )
+                        isSearching -> {
+                            TextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                placeholder = {
+                                    Text(
+                                        text = stringResource(R.string.search),
+                                        style = MaterialTheme.typography.titleLarge,
+                                    )
+                                },
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.titleLarge,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                colors =
+                                    TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent,
+                                    ),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(focusRequester),
+                            )
+                        }
                     }
-
-                    showTopBarTitle -> {
-                        Text(
-                            text = stringResource(R.string.cached_playlist),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    }
-                }
-            },
-            navigationIcon = {
-                IconButton(
-                    onClick = {
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
                         when {
                             isSearching -> {
                                 isSearching = false
@@ -617,106 +651,87 @@ fun CachePlaylistScreen(
                                 navController.navigateUp()
                             }
                         }
-                    },
-                    onLongClick = {
+                    }, onLongClick = {
                         if (!isSearching && !selection) {
                             navController.backToMain()
-                        }
-                    },
-                    colors =
-                        if (transparentAppBar) {
-                            IconButtonDefaults.iconButtonColors(
-                                containerColor = Color.Black.copy(alpha = 0.35f),
-                                contentColor = Color.White,
-                            )
-                        } else {
-                            IconButtonDefaults.iconButtonColors()
-                        },
-                ) {
-                    Icon(
-                        painter =
-                            painterResource(
-                                if (selection) R.drawable.close else R.drawable.arrow_back,
-                            ),
-                        contentDescription = null,
-                    )
-                }
-            },
-            actions = {
-                if (selection) {
-                    val count = wrappedSongs.count { it.isSelected }
-                    androidx.compose.material3.IconButton(onClick = {
-                        wrappedSongs.filter { it.isSelected }.forEach {
-                            viewModel.removeSongFromCache(it.item.id)
-                        }
-                        selection = false
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.delete),
-                            contentDescription = stringResource(R.string.remove_from_cache),
-                        )
-                    }
-
-                    androidx.compose.material3.IconButton(onClick = {
-                        if (count == wrappedSongs.size) {
-                            wrappedSongs.forEach { it.isSelected = false }
-                            selection = false
-                        } else {
-                            wrappedSongs.forEach { it.isSelected = true }
                         }
                     }) {
                         Icon(
                             painter =
                                 painterResource(
-                                    if (count == wrappedSongs.size) R.drawable.deselect else R.drawable.select_all,
+                                    if (selection) R.drawable.close else R.drawable.arrow_back,
                                 ),
                             contentDescription = null,
                         )
                     }
-
-                    androidx.compose.material3.IconButton(onClick = {
-                        menuState.show {
-                            SelectionSongMenu(
-                                songSelection = wrappedSongs.filter { it.isSelected }.map { it.item },
-                                onDismiss = menuState::dismiss,
-                                clearAction = { selection = false },
-                                isFromCache = true,
-                                onRemoveFromCache = { songs ->
-                                    songs.forEach { viewModel.removeSongFromCache(it.id) }
-                                },
+                },
+                actions = {
+                    if (selection) {
+                        val count = wrappedSongs.count { it.isSelected }
+                        androidx.compose.material3.IconButton(onClick = {
+                            wrappedSongs.filter { it.isSelected }.forEach {
+                                viewModel.removeSongFromCache(it.item.id)
+                            }
+                            selection = false
+                        }) {
+                            Icon(
+                                painter = painterResource(R.drawable.delete),
+                                contentDescription = stringResource(R.string.remove_from_cache),
                             )
                         }
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.more_vert),
-                            contentDescription = null,
-                        )
-                    }
-                } else if (!isSearching) {
-                    androidx.compose.material3.IconButton(
-                        onClick = { isSearching = true },
-                        colors =
-                            if (transparentAppBar) {
-                                IconButtonDefaults.iconButtonColors(
-                                    containerColor = Color.Black.copy(alpha = 0.35f),
-                                    contentColor = Color.White,
-                                )
+
+                        androidx.compose.material3.IconButton(onClick = {
+                            if (count == wrappedSongs.size) {
+                                wrappedSongs.forEach { it.isSelected = false }
+                                selection = false
                             } else {
-                                IconButtonDefaults.iconButtonColors()
-                            },
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.search),
-                            contentDescription = null,
-                        )
+                                wrappedSongs.forEach { it.isSelected = true }
+                            }
+                        }) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (count == wrappedSongs.size) R.drawable.deselect else R.drawable.select_all,
+                                    ),
+                                contentDescription = null,
+                            )
+                        }
+
+                        androidx.compose.material3.IconButton(onClick = {
+                            menuState.show {
+                                SelectionSongMenu(
+                                    songSelection = wrappedSongs.filter { it.isSelected }.map { it.item },
+                                    onDismiss = menuState::dismiss,
+                                    clearAction = { selection = false },
+                                    isFromCache = true,
+                                    onRemoveFromCache = { songs ->
+                                        songs.forEach { viewModel.removeSongFromCache(it.id) }
+                                    },
+                                )
+                            }
+                        }) {
+                            Icon(
+                                painter = painterResource(R.drawable.more_vert),
+                                contentDescription = null,
+                            )
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
+        }
+
+        if (!selection && !isSearching) {
+            PlaylistTopBarOverlay(
+                title = stringResource(R.string.cached_playlist),
+                scrolled = showTopBarTitle,
+                backgroundColor = animatedBackgroundColor,
+                onBackClick = { navController.navigateUp() },
+                onSearchClick = { isSearching = true },
+                onMoreClick = null,
+            )
+        }
     }
 }
-}
-
 
 
 
