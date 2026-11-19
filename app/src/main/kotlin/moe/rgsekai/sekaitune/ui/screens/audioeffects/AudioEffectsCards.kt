@@ -56,7 +56,6 @@ fun ReverbCard(viewModel: AudioEffectsViewModel) {
         header = {
             EffectToggleRow(
                 title = stringResource(R.string.fx_reverb_title),
-                subtitle = stringResource(R.string.fx_reverb_desc),
                 checked = reverb.enabled,
                 onCheckedChange = { on -> viewModel.updateReverb { it.copy(enabled = on) } },
             )
@@ -159,7 +158,6 @@ fun LoudnessCard(viewModel: AudioEffectsViewModel) {
         header = {
             EffectToggleRow(
                 title = stringResource(R.string.fx_loudness_title),
-                subtitle = stringResource(R.string.fx_loudness_desc),
                 checked = loudness.enabled,
                 onCheckedChange = { on -> viewModel.updateLoudness { it.copy(enabled = on) } },
             )
@@ -222,7 +220,6 @@ fun LoudnessCard(viewModel: AudioEffectsViewModel) {
             Spacer(Modifier.height(10.dp))
             EffectToggleRow(
                 title = stringResource(R.string.fx_even_out_title),
-                subtitle = stringResource(R.string.fx_even_out_desc),
                 checked = normalize,
                 onCheckedChange = { on ->
                     onNormalize(on)
@@ -233,7 +230,7 @@ fun LoudnessCard(viewModel: AudioEffectsViewModel) {
                 Spacer(Modifier.height(8.dp))
                 EffectPanel {
                     Text(
-                        text = "REPLAYGAIN MODE",
+                        text = "REPLAYGAIN",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
                         letterSpacing = 1.2.sp,
@@ -290,7 +287,6 @@ fun SpatialCard(viewModel: AudioEffectsViewModel) {
         header = {
             EffectToggleRow(
                 title = stringResource(R.string.fx_spatial_title),
-                subtitle = stringResource(R.string.fx_spatial_desc),
                 checked = spatial.enabled,
                 onCheckedChange = { on -> viewModel.updateSpatial { it.copy(enabled = on) } },
             )
@@ -394,7 +390,6 @@ fun MonoCard(viewModel: AudioEffectsViewModel) {
     ) {
         EffectToggleRow(
             title = stringResource(R.string.fx_mono_title),
-            subtitle = stringResource(R.string.fx_mono_desc),
             checked = spatial.mono,
             onCheckedChange = { on -> viewModel.updateSpatial { it.copy(mono = on) } },
             leadingDot = true,
@@ -419,7 +414,6 @@ fun AtmosCard(viewModel: AudioEffectsViewModel) {
         header = {
             EffectToggleRow(
                 title = stringResource(R.string.fx_atmos_title),
-                subtitle = stringResource(R.string.fx_atmos_desc),
                 checked = spatial.surround,
                 onCheckedChange = { on -> viewModel.updateSpatial { it.copy(surround = on) } },
             )
@@ -514,7 +508,7 @@ fun SpeedCard(viewModel: AudioEffectsViewModel) {
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = if (playback.preservePitch) "Pitch is preserved independently" else "Pitch follows speed",
+                        text = if (playback.preservePitch) "Pitch stays where it is" else "Pitch follows speed",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -577,13 +571,12 @@ fun SpeedCard(viewModel: AudioEffectsViewModel) {
                 )
                 EffectToggleRow(
                     title = "Preserve pitch",
-                    subtitle = "Keep original musical pitch regardless of speed",
                     checked = playback.preservePitch,
                     onCheckedChange = { on -> viewModel.updatePlayback { it.copy(preservePitch = on) } },
                 )
                 EffectCollapsible(playback.preservePitch) {
                     EffectSlider(
-                        label = "Pitch shift",
+                        label = "Pitch",
                         valueLabel = (if (playback.pitchSemitones > 0) "+" else "") + "${playback.pitchSemitones.roundToInt()} semitones",
                         value = playback.pitchSemitones,
                         onValueChange = { v -> viewModel.updatePlayback { it.copy(pitchSemitones = v.roundToInt().toFloat()) } },
@@ -626,7 +619,6 @@ fun VolumeCard(viewModel: AudioEffectsViewModel) {
         header = {
             EffectToggleRow(
                 title = stringResource(R.string.fx_volume_title),
-                subtitle = stringResource(R.string.fx_volume_desc),
                 checked = volume.enabled,
                 onCheckedChange = { on -> viewModel.updateVolume { it.copy(enabled = on) } },
             )
