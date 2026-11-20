@@ -1,4 +1,4 @@
-﻿package moe.rgsekai.sekaitune.ui.component
+package moe.rgsekai.sekaitune.ui.component
 
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
@@ -71,6 +71,7 @@ import moe.rgsekai.sekaitune.ui.player.LyricsRecenterDurationMs
 import moe.rgsekai.sekaitune.ui.player.LyricsStagger
 import moe.rgsekai.sekaitune.ui.player.MinInterludeGapMs
 import moe.rgsekai.sekaitune.ui.player.PlaybackClock
+import moe.rgsekai.sekaitune.ui.player.RubyPlacement
 import moe.rgsekai.sekaitune.ui.player.recenterEasingFor
 import moe.rgsekai.sekaitune.ui.theme.rememberLyricsFontFamily
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
@@ -486,6 +487,9 @@ fun LyricsStyleView(
                             val state = look.state
                             val blurStage = if (suppressEffects || !lyricsLineBlurPreference) 0 else look.blurStage
                             val lineAlignment = alignmentFor(entry, useAgentAlignment, mirrored)
+                            val translation = remember(entry.providerTranslationText, entry.text) {
+                                LyricsUtils.providedTranslationTextForEntry(entry)
+                            }
 
                             LyricsGlowLine(
                                 modifier = Modifier.graphicsLayer {
@@ -499,6 +503,8 @@ fun LyricsStyleView(
                                 accentColor = accent,
                                 subLine = entry.providerRomanizedText,
                                 ruby = entry.ruby,
+                                rubyPlacement = if (!translation.isNullOrBlank()) RubyPlacement.ABOVE else RubyPlacement.BELOW,
+                                translation = translation,
                                 alignment = lineAlignment,
                                 waveEnabled = !suppressEffects,
                                 motionStyle = motionStyle,

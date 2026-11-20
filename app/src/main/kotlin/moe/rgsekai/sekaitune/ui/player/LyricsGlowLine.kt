@@ -402,7 +402,7 @@ fun LyricsGlowLine(
         )
 
         if (translationAbove) {
-            TranslationSubText(translation, translationLoading, translationColor, textAlign, above = true)
+            TranslationSubText(translation, translationLoading, translationColor, textAlign, above = true, fontFamily = fontFamily)
         }
 
         // a derived flag, so the fade doesn't recompose the line on every frame
@@ -470,6 +470,7 @@ fun LyricsGlowLine(
             text = subLine,
             color = subLineColor,
             textAlign = textAlign,
+            fontFamily = fontFamily,
         )
 
         parts.backing?.let { backing ->
@@ -492,10 +493,10 @@ fun LyricsGlowLine(
         }
 
         // The translation sits below both the line and its romanisation. It is written by
-        // LyricsTranslationHelper, which until now had no reader in the live player at all â€” the
+        // LyricsTranslationHelper, which until now had no reader in the live player at all — the
         // menu toggle wrote into flows nothing was collecting.
         if (!translationAbove) {
-            TranslationSubText(translation, translationLoading, translationColor, textAlign, above = false)
+            TranslationSubText(translation, translationLoading, translationColor, textAlign, above = false, fontFamily = fontFamily)
         }
     }
     }
@@ -510,6 +511,7 @@ private fun TranslationSubText(
     color: ColorProducer,
     textAlign: TextAlign,
     above: Boolean,
+    fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
 ) {
     if (loading && translation.isNullOrBlank()) {
         TranslationLoadingDots(
@@ -522,13 +524,20 @@ private fun TranslationSubText(
             color = color,
             textAlign = textAlign,
             above = above,
+            fontFamily = fontFamily,
         )
     }
 }
 
 // a small line under the lyric (reading or translation) that fades and unfolds in, instead of popping in and shoving the rows below
 @Composable
-private fun FadingSubText(text: String?, color: ColorProducer, textAlign: TextAlign, above: Boolean = false) {
+private fun FadingSubText(
+    text: String?,
+    color: ColorProducer,
+    textAlign: TextAlign,
+    above: Boolean = false,
+    fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
+) {
     // Keep the last text while folding away, or the exit would animate an empty line.
     val shown = remember { arrayOfNulls<String>(1) }
     if (!text.isNullOrBlank()) shown[0] = text
@@ -540,8 +549,11 @@ private fun FadingSubText(text: String?, color: ColorProducer, textAlign: TextAl
             androidx.compose.animation.shrinkVertically(tween(SubTextFadeMs)),
     ) {
         BasicText(
-            text = shown[0].orEmpty(),
-            style = MaterialTheme.typography.bodyLarge.copy(textAlign = textAlign),
+            text = text ?: shown[0].orEmpty(),
+            style = MaterialTheme.typography.bodyLarge.copy(
+                textAlign = textAlign,
+                fontFamily = fontFamily ?: MaterialTheme.typography.bodyLarge.fontFamily,
+            ),
             color = color,
             overflow = TextOverflow.Clip,
             modifier = Modifier.padding(top = if (above) 0.dp else 3.dp, bottom = if (above) 2.dp else 0.dp),
