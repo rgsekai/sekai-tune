@@ -181,6 +181,7 @@ import androidx.media3.common.MediaMetadata.MEDIA_TYPE_MUSIC
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -1321,7 +1322,7 @@ class MainActivity : ComponentActivity() {
                             }
                         } else {
                             navController.navigate(screen.route) {
-                                popUpTo(navController.graph.startDestinationId) {
+                                popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
                                 launchSingleTop = true
@@ -2356,11 +2357,7 @@ class MainActivity : ComponentActivity() {
                                             } else if (launchMusicRecognitionFromShortcut) {
                                                 MusicRecognitionRoute
                                             } else {
-                                                when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                                                    NavigationTab.HOME -> Screens.Home.route
-                                                    NavigationTab.LIBRARY -> Screens.Library.route
-                                                    else -> Screens.Home.route
-                                                }
+                                                Screens.Home.route
                                             },
                                         enterTransition = {
                                             if (disableAnimations || !moe.rgsekai.sekaitune.ui.theme.SekaiMotion.enabled) {
@@ -2478,6 +2475,7 @@ class MainActivity : ComponentActivity() {
                                             onClearUpdateBadge = { latestVersionName = BuildConfig.VERSION_NAME },
                                             homeScrollConnection = homeScrollBehavior.nestedScrollConnection,
                                             searchScrollConnection = searchScrollBehavior.nestedScrollConnection,
+                                            homeViewModel = homeViewModel,
                                         )
                                     }
                                 }

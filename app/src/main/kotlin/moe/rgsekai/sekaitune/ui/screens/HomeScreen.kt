@@ -84,6 +84,9 @@ fun HomeScreen(
     val haptic = LocalHapticFeedback.current
 
     val screenState by viewModel.screenState.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        viewModel.refreshIfStale()
+    }
     val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 

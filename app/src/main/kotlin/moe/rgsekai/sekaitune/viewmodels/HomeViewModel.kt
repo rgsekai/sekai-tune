@@ -293,9 +293,20 @@ class HomeViewModel
                 )
             }.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
+                started = SharingStarted.Lazily,
                 initialValue = HomeScreenState.Loading,
             )
+
+        @Volatile
+        private var lastFetchTimeMs: Long = 0L
+
+        fun refreshIfStale(thresholdMs: Long = 10 * 60 * 1000L) {
+            val now = System.currentTimeMillis()
+            if (lastFetchTimeMs > 0L && (now - lastFetchTimeMs) > thresholdMs) {
+                Timber.tag("HomeDebug").d("HomeViewModel: data is stale (${(now - lastFetchTimeMs) / 1000}s old), refreshing in background")
+                refresh()
+            }
+        }
 
         private var wasLoggedIn = false
         private fun List<Song>.toQuickPickSample(): List<Song> =
@@ -629,6 +640,7 @@ class HomeViewModel
                         ?.flatMap { it.items }
                         .orEmpty()
 
+                lastFetchTimeMs = System.currentTimeMillis()
                 isInitialLoadComplete.value = true
             } catch (e: CancellationException) {
                 throw e

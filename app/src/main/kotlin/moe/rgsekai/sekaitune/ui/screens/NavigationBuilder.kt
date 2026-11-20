@@ -91,9 +91,14 @@ fun NavGraphBuilder.navigationBuilder(
     onClearUpdateBadge: () -> Unit = {},
     homeScrollConnection: NestedScrollConnection? = null,
     searchScrollConnection: NestedScrollConnection? = null,
+    homeViewModel: moe.rgsekai.sekaitune.viewmodels.HomeViewModel? = null,
 ) {
     composable(Screens.Home.route) {
-        HomeScreen(navController, headerScrollConnection = homeScrollConnection)
+        HomeScreen(
+            navController = navController,
+            headerScrollConnection = homeScrollConnection,
+            viewModel = homeViewModel ?: androidx.hilt.navigation.compose.hiltViewModel(),
+        )
     }
     composable(
         Screens.Library.route,

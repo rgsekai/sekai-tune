@@ -234,6 +234,7 @@ fun TvRoot(
                     navController = navController,
                     scrollBehavior = topAppBarScrollBehavior,
                     latestVersionName = { BuildConfig.VERSION_NAME },
+                    homeViewModel = homeViewModel,
                 )
 
                 // TV-optimized Explore / New Releases screen

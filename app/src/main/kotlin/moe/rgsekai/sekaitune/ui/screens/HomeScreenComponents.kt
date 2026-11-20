@@ -511,8 +511,8 @@ fun QuickPicksSection(
 
     // Handle late-insertion safety: when new items arrive (e.g. new releases loaded in background),
     // prevent the pager from jumping or animating to a different card.
-    val lastItemCount = remember { androidx.compose.runtime.mutableIntStateOf(distinctHeroItems.size) }
-    val lastVisibleItemId = remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val lastItemCount = androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(distinctHeroItems.size) }
+    val lastVisibleItemId = androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
 
     androidx.compose.runtime.LaunchedEffect(pagerState) {
         androidx.compose.runtime.snapshotFlow { pagerState.currentPage }.collect { curr ->
@@ -630,7 +630,9 @@ fun QuickPicksSection(
                     ImageRequest
                         .Builder(context)
                         .data(item.thumbnailUrl)
-                        .crossfade(300)
+                        .memoryCacheKey(item.thumbnailUrl)
+                        .diskCacheKey(item.thumbnailUrl)
+                        .crossfade(false)
                         .build()
                 }
 
@@ -695,10 +697,10 @@ fun QuickPicksSection(
                         model = imageRequest,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
+                        placeholder = androidx.compose.ui.graphics.painter.ColorPainter(SekaiMotion.BoneColor),
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .background(SekaiMotion.BoneColor)
                                 .pageMediaDrift(pageOffset),
                     )
 
