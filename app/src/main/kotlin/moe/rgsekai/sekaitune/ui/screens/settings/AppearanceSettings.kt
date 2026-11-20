@@ -257,19 +257,6 @@ fun AppearanceSettings(navController: NavController) {
     ) { innerPadding ->
         val topPadding = innerPadding.calculateTopPadding()
 
-        val (disableAnimations, onDisableAnimationsChange) = rememberPreference(
-            moe.rgsekai.sekaitune.constants.DisableAnimationsKey,
-            defaultValue = false,
-        )
-        val (animSpeed, onAnimSpeedChange) = rememberPreference(
-            moe.rgsekai.sekaitune.constants.AnimationSpeedKey,
-            defaultValue = 1.0f,
-        )
-        LaunchedEffect(disableAnimations, animSpeed) {
-            moe.rgsekai.sekaitune.ui.theme.SekaiMotion.enabled = !disableAnimations
-            moe.rgsekai.sekaitune.ui.theme.SekaiMotion.speed = animSpeed
-        }
-
         Column(
             Modifier
                 .padding(top = topPadding)
@@ -277,56 +264,6 @@ fun AppearanceSettings(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
         ) {
             PreferenceGroup(title = stringResource(R.string.theme)) {
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.disable_animations)) },
-                        description = stringResource(R.string.disable_animations_desc),
-                        icon = { Icon(painterResource(R.drawable.animation), null) },
-                        checked = disableAnimations,
-                        onCheckedChange = onDisableAnimationsChange,
-                    )
-                }
-
-                item(visible = !disableAnimations) {
-                    val speedSteps = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
-                    val speedLabel = if (animSpeed % 1f == 0f) "${animSpeed.toInt()}x" else "${animSpeed}x"
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.animation_speed),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                text = speedLabel,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        Text(
-                            text = stringResource(R.string.animation_speed_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Slider(
-                            value = animSpeed,
-                            onValueChange = { newVal ->
-                                val closest = speedSteps.minByOrNull { kotlin.math.abs(it - newVal) } ?: 1.0f
-                                onAnimSpeedChange(closest)
-                            },
-                            valueRange = 0.5f..2.0f,
-                            steps = 5,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
                 item {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.liquid_glass)) },
@@ -498,15 +435,6 @@ fun AppearanceSettings(navController: NavController) {
             }
 
             PreferenceGroup(title = stringResource(R.string.appearance_section_ambient)) {
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.aod_customize_title)) },
-                        description = stringResource(R.string.aod_customize_entry_desc),
-                        icon = { Icon(painterResource(R.drawable.bedtime), null) },
-                        onClick = { navController.navigate("settings/appearance/aod_customized") },
-                    )
-                }
-
                 item {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.ambient_mode_settings)) },

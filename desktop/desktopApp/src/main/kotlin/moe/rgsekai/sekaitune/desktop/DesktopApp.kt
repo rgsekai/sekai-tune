@@ -6872,7 +6872,7 @@ private fun DesktopSettingsFooter(onLicenses: () -> Unit) {
                 append("Reddit")
             }
             append("  ")
-            withLink(LinkAnnotation.Url("https://discord.gg/De269BfEA", linkStyles)) {
+            withLink(LinkAnnotation.Url("https://discord.gg/HCeBT9yqQZ", linkStyles)) {
                 append("Discord")
             }
             append("  ")

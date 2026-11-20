@@ -307,6 +307,12 @@ fun Queue(
 
     var locked by rememberPreference(QueueEditLockKey, defaultValue = true)
     var infiniteQueueEnabled by rememberPreference(AutoLoadMoreKey, defaultValue = true)
+    LaunchedEffect(infiniteQueueEnabled) {
+        if (!infiniteQueueEnabled) {
+            infiniteQueueEnabled = true
+            playerConnection.service.onInfiniteQueueEnabled()
+        }
+    }
     val infiniteQueueLoading by playerConnection.service.infiniteQueueLoading.collectAsState()
     val currentQueueFilter by playerConnection.currentQueueFilter.collectAsState()
     val togetherSessionState by playerConnection.service.togetherSessionState.collectAsState()
@@ -803,11 +809,6 @@ fun Queue(
                             selection = false
                             selectedSongs.clear()
                             selectedItems.clear()
-                        }
-
-                        if (infiniteQueueEnabled) {
-                            infiniteQueueEnabled = false
-                            playerConnection.service.onInfiniteQueueDisabled()
                         }
                     },
                     onRepeatClick = { playerConnection.player.toggleRepeatMode() },

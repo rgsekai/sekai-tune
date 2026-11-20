@@ -161,11 +161,7 @@ import moe.rgsekai.sekaitune.playback.PlayerConnection
 import moe.rgsekai.sekaitune.ui.component.BottomSheetPageState
 import moe.rgsekai.sekaitune.ui.component.BottomSheetState
 import moe.rgsekai.sekaitune.ui.component.MenuState
-import moe.rgsekai.sekaitune.ui.component.GlassComponent
-import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
 import moe.rgsekai.sekaitune.ui.component.OneLineLyrics
-import moe.rgsekai.sekaitune.ui.component.isGlassSupported
-import moe.rgsekai.sekaitune.ui.component.liquidGlass
 import moe.rgsekai.sekaitune.ui.component.PlayerSliderTrack
 import moe.rgsekai.sekaitune.ui.component.rememberDelayedBufferingState
 import moe.rgsekai.sekaitune.ui.component.ResizableIconButton
@@ -958,7 +954,6 @@ private fun V8MetadataActions(
 
             Spacer(Modifier.width(16.dp))
 
-            val useGlass = rememberPlayerGlassEnabled()
             val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
 
             Row(
@@ -970,13 +965,7 @@ private fun V8MetadataActions(
                         Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .then(
-                                if (useGlass) {
-                                    Modifier.playerGlass(CircleShape)
-                                } else {
-                                    Modifier.background(foreground.copy(alpha = 0.20f))
-                                },
-                            )
+                            .background(foreground.copy(alpha = 0.20f))
                             .clickable(onClick = onCommentsClick),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -993,13 +982,7 @@ private fun V8MetadataActions(
                         Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .then(
-                                if (useGlass) {
-                                    Modifier.playerGlass(CircleShape)
-                                } else {
-                                    Modifier.background(foreground.copy(alpha = 0.20f))
-                                },
-                            )
+                            .background(foreground.copy(alpha = 0.20f))
                             .clickable(onClick = onMenuClick),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1016,13 +999,7 @@ private fun V8MetadataActions(
                         Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .then(
-                                if (useGlass) {
-                                    Modifier.playerGlass(CircleShape)
-                                } else {
-                                    Modifier.background(foreground.copy(alpha = 0.20f))
-                                },
-                            )
+                            .background(foreground.copy(alpha = 0.20f))
                             .clickable(onClick = onToggleLike),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1218,22 +1195,5 @@ private fun V8TransportControls(
                 },
             )
         }
-    }
-}
-/** True when the "Glass Player" option (and the global glass switch) is on and the device supports it. */
-@Composable
-internal fun rememberPlayerGlassEnabled(): Boolean {
-    val config = LocalGlassEffectConfig.current
-    return config.isEnabledFor(GlassComponent.PLAYER) && isGlassSupported()
-}
-
-/** Applies the liquid glass effect to a player control. No-op when the glass player is disabled. */
-@Composable
-internal fun Modifier.playerGlass(shape: androidx.compose.ui.graphics.Shape): Modifier {
-    val config = LocalGlassEffectConfig.current
-    return if (config.isEnabledFor(GlassComponent.PLAYER) && isGlassSupported()) {
-        this.liquidGlass(config = config, shape = shape)
-    } else {
-        this
     }
 }

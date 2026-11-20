@@ -57,7 +57,6 @@ import moe.rgsekai.sekaitune.ui.screens.settings.AdvancedSettings
 import moe.rgsekai.sekaitune.ui.screens.ambient.AmbientModeScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AiIntegrationSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.AmbientModeSettingsScreen
-import moe.rgsekai.sekaitune.ui.screens.settings.AodCustomizedScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AppearanceSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.BackupAndRestore
 import moe.rgsekai.sekaitune.ui.screens.settings.CanvasSettings
@@ -385,9 +384,6 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/appearance/icon") {
         IconScreen(navController)
-    }
-    composable("settings/appearance/aod_customized") {
-        AodCustomizedScreen(navController)
     }
     composable("settings/appearance/lyrics_animations") {
         LyricsAnimationSettings(navController)

@@ -208,7 +208,7 @@ Sekai Tune is free, open-source software developed in personal time. If you enjo
 Join our community to stay updated, report feedback, or chat with other listeners:
 
 <p align="left">
-  <a href="https://discord.gg/De269BfEA"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://discord.gg/HCeBT9yqQZ"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://t.me/+-mT3ps-V32g3ZWFl"><img src="https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"></a>
   <a href="https://www.reddit.com/r/SekaiTune/s/uGzuuwpCzR"><img src="https://img.shields.io/badge/Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Reddit"></a>
 </p>

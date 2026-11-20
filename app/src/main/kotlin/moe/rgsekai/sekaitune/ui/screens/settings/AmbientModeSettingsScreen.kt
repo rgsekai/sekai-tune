@@ -91,7 +91,7 @@ fun AmbientModeSettingsScreen(navController: NavController) {
                         ),
                     ).padding(bottom = SettingsDimensions.ScreenBottomPadding),
         ) {
-            PreferenceGroup(title = stringResource(R.string.aod_customize_layout)) {
+            PreferenceGroup(title = stringResource(R.string.ambient_mode_layout)) {
                 item {
                     PreferenceEntry(
                         title = { Text(stringResource(R.string.ambient_art_size)) },

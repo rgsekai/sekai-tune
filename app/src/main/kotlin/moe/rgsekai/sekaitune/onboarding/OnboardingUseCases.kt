@@ -76,6 +76,12 @@ class BuildOnboardingUiStateUseCase
                         url = "https://t.me/+-mT3ps-V32g3ZWFl",
                         contentDescription = "Telegram",
                     ),
+                    OnboardingSocialLinkUiModel(
+                        id = "discord",
+                        iconResId = R.drawable.discord,
+                        url = "https://discord.gg/HCeBT9yqQZ",
+                        contentDescription = "Discord",
+                    ),
                 )
         }
     }

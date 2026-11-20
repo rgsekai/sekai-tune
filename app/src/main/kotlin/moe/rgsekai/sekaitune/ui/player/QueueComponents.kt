@@ -356,15 +356,112 @@ fun CurrentSongHeader(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val leadingShape = ButtonGroupDefaults.connectedLeadingButtonShapes().shape
-            val trailingShape = ButtonGroupDefaults.connectedTrailingButtonShapes().shape
+            // Dual Queue Selector (Online vs Local) in its own liquid glass container
+            val dualQueueShape = remember { RoundedCornerShape(24.dp) }
+            Surface(
+                onClick = {
+                    if (enableHapticFeedback) {
+                        view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.CONTEXT_CLICK,
+                            android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                        )
+                    }
+                    onToggleActiveQueue()
+                },
+                shape = dualQueueShape,
+                color = if (isGlassQueue) Color.Transparent else onBackgroundColor.copy(alpha = 0.05f),
+                border = if (isGlassQueue) defaultRimBorder else null,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .then(
+                            if (isGlassQueue) {
+                                Modifier.liquidGlass(
+                                    config = glassConfig,
+                                    shape = dualQueueShape,
+                                    applyEdgeEffects = true,
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            painter =
+                                painterResource(
+                                    if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                        R.drawable.storage
+                                    } else {
+                                        R.drawable.language
+                                    },
+                                ),
+                            contentDescription = null,
+                            tint = onBackgroundColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text =
+                                    stringResource(
+                                        if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                            R.string.queue_local
+                                        } else {
+                                            R.string.queue_online
+                                        },
+                                    ),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = onBackgroundColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text =
+                                    stringResource(
+                                        if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
+                                            R.string.switch_to_online_queue
+                                        } else {
+                                            R.string.switch_to_local_queue
+                                        },
+                                    ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = onBackgroundColor.copy(alpha = 0.55f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
 
+                    Icon(
+                        painter = painterResource(R.drawable.swipe),
+                        contentDescription = null,
+                        tint = onBackgroundColor.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+
+            val circleShape = CircleShape
             val shuffleBorder = if (isGlassQueue) (if (shuffleModeEnabled) activeRimBorder else defaultRimBorder) else null
             val repeatBorder = if (isGlassQueue) (if (repeatMode != Player.REPEAT_MODE_OFF) activeRimBorder else defaultRimBorder) else null
 
+            // Shuffle Button in circle shape
             Surface(
                 onClick = {
                     if (enableHapticFeedback) {
@@ -375,18 +472,17 @@ fun CurrentSongHeader(
                     }
                     onShuffleClick()
                 },
-                shape = leadingShape,
+                shape = circleShape,
                 color = if (isGlassQueue) (if (shuffleModeEnabled) Color.White.copy(alpha = 0.22f) else Color.Transparent) else (if (shuffleModeEnabled) onBackgroundColor.copy(alpha = 0.22f) else onBackgroundColor.copy(alpha = 0.12f)),
                 border = shuffleBorder,
                 modifier =
                     Modifier
-                        .weight(1f)
-                        .height(48.dp)
+                        .size(48.dp)
                         .then(
                             if (isGlassQueue) {
                                 Modifier.liquidGlass(
                                     config = glassConfig,
-                                    shape = leadingShape,
+                                    shape = circleShape,
                                     applyEdgeEffects = true,
                                 )
                             } else {
@@ -404,6 +500,7 @@ fun CurrentSongHeader(
                 }
             }
 
+            // Repeat Button in circle shape
             Surface(
                 onClick = {
                     if (enableHapticFeedback) {
@@ -414,18 +511,17 @@ fun CurrentSongHeader(
                     }
                     onRepeatClick()
                 },
-                shape = trailingShape,
+                shape = circleShape,
                 color = if (isGlassQueue) (if (repeatMode != Player.REPEAT_MODE_OFF) Color.White.copy(alpha = 0.22f) else Color.Transparent) else (if (repeatMode != Player.REPEAT_MODE_OFF) onBackgroundColor.copy(alpha = 0.22f) else onBackgroundColor.copy(alpha = 0.12f)),
                 border = repeatBorder,
                 modifier =
                     Modifier
-                        .weight(1f)
-                        .height(48.dp)
+                        .size(48.dp)
                         .then(
                             if (isGlassQueue) {
                                 Modifier.liquidGlass(
                                     config = glassConfig,
-                                    shape = trailingShape,
+                                    shape = circleShape,
                                     applyEdgeEffects = true,
                                 )
                             } else {
@@ -448,173 +544,6 @@ fun CurrentSongHeader(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // YouTube Music style Auto-play Header with Switch in its own liquid glass container
-        val autoplayShape = remember { RoundedCornerShape(20.dp) }
-        Surface(
-            onClick = {
-                if (enableHapticFeedback) {
-                    view.performHapticFeedback(
-                        android.view.HapticFeedbackConstants.CONTEXT_CLICK,
-                        android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
-                    )
-                }
-                onInfiniteQueueClick()
-            },
-            shape = autoplayShape,
-            color = Color.Transparent,
-            border = if (isGlassQueue) defaultRimBorder else null,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (isGlassQueue) {
-                            Modifier.liquidGlass(
-                                config = glassConfig,
-                                shape = autoplayShape,
-                                applyEdgeEffects = true,
-                            )
-                        } else {
-                            Modifier
-                        }
-                    ),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.autoplay),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = onBackgroundColor,
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(R.string.autoplay_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = onBackgroundColor.copy(alpha = 0.55f),
-                    )
-                }
-
-                androidx.compose.material3.Switch(
-                    checked = infiniteQueueEnabled,
-                    onCheckedChange = {
-                        if (enableHapticFeedback) {
-                            view.performHapticFeedback(
-                                android.view.HapticFeedbackConstants.CONTEXT_CLICK,
-                                android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
-                            )
-                        }
-                        onInfiniteQueueClick()
-                    },
-                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                        checkedThumbColor = if (isGlassQueue) Color.White else backgroundColor,
-                        checkedTrackColor = if (isGlassQueue) Color.White.copy(alpha = 0.35f) else onBackgroundColor,
-                        uncheckedThumbColor = onBackgroundColor.copy(alpha = 0.6f),
-                        uncheckedTrackColor = if (isGlassQueue) Color.White.copy(alpha = 0.10f) else onBackgroundColor.copy(alpha = 0.10f),
-                        uncheckedBorderColor = if (isGlassQueue) Color.White.copy(alpha = 0.20f) else onBackgroundColor.copy(alpha = 0.18f),
-                    ),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Dual Queue Selector (Online vs Local) in its own liquid glass container
-        val dualQueueShape = remember { RoundedCornerShape(20.dp) }
-        Surface(
-            onClick = {
-                if (enableHapticFeedback) {
-                    view.performHapticFeedback(
-                        android.view.HapticFeedbackConstants.CONTEXT_CLICK,
-                        android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
-                    )
-                }
-                onToggleActiveQueue()
-            },
-            shape = dualQueueShape,
-            color = if (isGlassQueue) Color.Transparent else onBackgroundColor.copy(alpha = 0.05f),
-            border = if (isGlassQueue) defaultRimBorder else null,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (isGlassQueue) {
-                            Modifier.liquidGlass(
-                                config = glassConfig,
-                                shape = dualQueueShape,
-                                applyEdgeEffects = true,
-                            )
-                        } else {
-                            Modifier
-                        }
-                    ),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        painter =
-                            painterResource(
-                                if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
-                                    R.drawable.storage
-                                } else {
-                                    R.drawable.language
-                                },
-                            ),
-                        contentDescription = null,
-                        tint = onBackgroundColor,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Column {
-                        Text(
-                            text =
-                                stringResource(
-                                    if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
-                                        R.string.queue_local
-                                    } else {
-                                        R.string.queue_online
-                                    },
-                                ),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = onBackgroundColor,
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    if (activeQueueType == moe.rgsekai.sekaitune.playback.queues.ActiveQueueType.LOCAL) {
-                                        R.string.switch_to_online_queue
-                                    } else {
-                                        R.string.switch_to_local_queue
-                                    },
-                                ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = onBackgroundColor.copy(alpha = 0.55f),
-                        )
-                    }
-                }
-
-                Icon(
-                    painter = painterResource(R.drawable.swipe),
-                    contentDescription = null,
-                    tint = onBackgroundColor.copy(alpha = 0.6f),
-                    modifier = Modifier.size(18.dp),
-                )
             }
         }
 

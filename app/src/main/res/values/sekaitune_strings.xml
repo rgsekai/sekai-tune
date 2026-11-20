@@ -758,8 +758,6 @@
     <string name="liquid_glass_dialog_desc">Manage Glass Dialog Boxes settings</string>
     <string name="liquid_glass_queue">Glass Queue</string>
     <string name="liquid_glass_queue_desc">Manage Glass Queue settings</string>
-    <string name="liquid_glass_player">Glass Player</string>
-    <string name="liquid_glass_player_desc">Apply the glass effect to the player controls (previous, play/pause, next, share, like)</string>
     <string name="color_picker_hex">Hex</string>
     <string name="playing_matched_version">Playing best matched version from YouTube Music</string>
     <string name="downloading_matched_version">Downloading best matched version from YouTube Music</string>
@@ -772,6 +770,7 @@
     <string name="ambient_mode_desc">Fullscreen landscape display with fluid ambient glow and synchronized lyrics</string>
     <string name="ambient_mode_settings">Ambient mode</string>
     <string name="ambient_mode_settings_desc">Artwork size, live artwork, progress bar, lyrics and display options</string>
+    <string name="ambient_mode_layout">Layout</string>
     <string name="ambient_art_size">Music art size</string>
     <string name="ambient_live_artwork">Live album art</string>
     <string name="ambient_live_artwork_desc">Display animated canvas or procedural live visualizer for album art</string>

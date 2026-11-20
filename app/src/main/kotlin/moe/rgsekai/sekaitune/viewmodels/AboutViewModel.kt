@@ -479,7 +479,7 @@ class AboutViewModel
                             id = "discord",
                             iconResId = R.drawable.discord,
                             labelResId = R.string.about_discord,
-                            url = "https://discord.gg/De269BfEA",
+                            url = "https://discord.gg/HCeBT9yqQZ",
                         ),
                     ),
                 leadDeveloper =
