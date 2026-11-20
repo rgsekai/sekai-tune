@@ -23,6 +23,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import moe.rgsekai.sekaitune.R
+import timber.log.Timber
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -106,7 +107,6 @@ internal class PillDropTargets(private val context: Context, private val coverPx
         view.animate().cancel()
         val h = px(ScrimHeightDp) + bottomInset
         wmParams.height = h
-        view.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h, Gravity.BOTTOM)
         (row.layoutParams as FrameLayout.LayoutParams).bottomMargin = px(FromBottomDp) + bottomInset
         if (!added) {
             runCatching {
@@ -116,6 +116,9 @@ internal class PillDropTargets(private val context: Context, private val coverPx
         } else {
             runCatching { windowManager.updateViewLayout(view, wmParams) }
         }
+        view.requestLayout()
+        row.requestLayout()
+        targets.forEach { it.view.requestLayout() }
         hovered = null
         targets.forEach { it.reset() }
         view.visibility = View.VISIBLE
@@ -169,22 +172,39 @@ internal class PillDropTargets(private val context: Context, private val coverPx
     fun hover(centerX: Float, centerY: Float): PillDrop? {
         var best: PillDrop? = null
         var bestDistance = Float.MAX_VALUE
+        val pad = px(24f) // 24dp hit test padding
         for (target in targets) {
-            if (!boundsOf(target)) continue
-            val reach = px(ReachDp) + if (target.drop == hovered) px(LeaveDp) else 0
-            val inside = centerX >= bounds.left - reach && centerX <= bounds.right + reach &&
-                centerY >= bounds.top - coverPx - reach && centerY <= bounds.bottom + reach
+            val hasBounds = boundsOf(target)
+            if (!hasBounds) {
+                Timber.tag("DropDebug").d(
+                    "hover: target=${target.drop} hasBounds=false (vis=${view.visibility}, pillW=${target.view.width}, pillH=${target.view.height})"
+                )
+                continue
+            }
+            val left = bounds.left - pad
+            val right = bounds.right + pad
+            val top = bounds.top - pad
+            val bottom = bounds.bottom + pad
+            val inside = centerX in left..right && centerY in top..bottom
             val distance = abs(centerX - bounds.centerX())
+            Timber.tag("DropDebug").d(
+                "hover check: target=${target.drop}, center=(%.1f, %.1f), bounds=$bounds, pad=$pad, inside=$inside, dist=%.1f",
+                centerX, centerY, distance
+            )
             if (inside && distance < bestDistance) {
                 best = target.drop
                 bestDistance = distance
             }
         }
         if (best != hovered) {
+            val oldHovered = hovered
             hovered = best
             targets.forEach { it.light(it.drop == best) }
-            if (best != null) view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            if (best != null && best != oldHovered) {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            }
         }
+        Timber.tag("DropDebug").d("hover result: hoveredTarget=$hovered")
         return best
     }
 
@@ -209,7 +229,7 @@ internal class PillDropTargets(private val context: Context, private val coverPx
 
     private fun boundsOf(target: Target): Boolean {
         val pill = target.view
-        if (view.visibility != View.VISIBLE || !view.isLaidOut || !pill.isLaidOut) return false
+        if (view.visibility != View.VISIBLE || pill.visibility != View.VISIBLE || pill.width <= 0 || pill.height <= 0) return false
         val loc = IntArray(2)
         pill.getLocationOnScreen(loc)
         bounds.set(loc[0].toFloat(), loc[1].toFloat(), (loc[0] + pill.width).toFloat(), (loc[1] + pill.height).toFloat())

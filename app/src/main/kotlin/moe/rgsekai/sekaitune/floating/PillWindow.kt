@@ -21,6 +21,7 @@ import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import timber.log.Timber
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -430,7 +431,13 @@ internal class PillWindow(
                     val targetY = startParamsY + (event.rawY - downRawY)
                     drag(targetX, targetY)
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> drop(event.actionMasked == MotionEvent.ACTION_UP)
+                MotionEvent.ACTION_UP -> {
+                    val targetX = startParamsX + (event.rawX - downRawX)
+                    val targetY = startParamsY + (event.rawY - downRawY)
+                    drag(targetX, targetY)
+                    drop(released = true)
+                }
+                MotionEvent.ACTION_CANCEL -> drop(released = false)
             }
             return true
         }
@@ -490,7 +497,18 @@ internal class PillWindow(
             coverX = if (dockEnd) (params.x + frameWidth - margin - cover).toFloat() else (params.x + margin).toFloat()
             coverY = (params.y + margin).toFloat()
             if (root.isAttachedToWindow) runCatching { windowManager.updateViewLayout(root, params) }
-            val over = targets.hover(coverX + cover / 2f, coverY + cover / 2f)
+            val rootLoc = IntArray(2)
+            root.getLocationOnScreen(rootLoc)
+            val bubbleCenterX = coverX + cover / 2f
+            val bubbleCenterY = coverY + cover / 2f
+            Timber.tag("DropDebug").d(
+                "drag: params=(%d, %d), rootLoc=(%d, %d), rootSize=(%d, %d), bubbleCenter=(%.1f, %.1f)",
+                params.x, params.y, rootLoc[0], rootLoc[1], root.width, root.height, bubbleCenterX, bubbleCenterY
+            )
+            val over = targets.hover(bubbleCenterX, bubbleCenterY)
+            if (over != null && over != magnet) {
+                root.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            }
             magnet = over
         }
 
@@ -505,10 +523,13 @@ internal class PillWindow(
             val drop = magnet.takeIf { released }
             magnet = null
             cancelSnap()
+            Timber.tag("DropDebug").d("drop: released=$released, dropTarget=$drop, speed=(${speed.x}, ${speed.y})")
             if (drop != null) {
+                Timber.tag("DropDebug").d("drop action: vanish($drop)")
                 vanish(drop)
                 return
             }
+            Timber.tag("DropDebug").d("drop action: snap back to edge (settle)")
             targets.hide()
             settle(speed.x, speed.y)
         }
