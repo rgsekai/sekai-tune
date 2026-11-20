@@ -6,26 +6,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
-import moe.rgsekai.sekaitune.utils.rememberPreference
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,24 +28,30 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.constants.SyncLikesToSpotifyKey
+import moe.rgsekai.sekaitune.lyrics.LyricsEntry
+import moe.rgsekai.sekaitune.playback.PlayerConnection
+import moe.rgsekai.sekaitune.ui.player.flagship.AmbientBackdrop
+import moe.rgsekai.sekaitune.ui.player.flagship.FollowPicture
+import moe.rgsekai.sekaitune.ui.player.flagship.rememberAmbientClock
+import moe.rgsekai.sekaitune.ui.player.flagship.rememberAmbientColors
 import moe.rgsekai.sekaitune.ui.player.styles.PlayerPreviewData
+import moe.rgsekai.sekaitune.utils.rememberPreference
 
 /**
  * Poster Player UI layout:
+ * - Ambient backdrop softly drifting with artwork tones.
  * - Huge circle crop artwork swung from the top-left corner.
- * - Circular seek bar arc / ring tracking progress.
- * - Bold expressive title / lyrics.
+ * - Circular seek bar arc / ring tracking progress with timestamps ("0:00", "3:17") and touch scrubbing.
+ * - Bold expressive synced lyrics / title with word-by-word glow and smooth transitions.
  * - Vertical 4-pill action stack on the bottom right (Like, Prev, Play/Pause, Next).
  */
 @Composable
@@ -64,15 +63,66 @@ fun PosterPlayerContent(
     onNextClick: () -> Unit,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onSeek: ((Long) -> Unit)? = null,
+    playerConnection: PlayerConnection? = null,
+    lyricsSyncOffset: Int = 0,
+    onOpenLyrics: (() -> Unit)? = null,
+    onOpenQueue: (() -> Unit)? = null,
+    isPlayerExpanded: Boolean = true,
 ) {
     val foreground = Color.White
-    val secondaryForeground = foreground.copy(alpha = 0.72f)
     val syncLikesToSpotify by rememberPreference(SyncLikesToSpotifyKey, false)
 
+    val artworkUrl = (data.artworkModel as? String) ?: data.artworkModel?.toString()
+    val ambientColors = rememberAmbientColors()
+    FollowPicture(ambientColors, artworkUrl)
+    val ambientClock = rememberAmbientClock(running = data.isPlaying && isPlayerExpanded)
+
+    // Observe real-time lyrics from playerConnection if connected
+    val currentLyricsEntity by playerConnection?.currentLyrics?.collectAsStateWithLifecycle(initialValue = null)
+        ?: remember { mutableStateOf(null) }
+    val currentTrackId = playerConnection?.mediaMetadata?.value?.id
+
+    val lyricsText = remember(currentLyricsEntity, currentTrackId) {
+        currentLyricsEntity?.takeIf { currentTrackId == null || it.id == currentTrackId }?.lyrics
+    }
+
+    val parsedLyrics = remember(lyricsText, data.durationMs) {
+        if (!lyricsText.isNullOrBlank() && lyricsText != moe.rgsekai.sekaitune.db.entities.LyricsEntity.LYRICS_NOT_FOUND) {
+            val parsed = when {
+                moe.rgsekai.sekaitune.lyrics.LyricsUtils.isTtml(lyricsText) ->
+                    moe.rgsekai.sekaitune.lyrics.LyricsUtils.parseTtml(lyricsText, (data.durationMs / 1000L).toInt())
+                moe.rgsekai.sekaitune.lyrics.LyricsUtils.isLineSyncedLrc(lyricsText) ->
+                    moe.rgsekai.sekaitune.lyrics.LyricsUtils.parseLyrics(lyricsText)
+                else -> emptyList()
+            }
+            parsed.filter { !it.isBackground && it.text.isNotBlank() }
+        } else {
+            emptyList()
+        }
+    }
+
+    val effectiveLines = remember(parsedLyrics, data.lyricLine) {
+        if (parsedLyrics.isNotEmpty()) parsedLyrics
+        else if (data.lyricLine.isNotBlank()) listOf(LyricsEntry(0L, data.lyricLine))
+        else emptyList()
+    }
+
+    val positionMsProvider: () -> Long = remember(playerConnection, data.progressMs, lyricsSyncOffset) {
+        { (playerConnection?.player?.currentPosition ?: data.progressMs) + lyricsSyncOffset.toLong() }
+    }
+    val seekPositionMsProvider: () -> Long = remember(playerConnection, data.progressMs) {
+        { playerConnection?.player?.currentPosition ?: data.progressMs }
+    }
+    val livePosition = rememberLivePosition(
+        positionMsProvider = positionMsProvider,
+        isPlaying = data.isPlaying,
+    )
+
+    val ringState = rememberCoverRingState()
+
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black),
+        modifier = modifier.fillMaxSize(),
     ) {
         val w = maxWidth
         val h = maxHeight
@@ -96,7 +146,27 @@ fun PosterPlayerContent(
             }
         }
 
-        // 1. Circle Cover Artwork
+        // Layer 0: Ambient Backdrop drifting softly
+        AmbientBackdrop(
+            colors = ambientColors,
+            modifier = Modifier.fillMaxSize(),
+            time = ambientClock,
+        )
+
+        // Layer 0.5: Soft dark gradient overlay for optimal typography contrast and depth
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to Color.Transparent,
+                        0.42f to Color.Black.copy(alpha = 0.28f),
+                        1.0f to Color.Black.copy(alpha = 0.82f),
+                    ),
+                ),
+        )
+
+        // Layer 1: Circle Cover Artwork
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -142,45 +212,22 @@ fun PosterPlayerContent(
             }
         }
 
-        // 2. Cover Rim Progress Arc
-        val progressFraction = if (data.durationMs > 0L) {
-            (data.progressMs.toFloat() / data.durationMs.toFloat()).coerceIn(0f, 1f)
-        } else {
-            0.35f
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    // Draw seek arc around the rim of the circle
-                    val startAngle = 18f
-                    val sweepAngle = 76f * progressFraction
-                    val arcRadius = radiusPx + 8.dp.toPx()
-
-                    drawArc(
-                        color = Color.White.copy(alpha = 0.25f),
-                        startAngle = startAngle,
-                        sweepAngle = 76f,
-                        useCenter = false,
-                        topLeft = Offset(centerOffset.x - arcRadius, centerOffset.y - arcRadius),
-                        size = androidx.compose.ui.geometry.Size(arcRadius * 2f, arcRadius * 2f),
-                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
-                    )
-
-                    drawArc(
-                        color = Color.White,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = false,
-                        topLeft = Offset(centerOffset.x - arcRadius, centerOffset.y - arcRadius),
-                        size = androidx.compose.ui.geometry.Size(arcRadius * 2f, arcRadius * 2f),
-                        style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round),
-                    )
-                },
+        // Layer 2: Cover Rim Interactive Progress Arc with Timestamps
+        CoverRing(
+            state = ringState,
+            circle = RingCircle(centerOffset, radiusPx),
+            durationMs = data.durationMs,
+            positionMsProvider = seekPositionMsProvider,
+            onSeek = { ms ->
+                onSeek?.invoke(ms) ?: playerConnection?.player?.seekTo(ms)
+            },
+            isPlaying = data.isPlaying,
+            trackId = currentTrackId,
+            interactive = isPlayerExpanded,
+            modifier = Modifier.fillMaxSize(),
         )
 
-        // 3. Top Menu Option Button (Sekai Tune Real 3-dot Menu)
+        // Layer 3: Top Menu Option Button (3-dot Menu)
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -199,55 +246,40 @@ fun PosterPlayerContent(
             )
         }
 
-        // 4. Large Bold Text (Title / Lyrics)
-        Column(
+        // Layer 4: Bold Expressive Synced Lyrics / Title
+        val wordsTop = (w * 1.22f).coerceAtMost(h * 0.58f)
+        val pillsWidth = 54.dp
+        val bottomMargin = 42.dp
+
+        Box(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth(0.70f)
-                .padding(start = 24.dp, bottom = 48.dp),
+                .fillMaxSize()
+                .padding(
+                    top = wordsTop + 8.dp,
+                    start = 24.dp,
+                    end = 22.dp + pillsWidth + 16.dp,
+                    bottom = bottomMargin,
+                ),
         ) {
-            Text(
-                text = data.title,
-                style = MaterialTheme.typography.displaySmall,
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Black,
-                color = foreground,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 46.sp,
-            )
-
-            Spacer(Modifier.height(10.dp))
-
-            Text(
-                text = data.artist,
-                style = MaterialTheme.typography.titleMedium,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = secondaryForeground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            if (data.lyricLine.isNotBlank()) {
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    text = data.lyricLine,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = foreground.copy(alpha = 0.88f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+            Column(modifier = Modifier.fillMaxSize()) {
+                PosterText(
+                    lines = effectiveLines,
+                    position = livePosition,
+                    title = data.title,
+                    artist = data.artist,
+                    color = foreground,
+                    baseSize = 40.sp,
+                    gap = 10.dp,
+                    push = { Offset(0f, ringState.expand.value * with(density) { 30.dp.toPx() }) },
                 )
             }
         }
 
-        // 5. Vertical 4-Pill Action Stack on the Bottom Right
+        // Layer 5: Vertical 4-Pill Action Stack on the Bottom Right
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 22.dp, bottom = 42.dp),
+                .padding(end = 22.dp, bottom = bottomMargin),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -311,4 +343,3 @@ private fun PosterPillButton(
         )
     }
 }
-

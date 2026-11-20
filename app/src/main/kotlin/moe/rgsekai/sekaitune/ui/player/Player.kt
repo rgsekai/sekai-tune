@@ -428,9 +428,10 @@ fun BottomSheetPlayer(
                 ).lyricsHelper()
         }
 
-    LaunchedEffect(mediaMetadata?.id, showOneLineLyrics, state.isExpandedOrExpanding) {
+    val lyricsNeeded = showOneLineLyrics || activePlayerStyle == PlayerStyle.POSTER
+    LaunchedEffect(mediaMetadata?.id, lyricsNeeded, state.isExpandedOrExpanding) {
         val currentMeta = mediaMetadata ?: return@LaunchedEffect
-        if (!showOneLineLyrics || !state.isExpandedOrExpanding) return@LaunchedEffect
+        if (!lyricsNeeded || !state.isExpandedOrExpanding) return@LaunchedEffect
         LyricsFetchManager.fetchLyricsForSong(
             context = context,
             database = playerConnection.database,
@@ -1401,6 +1402,16 @@ fun BottomSheetPlayer(
                                     onPlayPauseClick = { playerConnection.player.togglePlayPause() },
                                     onNextClick = { playerConnection.player.seekToNext() },
                                     onMenuClick = onMenuClick,
+                                    onSeek = { ms ->
+                                        onSliderValueChange?.invoke(ms)
+                                        playerConnection.player.seekTo(ms)
+                                        onSliderValueChangeFinished?.invoke()
+                                    },
+                                    playerConnection = playerConnection,
+                                    lyricsSyncOffset = lyricsSyncOffset,
+                                    onOpenLyrics = { isLyricsScreenVisible = true },
+                                    onOpenQueue = { },
+                                    isPlayerExpanded = state.isExpanded,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }

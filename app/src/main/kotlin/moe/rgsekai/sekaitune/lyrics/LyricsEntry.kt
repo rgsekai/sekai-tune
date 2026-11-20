@@ -37,6 +37,8 @@ data class LyricsEntry(
     val isBackground: Boolean = false,
     val syllables: List<WordTimestamp>? = null,
     val ruby: List<RubyToken>? = null,
+    val rubyFlow: MutableStateFlow<List<RubyToken>?> = MutableStateFlow(null),
+    val translatedTextFlow: MutableStateFlow<String?> = MutableStateFlow(null),
 ) : Comparable<LyricsEntry> {
     override fun compareTo(other: LyricsEntry): Int = (time - other.time).toInt()
 
