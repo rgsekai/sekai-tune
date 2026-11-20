@@ -739,6 +739,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_floating_lyrics",
+                title = context.getString(R.string.floating_lyrics),
+                subtitle = context.getString(R.string.floating_lyrics_desc),
+                category = lyricsCategory,
+                iconRes = R.drawable.lyrics,
+                route = "settings/lyrics",
+                keywords = listOf("floating lyrics", "overlay", "lyrics overlay", "bubble", "pip lyrics", "floating bubble"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_romanize_lyrics",
                 title = "Romanize lyrics (Romaji, Pinyin, Hangul)",
                 subtitle = "Convert Japanese, Korean, and Chinese lyrics into readable romanized pronunciation",

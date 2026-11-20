@@ -507,6 +507,7 @@ class MusicService :
     private var statsProgressJob: Job? = null
     private val pendingHistoryFinalizations = mutableMapOf<String, MutableList<PendingHistoryFinalization>>()
     private val historyRecordingJobs = ConcurrentHashMap<Long, kotlinx.coroutines.Deferred<ImmediateHistoryResult>>()
+    private var floatingLyrics: moe.rgsekai.sekaitune.floating.FloatingLyrics? = null
 
     val currentMediaMetadata = MutableStateFlow<moe.rgsekai.sekaitune.models.MediaMetadata?>(null)
     val queueRestoreCompleted = MutableStateFlow(false)
@@ -1357,6 +1358,15 @@ class MusicService :
             .build()
         addSession(mediaSession)
         ColdStartTimer.addStage("MusicService: MediaLibrarySession Built")
+
+        floatingLyrics = moe.rgsekai.sekaitune.floating.FloatingLyrics(
+            context = this,
+            database = database,
+            source = moe.rgsekai.sekaitune.car.CarLyricsSource(database, lyricsHelper),
+            song = currentMediaMetadata,
+            player = kotlinx.coroutines.flow.MutableStateFlow(player),
+            scope = scope,
+        ).also { it.start() }
 
         updateNotification()
         player.repeatMode = REPEAT_MODE_OFF
@@ -9270,6 +9280,8 @@ class MusicService :
 
     override fun onDestroy() {
         super.onDestroy()
+        floatingLyrics?.stop()
+        floatingLyrics = null
         discordPresence.update(null)
         scrobbleTracker.onSongStop()
         sessionDeduplicator.clear()

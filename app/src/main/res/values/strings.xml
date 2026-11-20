@@ -1212,6 +1212,13 @@
     <string name="comments_edited">(edited)</string>
     <string name="comments_add">Add comment</string>
     <string name="comments_error">Failed to load comments</string>
+    <string name="floating_lyrics">Floating lyrics</string>
+    <string name="floating_lyrics_desc">Show synced lyrics over other apps while music plays</string>
+    <string name="floating_lyrics_permission">Sekai Tune needs permission to display over other apps for floating lyrics</string>
+    <string name="floating_lyrics_turned_off">Floating lyrics turned off</string>
+    <string name="floating_lyrics_close">Close</string>
+    <string name="floating_lyrics_never">Don\'t show again</string>
+    <string name="floating_lyrics_open">Open Sekai Tune</string>
 </resources>
 
 

@@ -30,6 +30,8 @@ private const val ACTION_PIP_PREVIOUS = "moe.rgsekai.sekaitune.pip.ACTION_PREVIO
 private const val ACTION_PIP_PLAY_PAUSE = "moe.rgsekai.sekaitune.pip.ACTION_PLAY_PAUSE"
 private const val ACTION_PIP_NEXT = "moe.rgsekai.sekaitune.pip.ACTION_NEXT"
 
+val isPipActive = kotlinx.coroutines.flow.MutableStateFlow(false)
+
 val LocalInPipMode = compositionLocalOf { false }
 
 fun isPipSupported(context: Context): Boolean {

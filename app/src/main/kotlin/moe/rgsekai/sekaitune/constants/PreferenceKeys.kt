@@ -958,6 +958,10 @@ val VideoModeWholeVideoKey = booleanPreferencesKey("videoModeWholeVideo")
 
 
 val VideoModeActiveKey = booleanPreferencesKey("videoModeActive")
+
+val FloatingLyricsKey = booleanPreferencesKey("floatingLyrics")
+val FloatingLyricsXKey = intPreferencesKey("floatingLyricsX")
+val FloatingLyricsYKey = intPreferencesKey("floatingLyricsY")
 val VideoModeFullScreenKey = booleanPreferencesKey("videoModeFullScreen")
 val CarLyricsKey = booleanPreferencesKey("carLyrics")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")

@@ -110,6 +110,7 @@ import moe.rgsekai.sekaitune.constants.PreferredLyricsProvider
 import moe.rgsekai.sekaitune.constants.PreloadQueueLyricsEnabledKey
 import moe.rgsekai.sekaitune.constants.QueueLyricsPreloadCountKey
 import moe.rgsekai.sekaitune.constants.deserializeLyricsProviderOrder
+import moe.rgsekai.sekaitune.floating.rememberFloatingLyricsSwitch
 import moe.rgsekai.sekaitune.paxsenix.models.PaxsenixStats
 import moe.rgsekai.sekaitune.paxsenix.models.ProviderStats
 import moe.rgsekai.sekaitune.ui.component.ActionPromptDialog
@@ -468,6 +469,17 @@ fun LyricsSettings(
                             LyricsMode.ENHANCED -> stringResource(R.string.lyrics_mode_enhanced)
                         }
                     },
+                )
+            }
+
+            item {
+                val (floatingLyrics, onFloatingLyricsChange) = rememberFloatingLyricsSwitch()
+                SwitchPreference(
+                    title = { Text(stringResource(R.string.floating_lyrics)) },
+                    description = stringResource(R.string.floating_lyrics_desc),
+                    icon = { Icon(painterResource(R.drawable.lyrics), null) },
+                    checked = floatingLyrics,
+                    onCheckedChange = onFloatingLyricsChange,
                 )
             }
 
