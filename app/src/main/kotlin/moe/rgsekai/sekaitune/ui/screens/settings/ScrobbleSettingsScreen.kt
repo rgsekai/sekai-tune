@@ -94,7 +94,7 @@ fun ScrobbleSettingsScreen(
     var showSignInSheet by rememberSaveable { mutableStateOf(false) }
     var unconfiguredError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val iconRes = if (provider == ScrobbleProvider.LASTFM) R.drawable.ic_lastfm else R.drawable.ic_librefm
+    val iconRes = if (provider == ScrobbleProvider.LASTFM) R.drawable.integration_lastfm else R.drawable.integration_librefm
     val accentColor = if (provider == ScrobbleProvider.LASTFM) Color(0xFFD51007) else Color(0xFFB52323)
 
     Scaffold(

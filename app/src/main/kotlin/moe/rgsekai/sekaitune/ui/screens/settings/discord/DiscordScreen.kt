@@ -176,9 +176,11 @@ fun DiscordScreen(
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.discord),
+                            painter = painterResource(R.drawable.integration_discord),
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp)),
                         )
                         Spacer(Modifier.size(14.dp))
                         Column(Modifier.weight(1f)) {

@@ -511,20 +511,22 @@ fun AccountSettings(
                 item {
                     ExpressiveSectionCard(title = stringResource(R.string.integrations)) {
                         ExpressiveActionRow(
-                            icon = painterResource(R.drawable.integration),
-                            title = stringResource(R.string.integrations),
+                            icon = painterResource(R.drawable.spotify_icon),
+                            title = stringResource(R.string.canvas_spotify),
                             subtitle = if (spotifyState.isAuthenticated && spotifyState.accountName.isNotBlank()) {
                                 stringResource(R.string.spotify_connected_as, spotifyState.accountName)
                             } else {
                                 stringResource(R.string.integrations_desc)
                             },
+                            accent = Color(0xFF1DB954),
+                            tintIcon = false,
                             onClick = { navController.navigate("settings/integrations") },
                         )
 
                         ExpressiveDivider()
 
                         ExpressiveActionRow(
-                            icon = painterResource(R.drawable.ic_lastfm),
+                            icon = painterResource(R.drawable.integration_lastfm),
                             title = stringResource(R.string.scrobble_lastfm_title),
                             subtitle = if (lastfmUsername.isNotBlank()) {
                                 if (lastfmEnabled) stringResource(R.string.scrobble_connected_as, lastfmUsername)
@@ -540,7 +542,7 @@ fun AccountSettings(
                         ExpressiveDivider()
 
                         ExpressiveActionRow(
-                            icon = painterResource(R.drawable.ic_librefm),
+                            icon = painterResource(R.drawable.integration_librefm),
                             title = stringResource(R.string.scrobble_librefm_title),
                             subtitle = if (librefmUsername.isNotBlank()) {
                                 if (librefmEnabled) stringResource(R.string.scrobble_connected_as, librefmUsername)
@@ -556,7 +558,7 @@ fun AccountSettings(
                         ExpressiveDivider()
 
                         ExpressiveActionRow(
-                            icon = painterResource(R.drawable.discord),
+                            icon = painterResource(R.drawable.integration_discord),
                             title = stringResource(R.string.discord_title),
                             subtitle = if (discordToken.isNotBlank()) {
                                 val user = discordProfile?.displayName ?: discordProfile?.username
@@ -570,6 +572,7 @@ fun AccountSettings(
                                 stringResource(R.string.discord_desc)
                             },
                             accent = Color(0xFF5865F2),
+                            tintIcon = false,
                             onClick = { navController.navigate("settings/integrations/discord") },
                         )
                     }
@@ -1622,7 +1625,7 @@ internal fun ExpressiveRowIcon(
     Surface(
         modifier = Modifier.size(RowIconSize),
         shape = RoundedCornerShape(14.dp),
-        color = tint.copy(alpha = bgAlpha),
+        color = if (tintIcon) tint.copy(alpha = bgAlpha) else Color.Transparent,
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             if (tintIcon) {
@@ -1636,7 +1639,10 @@ internal fun ExpressiveRowIcon(
                 androidx.compose.foundation.Image(
                     painter = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(22.dp),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(8.dp)),
                 )
             }
         }
