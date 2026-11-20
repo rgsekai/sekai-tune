@@ -363,17 +363,6 @@ object SettingsSearchRepository {
                 keywords = listOf("discord", "rpc", "rich presence", "status", "listening to", "playing"),
             ),
         )
-        add(
-            SettingsSearchEntry(
-                id = "sub_more_content",
-                title = context.getString(R.string.more_content),
-                subtitle = context.getString(R.string.use_login_for_browse_desc),
-                category = accountCategory,
-                iconRes = R.drawable.account,
-                route = "settings/account",
-                keywords = listOf("more content", "browse with account", "personalized recommendations", "home feed"),
-            ),
-        )
 
         // ==========================================
         // 4. APPEARANCE SUB-SETTINGS

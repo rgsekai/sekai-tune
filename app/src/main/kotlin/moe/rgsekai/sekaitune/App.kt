@@ -250,9 +250,7 @@ class App :
                     }
                 }
 
-                if (prefs[UseLoginForBrowse] != false) {
-                    YouTube.useLoginForBrowse = true
-                }
+                YouTube.useLoginForBrowse = true
 
                 isInitialized = true
                 ColdStartTimer.addStage("App Init Complete")

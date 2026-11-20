@@ -132,15 +132,12 @@ import moe.rgsekai.sekaitune.constants.AccountChannelHandleKey
 import moe.rgsekai.sekaitune.constants.AccountEmailKey
 import moe.rgsekai.sekaitune.constants.AccountNameKey
 import moe.rgsekai.sekaitune.constants.DataSyncIdKey
-import moe.rgsekai.sekaitune.constants.ForceSyncOnAccountSwitchKey
 import moe.rgsekai.sekaitune.constants.InnerTubeCookieKey
 import moe.rgsekai.sekaitune.constants.SavedAccountsKey
 import moe.rgsekai.sekaitune.constants.SelectedYtmPlaylistsKey
 import moe.rgsekai.sekaitune.constants.ShowSpotifyFollowArtistKey
 import moe.rgsekai.sekaitune.constants.ShowSpotifyPlaylistsKey
-import moe.rgsekai.sekaitune.constants.UseLoginForBrowse
 import moe.rgsekai.sekaitune.constants.VisitorDataKey
-import moe.rgsekai.sekaitune.constants.YtmSyncKey
 import moe.rgsekai.sekaitune.innertube.YouTube
 import moe.rgsekai.sekaitune.innertube.utils.hasYouTubeLoginCookie
 import moe.rgsekai.sekaitune.spotify.SpotifyAccountUiState
@@ -197,7 +194,6 @@ fun AccountSettings(
     val scrollBehavior = appBarScrollBehavior()
 
     val accountLabel = stringResource(R.string.account)
-    val generalLabel = stringResource(R.string.general)
     val miscLabel = stringResource(R.string.misc)
     val loginLabel = stringResource(R.string.login)
     val notLoggedInLabel = stringResource(R.string.not_logged_in)
@@ -218,10 +214,6 @@ fun AccountSettings(
     val (innerTubeCookie, onInnerTubeCookieChange) = rememberPreference(InnerTubeCookieKey, "")
     val (visitorData, onVisitorDataChange) = rememberPreference(VisitorDataKey, "")
     val (dataSyncId, onDataSyncIdChange) = rememberPreference(DataSyncIdKey, "")
-    val (useLoginForBrowse, onUseLoginForBrowseChange) = rememberPreference(UseLoginForBrowse, true)
-    val (ytmSync, onYtmSyncChange) = rememberPreference(YtmSyncKey, true)
-    val (forceSyncOnAccountSwitch, onForceSyncOnAccountSwitchChange) =
-        rememberPreference(ForceSyncOnAccountSwitchKey, false)
     val (selectedYtmPlaylists, _) = rememberPreference(SelectedYtmPlaylistsKey, "")
     val (savedAccountsJson, onSavedAccountsJsonChange) = rememberPreference(SavedAccountsKey, "")
     val savedAccounts =
@@ -240,8 +232,8 @@ fun AccountSettings(
             hasYouTubeLoginCookie(innerTubeCookie)
         }
 
-    LaunchedEffect(useLoginForBrowse) {
-        YouTube.useLoginForBrowse = useLoginForBrowse
+    LaunchedEffect(Unit) {
+        YouTube.useLoginForBrowse = true
     }
 
     val isTv = LocalIsTv.current
@@ -293,7 +285,7 @@ fun AccountSettings(
                     innerTubeCookie = innerTubeCookie,
                     visitorData = visitorData,
                     dataSyncId = dataSyncId,
-                    ytmSync = ytmSync,
+                    ytmSync = true,
                     selectedYtmPlaylists = selectedYtmPlaylists,
                 )
             onSavedAccountsJsonChange(encodeSavedAccounts(existing + newAccount))
@@ -303,14 +295,14 @@ fun AccountSettings(
     val switchToAccount: (SavedAccount) -> Unit = { account ->
         viewModel.switchToAccount(
             account = account,
-            forceSyncOnSwitch = forceSyncOnAccountSwitch,
+            forceSyncOnSwitch = true,
         )
     }
 
     val switchToAccountChannel: (AccountChannelUiModel) -> Unit = { channel ->
         viewModel.switchToAccountChannel(
             channel = channel,
-            forceSyncOnSwitch = forceSyncOnAccountSwitch,
+            forceSyncOnSwitch = true,
         )
     }
 
@@ -467,46 +459,7 @@ fun AccountSettings(
                     }
                 }
 
-                item {
-                    AnimatedVisibility(
-                        visible = isLoggedIn,
-                        enter =
-                            fadeIn(spring(stiffness = Spring.StiffnessLow)) +
-                                expandVertically(
-                                    spring(stiffness = Spring.StiffnessLow),
-                                ),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        ExpressiveSectionCard(title = generalLabel) {
-                            ExpressiveSwitchRow(
-                                icon = painterResource(R.drawable.add_circle),
-                                title = stringResource(R.string.more_content),
-                                subtitle = stringResource(R.string.use_login_for_browse_desc),
-                                checked = useLoginForBrowse,
-                                onCheckedChange = onUseLoginForBrowseChange,
-                            )
 
-                            ExpressiveDivider()
-
-                            ExpressiveSwitchRow(
-                                icon = painterResource(R.drawable.cached),
-                                title = stringResource(R.string.yt_sync),
-                                checked = ytmSync,
-                                onCheckedChange = onYtmSyncChange,
-                            )
-
-                            ExpressiveDivider()
-
-                            ExpressiveSwitchRow(
-                                icon = painterResource(R.drawable.sync),
-                                title = stringResource(R.string.force_sync_on_switch_account),
-                                subtitle = stringResource(R.string.force_sync_on_switch_account_desc),
-                                checked = forceSyncOnAccountSwitch,
-                                onCheckedChange = onForceSyncOnAccountSwitchChange,
-                            )
-                        }
-                    }
-                }
 
                 item {
                     ExpressiveSectionCard(title = stringResource(R.string.integrations)) {

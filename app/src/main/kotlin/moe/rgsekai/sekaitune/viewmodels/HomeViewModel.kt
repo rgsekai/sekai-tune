@@ -946,13 +946,13 @@ class HomeViewModel
 
         fun switchToAccount(
             account: SavedAccount,
-            forceSyncOnSwitch: Boolean,
+            forceSyncOnSwitch: Boolean = true,
         ) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val authState = switchSavedYouTubeAccount(account).getOrThrow()
 
-                    if (forceSyncOnSwitch && account.ytmSync && authState.hasLoginCookie) {
+                    if (forceSyncOnSwitch && authState.hasLoginCookie) {
                         syncUtils.performFullSync(authoritative = true)
                     }
                 } catch (e: Exception) {
@@ -964,7 +964,7 @@ class HomeViewModel
 
         fun switchToAccountChannel(
             channel: AccountChannelUiModel,
-            forceSyncOnSwitch: Boolean,
+            forceSyncOnSwitch: Boolean = true,
         ) {
             if (channel.dataSyncId.isBlank()) return
 
@@ -992,7 +992,7 @@ class HomeViewModel
                         launch { refreshAccountPlaylistsInternal() }
                     }
 
-                    if (forceSyncOnSwitch && context.dataStore.get(YtmSyncKey, true) && authState.hasLoginCookie) {
+                    if (forceSyncOnSwitch && authState.hasLoginCookie) {
                         syncUtils.performFullSync(authoritative = true)
                     }
                 } catch (e: CancellationException) {
