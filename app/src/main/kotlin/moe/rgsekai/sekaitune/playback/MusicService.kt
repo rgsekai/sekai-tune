@@ -9573,7 +9573,11 @@ class MusicService :
         }
 
         ColdStartTimer.addStage("MusicService: Calling super.onStartCommand")
-        super.onStartCommand(intent, flags, startId)
+        try {
+            super.onStartCommand(intent, flags, startId)
+        } catch (e: Exception) {
+            reportException(e)
+        }
         ColdStartTimer.addStage("MusicService onStartCommand Exit")
         return START_NOT_STICKY
     }

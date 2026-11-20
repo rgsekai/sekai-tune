@@ -98,6 +98,7 @@ fun NavGraphBuilder.navigationBuilder(
             navController = navController,
             headerScrollConnection = homeScrollConnection,
             viewModel = homeViewModel ?: androidx.hilt.navigation.compose.hiltViewModel(),
+            latestVersionName = latestVersionName,
         )
     }
     composable(

@@ -8,24 +8,30 @@
 package moe.rgsekai.sekaitune.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
@@ -54,6 +60,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
@@ -95,6 +102,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.utils.rememberPreference
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -107,14 +116,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.HorizontalCenteredHeroCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import moe.rgsekai.sekaitune.BuildConfig
+import moe.rgsekai.sekaitune.ui.component.LocalAppBackdrop
+import moe.rgsekai.sekaitune.ui.component.LocalGlassEffectConfig
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.layerBackdrop
+import moe.rgsekai.sekaitune.ui.component.backdrop.backdrops.rememberLayerBackdrop
+import moe.rgsekai.sekaitune.ui.component.isGlassSupported
+import moe.rgsekai.sekaitune.ui.component.liquidGlass
+import moe.rgsekai.sekaitune.utils.Updater
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -492,6 +513,8 @@ fun QuickPicksSection(
     playerConnection: PlayerConnection,
     menuState: MenuState,
     haptic: HapticFeedback,
+    onShuffle: () -> Unit = {},
+    latestVersionName: () -> String = { BuildConfig.VERSION_NAME },
     modifier: Modifier = Modifier,
 ) {
     val distinctHeroItems = remember(heroItems) { heroItems.distinctBy { it.id } }
@@ -605,6 +628,12 @@ fun QuickPicksSection(
         }
     }
 
+    val heroBackdrop =
+        rememberLayerBackdrop {
+            drawRect(Color.Black)
+            drawContent()
+        }
+
     Box(
         modifier =
             modifier
@@ -615,7 +644,7 @@ fun QuickPicksSection(
         HorizontalPager(
             state = pagerState,
             userScrollEnabled = !isSingleItem,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().layerBackdrop(heroBackdrop),
         ) { page ->
             val pageOffset = remember(pagerState, page) { { pagerState.offsetOf(page) } }
             val item = distinctHeroItems[page.mod(distinctHeroItems.size)]
@@ -779,6 +808,130 @@ fun QuickPicksSection(
                                     )
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        val glassEffectConfig = LocalGlassEffectConfig.current
+        val isGlass = isGlassSupported()
+        var isMenuExpanded by rememberSaveable { mutableStateOf(false) }
+        val pillShape = RoundedCornerShape(24.dp)
+        val pillRimColor = Color.White.copy(alpha = 0.18f)
+        val liveStatusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        var stableStatusBarTopDp by rememberSaveable { mutableFloatStateOf(0f) }
+        if (liveStatusBarTop.value > 0f) {
+            stableStatusBarTopDp = liveStatusBarTop.value
+        }
+        val statusBarTop = if (stableStatusBarTopDp > 0f) stableStatusBarTopDp.dp else liveStatusBarTop
+
+        CompositionLocalProvider(LocalAppBackdrop provides heroBackdrop) {
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .zIndex(10f)
+                        .padding(
+                            top = statusBarTop + 12.dp,
+                            end = 16.dp,
+                        )
+                        .animateContentSize(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                        )
+                        .clip(pillShape)
+                        .then(
+                            if (isGlass) {
+                                Modifier
+                                    .liquidGlass(
+                                        config = glassEffectConfig.copy(
+                                            surfaceOpacity = 28f,
+                                            surfaceTintColor = Color.Black,
+                                        ),
+                                        shape = pillShape,
+                                        applyEdgeEffects = true,
+                                    )
+                                    .border(BorderStroke(1.dp, pillRimColor), pillShape)
+                            } else {
+                                Modifier
+                                    .background(Color.Black.copy(alpha = 0.45f), pillShape)
+                                    .border(BorderStroke(1.dp, pillRimColor), pillShape)
+                            },
+                        )
+                        .padding(vertical = 2.dp, horizontal = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                IconButton(
+                    onClick = { isMenuExpanded = !isMenuExpanded },
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.more_horiz),
+                        contentDescription = "More options",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = isMenuExpanded,
+                    enter = fadeIn(animationSpec = tween(150)) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        expandFrom = Alignment.Top,
+                    ),
+                    exit = fadeOut(animationSpec = tween(100)) + shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        shrinkTowards = Alignment.Top,
+                    ),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        IconButton(
+                            onClick = {
+                                isMenuExpanded = false
+                                navController.navigate("settings")
+                            },
+                            modifier = Modifier.size(44.dp),
+                        ) {
+                            BadgedBox(badge = {
+                                if (
+                                    BuildConfig.UPDATER_AVAILABLE &&
+                                    Updater.isUpdateAvailable(latestVersionName(), BuildConfig.VERSION_NAME)
+                                ) {
+                                    Badge()
+                                }
+                            }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.settings),
+                                    contentDescription = stringResource(R.string.settings),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { onShuffle() },
+                            modifier = Modifier.size(44.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.shuffle),
+                                contentDescription = stringResource(R.string.shuffle),
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp),
+                            )
                         }
                     }
                 }

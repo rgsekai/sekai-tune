@@ -1499,6 +1499,7 @@ class MainActivity : ComponentActivity() {
                     val shouldShowTopBar =
                         remember(active, navBackStackEntry, topLevelScreens) {
                             !active && navBackStackEntry?.destination?.route in topLevelScreens &&
+                                navBackStackEntry?.destination?.route != Screens.Home.route &&
                                 navBackStackEntry?.destination?.route != "settings" &&
                                 navBackStackEntry?.destination?.route != Screens.NewRelease.route
                         }
@@ -2189,7 +2190,9 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 bottomBar = {
-                                    Box {
+                                    Box(
+                                        modifier = Modifier.zIndex(100f),
+                                    ) {
                                         val navSlideDistance =
                                             bottomInset + floatingBarsBottomPadding + navVisibleHeight
 
@@ -2490,12 +2493,12 @@ class MainActivity : ComponentActivity() {
 
                         BottomSheetMenu(
                             state = LocalMenuState.current,
-                            modifier = Modifier.align(Alignment.BottomCenter),
+                            modifier = Modifier.align(Alignment.BottomCenter).zIndex(300f),
                         )
 
                         BottomSheetPage(
                             state = LocalBottomSheetPageState.current,
-                            modifier = Modifier.align(Alignment.BottomCenter),
+                            modifier = Modifier.align(Alignment.BottomCenter).zIndex(300f),
                         )
 
                         sharedSong?.let { song ->
@@ -2551,135 +2554,6 @@ class MainActivity : ComponentActivity() {
                                     ).navigationBarsPadding()
                                     .zIndex(99f),
                         )
-
-                        // Floating Home Action Pill Overlay
-                        val isHomeRoute = navBackStackEntry?.destination?.route == Screens.Home.route
-                        if (isHomeRoute && !active && !playerBottomSheetState.isExpanded) {
-                            var isMenuExpanded by rememberSaveable { mutableStateOf(false) }
-                            val homeTopOffset = homeScrollBehavior.state.heightOffset.roundToInt()
-                            val pillShape = RoundedCornerShape(24.dp)
-                            val isGlass = isGlassSupported()
-                            val pillRimColor = Color.White.copy(alpha = 0.18f)
-
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset { IntOffset(x = 0, y = homeTopOffset) }
-                                        .padding(
-                                            top = topInset + 12.dp,
-                                            end = 16.dp,
-                                        )
-                                        .zIndex(20f)
-                                        .animateContentSize(
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                                stiffness = Spring.StiffnessMediumLow,
-                                            )
-                                        )
-                                        .clip(pillShape)
-                                        .then(
-                                            if (isGlass) {
-                                                Modifier
-                                                    .liquidGlass(
-                                                        config = glassEffectConfig.copy(
-                                                            surfaceOpacity = 28f,
-                                                            surfaceTintColor = Color.Black,
-                                                        ),
-                                                        shape = pillShape,
-                                                        applyEdgeEffects = true,
-                                                    )
-                                                    .border(BorderStroke(1.dp, pillRimColor), pillShape)
-                                            } else {
-                                                Modifier
-                                                    .background(Color.Black.copy(alpha = 0.45f), pillShape)
-                                                    .border(BorderStroke(1.dp, pillRimColor), pillShape)
-                                            },
-                                        )
-                                        .padding(vertical = 2.dp, horizontal = 2.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                // 1st icon (top): Three dot (toggles expanded / collapsed)
-                                IconButton(
-                                    onClick = { isMenuExpanded = !isMenuExpanded },
-                                    modifier = Modifier.size(44.dp),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.more_horiz),
-                                        contentDescription = "More options",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
-
-                                // Expanded items (float directly on the frosted glass background)
-                                AnimatedVisibility(
-                                    visible = isMenuExpanded,
-                                    enter = fadeIn(animationSpec = tween(150)) + expandVertically(
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                            stiffness = Spring.StiffnessMediumLow,
-                                        ),
-                                        expandFrom = Alignment.Top,
-                                    ),
-                                    exit = fadeOut(animationSpec = tween(100)) + shrinkVertically(
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                            stiffness = Spring.StiffnessMediumLow,
-                                        ),
-                                        shrinkTowards = Alignment.Top,
-                                    ),
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        // 2nd icon: Settings
-                                        IconButton(
-                                            onClick = {
-                                                isMenuExpanded = false
-                                                navController.navigate("settings")
-                                            },
-                                            modifier = Modifier.size(44.dp),
-                                        ) {
-                                            BadgedBox(badge = {
-                                                if (
-                                                    BuildConfig.UPDATER_AVAILABLE &&
-                                                    Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
-                                                ) {
-                                                    Badge()
-                                                }
-                                            }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.settings),
-                                                    contentDescription = stringResource(R.string.settings),
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(24.dp),
-                                                )
-                                            }
-                                        }
-
-                                        // 3rd icon: Shuffle
-                                        IconButton(
-                                            onClick = {
-                                                playerConnection?.let {
-                                                    homeViewModel.shuffle(it)
-                                                }
-                                            },
-                                            modifier = Modifier.size(44.dp),
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.shuffle),
-                                                contentDescription = stringResource(R.string.shuffle),
-                                                tint = Color.White,
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
 
                     pendingBackupRestoreUri?.let { uri ->

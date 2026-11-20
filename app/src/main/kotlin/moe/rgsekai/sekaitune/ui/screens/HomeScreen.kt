@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.CoroutineScope
+import moe.rgsekai.sekaitune.BuildConfig
 import moe.rgsekai.sekaitune.LocalPlayerAwareWindowInsets
 import moe.rgsekai.sekaitune.LocalPlayerConnection
 import moe.rgsekai.sekaitune.R
@@ -78,6 +79,7 @@ fun HomeScreen(
     navController: NavController,
     headerScrollConnection: NestedScrollConnection? = null,
     viewModel: HomeViewModel = hiltViewModel(),
+    latestVersionName: () -> String = { BuildConfig.VERSION_NAME },
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val menuState = LocalMenuState.current
@@ -183,6 +185,7 @@ fun HomeScreen(
                     lazyListState = lazyListState,
                     forgottenFavoritesGridState = forgottenFavoritesGridState,
                     onAction = viewModel::onAction,
+                    latestVersionName = latestVersionName,
                 )
             }
         }
@@ -258,6 +261,7 @@ private fun HomeContent(
     forgottenFavoritesGridState: LazyGridState,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
+    latestVersionName: () -> String = { BuildConfig.VERSION_NAME },
 ) {
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         ExpressivePullToRefreshBox(
@@ -310,6 +314,8 @@ private fun HomeContent(
                                 playerConnection = playerConnection,
                                 menuState = menuState,
                                 haptic = haptic,
+                                onShuffle = { onAction(HomeAction.Shuffle(playerConnection)) },
+                                latestVersionName = latestVersionName,
                                 modifier = Modifier.animateItem(),
                             )
                         }
