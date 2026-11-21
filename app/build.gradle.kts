@@ -40,8 +40,8 @@ android {
         applicationId = "moe.rgsekai.sekaitune"
         minSdk = 26
         targetSdk = 37
-        versionCode = 22
-        versionName = "3.0.5"
+        versionCode = 23
+        versionName = "3.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
