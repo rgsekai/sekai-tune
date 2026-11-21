@@ -2589,13 +2589,12 @@ class MusicService :
             localPlayer.pauseAtEndOfMediaItems = false
             player.volume = 0f
             crossfadeHandoffInProgress = true
-            player.seekTo(targetIndex, incomingPosition)
+            if (player.currentMediaItemIndex != targetIndex || player.playbackState != Player.STATE_READY) {
+                player.seekTo(targetIndex, incomingPosition)
+            }
             player.playWhenReady = shouldContinuePlayback
             if (shouldContinuePlayback) {
-                if (awaitPrimaryCrossfadeHandoffReady(incomingPlayer)) {
-                    val syncedIncomingPosition = incomingPlayer.currentPosition.coerceAtLeast(0L)
-                    player.seekTo(targetIndex, syncedIncomingPosition)
-                }
+                awaitPrimaryCrossfadeHandoffReady(incomingPlayer)
             }
             currentMediaMetadata.value = player.getMediaItemAt(targetIndex).metadata
             handoffCompleted = true
@@ -2676,9 +2675,9 @@ class MusicService :
             }
 
             val seekDurationMs = ((System.nanoTime() - seekStartNs) / 1_000_000L).coerceAtLeast(1L)
-            var currentIncomingPos = incomingPlayer.currentPosition.coerceAtLeast(0L)
-            var currentPrimaryPos = player.currentPosition.coerceAtLeast(0L)
-            var gap = currentIncomingPos - currentPrimaryPos
+            val currentIncomingPos = incomingPlayer.currentPosition.coerceAtLeast(0L)
+            val currentPrimaryPos = player.currentPosition.coerceAtLeast(0L)
+            val gap = currentIncomingPos - currentPrimaryPos
             Timber.tag(TAG_AUTOMIX).i(
                 "Initial sync: incomingPos=%d playerPos=%d gap=%d ms (seekTook=%d ms)",
                 currentIncomingPos,
@@ -2687,40 +2686,9 @@ class MusicService :
                 seekDurationMs,
             )
 
-            // 2. If gap exceeds target (15 ms), execute a single seek correction while STILL silent
-            if (kotlin.math.abs(gap) > AUTOMIX_MAX_ACCEPTABLE_GAP_MS) {
-                val correctedTargetPos = incomingPlayer.currentPosition + seekDurationMs
-                Timber.tag(TAG_AUTOMIX).d(
-                    "Executing single seek correction to %d ms (gap was %d ms)",
-                    correctedTargetPos,
-                    gap,
-                )
-                player.seekTo(targetIndex, correctedTargetPos)
-                val correctionReady = awaitPrimaryPlayerReady(deadlineMs)
-                if (!correctionReady) {
-                    Timber.tag(TAG_AUTOMIX).w("AutomixHandoff fallback: timeout during seek correction")
-                    finishCrossfade(target, incomingPlayer)
-                    return
-                }
-                currentIncomingPos = incomingPlayer.currentPosition.coerceAtLeast(0L)
-                currentPrimaryPos = player.currentPosition.coerceAtLeast(0L)
-                gap = currentIncomingPos - currentPrimaryPos
-                Timber.tag(TAG_AUTOMIX).i(
-                    "Post-correction sync: incomingPos=%d playerPos=%d gap=%d ms",
-                    currentIncomingPos,
-                    currentPrimaryPos,
-                    gap,
-                )
-            }
-
-            // 3. Fallback check: if gap is still too large or deadline passed
-            if (kotlin.math.abs(gap) > AUTOMIX_MAX_ACCEPTABLE_GAP_MS && android.os.SystemClock.elapsedRealtime() >= deadlineMs) {
-                Timber.tag(TAG_AUTOMIX).w("AutomixHandoff fallback: gap %d ms exceeds threshold at deadline", gap)
-                finishCrossfade(target, incomingPlayer)
-                return
-            }
-
-            // 4. Equal-power handoff ramp based on measured gap
+            // Equal-power handoff ramp based on measured gap (20ms - 50ms micro-fade).
+            // Primary player is already in STATE_READY; we crossfade directly to prevent
+            // a redundant secondary seek from discarding audio buffers and causing a playback stall.
             val overlapDurationMs = (kotlin.math.abs(gap) * 2L).coerceIn(20L, 50L)
             val effectiveTargetVolume = currentEffectivePlayerVolumeForMediaId(target.mediaId)
             val incomingStartVolume = incomingPlayer.volume
@@ -9729,8 +9697,7 @@ class MusicService :
         const val STUCK_MUTED_VOLUME_EPSILON = 0.001f
         const val AUDIBLE_PLAYBACK_VOLUME_CHECK_MS = 2_000L
         private const val TAG_AUTOMIX = "AutomixHandoff"
-        private const val AUTOMIX_HANDOFF_TIMEOUT_MS = 1500L
-        private const val AUTOMIX_MAX_ACCEPTABLE_GAP_MS = 15L
+        private const val AUTOMIX_HANDOFF_TIMEOUT_MS = 4_000L
 
         private val matchedCatalogIds = ConcurrentHashMap<String, String>()
 
