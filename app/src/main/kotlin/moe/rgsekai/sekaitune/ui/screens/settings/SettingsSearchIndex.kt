@@ -391,6 +391,17 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
+                id = "sub_aod_customized",
+                title = context.getString(R.string.aod_customize_title),
+                subtitle = context.getString(R.string.aod_customize_subtitle),
+                category = appearanceCategory,
+                iconRes = R.drawable.desktop_windows,
+                route = "settings/appearance/aod_customized",
+                keywords = listOf("always on display", "aod", "lockscreen", "clock style", "standby mode", "ambient"),
+            ),
+        )
+        add(
+            SettingsSearchEntry(
                 id = "sub_custom_font",
                 title = "Custom font",
                 subtitle = "Select typeface (Poppins, Outfit, Inter, etc.) or import custom TTF",

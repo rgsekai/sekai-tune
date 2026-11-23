@@ -387,6 +387,17 @@
         </service>
 
         <service
+            android:name=".aod.AodModeTileService"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true"
+            android:icon="@drawable/bedtime"
+            android:label="@string/aod_mode">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
             android:name=".buddy.BuddyMessagingService"
             android:exported="false">
             <intent-filter>

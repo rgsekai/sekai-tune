@@ -54,6 +54,79 @@ val AmbientShowArtistKey = booleanPreferencesKey("ambientShowArtist")
 val AmbientShowLyricsKey = booleanPreferencesKey("ambientShowLyrics")
 val AmbientVolumeGestureEnabledKey = booleanPreferencesKey("ambientVolumeGestureEnabled")
 
+val AodThumbnailShapeKey = stringPreferencesKey("aodThumbnailShape")
+val AodThumbnailSizeKey = floatPreferencesKey("aodThumbnailSize")
+val AodThumbnailShapeRotationKey = intPreferencesKey("aodThumbnailShapeRotation")
+val AodShowThumbnailKey = booleanPreferencesKey("aodShowThumbnail")
+val AodShowArtistKey = booleanPreferencesKey("aodShowArtist")
+val AodShowAlbumKey = booleanPreferencesKey("aodShowAlbum")
+val AodShowProgressKey = booleanPreferencesKey("aodShowProgress")
+val AodShowTimeLabelsKey = booleanPreferencesKey("aodShowTimeLabels")
+val AodShowControlsKey = booleanPreferencesKey("aodShowControls")
+val AodShowExitButtonKey = booleanPreferencesKey("aodShowExitButton")
+val AodArtworkGlowKey = booleanPreferencesKey("aodArtworkGlow")
+val AodBackgroundStyleKey = stringPreferencesKey("aodBackgroundStyle")
+val AodAccentStyleKey = stringPreferencesKey("aodAccentStyle")
+val AodContentPositionKey = stringPreferencesKey("aodContentPosition")
+val AodTextAlignmentKey = stringPreferencesKey("aodTextAlignment")
+val AodControlStyleKey = stringPreferencesKey("aodControlStyle")
+val AodControlSizeKey = floatPreferencesKey("aodControlSize")
+val AodHorizontalPaddingKey = floatPreferencesKey("aodHorizontalPadding")
+val AodVerticalSpacingKey = floatPreferencesKey("aodVerticalSpacing")
+val AodTitleMaxLinesKey = intPreferencesKey("aodTitleMaxLines")
+val AodAmbientIntensityKey = floatPreferencesKey("aodAmbientIntensity")
+
+enum class AodThumbnailShape {
+    ROUNDED,
+    SQUARE,
+    CIRCLE,
+    PILL,
+    ARCH,
+    SLANTED,
+    DIAMOND,
+    PENTAGON,
+    TRIANGLE,
+    HEART,
+    FLOWER,
+    CLOVER_4,
+    COOKIE_6,
+    COOKIE_9,
+    SUNNY,
+    SOFT_BURST,
+    GHOSTISH,
+    PIXEL_CIRCLE,
+}
+
+enum class AodBackgroundStyle {
+    PURE_BLACK,
+    SOFT_RADIAL,
+    TONAL_EDGE,
+    AMBIENT_GLOW,
+}
+
+enum class AodAccentStyle {
+    MONOCHROME,
+    THEME,
+}
+
+enum class AodContentPosition {
+    TOP,
+    CENTER,
+    BOTTOM,
+}
+
+enum class AodTextAlignment {
+    START,
+    CENTER,
+    END,
+}
+
+enum class AodControlStyle {
+    FILLED,
+    TONAL,
+    MINIMAL,
+}
+
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
 val DisableBlurKey = booleanPreferencesKey("disableBlur")
 val DisableLiveMirrorKey = booleanPreferencesKey("disableLiveMirror")

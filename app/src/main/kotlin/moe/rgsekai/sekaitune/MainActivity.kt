@@ -203,6 +203,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import moe.rgsekai.sekaitune.aod.ACTION_AOD_MODE
 import moe.rgsekai.sekaitune.constants.AppBarHeight
 import moe.rgsekai.sekaitune.constants.AppFontPreference
 import moe.rgsekai.sekaitune.constants.AmbientArtScaleKey
@@ -372,6 +373,9 @@ class MainActivity : ComponentActivity() {
     private var pendingIntent: Intent? = null
     private var pendingDeepLinkQueue: Queue? = null
     private var pendingVoiceSearchQuery: String? = null
+    private var pendingAodModeRequest = false
+    private var pendingAodModeJob: Job? = null
+    private var aodModeLaunchRequestCount by mutableIntStateOf(0)
     private var pendingTogetherJoinLink: String? = null
     private var pendingTogetherOnlineCode: String? = null
     private var pendingBackupRestoreUri by mutableStateOf<Uri?>(null)
@@ -395,6 +399,7 @@ class MainActivity : ComponentActivity() {
                     LinkPlayer.connection = playerConnection
                     playPendingDeepLinkQueueIfReady()
                     playPendingVoiceSearchIfReady()
+                    openPendingAodModeIfReady()
                     joinPendingTogetherIfReady()
                     joinPendingTogetherOnlineIfReady()
                 }
@@ -402,6 +407,8 @@ class MainActivity : ComponentActivity() {
 
             override fun onServiceDisconnected(name: ComponentName?) {
                 isMusicServiceBound = false
+                pendingAodModeJob?.cancel()
+                pendingAodModeJob = null
                 playerConnection?.let { LinkPlayer.release(it) }
                 playerConnection?.dispose()
                 playerConnection = null
@@ -420,6 +427,26 @@ class MainActivity : ComponentActivity() {
         val connection = playerConnection ?: return
         pendingVoiceSearchQuery = null
         connection.playFromVoiceSearch(query)
+    }
+
+    private fun requestAodMode() {
+        pendingAodModeRequest = true
+        startMusicServiceSafely()
+        openPendingAodModeIfReady()
+    }
+
+    private fun openPendingAodModeIfReady() {
+        if (!pendingAodModeRequest) return
+        val connection = playerConnection ?: return
+        pendingAodModeRequest = false
+        pendingAodModeJob?.cancel()
+        pendingAodModeJob =
+            lifecycleScope.launch {
+                connection.queueRestoreCompleted.first { it }
+                if (awaitRestorablePlayback(connection)) {
+                    aodModeLaunchRequestCount++
+                }
+            }
     }
 
     private fun joinPendingTogetherIfReady() {
@@ -485,6 +512,7 @@ class MainActivity : ComponentActivity() {
                 Context.BIND_AUTO_CREATE,
             )
         playPendingDeepLinkQueueIfReady()
+        openPendingAodModeIfReady()
     }
 
     private fun safeUnbindMusicService() {
@@ -1083,7 +1111,41 @@ class MainActivity : ComponentActivity() {
                         drawContent()
                     }
 
-                    LaunchedEffect(useDarkTheme, playerBottomSheetState.isExpanded, playerBackground) {
+                    val aodModeEnabled by remember(playerConnection) {
+                        playerConnection?.aodModeEnabled ?: MutableStateFlow(false)
+                    }.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(aodModeLaunchRequestCount, playerConnection) {
+                        val launchRequestCount = aodModeLaunchRequestCount
+                        if (launchRequestCount == 0) return@LaunchedEffect
+                        val connection = playerConnection ?: return@LaunchedEffect
+                        if (!awaitRestorablePlayback(connection)) return@LaunchedEffect
+                        if (!playerBottomSheetState.isExpandedOrExpanding) {
+                            playerBottomSheetState.expandSoft()
+                        }
+                        connection.aodModeEnabled.value = true
+                        if (aodModeLaunchRequestCount == launchRequestCount) {
+                            aodModeLaunchRequestCount = 0
+                        }
+                    }
+
+                    LaunchedEffect(aodModeEnabled) {
+                        val controller = WindowCompat.getInsetsController(window, window.decorView)
+                        if (aodModeEnabled) {
+                            controller.systemBarsBehavior =
+                                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            controller.hide(WindowInsetsCompat.Type.systemBars())
+                            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        } else {
+                            controller.show(WindowInsetsCompat.Type.systemBars())
+                            controller.systemBarsBehavior =
+                                WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        }
+                    }
+
+                    LaunchedEffect(useDarkTheme, playerBottomSheetState.isExpanded, playerBackground, aodModeEnabled) {
+                        if (aodModeEnabled) return@LaunchedEffect
                         val isDarkStatusBar =
                             if (playerBottomSheetState.isExpanded &&
                                 playerBackground != PlayerBackgroundStyle.DEFAULT
@@ -1125,7 +1187,8 @@ class MainActivity : ComponentActivity() {
                             isAmbientModeScreen ||
                             playerBottomSheetState.isExpanded
 
-                    LaunchedEffect(shouldHideStatusBars) {
+                    LaunchedEffect(shouldHideStatusBars, aodModeEnabled) {
+                        if (aodModeEnabled) return@LaunchedEffect
                         setStatusBarsHidden(shouldHideStatusBars)
                     }
 
@@ -2670,6 +2733,10 @@ class MainActivity : ComponentActivity() {
                 launchSingleTop = true
                 restoreState = true
             }
+            return
+        }
+        if (intent.action == ACTION_AOD_MODE) {
+            requestAodMode()
             return
         }
         if (intent.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH") {

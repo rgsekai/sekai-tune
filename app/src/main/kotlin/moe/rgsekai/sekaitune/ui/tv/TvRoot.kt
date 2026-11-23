@@ -560,6 +560,16 @@ fun TvRoot(
                     )
                 }
 
+                composable("settings/appearance/aod_customized") {
+                    TvSettingsScreen(
+                        navController = navController,
+                        initialCategory = TvSettingsCategory.ACCOUNT,
+                        activeSubRoute = "settings/appearance/aod_customized",
+                        upFocusRequester = topBarFocusRequester,
+                        contentFocusRequester = contentFocusRequester,
+                    )
+                }
+
                 composable("settings/appearance/lyrics_animations") {
                     TvSettingsScreen(
                         navController = navController,

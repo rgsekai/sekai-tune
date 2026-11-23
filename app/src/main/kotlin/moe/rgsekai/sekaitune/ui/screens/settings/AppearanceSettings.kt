@@ -377,6 +377,15 @@ fun AppearanceSettings(navController: NavController) {
             PreferenceGroup(title = stringResource(R.string.appearance_section_ambient)) {
                 item {
                     PreferenceEntry(
+                        title = { Text(stringResource(R.string.aod_customize_title)) },
+                        description = stringResource(R.string.aod_customize_entry_desc),
+                        icon = { Icon(painterResource(R.drawable.bedtime), null) },
+                        onClick = { navController.navigate("settings/appearance/aod_customized") },
+                    )
+                }
+
+                item {
+                    PreferenceEntry(
                         title = { Text(stringResource(R.string.ambient_mode_settings)) },
                         description = stringResource(R.string.ambient_mode_settings_desc),
                         icon = { Icon(painterResource(R.drawable.fullscreen), null) },

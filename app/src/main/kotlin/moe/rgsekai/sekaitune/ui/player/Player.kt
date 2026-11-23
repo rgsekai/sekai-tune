@@ -403,6 +403,8 @@ fun BottomSheetPlayer(
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
+    val aodModeEnabled by playerConnection.aodModeEnabled.collectAsStateWithLifecycle()
+
     val (thumbnailCornerRadius) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = 8f)
     val SekaiTuneCanvasEnabled by rememberPreference(SekaiTuneCanvasKey, true)
     val useYtVideoCanvas by rememberPreference(UseYtVideoAsCanvasKey, false)
@@ -486,6 +488,7 @@ fun BottomSheetPlayer(
     }
 
     LaunchedEffect(mediaMetadata?.id) {
+        if (aodModeEnabled) return@LaunchedEffect
         val currentMetadata = mediaMetadata
             if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
                 // Check cache first
@@ -650,7 +653,7 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    LaunchedEffect(mediaMetadata?.id, playbackState, isPlaying, state.isExpandedOrExpanding) {
+    LaunchedEffect(mediaMetadata?.id, playbackState, isPlaying, aodModeEnabled, state.isExpandedOrExpanding) {
         val startTime = SystemClock.elapsedRealtime()
         if (playbackState == STATE_READY || playbackState == STATE_BUFFERING) {
             val initialPos = playerConnection.player.currentPosition
@@ -699,7 +702,7 @@ fun BottomSheetPlayer(
                         }
                     }
                 }
-                val delayMs = if (!state.isExpandedOrExpanding) 200L else 100L
+                val delayMs = if (aodModeEnabled) 500L else if (!state.isExpandedOrExpanding) 200L else 100L
                 delay(delayMs)
             }
         } else if (playbackState == STATE_ENDED) {
@@ -794,6 +797,9 @@ fun BottomSheetPlayer(
     LaunchedEffect(state.isExpanded) {
         if (state.isExpanded) {
             focusRequester.requestFocus()
+        }
+        if (!state.isExpanded && aodModeEnabled) {
+            playerConnection.aodModeEnabled.value = false
         }
     }
 
@@ -944,7 +950,8 @@ fun BottomSheetPlayer(
                 val country = Locale.getDefault().country
                 if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
             }
-        val shouldUseV7Canvas = SekaiTuneCanvasEnabled
+        val shouldUseV7Canvas =
+            SekaiTuneCanvasEnabled && !aodModeEnabled
         val shouldFetchV7Canvas = shouldUseV7Canvas && (canvasMetered || !lowDataModeActive)
         val canvasPolicy = remember(canvasSource, canvasMetered, canvasFallback, spotifySpDc) {
             CanvasRequestPolicy(
@@ -1540,6 +1547,35 @@ fun BottomSheetPlayer(
                             state.collapseSoft()
                             navController.navigate("settings/ai_integration")
                         },
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = aodModeEnabled,
+                enter = fadeIn(tween(300)),
+                exit = fadeOut(tween(300)),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black),
+            ) {
+                mediaMetadata?.let { metadata ->
+                    AodPlayerScreen(
+                        mediaMetadata = metadata,
+                        isPlaying = isPlaying,
+                        position = position,
+                        duration = duration,
+                        sliderPosition = sliderPosition,
+                        canSkipPrevious = canSkipPrevious,
+                        canSkipNext = canSkipNext,
+                        thumbnailCornerRadius = thumbnailCornerRadius,
+                        onPlayPause = { playerConnection.player.togglePlayPause() },
+                        onSkipPrevious = playerConnection::seekToPrevious,
+                        onSkipNext = playerConnection::seekToNext,
+                        onSeek = { sliderPosition = it },
+                        onSeekFinished = onSliderValueChangeFinished,
+                        onExit = { playerConnection.aodModeEnabled.value = false },
                     )
                 }
             }
