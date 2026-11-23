@@ -326,6 +326,30 @@ class SpotifyLibraryRepository
                 tracks
             }
 
+        suspend fun playlistTracksPage(
+            playlistId: String,
+            limit: Int = 50,
+            offset: Int = 0,
+        ): SpotifyPaging<SpotifyTrack> =
+            withContext(Dispatchers.IO) {
+                ensureAuthenticated()
+                spotifyCallWithTokenRetry {
+                    val response =
+                        Spotify
+                            .playlistTracks(
+                                playlistId = playlistId,
+                                limit = limit,
+                                offset = offset,
+                            ).getOrThrow()
+                    SpotifyPaging(
+                        items = response.items.mapNotNull { it.track?.takeUnless(SpotifyTrack::isLocal) },
+                        total = response.total,
+                        limit = response.limit,
+                        offset = response.offset,
+                    )
+                }
+            }
+
         suspend fun likedSongs(
             limit: Int = 50,
             offset: Int = 0,

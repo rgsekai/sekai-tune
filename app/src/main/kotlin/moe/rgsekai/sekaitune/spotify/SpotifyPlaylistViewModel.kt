@@ -18,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -112,14 +113,17 @@ class SpotifyPlaylistViewModel
                                     hasMore = page.items.size < page.total && page.items.isNotEmpty(),
                                 )
                         } else {
-                            val playlist = repository.playlist(playlistId)
-                            val tracks = repository.playlistTracks(playlistId)
+                            val playlistDeferred = async { repository.playlist(playlistId) }
+                            val pageDeferred = async { repository.playlistTracksPage(playlistId, limit = 50, offset = 0) }
+                            val playlist = playlistDeferred.await()
+                            val page = pageDeferred.await()
+                            val totalTracks = playlist.tracks?.total ?: page.total
                             _uiState.value =
                                 SpotifyPlaylistUiState(
                                     playlist = playlist,
-                                    tracks = tracks,
+                                    tracks = page.items,
                                     isLoading = false,
-                                    hasMore = false,
+                                    hasMore = page.items.size < totalTracks && page.items.isNotEmpty(),
                                 )
                         }
                     } catch (error: CancellationException) {
@@ -138,7 +142,7 @@ class SpotifyPlaylistViewModel
 
         fun loadMore() {
             val state = _uiState.value
-            if (playlistId != SPOTIFY_LIKED_SONGS_ID || state.isLoading || state.isLoadingMore || !state.hasMore) {
+            if (state.isLoading || state.isLoadingMore || !state.hasMore) {
                 return
             }
             if (loadMoreJob?.isActive == true) return
@@ -148,13 +152,19 @@ class SpotifyPlaylistViewModel
                 viewModelScope.launch(Dispatchers.IO) {
                     _uiState.update { it.copy(isLoadingMore = true) }
                     try {
-                        val page = repository.likedSongs(limit = 50, offset = offset)
+                        val page =
+                            if (playlistId == SPOTIFY_LIKED_SONGS_ID) {
+                                repository.likedSongs(limit = 50, offset = offset)
+                            } else {
+                                repository.playlistTracksPage(playlistId, limit = 50, offset = offset)
+                            }
+                        val totalTracks = _uiState.value.playlist?.tracks?.total ?: page.total
                         _uiState.update { current ->
                             val combinedTracks = current.tracks + page.items
                             current.copy(
                                 tracks = combinedTracks,
                                 isLoadingMore = false,
-                                hasMore = combinedTracks.size < page.total && page.items.isNotEmpty(),
+                                hasMore = combinedTracks.size < totalTracks && page.items.isNotEmpty(),
                             )
                         }
                     } catch (error: CancellationException) {
@@ -174,11 +184,16 @@ class SpotifyPlaylistViewModel
             }
             if (state.tracks.isEmpty() || downloadResolutionJob?.isActive == true) return
 
-            val tracks = state.tracks
             downloadResolutionJob =
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.IO) {
                     _uiState.update { it.copy(isResolvingDownloads = true) }
                     try {
+                        val tracks =
+                            if (playlistId != SPOTIFY_LIKED_SONGS_ID && state.hasMore) {
+                                repository.playlistTracks(playlistId)
+                            } else {
+                                state.tracks
+                            }
                         val items = resolveSpotifyPlaylistDownloads(tracks)
                         if (items.isEmpty()) {
                             _uiState.update { it.copy(isResolvingDownloads = false) }
