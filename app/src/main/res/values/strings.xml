@@ -226,6 +226,9 @@
     <string name="tempo_and_pitch">Tempo and Pitch</string>
     <string name="aod_mode">AOD Mode</string>
     <string name="aod_mode_exit">Exit AOD</string>
+    <string name="lockscreen_aod">Lock screen AOD</string>
+    <string name="lockscreen_aod_desc">Show fullscreen dim AOD player when screen turns off while playing</string>
+    <string name="swipe_up_to_unlock">Swipe up to unlock</string>
     <string name="tempo">Tempo</string>
     <string name="pitch">Pitch</string>
     <string name="pitch_mode_semitones_short">st</string>

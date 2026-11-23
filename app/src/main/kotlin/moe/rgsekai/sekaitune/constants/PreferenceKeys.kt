@@ -53,6 +53,7 @@ val AmbientShowTitleKey = booleanPreferencesKey("ambientShowTitle")
 val AmbientShowArtistKey = booleanPreferencesKey("ambientShowArtist")
 val AmbientShowLyricsKey = booleanPreferencesKey("ambientShowLyrics")
 val AmbientVolumeGestureEnabledKey = booleanPreferencesKey("ambientVolumeGestureEnabled")
+val LockscreenAodEnabledKey = booleanPreferencesKey("lockscreenAodEnabled")
 
 val AodThumbnailShapeKey = stringPreferencesKey("aodThumbnailShape")
 val AodThumbnailSizeKey = floatPreferencesKey("aodThumbnailSize")

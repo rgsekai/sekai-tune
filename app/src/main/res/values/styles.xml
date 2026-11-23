@@ -19,4 +19,14 @@
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:colorAccent">@android:color/white</item>
     </style>
+
+    <style name="Theme.SekaiTune.Aod" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:showWhenLocked" tools:ignore="NewApi">true</item>
+        <item name="android:turnScreenOn" tools:ignore="NewApi">true</item>
+    </style>
 </resources>

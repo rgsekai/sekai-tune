@@ -58,6 +58,8 @@ import java.io.InputStream
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
+import moe.rgsekai.sekaitune.aod.AodLockscreenActivity
+import moe.rgsekai.sekaitune.constants.LockscreenAodEnabledKey
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.media3.common.AudioAttributes
@@ -1497,6 +1499,17 @@ class MusicService :
                     registerBluetoothReceiver()
                 } else {
                     unregisterBluetoothReceiver()
+                }
+            }
+
+        dataStore.data
+            .map { it[LockscreenAodEnabledKey] ?: false }
+            .distinctUntilChanged()
+            .collectLatest(scope) { enabled ->
+                if (enabled) {
+                    registerScreenOffReceiver()
+                } else {
+                    unregisterScreenOffReceiver()
                 }
             }
 
@@ -3254,6 +3267,41 @@ class MusicService :
         } catch (_: Exception) {
         }
         bluetoothReceiverRegistered = false
+    }
+
+    private var screenOffReceiverRegistered = false
+    private val screenOffReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action != Intent.ACTION_SCREEN_OFF) return
+                scope.launch {
+                    val enabled = dataStore.data.first()[LockscreenAodEnabledKey] ?: false
+                    if (!enabled) return@launch
+                    val isPlaying = player.isPlaying || (player.playWhenReady && player.playbackState == Player.STATE_READY)
+                    if (isPlaying && player.currentMediaItem != null) {
+                        val aodIntent = Intent(this@MusicService, AodLockscreenActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        }
+                        startActivity(aodIntent)
+                    }
+                }
+            }
+        }
+
+    private fun registerScreenOffReceiver() {
+        if (screenOffReceiverRegistered) return
+        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        registerReceiver(screenOffReceiver, filter)
+        screenOffReceiverRegistered = true
+    }
+
+    private fun unregisterScreenOffReceiver() {
+        if (!screenOffReceiverRegistered) return
+        try {
+            unregisterReceiver(screenOffReceiver)
+        } catch (_: Exception) {
+        }
+        screenOffReceiverRegistered = false
     }
 
     private fun waitOnNetworkError() {
@@ -9252,6 +9300,7 @@ class MusicService :
             audioDeviceCallbackRegistered = false
         }
         unregisterBluetoothReceiver()
+        unregisterScreenOffReceiver()
         unregisterMuteRecoveryObserver()
         try {
             callWatcher.stop()

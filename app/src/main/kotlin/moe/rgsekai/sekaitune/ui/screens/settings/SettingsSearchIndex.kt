@@ -391,13 +391,13 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
-                id = "sub_aod_customized",
-                title = context.getString(R.string.aod_customize_title),
-                subtitle = context.getString(R.string.aod_customize_subtitle),
+                id = "sub_lockscreen_aod",
+                title = context.getString(R.string.lockscreen_aod),
+                subtitle = context.getString(R.string.lockscreen_aod_desc),
                 category = appearanceCategory,
-                iconRes = R.drawable.desktop_windows,
-                route = "settings/appearance/aod_customized",
-                keywords = listOf("always on display", "aod", "lockscreen", "clock style", "standby mode", "ambient"),
+                iconRes = R.drawable.bedtime,
+                route = "settings/appearance",
+                keywords = listOf("always on display", "aod", "lockscreen", "screen off", "ambient display"),
             ),
         )
         add(

@@ -84,7 +84,6 @@ import moe.rgsekai.sekaitune.ui.component.TvRightPaneFocusTracker
 import moe.rgsekai.sekaitune.ui.screens.settings.AboutScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.AccountSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.AmbientModeSettingsScreen
-import moe.rgsekai.sekaitune.ui.screens.settings.AodCustomizedScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.CanvasSettings
 import moe.rgsekai.sekaitune.ui.screens.settings.ChangelogScreen
 import moe.rgsekai.sekaitune.ui.screens.settings.ChiperSettings
@@ -154,7 +153,6 @@ private fun tvSubRouteTitle(subRoute: String): String {
         "settings/appearance/liquid_glass" -> stringResource(R.string.liquid_glass)
         "settings/appearance/ambient_mode" -> stringResource(R.string.ambient_mode)
         "settings/appearance/icon" -> stringResource(R.string.app_icon)
-        "settings/appearance/aod_customized" -> stringResource(R.string.aod_customize_title)
         "settings/appearance/lyrics_animations" -> stringResource(R.string.lyrics_animation_style)
         "settings/player/chiper" -> stringResource(R.string.mori_cipher_settings_title)
         "settings/music_together" -> stringResource(R.string.music_together)
@@ -172,7 +170,6 @@ private fun tvCategoryTopBarHeight(category: TvSettingsCategory, subRoute: Strin
     if (subRoute != null) {
         return when (subRoute) {
             "settings/appearance/liquid_glass",
-            "settings/appearance/aod_customized",
             "settings/player/chiper",
             "settings/music_together",
             "settings/po_token",
@@ -621,7 +618,6 @@ private fun TvSettingsSubRouteContent(
         "settings/appearance/liquid_glass" -> GlassEffectSettings(navController)
         "settings/appearance/ambient_mode" -> AmbientModeSettingsScreen(navController)
         "settings/appearance/icon" -> IconScreen(navController)
-        "settings/appearance/aod_customized" -> AodCustomizedScreen(navController)
         "settings/appearance/lyrics_animations" -> LyricsAnimationSettings(navController)
         "settings/player/chiper" -> ChiperSettings(navController)
         "settings/music_together" -> MusicTogetherScreen(navController)

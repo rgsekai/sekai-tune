@@ -1074,23 +1074,6 @@ fun PlayerMenu(
                                     },
                                 ),
                             )
-                            add(
-                                NewAction(
-                                    icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.bedtime),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(28.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    },
-                                    text = stringResource(R.string.aod_mode),
-                                    onClick = {
-                                        playerConnection.aodModeEnabled.value = true
-                                        onDismiss()
-                                    },
-                                ),
-                            )
                         }
                     },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),

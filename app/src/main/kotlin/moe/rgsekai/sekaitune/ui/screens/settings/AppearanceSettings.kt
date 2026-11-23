@@ -86,6 +86,7 @@ import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurEnabledKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurStrengthKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
+import moe.rgsekai.sekaitune.constants.LockscreenAodEnabledKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
 import moe.rgsekai.sekaitune.constants.SwipeThumbnailKey
 import moe.rgsekai.sekaitune.constants.SwipeToSongKey
@@ -126,6 +127,8 @@ fun AppearanceSettings(navController: NavController) {
             MiniPlayerBackgroundStyleKey,
             defaultValue = MiniPlayerBackgroundStyle.GLOW,
         )
+    val (lockscreenAodEnabled, onLockscreenAodEnabledChange) =
+        rememberPreference(LockscreenAodEnabledKey, defaultValue = false)
     val (backdropEnabled, onBackdropEnabledChange) = rememberPreference(BackdropEnabledKey, defaultValue = true)
     val (backdropBlurAmount, onBackdropBlurAmountChange) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
     val (themeBackdropMode, onThemeBackdropModeChange) =
@@ -376,11 +379,12 @@ fun AppearanceSettings(navController: NavController) {
 
             PreferenceGroup(title = stringResource(R.string.appearance_section_ambient)) {
                 item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.aod_customize_title)) },
-                        description = stringResource(R.string.aod_customize_entry_desc),
+                    SwitchPreference(
+                        title = { Text(stringResource(R.string.lockscreen_aod)) },
+                        description = stringResource(R.string.lockscreen_aod_desc),
                         icon = { Icon(painterResource(R.drawable.bedtime), null) },
-                        onClick = { navController.navigate("settings/appearance/aod_customized") },
+                        checked = lockscreenAodEnabled,
+                        onCheckedChange = onLockscreenAodEnabledChange,
                     )
                 }
 
