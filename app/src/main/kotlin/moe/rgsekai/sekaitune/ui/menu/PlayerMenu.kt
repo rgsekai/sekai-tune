@@ -619,6 +619,129 @@ fun PlayerMenu(
             ),
     ) {
         item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MenuSurfaceSection(
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.weight(1f).height(64.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable { showAddToSpotifyPlaylist = true }
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.spotify_icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = Color(0xFF1DB954),
+                        )
+                        Text(
+                            text = stringResource(R.string.spotify_add_to_playlist),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                MenuSurfaceSection(
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.weight(1f).height(64.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable { showChoosePlaylistDialog = true }
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.playlist_add),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(R.string.add_to_playlist),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (!isLocalMedia) {
+            item {
+                MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
+                    ListItem(
+                        headlineContent = { Text(text = stringResource(R.string.save_to_device_downloads)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.download),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier =
+                            Modifier.clickable {
+                                onDismiss()
+                                val songTitle = mediaMetadata.title
+                                val safeArtistName = mediaMetadata.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
+                                if (mediaMetadata.isUploaded) {
+                                    coroutineScope.launch {
+                                        val dbSong = withContext(Dispatchers.IO) { database.song(mediaMetadata.id).firstOrNull() }
+                                        val songEntity = dbSong?.song ?: mediaMetadata.toSongEntity()
+                                        val artistEntities = dbSong?.artists ?: mediaMetadata.artists.map { ArtistEntity(id = it.id ?: "", name = it.name) }
+                                        when (val result = resolveUploadedCatalogMatchUseCase(songEntity, artistEntities)) {
+                                            is CatalogMatchResult.Success -> {
+                                                if (!result.isHighConfidence) {
+                                                    android.widget.Toast.makeText(context, context.getString(R.string.saving_matched_version), android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                                android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+                                                val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                                    songId = result.catalogId,
+                                                    title = songTitle,
+                                                    artist = safeArtistName,
+                                                )
+                                                androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+                                            }
+                                            is CatalogMatchResult.NoMatch -> {
+                                                android.widget.Toast.makeText(context, context.getString(R.string.export_failed_no_catalog_match), android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
+                                    val songId = mediaMetadata.id
+                                    val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
+                                        songId = songId,
+                                        title = songTitle,
+                                        artist = safeArtistName,
+                                    )
+                                    androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+                                }
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+            }
+        }
+
+        item {
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
                 NewActionGrid(
                     actions =
@@ -640,36 +763,6 @@ fun PlayerMenu(
                                             playerConnection.startRadio(mediaMetadata)
                                             onDismiss()
                                         },
-                                    ),
-                                )
-                            }
-                            add(
-                                NewAction(
-                                    icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.playlist_add),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(28.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    },
-                                    text = stringResource(R.string.add_to_playlist),
-                                    onClick = { showChoosePlaylistDialog = true },
-                                ),
-                            )
-                            if (canAddToSpotify) {
-                                add(
-                                    NewAction(
-                                        icon = {
-                                            Icon(
-                                                painter = painterResource(R.drawable.spotify_icon),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        },
-                                        text = stringResource(R.string.spotify_add_to_playlist),
-                                        onClick = { showAddToSpotifyPlaylist = true },
                                     ),
                                 )
                             }
@@ -827,63 +920,7 @@ fun PlayerMenu(
         if (!isLocalMedia) {
             item {
                 MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
-                    Column {
-                        ListItem(
-                            headlineContent = { Text(text = stringResource(R.string.save_to_device_downloads)) },
-                            leadingContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.download),
-                                    contentDescription = null,
-                                )
-                            },
-                            modifier =
-                                Modifier.clickable {
-                                    onDismiss()
-                                    val songTitle = mediaMetadata.title
-                                    val safeArtistName = mediaMetadata.artists.joinToString(", ") { it.name }.ifEmpty { "Unknown Artist" }
-                                    if (mediaMetadata.isUploaded) {
-                                        coroutineScope.launch {
-                                            val dbSong = withContext(Dispatchers.IO) { database.song(mediaMetadata.id).firstOrNull() }
-                                            val songEntity = dbSong?.song ?: mediaMetadata.toSongEntity()
-                                            val artistEntities = dbSong?.artists ?: mediaMetadata.artists.map { ArtistEntity(id = it.id ?: "", name = it.name) }
-                                            when (val result = resolveUploadedCatalogMatchUseCase(songEntity, artistEntities)) {
-                                                is CatalogMatchResult.Success -> {
-                                                    if (!result.isHighConfidence) {
-                                                        android.widget.Toast.makeText(context, context.getString(R.string.saving_matched_version), android.widget.Toast.LENGTH_SHORT).show()
-                                                    }
-                                                    android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
-                                                    val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
-                                                        songId = result.catalogId,
-                                                        title = songTitle,
-                                                        artist = safeArtistName,
-                                                    )
-                                                    androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
-                                                }
-                                                is CatalogMatchResult.NoMatch -> {
-                                                    android.widget.Toast.makeText(context, context.getString(R.string.export_failed_no_catalog_match), android.widget.Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        android.widget.Toast.makeText(context, "Exporting to Music folder...", android.widget.Toast.LENGTH_SHORT).show()
-                                        val songId = mediaMetadata.id
-                                        val workRequest = moe.rgsekai.sekaitune.download.createSaveToDeviceWorkRequest(
-                                            songId = songId,
-                                            title = songTitle,
-                                            artist = safeArtistName,
-                                        )
-                                        androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
-                                    }
-                                },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 56.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
-
-                        when (download?.state) {
+                    when (download?.state) {
                             Download.STATE_COMPLETED -> {
                                 ListItem(
                                     headlineContent = {
@@ -1070,7 +1107,6 @@ fun PlayerMenu(
                     }
                 }
             }
-        }
         item {
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
                 Column {
