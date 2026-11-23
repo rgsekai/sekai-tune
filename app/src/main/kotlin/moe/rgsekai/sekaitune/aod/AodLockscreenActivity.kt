@@ -52,7 +52,7 @@ class AodLockscreenActivity : ComponentActivity() {
                         LinkPlayer.current()
                             ?: PlayerConnection(
                                 this@AodLockscreenActivity,
-                                service.service,
+                                service,
                                 database,
                                 lifecycleScope,
                             )
@@ -103,11 +103,11 @@ class AodLockscreenActivity : ComponentActivity() {
                         overrideActivityTransition(
                             OVERRIDE_TRANSITION_CLOSE,
                             0,
-                            android.R.anim.slide_out_bottom,
+                            0,
                         )
                     } else {
                         @Suppress("DEPRECATION")
-                        overridePendingTransition(0, android.R.anim.slide_out_bottom)
+                        overridePendingTransition(0, 0)
                     }
                 },
                 onSleep = {

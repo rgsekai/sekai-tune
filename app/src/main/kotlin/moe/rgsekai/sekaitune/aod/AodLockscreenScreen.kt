@@ -73,6 +73,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
+import moe.rgsekai.sekaitune.extensions.togglePlayPause
 import moe.rgsekai.sekaitune.playback.PlayerConnection
 import moe.rgsekai.sekaitune.utils.makeTimeString
 import java.text.SimpleDateFormat
@@ -258,7 +259,7 @@ fun AodLockscreenScreen(
             ) {
                 // Song Title & Artist
                 Text(
-                    text = mediaMetadata?.title ?: stringResource(R.string.not_playing),
+                    text = mediaMetadata?.title ?: stringResource(R.string.no_track_playing),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
@@ -269,7 +270,7 @@ fun AodLockscreenScreen(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = mediaMetadata?.artist ?: "",
+                    text = mediaMetadata?.artists?.joinToString { it.name }.orEmpty(),
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.65f),
                     maxLines = 1,
