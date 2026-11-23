@@ -434,17 +434,6 @@ object SettingsSearchRepository {
         )
         add(
             SettingsSearchEntry(
-                id = "sub_disable_blur",
-                title = "Disable blur effects",
-                subtitle = "Disable backdrop blur to maximize performance on lower-end devices",
-                category = appearanceCategory,
-                iconRes = R.drawable.contrast,
-                route = "settings/appearance",
-                keywords = listOf("disable blur", "remove blur", "blur radius", "performance", "lag fix", "speed up"),
-            ),
-        )
-        add(
-            SettingsSearchEntry(
                 id = "sub_swipe_to_skip",
                 title = "Swipe thumbnail to skip",
                 subtitle = "Swipe player artwork left or right to skip tracks",

@@ -72,13 +72,11 @@ import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.AppFontPreference
 import moe.rgsekai.sekaitune.constants.BackdropBlurAmountKey
 import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
-import moe.rgsekai.sekaitune.constants.BlurRadiusKey
 import moe.rgsekai.sekaitune.constants.ChipSortTypeKey
 import moe.rgsekai.sekaitune.constants.CropThumbnailToSquareKey
 import moe.rgsekai.sekaitune.constants.CustomFontNameKey
 import moe.rgsekai.sekaitune.constants.CustomFontUriKey
 import moe.rgsekai.sekaitune.constants.DefaultOpenTabKey
-import moe.rgsekai.sekaitune.constants.DisableBlurKey
 import moe.rgsekai.sekaitune.constants.FontPreferenceKey
 import moe.rgsekai.sekaitune.constants.GridItemSize
 import moe.rgsekai.sekaitune.constants.GridItemsSizeKey
@@ -108,7 +106,6 @@ import moe.rgsekai.sekaitune.ui.theme.CustomFontLoader
 import moe.rgsekai.sekaitune.ui.utils.backToMain
 import moe.rgsekai.sekaitune.utils.rememberEnumPreference
 import moe.rgsekai.sekaitune.utils.rememberPreference
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,8 +131,6 @@ fun AppearanceSettings(navController: NavController) {
             MiniPlayerBackgroundStyleKey,
             defaultValue = MiniPlayerBackgroundStyle.GLOW,
         )
-    val (disableBlur, onDisableBlurChange) = rememberPreference(DisableBlurKey, defaultValue = false)
-    val (blurRadius, onBlurRadiusChange) = rememberPreference(BlurRadiusKey, defaultValue = 48f)
     val (backdropEnabled, onBackdropEnabledChange) = rememberPreference(BackdropEnabledKey, defaultValue = true)
     val (backdropBlurAmount, onBackdropBlurAmountChange) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
     val (themeBackdropMode, onThemeBackdropModeChange) =
@@ -323,39 +318,6 @@ fun AppearanceSettings(navController: NavController) {
                         onClick = pickCustomFont,
                     )
                 }
-            }
-
-            PreferenceGroup(title = stringResource(R.string.display)) {
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.disable_blur)) },
-                        description = stringResource(R.string.disable_blur_desc),
-                        icon = { Icon(painterResource(R.drawable.blur_off), null) },
-                        checked = disableBlur,
-                        onCheckedChange = onDisableBlurChange,
-                    )
-                }
-
-                item {
-                    PreferenceEntry(
-                        title = { Text(stringResource(R.string.blur_intensity)) },
-                        description = stringResource(R.string.blur_intensity_value, blurRadius.roundToInt()),
-                        icon = { Icon(painterResource(R.drawable.blur_on), null) },
-                        isEnabled = !disableBlur,
-                        content = {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Slider(
-                                value = blurRadius,
-                                onValueChange = onBlurRadiusChange,
-                                valueRange = 0f..64f,
-                                steps = 63,
-                                enabled = !disableBlur,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        },
-                    )
-                }
-
             }
 
             PreferenceGroup(title = stringResource(R.string.player)) {
