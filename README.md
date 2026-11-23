@@ -223,7 +223,7 @@ Join our community to stay updated, report feedback, or chat with other listener
 Sekai Tune is built on the shoulders of the open-source community:
 
 * **[ArchiveTune](https://github.com/ArchiveTune/ArchiveTune)** & **[InnerTune](https://github.com/z-huang/InnerTune)** — The foundational upstream music player architecture this app is forked and developed from.
-* **[Echo Music](https://github.com/brahmkshatriya/echo)** — Design and feature inspiration.
+* **[Echo Music](https://github.com/brahmkshatriya/echo)** and **[Mochy](https://github.com/realidkroo/Mochy-Music)** — Design and feature inspiration.
 * **[SimpMusic](https://github.com/maxrave-dev/SimpMusic)** — Lyrics API provider implementation.
 * **[BetterLyrics](https://github.com/BetterLyrics/BetterLyrics)** — Word-by-word synced lyrics, unison, and artwork integration.
 * **[Material Color Utilities](https://github.com/material-foundation/material-color-utilities)** — Dynamic theming extraction.
