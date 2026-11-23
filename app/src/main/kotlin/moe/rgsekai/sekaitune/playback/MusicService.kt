@@ -698,10 +698,6 @@ class MusicService :
     lateinit var downloadCache: Cache
 
     @Inject
-    lateinit var equalizerService: moe.rgsekai.sekaitune.eq.EqualizerService
-    @Inject
-    lateinit var equalizerStore: moe.rgsekai.sekaitune.eq.EqualizerStore
-    @Inject
     lateinit var audioEffectsService: moe.rgsekai.sekaitune.eq.AudioEffectsService
     @Inject
     lateinit var audioEffectsStore: moe.rgsekai.sekaitune.eq.AudioEffectsStore
@@ -719,8 +715,6 @@ class MusicService :
     var primaryClockSink: moe.rgsekai.sekaitune.playback.audio.AudioEffectsClockSink? = null
     var secondaryClockSink: moe.rgsekai.sekaitune.playback.audio.AudioEffectsClockSink? = null
     val replayGainTags = moe.rgsekai.sekaitune.eq.audio.ReplayGainTags()
-    val eqProcessorPrimary = moe.rgsekai.sekaitune.eq.audio.CustomEqualizerAudioProcessor()
-    val eqProcessorSecondary = moe.rgsekai.sekaitune.eq.audio.CustomEqualizerAudioProcessor()
     private lateinit var castPlaybackRepository: CastPlaybackRepository
     private lateinit var mediaSession: MediaLibrarySession
 
@@ -1197,7 +1191,6 @@ class MusicService :
                 .setMediaSourceFactory(createMediaSourceFactory())
                 .setRenderersFactory(
                     createRenderersFactory(
-                        eqProcessorPrimary,
                         spatialAudioProcessorPrimary,
                         reverbAudioProcessorPrimary,
                         loudnessAudioProcessorPrimary,
@@ -1220,8 +1213,6 @@ class MusicService :
                     setOffloadEnabled(false)
                 }
         ColdStartTimer.addStage("MusicService: ExoPlayer Built")
-        equalizerService.addAudioProcessor(eqProcessorPrimary)
-        equalizerService.addAudioProcessor(eqProcessorSecondary)
         castPlaybackRepository = CastPlaybackRepositoryLocator.get(this)
         ColdStartTimer.addStage("MusicService: Wrapping Player")
         player =
@@ -2409,7 +2400,6 @@ class MusicService :
             .setMediaSourceFactory(createMediaSourceFactory())
             .setRenderersFactory(
                 createRenderersFactory(
-                    eqProcessorSecondary,
                     spatialAudioProcessorSecondary,
                     reverbAudioProcessorSecondary,
                     loudnessAudioProcessorSecondary,
@@ -8662,7 +8652,6 @@ class MusicService :
             .build()
 
     private fun createRenderersFactory(
-        eqProcessor: moe.rgsekai.sekaitune.eq.audio.CustomEqualizerAudioProcessor,
         spatialAudioProcessor: SpatialAudioProcessor,
         reverbAudioProcessor: moe.rgsekai.sekaitune.eq.audio.ReverbAudioProcessor,
         loudnessAudioProcessor: moe.rgsekai.sekaitune.eq.audio.LoudnessAudioProcessor,
@@ -8680,7 +8669,6 @@ class MusicService :
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                     .setAudioProcessorChain(
                         DefaultAudioSink.DefaultAudioProcessorChain(
-                            eqProcessor,
                             SilenceSkippingAudioProcessor(
                                 1_500_000L,
                                 0.35f,
