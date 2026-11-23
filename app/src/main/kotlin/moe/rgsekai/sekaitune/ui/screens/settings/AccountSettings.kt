@@ -194,10 +194,8 @@ fun AccountSettings(
     val scrollBehavior = appBarScrollBehavior()
 
     val accountLabel = stringResource(R.string.account)
-    val miscLabel = stringResource(R.string.misc)
     val loginLabel = stringResource(R.string.login)
     val notLoggedInLabel = stringResource(R.string.not_logged_in)
-    val tokenDescription = stringResource(R.string.token_adv_login_description)
 
     val (lastfmUsername, _) = rememberPreference(LastFmUsernameKey, "")
     val (lastfmEnabled, _) = rememberPreference(LastFmEnabledKey, false)
@@ -250,28 +248,15 @@ fun AccountSettings(
             else -> loginLabel
         }
 
-    var showToken by remember { mutableStateOf(false) }
     var showTokenEditor by remember { mutableStateOf(false) }
     var showUnsavedAccountDialog by remember { mutableStateOf(false) }
 
     val spotifyAccountViewModel: SpotifyAccountViewModel = hiltViewModel()
     val spotifyState by spotifyAccountViewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(isLoggedIn) {
-        if (!isLoggedIn) {
-            showToken = false
-        }
-    }
-
     val hasUpdate =
         BuildConfig.UPDATER_AVAILABLE &&
             Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
-    val tokenActionTitle =
-        when {
-            !isLoggedIn -> stringResource(R.string.advanced_login)
-            showToken -> stringResource(R.string.token_shown)
-            else -> stringResource(R.string.token_hidden)
-        }
 
     val saveCurrentAccount: () -> Unit = {
         val existing = decodeSavedAccounts(savedAccountsJson)
@@ -427,7 +412,6 @@ fun AccountSettings(
                     },
                     onSecondaryAction = {
                         if (isLoggedIn) {
-                            showToken = false
                             onInnerTubeCookieChange("")
                             forgetAccount(context, clearWebAuthSession = true)
                         } else {
@@ -537,26 +521,6 @@ fun AccountSettings(
                             icon = painterResource(R.drawable.fire),
                             title = stringResource(R.string.music_together),
                             onClick = { navController.navigate("settings/music_together") },
-                        )
-                    }
-                }
-
-                item {
-                    ExpressiveSectionCard(title = miscLabel) {
-                        ExpressiveActionRow(
-                            icon = painterResource(R.drawable.token),
-                            title = tokenActionTitle,
-                            subtitle = tokenDescription,
-                            accent = if (isLoggedIn && showToken) MaterialTheme.colorScheme.tertiary else null,
-                            onClick = {
-                                if (!isLoggedIn) {
-                                    showTokenEditor = true
-                                } else if (!showToken) {
-                                    showToken = true
-                                } else {
-                                    showTokenEditor = true
-                                }
-                            },
                         )
                     }
                 }
@@ -1636,7 +1600,7 @@ private fun VersionStamp() {
 }
 
 @Composable
-private fun TokenEditorDialog(
+internal fun TokenEditorDialog(
     innerTubeCookie: String,
     visitorData: String,
     dataSyncId: String,
