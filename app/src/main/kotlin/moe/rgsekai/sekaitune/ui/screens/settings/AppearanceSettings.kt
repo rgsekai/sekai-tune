@@ -72,15 +72,12 @@ import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.constants.AppFontPreference
 import moe.rgsekai.sekaitune.constants.BackdropBlurAmountKey
 import moe.rgsekai.sekaitune.constants.BackdropEnabledKey
-import moe.rgsekai.sekaitune.constants.ChipSortTypeKey
 import moe.rgsekai.sekaitune.constants.CropThumbnailToSquareKey
 import moe.rgsekai.sekaitune.constants.CustomFontNameKey
 import moe.rgsekai.sekaitune.constants.CustomFontUriKey
-import moe.rgsekai.sekaitune.constants.DefaultOpenTabKey
 import moe.rgsekai.sekaitune.constants.FontPreferenceKey
 import moe.rgsekai.sekaitune.constants.GridItemSize
 import moe.rgsekai.sekaitune.constants.GridItemsSizeKey
-import moe.rgsekai.sekaitune.constants.LibraryFilter
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyle
 import moe.rgsekai.sekaitune.constants.MiniPlayerBackgroundStyleKey
 import moe.rgsekai.sekaitune.constants.ThemeBackdropMode
@@ -90,14 +87,12 @@ import moe.rgsekai.sekaitune.constants.ThemeBackdropBlurStrengthKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassGlobalEnabledKey
 import moe.rgsekai.sekaitune.constants.LiquidGlassNavBarEnabledKey
 import moe.rgsekai.sekaitune.constants.ShowOneLineLyricsKey
-import moe.rgsekai.sekaitune.constants.ShowTagsInLibraryKey
 import moe.rgsekai.sekaitune.constants.SwipeThumbnailKey
 import moe.rgsekai.sekaitune.constants.SwipeToSongKey
 import moe.rgsekai.sekaitune.constants.ThumbnailCornerRadiusKey
 import moe.rgsekai.sekaitune.ui.component.DefaultDialog
 import moe.rgsekai.sekaitune.ui.component.EnumListPreference
 import moe.rgsekai.sekaitune.ui.component.IconButton
-import moe.rgsekai.sekaitune.ui.component.ListPreference
 import moe.rgsekai.sekaitune.ui.component.PreferenceEntry
 import moe.rgsekai.sekaitune.ui.component.PreferenceGroup
 import moe.rgsekai.sekaitune.ui.component.SwitchPreference
@@ -155,11 +150,6 @@ fun AppearanceSettings(navController: NavController) {
         )
     val (customFontUri, onCustomFontUriChange) = rememberPreference(CustomFontUriKey, defaultValue = "")
     val (customFontName, onCustomFontNameChange) = rememberPreference(CustomFontNameKey, defaultValue = "")
-    val (defaultOpenTab, onDefaultOpenTabChange) =
-        rememberEnumPreference(
-            DefaultOpenTabKey,
-            defaultValue = NavigationTab.HOME,
-        )
     val (swipeThumbnail, onSwipeThumbnailChange) =
         rememberPreference(
             SwipeThumbnailKey,
@@ -174,12 +164,6 @@ fun AppearanceSettings(navController: NavController) {
     val (swipeToSong, onSwipeToSongChange) =
         rememberPreference(
             SwipeToSongKey,
-            defaultValue = false,
-        )
-
-    val (showTagsInLibrary, onShowTagsInLibraryChange) =
-        rememberPreference(
-            ShowTagsInLibraryKey,
             defaultValue = false,
         )
 
@@ -225,12 +209,6 @@ fun AppearanceSettings(navController: NavController) {
                 }
             }
         }
-
-    val (defaultChip, onDefaultChipChange) =
-        rememberEnumPreference(
-            key = ChipSortTypeKey,
-            defaultValue = LibraryFilter.LIBRARY,
-        )
 
     Scaffold(
         topBar = {
@@ -408,61 +386,6 @@ fun AppearanceSettings(navController: NavController) {
             }
 
             PreferenceGroup(title = stringResource(R.string.appearance_section_navigation_layout)) {
-                item {
-                    EnumListPreference(
-                        title = { Text(stringResource(R.string.default_open_tab)) },
-                        icon = { Icon(painterResource(R.drawable.nav_bar), null) },
-                        selectedValue = defaultOpenTab,
-                        onValueSelected = onDefaultOpenTabChange,
-                        valueText = {
-                            when (it) {
-                                NavigationTab.HOME -> stringResource(R.string.home)
-                                NavigationTab.SEARCH -> stringResource(R.string.search)
-                                NavigationTab.MOODANDGENRES -> stringResource(R.string.mood_and_genres)
-                                NavigationTab.LIBRARY -> stringResource(R.string.filter_library)
-                            }
-                        },
-                    )
-                }
-
-                item {
-                    ListPreference(
-                        title = { Text(stringResource(R.string.default_lib_chips)) },
-                        icon = { Icon(painterResource(R.drawable.tab), null) },
-                        selectedValue = defaultChip,
-                        values =
-                            listOf(
-                                LibraryFilter.LIBRARY,
-                                LibraryFilter.PLAYLISTS,
-                                LibraryFilter.ALBUMS,
-                                LibraryFilter.ARTISTS,
-                                LibraryFilter.AI_MIXES,
-                            ),
-                        valueText = {
-                            when (it) {
-                                LibraryFilter.SONGS -> stringResource(R.string.songs)
-                                LibraryFilter.ARTISTS -> stringResource(R.string.artists)
-                                LibraryFilter.ALBUMS -> stringResource(R.string.albums)
-                                LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
-                                LibraryFilter.SPOTIFY -> stringResource(R.string.spotify_playlists)
-                                LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
-                                LibraryFilter.AI_MIXES -> stringResource(R.string.top_mixes)
-                            }
-                        },
-                        onValueSelected = onDefaultChipChange,
-                    )
-                }
-
-                item {
-                    SwitchPreference(
-                        title = { Text(stringResource(R.string.show_tags_in_library)) },
-                        description = stringResource(R.string.show_tags_in_library_desc),
-                        icon = { Icon(painterResource(R.drawable.filter_alt), null) },
-                        checked = showTagsInLibrary,
-                        onCheckedChange = onShowTagsInLibraryChange,
-                    )
-                }
-
                 item {
                     SwitchPreference(
                         title = { Text(stringResource(R.string.swipe_song_to_add)) },
