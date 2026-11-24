@@ -3536,6 +3536,7 @@ class MusicService :
             } else {
                 true
             }
+            AodLogger.log(this@MusicService, "canUseFullScreenIntent() result: $canUseFsi")
 
             if (!canUseFsi) {
                 AodLogger.log(this@MusicService, "NotificationManager.canUseFullScreenIntent() is false -> full-screen-intent fallback skipped")
@@ -3576,7 +3577,8 @@ class MusicService :
                     .build()
 
                 lastSuccessfulLaunchPath = "full_screen_intent"
-                AodLogger.log(this@MusicService, "posting silent full-screen intent notification on channel $AOD_NOTIFICATION_CHANNEL_ID")
+                val elapsedSinceScreenOff = if (AodLogger.screenOffTimeMs > 0) "${System.currentTimeMillis() - AodLogger.screenOffTimeMs} ms" else "unknown"
+                AodLogger.log(this@MusicService, "posting silent full-screen intent notification on channel $AOD_NOTIFICATION_CHANNEL_ID (posted at $elapsedSinceScreenOff after SCREEN_OFF)")
                 nm.notify(AOD_FALLBACK_NOTIFICATION_ID, notification)
 
                 var fsiShowed = false
@@ -3584,7 +3586,8 @@ class MusicService :
                     delay(100)
                     if (AodLockscreenActivity.isShowing) {
                         fsiShowed = true
-                        AodLogger.log(this@MusicService, "full-screen intent fallback succeeded at ${j * 100}ms (isShowing=true, path=full_screen_intent)")
+                        val totalElapsed = if (AodLogger.screenOffTimeMs > 0) "${System.currentTimeMillis() - AodLogger.screenOffTimeMs} ms" else "unknown"
+                        AodLogger.log(this@MusicService, "full-screen intent fallback succeeded at ${j * 100}ms (isShowing=true, path=full_screen_intent, total latency from SCREEN_OFF: $totalElapsed)")
                         break
                     }
                 }

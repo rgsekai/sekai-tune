@@ -141,6 +141,9 @@ class AodLockscreenActivity : ComponentActivity() {
         val path = MusicService.lastSuccessfulLaunchPath
         val preAttached = MusicService.wasPreAttachedOnScreenOff
         AodLogger.log(this, "AodLockscreenActivity.onResume() - isShowing=true | latency from SCREEN_OFF: $latencyStr | preAttached: $preAttached | launchPath: $path")
+        if (path == "full_screen_intent") {
+            AodLogger.log(this, "AodLockscreenActivity.onResume() ran after full-screen-intent fallback | latency from SCREEN_OFF: $latencyStr")
+        }
         MusicService.dismissLaunchOverlay()
         (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(MusicService.AOD_FALLBACK_NOTIFICATION_ID)
         applyLockscreenFlags()
