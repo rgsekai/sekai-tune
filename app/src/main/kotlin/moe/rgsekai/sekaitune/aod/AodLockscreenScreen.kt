@@ -146,6 +146,12 @@ fun AodLockscreenScreen(
     val dragOffsetY = remember { Animatable(0f) }
     val dismissThresholdPx = with(density) { 120.dp.toPx() }
 
+    var showArtwork by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(150)
+        showArtwork = true
+    }
+
     Box(
         modifier =
             Modifier
@@ -185,8 +191,8 @@ fun AodLockscreenScreen(
                     )
                 },
     ) {
-        // Fullscreen Dim-Toned Album Artwork
-        if (mediaMetadata?.thumbnailUrl != null) {
+        // Fullscreen Dim-Toned Album Artwork (deferred to frame 2+ for instant black first frame)
+        if (showArtwork && mediaMetadata?.thumbnailUrl != null) {
             val desaturateMatrix =
                 remember {
                     ColorMatrix().apply {

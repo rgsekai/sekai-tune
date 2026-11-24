@@ -78,6 +78,7 @@ class AodLockscreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         isShowing = true
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
         AodLogger.log(this, "AodLockscreenActivity.onCreate() - isShowing=true")
         MusicService.dismissLaunchOverlay()
         applyLockscreenFlags()
@@ -95,12 +96,6 @@ class AodLockscreenActivity : ComponentActivity() {
                         lifecycleScope,
                     )
                 }
-
-        bindService(
-            Intent(this, MusicService::class.java),
-            serviceConnection,
-            Context.BIND_AUTO_CREATE,
-        )
 
         setContent {
             AodLockscreenScreen(
@@ -123,6 +118,14 @@ class AodLockscreenActivity : ComponentActivity() {
                     AodLogger.log(this@AodLockscreenActivity, "AodLockscreenActivity onSleep (double-tap)")
                     finish()
                 },
+            )
+        }
+
+        lifecycleScope.launch(Dispatchers.Main.immediate) {
+            bindService(
+                Intent(this@AodLockscreenActivity, MusicService::class.java),
+                serviceConnection,
+                Context.BIND_AUTO_CREATE,
             )
         }
     }
