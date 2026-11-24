@@ -302,7 +302,7 @@ fun AodLockscreenScreen(
                 )
             }
 
-            // Balanced vertical spacing: pushes player card into the natural lower half
+            // Balanced vertical spacing: pushes player card into the lower-middle zone
             Spacer(modifier = Modifier.weight(1f))
 
             // Lower Area: Song Details, Progress Bar & Media Controls
@@ -424,7 +424,7 @@ fun AodLockscreenScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Playback Controls: Symmetric [Like] [Prev] [Play/Pause] [Next] [Save to device]
+                // Playback Controls: Symmetric [Save to device] [Prev] [Play/Pause] [Next] [Like]
                 Row(
                     modifier =
                         Modifier
@@ -432,82 +432,13 @@ fun AodLockscreenScreen(
                             .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Left equal-weight slot: [Like] [Prev]
+                    // Left equal-weight slot: [Save to device] [Prev]
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Like Button (min 48dp touch target)
-                        IconButton(
-                            onClick = { playerConnection?.toggleLike() },
-                            modifier = Modifier.size(48.dp),
-                        ) {
-                            Icon(
-                                painter =
-                                    painterResource(
-                                        if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
-                                    ),
-                                contentDescription = stringResource(R.string.action_like),
-                                tint = if (isLiked) Color(0xFFFF4081) else Color.White.copy(alpha = 0.85f),
-                                modifier = Modifier.size(26.dp),
-                            )
-                        }
-
-                        // Previous Button (48dp touch target)
-                        IconButton(
-                            onClick = { playerConnection?.seekToPrevious() },
-                            modifier = Modifier.size(48.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.skip_previous),
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.size(32.dp),
-                            )
-                        }
-                    }
-
-                    // Exactly Centered: Play / Pause Circle (64dp)
-                    Surface(
-                        onClick = { playerConnection?.player?.togglePlayPause() },
-                        shape = CircleShape,
-                        color = Color.White,
-                        modifier = Modifier.size(64.dp),
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                painter =
-                                    painterResource(
-                                        if (isPlaying) R.drawable.pause else R.drawable.play,
-                                    ),
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.size(30.dp),
-                            )
-                        }
-                    }
-
-                    // Right equal-weight slot: [Next] [Save to device]
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Next Button (48dp touch target)
-                        IconButton(
-                            onClick = { playerConnection?.seekToNext() },
-                            modifier = Modifier.size(48.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.skip_next),
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.size(32.dp),
-                            )
-                        }
-
-                        // Save to Device Button (min 48dp touch target, mirroring Like button)
+                        // Save to Device Button (min 48dp touch target)
                         IconButton(
                             onClick = {
                                 if (!canSave) return@IconButton
@@ -577,12 +508,81 @@ fun AodLockscreenScreen(
                                 )
                             }
                         }
+
+                        // Previous Button (48dp touch target)
+                        IconButton(
+                            onClick = { playerConnection?.seekToPrevious() },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.skip_previous),
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
+                    }
+
+                    // Exactly Centered: Play / Pause Circle (64dp)
+                    Surface(
+                        onClick = { playerConnection?.player?.togglePlayPause() },
+                        shape = CircleShape,
+                        color = Color.White,
+                        modifier = Modifier.size(64.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (isPlaying) R.drawable.pause else R.drawable.play,
+                                    ),
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(30.dp),
+                            )
+                        }
+                    }
+
+                    // Right equal-weight slot: [Next] [Like]
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Next Button (48dp touch target)
+                        IconButton(
+                            onClick = { playerConnection?.seekToNext() },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.skip_next),
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
+
+                        // Like Button (min 48dp touch target)
+                        IconButton(
+                            onClick = { playerConnection?.toggleLike() },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                                    ),
+                                contentDescription = stringResource(R.string.action_like),
+                                tint = if (isLiked) Color(0xFFFF4081) else Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
                     }
                 }
             }
 
-            // Balanced spacing above swipe-up prompt
-            Spacer(modifier = Modifier.height(36.dp))
+            // Balanced spacing above swipe-up prompt (lifts player group by ~13% of screen height)
+            Spacer(modifier = Modifier.weight(0.42f))
 
             // Bottom: Swipe up to unlock hint
             Column(
