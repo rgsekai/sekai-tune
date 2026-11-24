@@ -12,10 +12,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
+import android.view.Display
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -140,7 +143,24 @@ class AodLockscreenActivity : ComponentActivity() {
         val latencyStr = if (t0 > 0) "${now - t0} ms" else "unknown"
         val path = MusicService.lastSuccessfulLaunchPath
         val preAttached = MusicService.wasPreAttachedOnScreenOff
-        AodLogger.log(this, "AodLockscreenActivity.onResume() - isShowing=true | latency from SCREEN_OFF: $latencyStr | preAttached: $preAttached | launchPath: $path")
+        val dm = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+        val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
+        val stateName = when (display?.state) {
+            Display.STATE_OFF -> "STATE_OFF(1)"
+            Display.STATE_ON -> "STATE_ON(2)"
+            Display.STATE_DOZE -> "STATE_DOZE(3)"
+            Display.STATE_DOZE_SUSPEND -> "STATE_DOZE_SUSPEND(4)"
+            Display.STATE_VR -> "STATE_VR(5)"
+            Display.STATE_ON_SUSPEND -> "STATE_ON_SUSPEND(6)"
+            null -> "STATE_NULL"
+            else -> "STATE_${display.state}"
+        }
+        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        val isInteractive = pm?.isInteractive == true
+        AodLogger.log(
+            this,
+            "AodLockscreenActivity.onResume() - isShowing=true | displayState=$stateName, isInteractive=$isInteractive | latency from SCREEN_OFF: $latencyStr | preAttached: $preAttached | launchPath: $path",
+        )
         MusicService.dismissLaunchOverlay()
         (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(MusicService.AOD_FALLBACK_NOTIFICATION_ID)
         applyLockscreenFlags()
