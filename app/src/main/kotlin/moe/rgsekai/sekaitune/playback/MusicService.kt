@@ -16,6 +16,7 @@ import moe.rgsekai.sekaitune.constants.MediaSessionConstants
 import moe.rgsekai.sekaitune.webdav.WebDavAuth
 import android.app.ActivityManager
 import android.app.ActivityOptions
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -1177,19 +1178,6 @@ class MusicService :
                         NotificationManager.IMPORTANCE_DEFAULT,
                     ),
                 )
-                nm?.createNotificationChannel(
-                    NotificationChannel(
-                        AOD_CHANNEL_ID,
-                        getString(R.string.lockscreen_aod),
-                        NotificationManager.IMPORTANCE_HIGH,
-                    ).apply {
-                        description = getString(R.string.lockscreen_aod_desc)
-                        setSound(null, null)
-                        enableVibration(false)
-                        enableLights(false)
-                        lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                    },
-                )
             }
         } catch (e: Exception) {
             reportException(e)
@@ -1524,9 +1512,9 @@ class MusicService :
             .collectLatest(scope) { enabled ->
                 isLockscreenAodEnabled = enabled
                 if (enabled) {
-                    registerScreenOffReceiver()
+                    registerScreenReceiver()
                 } else {
-                    unregisterScreenOffReceiver()
+                    unregisterScreenReceiver()
                 }
             }
 
@@ -3287,29 +3275,30 @@ class MusicService :
     }
 
     private var isLockscreenAodEnabled = false
-    private var screenOffReceiverRegistered = false
-    private val screenOffReceiver =
+    private var screenReceiverRegistered = false
+    private val screenReceiver =
         object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                if (intent.action != Intent.ACTION_SCREEN_OFF) return
                 if (!isLockscreenAodEnabled) return
                 val isPlaying = player.isPlaying || player.playWhenReady
-                if (isPlaying && player.currentMediaItem != null) {
-                    launchAodLockscreen()
+                if (!isPlaying || player.currentMediaItem == null) return
+
+                when (intent.action) {
+                    Intent.ACTION_SCREEN_OFF -> {
+                        launchAodLockscreen()
+                    }
+                    Intent.ACTION_SCREEN_ON -> {
+                        val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                        if (km?.isKeyguardLocked == true) {
+                            launchAodLockscreen()
+                        }
+                    }
                 }
             }
         }
 
     private fun launchAodLockscreen() {
         try {
-            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
-            @Suppress("DEPRECATION")
-            val wakeLock = pm?.newWakeLock(
-                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "SekaiTune:AodWakeLock",
-            )
-            wakeLock?.acquire(2500L)
-
             val aodIntent = Intent(this, AodLockscreenActivity::class.java).apply {
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -3317,67 +3306,29 @@ class MusicService :
                         Intent.FLAG_ACTIVITY_CLEAR_TOP,
                 )
             }
-
-            val options = ActivityOptions.makeBasic()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                options.setPendingIntentBackgroundActivityStartMode(
-                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
-                )
-            }
-
-            val pendingIntent = PendingIntent.getActivity(
-                this,
-                AOD_NOTIFICATION_ID,
-                aodIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                options.toBundle(),
-            )
-
-            try {
-                pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
-            } catch (_: Exception) {
-                try {
-                    startActivity(aodIntent, options.toBundle())
-                } catch (_: Exception) {
-                }
-            }
-
-            val currentMeta = player.currentMetadata ?: currentMediaMetadata.value
-            val notif = NotificationCompat.Builder(this, AOD_CHANNEL_ID)
-                .setSmallIcon(R.drawable.small_icon)
-                .setContentTitle(currentMeta?.title ?: getString(R.string.lockscreen_aod))
-                .setContentText(currentMeta?.artists?.joinToString { it.name } ?: "")
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setFullScreenIntent(pendingIntent, true)
-                .setAutoCancel(true)
-                .setSilent(true)
-                .build()
-
-            (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.notify(
-                AOD_NOTIFICATION_ID,
-                notif,
-            )
+            startActivity(aodIntent)
         } catch (e: Exception) {
             reportException(e)
         }
     }
 
-    private fun registerScreenOffReceiver() {
-        if (screenOffReceiverRegistered) return
-        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
-        registerReceiver(screenOffReceiver, filter)
-        screenOffReceiverRegistered = true
+    private fun registerScreenReceiver() {
+        if (screenReceiverRegistered) return
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        registerReceiver(screenReceiver, filter)
+        screenReceiverRegistered = true
     }
 
-    private fun unregisterScreenOffReceiver() {
-        if (!screenOffReceiverRegistered) return
+    private fun unregisterScreenReceiver() {
+        if (!screenReceiverRegistered) return
         try {
-            unregisterReceiver(screenOffReceiver)
+            unregisterReceiver(screenReceiver)
         } catch (_: Exception) {
         }
-        screenOffReceiverRegistered = false
+        screenReceiverRegistered = false
     }
 
     private fun waitOnNetworkError() {
@@ -9379,7 +9330,7 @@ class MusicService :
             audioDeviceCallbackRegistered = false
         }
         unregisterBluetoothReceiver()
-        unregisterScreenOffReceiver()
+        unregisterScreenReceiver()
         unregisterMuteRecoveryObserver()
         try {
             callWatcher.stop()
@@ -9773,8 +9724,6 @@ class MusicService :
         private const val INFINITE_QUEUE_MAX_BOOTSTRAP_PAGES = 3
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888
-        const val AOD_CHANNEL_ID = "aod_channel"
-        const val AOD_NOTIFICATION_ID = 899
         @Volatile
         var currentBinder: MusicBinder? = null
             internal set

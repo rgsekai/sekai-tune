@@ -402,7 +402,6 @@
             android:name=".aod.AodLockscreenActivity"
             android:exported="false"
             android:showWhenLocked="true"
-            android:turnScreenOn="true"
             android:excludeFromRecents="true"
             android:taskAffinity="moe.rgsekai.sekaitune.aod"
             android:launchMode="singleInstance"

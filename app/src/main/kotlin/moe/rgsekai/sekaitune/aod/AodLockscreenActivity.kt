@@ -7,7 +7,6 @@
 
 package moe.rgsekai.sekaitune.aod
 
-import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -109,10 +108,6 @@ class AodLockscreenActivity : ComponentActivity() {
                     }
                 },
                 onSleep = {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    val lp = window.attributes
-                    lp.screenBrightness = 0.001f
-                    window.attributes = lp
                     finish()
                 },
             )
@@ -123,9 +118,6 @@ class AodLockscreenActivity : ComponentActivity() {
         super.onResume()
         applyLockscreenFlags()
         hideSystemBars()
-        (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(
-            MusicService.AOD_NOTIFICATION_ID,
-        )
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -144,15 +136,10 @@ class AodLockscreenActivity : ComponentActivity() {
     private fun applyLockscreenFlags() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
-            setTurnScreenOn(true)
         } else {
             @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
-            )
+            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     private fun hideSystemBars() {
@@ -165,9 +152,6 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(
-            MusicService.AOD_NOTIFICATION_ID,
-        )
         if (isMusicServiceBound) {
             try {
                 unbindService(serviceConnection)
