@@ -14,6 +14,7 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -69,6 +70,7 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onCreate()")
         applyLockscreenFlags()
         hideSystemBars()
 
@@ -95,6 +97,7 @@ class AodLockscreenActivity : ComponentActivity() {
             AodLockscreenScreen(
                 playerConnection = playerConnection,
                 onDismiss = {
+                    Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity onDismiss (swipe-up)")
                     finish()
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                         overrideActivityTransition(
@@ -108,6 +111,7 @@ class AodLockscreenActivity : ComponentActivity() {
                     }
                 },
                 onSleep = {
+                    Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity onSleep (double-tap)")
                     finish()
                 },
             )
@@ -116,8 +120,14 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onResume()")
         applyLockscreenFlags()
         hideSystemBars()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onStop()")
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -152,6 +162,7 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onDestroy()")
         if (isMusicServiceBound) {
             try {
                 unbindService(serviceConnection)

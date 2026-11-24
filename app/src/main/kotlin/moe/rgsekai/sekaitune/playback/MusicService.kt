@@ -54,6 +54,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.DocumentsContract
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import java.io.FileInputStream
 import java.io.FileNotFoundException
@@ -3280,27 +3281,63 @@ class MusicService :
     private val screenReceiver =
         object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                if (!isLockscreenAodEnabled) return
-                val isPlaying = player.isPlaying || player.playWhenReady
-                if (!isPlaying || player.currentMediaItem == null) return
+                val now = System.currentTimeMillis()
+                val action = intent.action
+                Log.d("AodLockscreen", "[$now] screenReceiver onReceive: action=$action")
 
-                when (intent.action) {
+                if (!isLockscreenAodEnabled) {
+                    Log.d("AodLockscreen", "[$now] returning early because isLockscreenAodEnabled is false")
+                    return
+                }
+
+                val isPlaying = player.isPlaying
+                val playWhenReady = player.playWhenReady
+                val hasMediaItem = player.currentMediaItem != null
+                Log.d(
+                    "AodLockscreen",
+                    "[$now] state check: aodEnabled=$isLockscreenAodEnabled, isPlaying=$isPlaying, playWhenReady=$playWhenReady, hasMediaItem=$hasMediaItem",
+                )
+
+                if (!isPlaying && !playWhenReady) {
+                    Log.d("AodLockscreen", "[$now] returning early because neither isPlaying nor playWhenReady is true")
+                    return
+                }
+                if (!hasMediaItem) {
+                    Log.d("AodLockscreen", "[$now] returning early because currentMediaItem is null")
+                    return
+                }
+
+                when (action) {
                     Intent.ACTION_SCREEN_OFF -> {
+                        Log.d("AodLockscreen", "[$now] received ACTION_SCREEN_OFF -> invoking launchAodLockscreen()")
                         launchAodLockscreen()
                     }
                     Intent.ACTION_SCREEN_ON -> {
                         val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                        if (km?.isKeyguardLocked == true) {
+                        val isLocked = km?.isKeyguardLocked == true
+                        Log.d("AodLockscreen", "[$now] received ACTION_SCREEN_ON: isKeyguardLocked=$isLocked")
+                        if (isLocked) {
+                            Log.d("AodLockscreen", "[$now] keyguard is locked -> invoking launchAodLockscreen()")
                             launchAodLockscreen()
+                        } else {
+                            Log.d("AodLockscreen", "[$now] returning early because keyguard is not locked (isKeyguardLocked=$isLocked)")
                         }
+                    }
+                    else -> {
+                        Log.d("AodLockscreen", "[$now] ignored unhandled action: $action")
                     }
                 }
             }
         }
 
     private fun launchAodLockscreen() {
+        val now = System.currentTimeMillis()
         try {
-            if (!Settings.canDrawOverlays(this)) {
+            val canDrawOverlays = Settings.canDrawOverlays(this)
+            Log.d("AodLockscreen", "[$now] launchAodLockscreen() called. canDrawOverlays=$canDrawOverlays")
+
+            if (!canDrawOverlays) {
+                Log.d("AodLockscreen", "[$now] canDrawOverlays is false, showing warning toast")
                 Handler(Looper.getMainLooper()).post {
                     Toast.makeText(this@MusicService, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
                 }
@@ -3330,18 +3367,23 @@ class MusicService :
             )
 
             try {
+                Log.d("AodLockscreen", "[$now] launching via PendingIntent.send()")
                 pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
-            } catch (_: Exception) {
+            } catch (e1: Exception) {
+                Log.d("AodLockscreen", "[$now] PendingIntent.send failed: ${e1.message}, fallback to startActivity(options)")
                 try {
                     startActivity(aodIntent, options.toBundle())
-                } catch (_: Exception) {
+                } catch (e2: Exception) {
+                    Log.d("AodLockscreen", "[$now] startActivity(options) failed: ${e2.message}, fallback to plain startActivity")
                     try {
                         startActivity(aodIntent)
-                    } catch (_: Exception) {
+                    } catch (e3: Exception) {
+                        Log.d("AodLockscreen", "[$now] plain startActivity failed: ${e3.message}")
                     }
                 }
             }
         } catch (e: Exception) {
+            Log.d("AodLockscreen", "[$now] launchAodLockscreen outer exception: ${e.message}", e)
             reportException(e)
         }
     }
