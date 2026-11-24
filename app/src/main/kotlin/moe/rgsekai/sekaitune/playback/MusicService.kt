@@ -3330,73 +3330,110 @@ class MusicService :
             }
         }
 
+    private fun getAppProcessStateDescription(): String {
+        return try {
+            val appProcessInfo = ActivityManager.RunningAppProcessInfo()
+            ActivityManager.getMyMemoryState(appProcessInfo)
+            val importanceName = when (appProcessInfo.importance) {
+                ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND -> "FOREGROUND"
+                ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE -> "FOREGROUND_SERVICE"
+                ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE -> "VISIBLE"
+                ActivityManager.RunningAppProcessInfo.IMPORTANCE_PERCEPTIBLE -> "PERCEPTIBLE"
+                ActivityManager.RunningAppProcessInfo.IMPORTANCE_CANT_SAVE_STATE -> "CANT_SAVE_STATE"
+                ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED -> "CACHED"
+                else -> "IMPORTANCE_${appProcessInfo.importance}"
+            }
+            "processState=$importanceName(${appProcessInfo.importance})"
+        } catch (e: Exception) {
+            "processState=UNKNOWN(${e.message})"
+        }
+    }
+
     private fun launchAodLockscreen() {
-        if (AodLockscreenActivity.isShowing) {
-            AodLogger.log(this, "skipping launch because AodLockscreenActivity is already showing (isShowing=true)")
-            return
-        }
-
-        val canDrawOverlays = Settings.canDrawOverlays(this)
-        AodLogger.log(this, "launchAodLockscreen() called. canDrawOverlays=$canDrawOverlays")
-
-        if (!canDrawOverlays) {
-            AodLogger.log(this, "canDrawOverlays is false, showing warning toast")
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(this@MusicService, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
+        scope.launch {
+            if (AodLockscreenActivity.isShowing) {
+                AodLogger.log(this@MusicService, "skipping launch because AodLockscreenActivity is already showing (isShowing=true)")
+                return@launch
             }
-        }
 
-        val aodIntent = Intent(this, AodLockscreenActivity::class.java).apply {
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
-            )
-        }
+            val canDrawOverlays = Settings.canDrawOverlays(this@MusicService)
+            val appState = getAppProcessStateDescription()
+            AodLogger.log(this@MusicService, "launchAodLockscreen() called. canDrawOverlays=$canDrawOverlays, $appState")
 
-        val options = ActivityOptions.makeBasic()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            options.setPendingIntentBackgroundActivityStartMode(
-                ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
-            )
-        }
-
-        var launched = false
-
-        // 1. PendingIntent launch (created with plain flags only, background start mode passed only to send())
-        try {
-            val pendingIntent = PendingIntent.getActivity(
-                this,
-                899,
-                aodIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-            AodLogger.log(this, "launching via PendingIntent.send()")
-            pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
-            launched = true
-        } catch (e1: Exception) {
-            AodLogger.log(this, "PendingIntent.send failed: ${e1.message}, will fallback to direct startActivity", e1)
-        }
-
-        // 2. Direct startActivity with options
-        if (!launched) {
-            try {
-                AodLogger.log(this, "fallback: startActivity with options")
-                startActivity(aodIntent, options.toBundle())
-                launched = true
-            } catch (e2: Exception) {
-                AodLogger.log(this, "startActivity(options) failed: ${e2.message}, will fallback to plain startActivity", e2)
+            if (!canDrawOverlays) {
+                AodLogger.log(this@MusicService, "canDrawOverlays is false, showing warning toast")
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(this@MusicService, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
+                }
             }
-        }
 
-        // 3. Plain startActivity
-        if (!launched) {
+            val aodIntent = Intent(this@MusicService, AodLockscreenActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                )
+            }
+
+            val options = ActivityOptions.makeBasic()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                options.setPendingIntentBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
+                )
+            }
+
+            // 1. Call startActivity(aodIntent) directly FIRST
+            AodLogger.log(this@MusicService, "attempt 1: calling startActivity(aodIntent) directly FIRST")
             try {
-                AodLogger.log(this, "fallback: plain startActivity")
                 startActivity(aodIntent)
-                launched = true
-            } catch (e3: Exception) {
-                AodLogger.log(this, "plain startActivity failed: ${e3.message}", e3)
+            } catch (e: Exception) {
+                AodLogger.log(this@MusicService, "attempt 1 direct startActivity exception: ${e.message}", e)
+            }
+
+            // Do not trust "no exception" as success. Wait ~700 ms and check isShowing
+            delay(700)
+            if (AodLockscreenActivity.isShowing) {
+                AodLogger.log(this@MusicService, "attempt 1 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
+                return@launch
+            }
+
+            AodLogger.log(this@MusicService, "attempt 1 did not result in activity showing (isShowing=false). Retrying direct startActivity...")
+
+            // Retry once with options bundle
+            try {
+                AodLogger.log(this@MusicService, "attempt 2: retry direct startActivity with options")
+                startActivity(aodIntent, options.toBundle())
+            } catch (e: Exception) {
+                AodLogger.log(this@MusicService, "attempt 2 direct startActivity(options) exception: ${e.message}", e)
+            }
+
+            delay(700)
+            if (AodLockscreenActivity.isShowing) {
+                AodLogger.log(this@MusicService, "attempt 2 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
+                return@launch
+            }
+
+            AodLogger.log(this@MusicService, "attempt 2 did not result in activity showing (isShowing=false). Trying PendingIntent path...")
+
+            // Try the PendingIntent path (send() with MODE_BACKGROUND_ACTIVITY_START_ALLOWED in send options only)
+            try {
+                val pendingIntent = PendingIntent.getActivity(
+                    this@MusicService,
+                    899,
+                    aodIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                AodLogger.log(this@MusicService, "attempt 3: sending PendingIntent with background start options")
+                pendingIntent.send(this@MusicService, 0, null, null, null, null, options.toBundle())
+            } catch (e: Exception) {
+                AodLogger.log(this@MusicService, "attempt 3 PendingIntent.send exception: ${e.message}", e)
+            }
+
+            delay(700)
+            if (AodLockscreenActivity.isShowing) {
+                AodLogger.log(this@MusicService, "attempt 3 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
+            } else {
+                AodLogger.log(this@MusicService, "all launch attempts completed but activity is still not showing (isShowing=false)")
             }
         }
     }

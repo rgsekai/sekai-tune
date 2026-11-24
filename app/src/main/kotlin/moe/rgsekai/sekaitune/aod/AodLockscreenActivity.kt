@@ -76,7 +76,8 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AodLogger.log(this, "AodLockscreenActivity.onCreate()")
+        isShowing = true
+        AodLogger.log(this, "AodLockscreenActivity.onCreate() - isShowing=true")
         applyLockscreenFlags()
         hideSystemBars()
 
