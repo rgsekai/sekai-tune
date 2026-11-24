@@ -3344,7 +3344,7 @@ class MusicService :
 
             val currentMeta = player.currentMetadata ?: currentMediaMetadata.value
             val notif = NotificationCompat.Builder(this, AOD_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setSmallIcon(R.drawable.small_icon)
                 .setContentTitle(currentMeta?.title ?: getString(R.string.lockscreen_aod))
                 .setContentText(currentMeta?.artists?.joinToString { it.name } ?: "")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
