@@ -35,6 +35,12 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class AodLockscreenActivity : ComponentActivity() {
 
+    companion object {
+        @Volatile
+        var isShowing: Boolean = false
+            internal set
+    }
+
     @Inject
     lateinit var database: MusicDatabase
 
@@ -120,14 +126,22 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        AodLogger.log(this, "AodLockscreenActivity.onResume()")
+        isShowing = true
+        AodLogger.log(this, "AodLockscreenActivity.onResume() - isShowing=true")
         applyLockscreenFlags()
         hideSystemBars()
     }
 
+    override fun onPause() {
+        super.onPause()
+        isShowing = false
+        AodLogger.log(this, "AodLockscreenActivity.onPause() - isShowing=false")
+    }
+
     override fun onStop() {
         super.onStop()
-        AodLogger.log(this, "AodLockscreenActivity.onStop()")
+        isShowing = false
+        AodLogger.log(this, "AodLockscreenActivity.onStop() - isShowing=false")
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -164,7 +178,8 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        AodLogger.log(this, "AodLockscreenActivity.onDestroy()")
+        isShowing = false
+        AodLogger.log(this, "AodLockscreenActivity.onDestroy() - isShowing=false")
         if (isMusicServiceBound) {
             try {
                 unbindService(serviceConnection)

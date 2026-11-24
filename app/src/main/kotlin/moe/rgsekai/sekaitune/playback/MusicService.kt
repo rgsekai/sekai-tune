@@ -3331,59 +3331,73 @@ class MusicService :
         }
 
     private fun launchAodLockscreen() {
+        if (AodLockscreenActivity.isShowing) {
+            AodLogger.log(this, "skipping launch because AodLockscreenActivity is already showing (isShowing=true)")
+            return
+        }
+
+        val canDrawOverlays = Settings.canDrawOverlays(this)
+        AodLogger.log(this, "launchAodLockscreen() called. canDrawOverlays=$canDrawOverlays")
+
+        if (!canDrawOverlays) {
+            AodLogger.log(this, "canDrawOverlays is false, showing warning toast")
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(this@MusicService, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        val aodIntent = Intent(this, AodLockscreenActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
+            )
+        }
+
+        val options = ActivityOptions.makeBasic()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            options.setPendingIntentBackgroundActivityStartMode(
+                ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
+            )
+        }
+
+        var launched = false
+
+        // 1. PendingIntent launch (created with plain flags only, background start mode passed only to send())
         try {
-            val canDrawOverlays = Settings.canDrawOverlays(this)
-            AodLogger.log(this, "launchAodLockscreen() called. canDrawOverlays=$canDrawOverlays")
-
-            if (!canDrawOverlays) {
-                AodLogger.log(this, "canDrawOverlays is false, showing warning toast")
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(this@MusicService, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
-                }
-            }
-
-            val aodIntent = Intent(this, AodLockscreenActivity::class.java).apply {
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                )
-            }
-
-            val options = ActivityOptions.makeBasic()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                options.setPendingIntentBackgroundActivityStartMode(
-                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
-                )
-            }
-
             val pendingIntent = PendingIntent.getActivity(
                 this,
                 899,
                 aodIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                options.toBundle(),
             )
+            AodLogger.log(this, "launching via PendingIntent.send()")
+            pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
+            launched = true
+        } catch (e1: Exception) {
+            AodLogger.log(this, "PendingIntent.send failed: ${e1.message}, will fallback to direct startActivity", e1)
+        }
 
+        // 2. Direct startActivity with options
+        if (!launched) {
             try {
-                AodLogger.log(this, "launching via PendingIntent.send()")
-                pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
-            } catch (e1: Exception) {
-                AodLogger.log(this, "PendingIntent.send failed: ${e1.message}, fallback to startActivity(options)", e1)
-                try {
-                    startActivity(aodIntent, options.toBundle())
-                } catch (e2: Exception) {
-                    AodLogger.log(this, "startActivity(options) failed: ${e2.message}, fallback to plain startActivity", e2)
-                    try {
-                        startActivity(aodIntent)
-                    } catch (e3: Exception) {
-                        AodLogger.log(this, "plain startActivity failed: ${e3.message}", e3)
-                    }
-                }
+                AodLogger.log(this, "fallback: startActivity with options")
+                startActivity(aodIntent, options.toBundle())
+                launched = true
+            } catch (e2: Exception) {
+                AodLogger.log(this, "startActivity(options) failed: ${e2.message}, will fallback to plain startActivity", e2)
             }
-        } catch (e: Exception) {
-            AodLogger.log(this, "launchAodLockscreen outer exception: ${e.message}", e)
-            reportException(e)
+        }
+
+        // 3. Plain startActivity
+        if (!launched) {
+            try {
+                AodLogger.log(this, "fallback: plain startActivity")
+                startActivity(aodIntent)
+                launched = true
+            } catch (e3: Exception) {
+                AodLogger.log(this, "plain startActivity failed: ${e3.message}", e3)
+            }
         }
     }
 
