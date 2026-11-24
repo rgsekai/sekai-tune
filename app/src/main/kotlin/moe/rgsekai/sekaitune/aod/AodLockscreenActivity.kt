@@ -78,6 +78,7 @@ class AodLockscreenActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         isShowing = true
         AodLogger.log(this, "AodLockscreenActivity.onCreate() - isShowing=true")
+        MusicService.dismissLaunchOverlay()
         applyLockscreenFlags()
         hideSystemBars()
 

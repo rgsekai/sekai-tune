@@ -55,6 +55,11 @@ import android.os.SystemClock
 import android.provider.DocumentsContract
 import android.provider.Settings
 import android.util.Log
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
 import android.widget.Toast
 import java.io.FileInputStream
 import java.io.FileNotFoundException
@@ -3349,6 +3354,70 @@ class MusicService :
         }
     }
 
+    private var launchOverlayView: View? = null
+
+    @Synchronized
+    private fun addLaunchOverlay(): Boolean {
+        if (!Settings.canDrawOverlays(this)) {
+            AodLogger.log(this, "cannot attach launch overlay: canDrawOverlays is false")
+            return false
+        }
+        if (launchOverlayView != null) {
+            AodLogger.log(this, "launch overlay is already attached")
+            return true
+        }
+        return try {
+            val wm = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+            if (wm == null) {
+                AodLogger.log(this, "failed to get WindowManager for overlay")
+                return false
+            }
+            val view = View(this).apply {
+                setBackgroundColor(Color.TRANSPARENT)
+            }
+            val params = WindowManager.LayoutParams(
+                1,
+                1,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                PixelFormat.TRANSLUCENT,
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = 0
+                y = 0
+            }
+            wm.addView(view, params)
+            launchOverlayView = view
+            AodLogger.log(this, "launch overlay window (1x1 transparent TYPE_APPLICATION_OVERLAY) successfully attached")
+            true
+        } catch (e: Exception) {
+            AodLogger.log(this, "exception attaching launch overlay window: ${e.message}", e)
+            false
+        }
+    }
+
+    @Synchronized
+    fun removeLaunchOverlay() {
+        val view = launchOverlayView ?: return
+        try {
+            val wm = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+            wm?.removeViewImmediate(view)
+            AodLogger.log(this, "launch overlay window removed via removeViewImmediate")
+        } catch (_: Exception) {
+            try {
+                val wm = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+                wm?.removeView(view)
+                AodLogger.log(this, "launch overlay window removed via removeView")
+            } catch (e2: Exception) {
+                AodLogger.log(this, "failed to remove launch overlay window: ${e2.message}", e2)
+            }
+        } finally {
+            launchOverlayView = null
+        }
+    }
+
     private fun launchAodLockscreen() {
         scope.launch {
             if (AodLockscreenActivity.isShowing) {
@@ -3382,58 +3451,76 @@ class MusicService :
                 )
             }
 
-            // 1. Call startActivity(aodIntent) directly FIRST
-            AodLogger.log(this@MusicService, "attempt 1: calling startActivity(aodIntent) directly FIRST")
+            val overlayAttached = addLaunchOverlay()
+            AodLogger.log(this@MusicService, "overlayAttached=$overlayAttached")
+
+            val timeoutJob = launch {
+                delay(3000)
+                AodLogger.log(this@MusicService, "3-second timeout reached, removing launch overlay")
+                removeLaunchOverlay()
+            }
+
             try {
-                startActivity(aodIntent)
-            } catch (e: Exception) {
-                AodLogger.log(this@MusicService, "attempt 1 direct startActivity exception: ${e.message}", e)
-            }
+                // 1. Right after it is attached, call startActivity(aodIntent) directly
+                AodLogger.log(this@MusicService, "attempt 1: calling startActivity(aodIntent) directly")
+                try {
+                    startActivity(aodIntent)
+                } catch (e: Exception) {
+                    AodLogger.log(this@MusicService, "attempt 1 direct startActivity exception: ${e.message}", e)
+                }
 
-            // Do not trust "no exception" as success. Wait ~700 ms and check isShowing
-            delay(700)
-            if (AodLockscreenActivity.isShowing) {
-                AodLogger.log(this@MusicService, "attempt 1 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
-                return@launch
-            }
+                // Do not trust "no exception" as success. Wait ~700 ms and check isShowing
+                delay(700)
+                if (AodLockscreenActivity.isShowing) {
+                    AodLogger.log(this@MusicService, "attempt 1 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
+                    removeLaunchOverlay()
+                    timeoutJob.cancel()
+                    return@launch
+                }
 
-            AodLogger.log(this@MusicService, "attempt 1 did not result in activity showing (isShowing=false). Retrying direct startActivity...")
+                AodLogger.log(this@MusicService, "attempt 1 did not result in activity showing (isShowing=false). Retrying direct startActivity...")
 
-            // Retry once with options bundle
-            try {
-                AodLogger.log(this@MusicService, "attempt 2: retry direct startActivity with options")
-                startActivity(aodIntent, options.toBundle())
-            } catch (e: Exception) {
-                AodLogger.log(this@MusicService, "attempt 2 direct startActivity(options) exception: ${e.message}", e)
-            }
+                // Retry once with options bundle
+                try {
+                    AodLogger.log(this@MusicService, "attempt 2: retry direct startActivity with options")
+                    startActivity(aodIntent, options.toBundle())
+                } catch (e: Exception) {
+                    AodLogger.log(this@MusicService, "attempt 2 direct startActivity(options) exception: ${e.message}", e)
+                }
 
-            delay(700)
-            if (AodLockscreenActivity.isShowing) {
-                AodLogger.log(this@MusicService, "attempt 2 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
-                return@launch
-            }
+                delay(700)
+                if (AodLockscreenActivity.isShowing) {
+                    AodLogger.log(this@MusicService, "attempt 2 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
+                    removeLaunchOverlay()
+                    timeoutJob.cancel()
+                    return@launch
+                }
 
-            AodLogger.log(this@MusicService, "attempt 2 did not result in activity showing (isShowing=false). Trying PendingIntent path...")
+                AodLogger.log(this@MusicService, "attempt 2 did not result in activity showing (isShowing=false). Trying PendingIntent path...")
 
-            // Try the PendingIntent path (send() with MODE_BACKGROUND_ACTIVITY_START_ALLOWED in send options only)
-            try {
-                val pendingIntent = PendingIntent.getActivity(
-                    this@MusicService,
-                    899,
-                    aodIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
-                AodLogger.log(this@MusicService, "attempt 3: sending PendingIntent with background start options")
-                pendingIntent.send(this@MusicService, 0, null, null, null, null, options.toBundle())
-            } catch (e: Exception) {
-                AodLogger.log(this@MusicService, "attempt 3 PendingIntent.send exception: ${e.message}", e)
-            }
+                // Try the PendingIntent path (send() with MODE_BACKGROUND_ACTIVITY_START_ALLOWED in send options only)
+                try {
+                    val pendingIntent = PendingIntent.getActivity(
+                        this@MusicService,
+                        899,
+                        aodIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    )
+                    AodLogger.log(this@MusicService, "attempt 3: sending PendingIntent with background start options")
+                    pendingIntent.send(this@MusicService, 0, null, null, null, null, options.toBundle())
+                } catch (e: Exception) {
+                    AodLogger.log(this@MusicService, "attempt 3 PendingIntent.send exception: ${e.message}", e)
+                }
 
-            delay(700)
-            if (AodLockscreenActivity.isShowing) {
-                AodLogger.log(this@MusicService, "attempt 3 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
-            } else {
-                AodLogger.log(this@MusicService, "all launch attempts completed but activity is still not showing (isShowing=false)")
+                delay(700)
+                if (AodLockscreenActivity.isShowing) {
+                    AodLogger.log(this@MusicService, "attempt 3 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
+                } else {
+                    AodLogger.log(this@MusicService, "all launch attempts completed but activity is still not showing (isShowing=false)")
+                }
+            } finally {
+                timeoutJob.cancel()
+                removeLaunchOverlay()
             }
         }
     }
@@ -9853,6 +9940,10 @@ class MusicService :
         @Volatile
         var currentBinder: MusicBinder? = null
             internal set
+
+        fun dismissLaunchOverlay() {
+            currentBinder?.service?.removeLaunchOverlay()
+        }
         private const val TOGETHER_NOTIFICATION_CHANNEL_ID = "together_room_events"
         private const val TOGETHER_PARTICIPANT_NOTIFICATION_ID = 891
         private const val TOGETHER_INACTIVITY_NOTIFICATION_ID = 892
