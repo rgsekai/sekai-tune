@@ -11,6 +11,7 @@ import android.os.SystemClock
 import android.text.format.DateFormat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -30,11 +31,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,10 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -67,13 +71,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.exoplayer.offline.Download
+import androidx.media3.exoplayer.offline.DownloadRequest
+import androidx.media3.exoplayer.offline.DownloadService
 import coil3.compose.AsyncImage
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import moe.rgsekai.sekaitune.R
 import moe.rgsekai.sekaitune.extensions.togglePlayPause
+import moe.rgsekai.sekaitune.playback.DownloadUtil
+import moe.rgsekai.sekaitune.playback.ExoDownloadService
 import moe.rgsekai.sekaitune.playback.PlayerConnection
 import moe.rgsekai.sekaitune.utils.makeTimeString
 import java.text.SimpleDateFormat
@@ -81,6 +96,13 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface AodDownloadEntryPoint {
+    fun downloadUtil(): DownloadUtil
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AodLockscreenScreen(
     playerConnection: PlayerConnection?,
@@ -95,6 +117,28 @@ fun AodLockscreenScreen(
     val isPlaying by playerConnection?.isPlaying?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
     val currentSong by playerConnection?.currentSong?.collectAsStateWithLifecycle(null) ?: remember { mutableStateOf(null) }
     val isLiked = currentSong?.song?.liked == true
+
+    val downloadUtil = remember(context) {
+        try {
+            EntryPointAccessors.fromApplication(context.applicationContext, AodDownloadEntryPoint::class.java).downloadUtil()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    val download by (downloadUtil?.getDownload(mediaMetadata?.id ?: "", mediaMetadata?.matchedCatalogId) ?: emptyFlow())
+        .collectAsStateWithLifecycle(initialValue = null)
+
+    val isLocalMedia = currentSong?.song?.isLocal == true ||
+        mediaMetadata?.id?.let { id ->
+            id.startsWith("local:") || id.startsWith("content:") || id.startsWith("file:") || id.startsWith("webdav:")
+        } == true
+    val canSave = mediaMetadata != null && !mediaMetadata?.id.isNullOrBlank() && !isLocalMedia
+
+    val isSaved = download?.state == Download.STATE_COMPLETED
+    val isSaving = download?.state == Download.STATE_DOWNLOADING ||
+        download?.state == Download.STATE_QUEUED ||
+        download?.state == Download.STATE_RESTARTING
 
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
@@ -225,31 +269,31 @@ fun AodLockscreenScreen(
             )
         }
 
-        // Content Column with Burn-in Shift
+        // Content Column with Burn-in Shift: spread vertical layout
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(horizontal = 28.dp, vertical = 20.dp)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
                     .offset(burnInShiftX.dp, burnInShiftY.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
         ) {
             // Top: Minimal Clock & Date
+            Spacer(modifier = Modifier.height(20.dp))
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 16.dp),
+                modifier = Modifier.padding(top = 8.dp),
             ) {
                 Text(
                     text = currentTimeText,
-                    fontSize = 68.sp,
+                    fontSize = 64.sp,
                     fontWeight = FontWeight.Light,
                     color = Color.White.copy(alpha = 0.95f),
                     letterSpacing = (-1).sp,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = currentDateText,
                     fontSize = 15.sp,
@@ -258,7 +302,10 @@ fun AodLockscreenScreen(
                 )
             }
 
-            // Center/Bottom: Song Details, Progress Bar & Media Controls
+            // Balanced vertical spacing: pushes player card into the natural lower half
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Lower Area: Song Details, Progress Bar & Media Controls
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth(),
@@ -266,7 +313,8 @@ fun AodLockscreenScreen(
                 // Song Title & Artist
                 Text(
                     text = mediaMetadata?.title ?: stringResource(R.string.no_track_playing),
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     maxLines = 1,
@@ -274,10 +322,11 @@ fun AodLockscreenScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = mediaMetadata?.artists?.joinToString { it.name }.orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -285,9 +334,9 @@ fun AodLockscreenScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
-                // Progress Bar
+                // Progress Bar: Continuous slider without stray dots/stubs
                 val safeDuration = if (duration > 0L) duration else 1L
                 val progressFraction =
                     if (isUserSeeking) {
@@ -308,17 +357,51 @@ fun AodLockscreenScreen(
                         currentPosition = seekTargetMs
                         isUserSeeking = false
                     },
-                    colors =
-                        SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = Color.White.copy(alpha = 0.9f),
-                            inactiveTrackColor = Color.White.copy(alpha = 0.2f),
-                        ),
+                    thumb = {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(10.dp)
+                                    .background(Color.White, CircleShape),
+                        )
+                    },
+                    track = { sliderState ->
+                        val trackHeight = 4.dp
+                        val activeFraction = sliderState.value.coerceIn(0f, 1f)
+                        Canvas(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(trackHeight),
+                        ) {
+                            val strokePx = trackHeight.toPx()
+                            val y = center.y
+                            // Inactive track: full width continuous line
+                            drawLine(
+                                color = Color.White.copy(alpha = 0.25f),
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = strokePx,
+                                cap = StrokeCap.Round,
+                            )
+                            // Active track: continuous line from start to current fraction
+                            if (activeFraction > 0f) {
+                                drawLine(
+                                    color = Color.White.copy(alpha = 0.90f),
+                                    start = Offset(0f, y),
+                                    end = Offset(size.width * activeFraction, y),
+                                    strokeWidth = strokePx,
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(24.dp),
                 )
 
+                // Time labels precisely aligned under slider ends
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     val displayedPosition =
@@ -341,42 +424,51 @@ fun AodLockscreenScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Playback Controls: Like, Previous, Play/Pause, Next
+                // Playback Controls: Symmetric [Like] [Prev] [Play/Pause] [Next] [Save to device]
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Like button
-                    IconButton(
-                        onClick = { playerConnection?.toggleLike() },
-                        modifier = Modifier.size(48.dp),
+                    // Left equal-weight slot: [Like] [Prev]
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            painter =
-                                painterResource(
-                                    if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
-                                ),
-                            contentDescription = null,
-                            tint = if (isLiked) Color(0xFFFF4081) else Color.White.copy(alpha = 0.85f),
-                            modifier = Modifier.size(26.dp),
-                        )
+                        // Like Button (min 48dp touch target)
+                        IconButton(
+                            onClick = { playerConnection?.toggleLike() },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (isLiked) R.drawable.favorite else R.drawable.favorite_border,
+                                    ),
+                                contentDescription = stringResource(R.string.action_like),
+                                tint = if (isLiked) Color(0xFFFF4081) else Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+
+                        // Previous Button (48dp touch target)
+                        IconButton(
+                            onClick = { playerConnection?.seekToPrevious() },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.skip_previous),
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
                     }
 
-                    // Skip Previous
-                    IconButton(
-                        onClick = { playerConnection?.seekToPrevious() },
-                        modifier = Modifier.size(48.dp),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.skip_previous),
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-
-                    // Play / Pause Circle
+                    // Exactly Centered: Play / Pause Circle (64dp)
                     Surface(
                         onClick = { playerConnection?.player?.togglePlayPause() },
                         shape = CircleShape,
@@ -396,25 +488,106 @@ fun AodLockscreenScreen(
                         }
                     }
 
-                    // Skip Next
-                    IconButton(
-                        onClick = { playerConnection?.seekToNext() },
-                        modifier = Modifier.size(48.dp),
+                    // Right equal-weight slot: [Next] [Save to device]
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.skip_next),
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.size(32.dp),
-                        )
+                        // Next Button (48dp touch target)
+                        IconButton(
+                            onClick = { playerConnection?.seekToNext() },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.skip_next),
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
+
+                        // Save to Device Button (min 48dp touch target, mirroring Like button)
+                        IconButton(
+                            onClick = {
+                                if (!canSave) return@IconButton
+                                val songId = mediaMetadata?.id ?: return@IconButton
+                                val title = mediaMetadata?.title ?: "Song"
+                                val artist = mediaMetadata?.artists?.joinToString(", ") { it.name }?.ifEmpty { "Unknown Artist" } ?: "Unknown Artist"
+
+                                if (isSaved) {
+                                    try {
+                                        DownloadService.sendRemoveDownload(
+                                            context.applicationContext,
+                                            ExoDownloadService::class.java,
+                                            songId,
+                                            false,
+                                        )
+                                    } catch (_: Exception) {}
+                                } else {
+                                    try {
+                                        val downloadRequest =
+                                            DownloadRequest
+                                                .Builder(songId, songId.toUri())
+                                                .setCustomCacheKey(songId)
+                                                .setData(title.toByteArray())
+                                                .build()
+                                        DownloadService.sendAddDownload(
+                                            context.applicationContext,
+                                            ExoDownloadService::class.java,
+                                            downloadRequest,
+                                            false,
+                                        )
+                                    } catch (_: Exception) {}
+                                    try {
+                                        moe.rgsekai.sekaitune.download.startDownload(
+                                            context.applicationContext,
+                                            songId,
+                                            title,
+                                            artist,
+                                        )
+                                    } catch (_: Exception) {}
+                                }
+                            },
+                            enabled = canSave,
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            if (isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                )
+                            } else {
+                                val iconRes = if (isSaved) R.drawable.offline else R.drawable.download
+                                val tint =
+                                    when {
+                                        !canSave -> Color.White.copy(alpha = 0.25f)
+                                        isSaved -> Color.White.copy(alpha = 0.95f)
+                                        else -> Color.White.copy(alpha = 0.85f)
+                                    }
+                                Icon(
+                                    painter = painterResource(iconRes),
+                                    contentDescription =
+                                        stringResource(
+                                            if (isSaved) R.string.remove_download else R.string.save_to_device_downloads,
+                                        ),
+                                    tint = tint,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }
 
+            // Balanced spacing above swipe-up prompt
+            Spacer(modifier = Modifier.height(36.dp))
+
             // Bottom: Swipe up to unlock hint
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(bottom = 12.dp),
+                modifier = Modifier.padding(bottom = 8.dp),
             ) {
                 Box(
                     modifier =
@@ -435,3 +608,4 @@ fun AodLockscreenScreen(
         }
     }
 }
+
