@@ -7,6 +7,7 @@
 
 package moe.rgsekai.sekaitune.aod
 
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -129,7 +130,14 @@ class AodLockscreenActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         isShowing = true
-        AodLogger.log(this, "AodLockscreenActivity.onResume() - isShowing=true")
+        val now = System.currentTimeMillis()
+        val t0 = AodLogger.screenOffTimeMs
+        val latencyStr = if (t0 > 0) "${now - t0} ms" else "unknown"
+        val path = MusicService.lastSuccessfulLaunchPath
+        val preAttached = MusicService.wasPreAttachedOnScreenOff
+        AodLogger.log(this, "AodLockscreenActivity.onResume() - isShowing=true | latency from SCREEN_OFF: $latencyStr | preAttached: $preAttached | launchPath: $path")
+        MusicService.dismissLaunchOverlay()
+        (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(MusicService.AOD_FALLBACK_NOTIFICATION_ID)
         applyLockscreenFlags()
         hideSystemBars()
     }
@@ -182,6 +190,7 @@ class AodLockscreenActivity : ComponentActivity() {
         super.onDestroy()
         isShowing = false
         AodLogger.log(this, "AodLockscreenActivity.onDestroy() - isShowing=false")
+        MusicService.currentBinder?.service?.updatePreAttachedOverlay()
         if (isMusicServiceBound) {
             try {
                 unbindService(serviceConnection)

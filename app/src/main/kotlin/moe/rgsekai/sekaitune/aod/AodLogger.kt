@@ -28,6 +28,13 @@ object AodLogger {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
     private var cachedLogUri: Uri? = null
 
+    @Volatile
+    var screenOffTimeMs: Long = 0L
+
+    fun recordScreenOff() {
+        screenOffTimeMs = System.currentTimeMillis()
+    }
+
     @Synchronized
     fun log(context: Context?, message: String, throwable: Throwable? = null) {
         val now = System.currentTimeMillis()

@@ -1524,6 +1524,7 @@ class MusicService :
                 } else {
                     unregisterScreenReceiver()
                 }
+                updatePreAttachedOverlay()
             }
 
         dataStore.data
@@ -3314,6 +3315,7 @@ class MusicService :
 
                 when (action) {
                     Intent.ACTION_SCREEN_OFF -> {
+                        AodLogger.recordScreenOff()
                         AodLogger.log(context, "received ACTION_SCREEN_OFF -> invoking launchAodLockscreen()")
                         launchAodLockscreen()
                     }
@@ -3325,7 +3327,8 @@ class MusicService :
                             AodLogger.log(context, "keyguard is locked -> invoking launchAodLockscreen()")
                             launchAodLockscreen()
                         } else {
-                            AodLogger.log(context, "returning early because keyguard is not locked (isKeyguardLocked=$isLocked)")
+                            AodLogger.log(context, "keyguard is not locked -> updating pre-attached overlay")
+                            updatePreAttachedOverlay()
                         }
                     }
                     else -> {
@@ -3334,6 +3337,29 @@ class MusicService :
                 }
             }
         }
+
+    fun updatePreAttachedOverlay() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            Handler(Looper.getMainLooper()).post { updatePreAttachedOverlay() }
+            return
+        }
+
+        if (!isLockscreenAodEnabled) {
+            removeLaunchOverlay("aod disabled")
+            return
+        }
+
+        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        val isInteractive = pm?.isInteractive == true
+        val isPlaying = ::player.isInitialized && (player.isPlaying || player.playWhenReady) && player.currentMediaItem != null
+        val isShowing = AodLockscreenActivity.isShowing
+
+        if (isPlaying && isInteractive && !isShowing) {
+            addLaunchOverlay("playback active & screen interactive")
+        } else {
+            removeLaunchOverlay("not eligible (isPlaying=$isPlaying, isInteractive=$isInteractive, isShowing=$isShowing)")
+        }
+    }
 
     private fun getAppProcessStateDescription(): String {
         return try {
@@ -3357,19 +3383,18 @@ class MusicService :
     private var launchOverlayView: View? = null
 
     @Synchronized
-    private fun addLaunchOverlay(): Boolean {
+    private fun addLaunchOverlay(reason: String = ""): Boolean {
         if (!Settings.canDrawOverlays(this)) {
-            AodLogger.log(this, "cannot attach launch overlay: canDrawOverlays is false")
+            AodLogger.log(this, "cannot attach launch overlay: canDrawOverlays is false ($reason)")
             return false
         }
         if (launchOverlayView != null) {
-            AodLogger.log(this, "launch overlay is already attached")
             return true
         }
         return try {
             val wm = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
             if (wm == null) {
-                AodLogger.log(this, "failed to get WindowManager for overlay")
+                AodLogger.log(this, "failed to get WindowManager for overlay ($reason)")
                 return false
             }
             val view = View(this).apply {
@@ -3390,28 +3415,32 @@ class MusicService :
             }
             wm.addView(view, params)
             launchOverlayView = view
-            AodLogger.log(this, "launch overlay window (1x1 transparent TYPE_APPLICATION_OVERLAY) successfully attached")
+            AodLogger.log(this, "launch overlay window (1x1 transparent TYPE_APPLICATION_OVERLAY) successfully attached ($reason)")
             true
         } catch (e: Exception) {
-            AodLogger.log(this, "exception attaching launch overlay window: ${e.message}", e)
+            AodLogger.log(this, "exception attaching launch overlay window ($reason): ${e.message}", e)
             false
         }
     }
 
     @Synchronized
-    fun removeLaunchOverlay() {
+    fun removeLaunchOverlay(reason: String = "") {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            Handler(Looper.getMainLooper()).post { removeLaunchOverlay(reason) }
+            return
+        }
         val view = launchOverlayView ?: return
         try {
             val wm = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
             wm?.removeViewImmediate(view)
-            AodLogger.log(this, "launch overlay window removed via removeViewImmediate")
+            AodLogger.log(this, "launch overlay window removed via removeViewImmediate ($reason)")
         } catch (_: Exception) {
             try {
                 val wm = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
                 wm?.removeView(view)
-                AodLogger.log(this, "launch overlay window removed via removeView")
+                AodLogger.log(this, "launch overlay window removed via removeView ($reason)")
             } catch (e2: Exception) {
-                AodLogger.log(this, "failed to remove launch overlay window: ${e2.message}", e2)
+                AodLogger.log(this, "failed to remove launch overlay window ($reason): ${e2.message}", e2)
             }
         } finally {
             launchOverlayView = null
@@ -3427,13 +3456,23 @@ class MusicService :
 
             val canDrawOverlays = Settings.canDrawOverlays(this@MusicService)
             val appState = getAppProcessStateDescription()
-            AodLogger.log(this@MusicService, "launchAodLockscreen() called. canDrawOverlays=$canDrawOverlays, $appState")
+            val wasPreAttached = (launchOverlayView != null)
+            wasPreAttachedOnScreenOff = wasPreAttached
+
+            AodLogger.log(
+                this@MusicService,
+                "launchAodLockscreen() called. canDrawOverlays=$canDrawOverlays, preAttached=$wasPreAttached, $appState"
+            )
 
             if (!canDrawOverlays) {
                 AodLogger.log(this@MusicService, "canDrawOverlays is false, showing warning toast")
                 Handler(Looper.getMainLooper()).post {
                     Toast.makeText(this@MusicService, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
                 }
+            }
+
+            if (!wasPreAttached && canDrawOverlays) {
+                addLaunchOverlay("on-demand at launchAodLockscreen")
             }
 
             val aodIntent = Intent(this@MusicService, AodLockscreenActivity::class.java).apply {
@@ -3444,83 +3483,100 @@ class MusicService :
                 )
             }
 
-            val options = ActivityOptions.makeBasic()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                options.setPendingIntentBackgroundActivityStartMode(
-                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
-                )
-            }
-
-            val overlayAttached = addLaunchOverlay()
-            AodLogger.log(this@MusicService, "overlayAttached=$overlayAttached")
-
             val timeoutJob = launch {
                 delay(3000)
                 AodLogger.log(this@MusicService, "3-second timeout reached, removing launch overlay")
-                removeLaunchOverlay()
+                removeLaunchOverlay("timeout")
             }
 
             try {
-                // 1. Right after it is attached, call startActivity(aodIntent) directly
-                AodLogger.log(this@MusicService, "attempt 1: calling startActivity(aodIntent) directly")
+                // 1. Immediately call startActivity(aodIntent)
+                lastSuccessfulLaunchPath = "direct_startActivity"
+                AodLogger.log(this@MusicService, "attempt 1: calling startActivity(aodIntent) directly (preAttached=$wasPreAttached)")
                 try {
                     startActivity(aodIntent)
                 } catch (e: Exception) {
                     AodLogger.log(this@MusicService, "attempt 1 direct startActivity exception: ${e.message}", e)
                 }
 
-                // Do not trust "no exception" as success. Wait ~700 ms and check isShowing
-                delay(700)
+                // 2. Wait ~500 ms and check isShowing
+                delay(500)
                 if (AodLockscreenActivity.isShowing) {
-                    AodLogger.log(this@MusicService, "attempt 1 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
-                    removeLaunchOverlay()
+                    AodLogger.log(this@MusicService, "attempt 1 direct startActivity succeeded (isShowing=true, path=direct_startActivity)")
+                    removeLaunchOverlay("direct_startActivity success")
                     timeoutJob.cancel()
                     return@launch
                 }
 
-                AodLogger.log(this@MusicService, "attempt 1 did not result in activity showing (isShowing=false). Retrying direct startActivity...")
+                AodLogger.log(this@MusicService, "after 500ms activity is not showing (isShowing=false). Checking full-screen-intent fallback...")
 
-                // Retry once with options bundle
-                try {
-                    AodLogger.log(this@MusicService, "attempt 2: retry direct startActivity with options")
-                    startActivity(aodIntent, options.toBundle())
-                } catch (e: Exception) {
-                    AodLogger.log(this@MusicService, "attempt 2 direct startActivity(options) exception: ${e.message}", e)
-                }
-
-                delay(700)
-                if (AodLockscreenActivity.isShowing) {
-                    AodLogger.log(this@MusicService, "attempt 2 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
-                    removeLaunchOverlay()
-                    timeoutJob.cancel()
+                // 3. Fallback only if isShowing is still false after ~500 ms: post full-screen-intent notification
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                if (nm == null) {
+                    AodLogger.log(this@MusicService, "NotificationManager is null, cannot trigger full-screen-intent fallback")
                     return@launch
                 }
 
-                AodLogger.log(this@MusicService, "attempt 2 did not result in activity showing (isShowing=false). Trying PendingIntent path...")
+                val canUseFsi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    nm.canUseFullScreenIntent()
+                } else {
+                    true
+                }
 
-                // Try the PendingIntent path (send() with MODE_BACKGROUND_ACTIVITY_START_ALLOWED in send options only)
+                if (!canUseFsi) {
+                    AodLogger.log(this@MusicService, "NotificationManager.canUseFullScreenIntent() is false -> full-screen-intent fallback skipped")
+                    return@launch
+                }
+
                 try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val channel = NotificationChannel(
+                            AOD_NOTIFICATION_CHANNEL_ID,
+                            "AOD Lockscreen",
+                            NotificationManager.IMPORTANCE_HIGH,
+                        ).apply {
+                            description = "Full-screen lockscreen takeover for AOD"
+                            setSound(null, null)
+                            enableVibration(false)
+                            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                        }
+                        nm.createNotificationChannel(channel)
+                    }
+
                     val pendingIntent = PendingIntent.getActivity(
                         this@MusicService,
-                        899,
+                        AOD_FALLBACK_NOTIFICATION_ID,
                         aodIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
-                    AodLogger.log(this@MusicService, "attempt 3: sending PendingIntent with background start options")
-                    pendingIntent.send(this@MusicService, 0, null, null, null, null, options.toBundle())
-                } catch (e: Exception) {
-                    AodLogger.log(this@MusicService, "attempt 3 PendingIntent.send exception: ${e.message}", e)
-                }
 
-                delay(700)
-                if (AodLockscreenActivity.isShowing) {
-                    AodLogger.log(this@MusicService, "attempt 3 succeeded: AodLockscreenActivity is now showing (isShowing=true)")
-                } else {
-                    AodLogger.log(this@MusicService, "all launch attempts completed but activity is still not showing (isShowing=false)")
+                    val notification = NotificationCompat.Builder(this@MusicService, AOD_NOTIFICATION_CHANNEL_ID)
+                        .setSmallIcon(R.drawable.small_icon)
+                        .setContentTitle(getString(R.string.app_name))
+                        .setContentText("AOD Lockscreen")
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setCategory(NotificationCompat.CATEGORY_ALARM)
+                        .setFullScreenIntent(pendingIntent, true)
+                        .setSilent(true)
+                        .setAutoCancel(true)
+                        .build()
+
+                    lastSuccessfulLaunchPath = "full_screen_intent"
+                    AodLogger.log(this@MusicService, "posting silent full-screen intent notification on channel $AOD_NOTIFICATION_CHANNEL_ID")
+                    nm.notify(AOD_FALLBACK_NOTIFICATION_ID, notification)
+
+                    delay(700)
+                    if (AodLockscreenActivity.isShowing) {
+                        AodLogger.log(this@MusicService, "full-screen intent fallback succeeded (isShowing=true, path=full_screen_intent)")
+                    } else {
+                        AodLogger.log(this@MusicService, "full-screen intent posted but activity is still not showing after 700ms")
+                    }
+                } catch (e: Exception) {
+                    AodLogger.log(this@MusicService, "exception triggering full-screen-intent fallback: ${e.message}", e)
                 }
             } finally {
                 timeoutJob.cancel()
-                removeLaunchOverlay()
+                removeLaunchOverlay("launchAodLockscreen finally")
             }
         }
     }
@@ -7292,6 +7348,7 @@ class MusicService :
 
         widgetUpdater.update()
         widgetUpdater.updateProgressTracking()
+        updatePreAttachedOverlay()
 
         scope.launch {
             val shouldSave = withContext(Dispatchers.IO) { dataStore.get(PersistentQueueKey, true) }
@@ -7348,6 +7405,7 @@ class MusicService :
             localPlayer.pauseAtEndOfMediaItems = false
             releaseSecondaryCrossfadePlayer()
         }
+        updatePreAttachedOverlay()
     }
 
     override fun onTracksChanged(tracks: Tracks) {
@@ -7417,6 +7475,7 @@ class MusicService :
 
         widgetUpdater.update()
         widgetUpdater.updateProgressTracking()
+        updatePreAttachedOverlay()
     }
 
     override fun onEvents(
@@ -7661,6 +7720,7 @@ class MusicService :
         }
         widgetUpdater.update()
         widgetUpdater.updateProgressTracking()
+        updatePreAttachedOverlay()
     }
 
     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -9544,6 +9604,8 @@ class MusicService :
         }
         unregisterBluetoothReceiver()
         unregisterScreenReceiver()
+        removeLaunchOverlay("service onDestroy")
+        (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(AOD_FALLBACK_NOTIFICATION_ID)
         unregisterMuteRecoveryObserver()
         try {
             callWatcher.stop()
@@ -9937,12 +9999,20 @@ class MusicService :
         private const val INFINITE_QUEUE_MAX_BOOTSTRAP_PAGES = 3
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888
+        const val AOD_FALLBACK_NOTIFICATION_ID = 899
+        private const val AOD_NOTIFICATION_CHANNEL_ID = "aod_lockscreen_takeover"
+        @Volatile
+        var wasPreAttachedOnScreenOff: Boolean = false
+            internal set
+        @Volatile
+        var lastSuccessfulLaunchPath: String = "unknown"
+            internal set
         @Volatile
         var currentBinder: MusicBinder? = null
             internal set
 
         fun dismissLaunchOverlay() {
-            currentBinder?.service?.removeLaunchOverlay()
+            currentBinder?.service?.removeLaunchOverlay("dismissLaunchOverlay")
         }
         private const val TOGETHER_NOTIFICATION_CHANNEL_ID = "together_room_events"
         private const val TOGETHER_PARTICIPANT_NOTIFICATION_ID = 891
