@@ -15,10 +15,15 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -129,6 +134,32 @@ fun AppearanceSettings(navController: NavController) {
         )
     val (lockscreenAodEnabled, onLockscreenAodEnabledChange) =
         rememberPreference(LockscreenAodEnabledKey, defaultValue = false)
+    var canDrawOverlays by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                canDrawOverlays = Settings.canDrawOverlays(context)
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+
+    val onLockscreenAodToggle: (Boolean) -> Unit = { enabled ->
+        onLockscreenAodEnabledChange(enabled)
+        if (enabled && !Settings.canDrawOverlays(context)) {
+            Toast.makeText(context, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
+            val ask = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:${context.packageName}".toUri())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(ask) }.recoverCatching {
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri())
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+        }
+    }
     val (backdropEnabled, onBackdropEnabledChange) = rememberPreference(BackdropEnabledKey, defaultValue = true)
     val (backdropBlurAmount, onBackdropBlurAmountChange) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
     val (themeBackdropMode, onThemeBackdropModeChange) =
@@ -379,12 +410,17 @@ fun AppearanceSettings(navController: NavController) {
 
             PreferenceGroup(title = stringResource(R.string.appearance_section_ambient)) {
                 item {
+                    val desc = if (lockscreenAodEnabled && !canDrawOverlays) {
+                        stringResource(R.string.lockscreen_aod_permission_needed)
+                    } else {
+                        stringResource(R.string.lockscreen_aod_desc)
+                    }
                     SwitchPreference(
                         title = { Text(stringResource(R.string.lockscreen_aod)) },
-                        description = stringResource(R.string.lockscreen_aod_desc),
+                        description = desc,
                         icon = { Icon(painterResource(R.drawable.bedtime), null) },
                         checked = lockscreenAodEnabled,
-                        onCheckedChange = onLockscreenAodEnabledChange,
+                        onCheckedChange = onLockscreenAodToggle,
                     )
                 }
 

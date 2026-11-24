@@ -53,6 +53,7 @@ import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.DocumentsContract
+import android.provider.Settings
 import android.widget.Toast
 import java.io.FileInputStream
 import java.io.FileNotFoundException
@@ -3299,6 +3300,12 @@ class MusicService :
 
     private fun launchAodLockscreen() {
         try {
+            if (!Settings.canDrawOverlays(this)) {
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(this@MusicService, R.string.lockscreen_aod_permission, Toast.LENGTH_LONG).show()
+                }
+            }
+
             val aodIntent = Intent(this, AodLockscreenActivity::class.java).apply {
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -3306,7 +3313,34 @@ class MusicService :
                         Intent.FLAG_ACTIVITY_CLEAR_TOP,
                 )
             }
-            startActivity(aodIntent)
+
+            val options = ActivityOptions.makeBasic()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                options.setPendingIntentBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
+                )
+            }
+
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                899,
+                aodIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                options.toBundle(),
+            )
+
+            try {
+                pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
+            } catch (_: Exception) {
+                try {
+                    startActivity(aodIntent, options.toBundle())
+                } catch (_: Exception) {
+                    try {
+                        startActivity(aodIntent)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
         } catch (e: Exception) {
             reportException(e)
         }

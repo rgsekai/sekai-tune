@@ -228,6 +228,8 @@
     <string name="aod_mode_exit">Exit AOD</string>
     <string name="lockscreen_aod">Lock screen AOD</string>
     <string name="lockscreen_aod_desc">Show fullscreen dim AOD player when screen turns off while playing</string>
+    <string name="lockscreen_aod_permission">Sekai Tune needs \'Display over other apps\' permission to show AOD mode from the background</string>
+    <string name="lockscreen_aod_permission_needed">Permission required: Tap to allow Display over other apps</string>
     <string name="swipe_up_to_unlock">Swipe up to unlock</string>
     <string name="tempo">Tempo</string>
     <string name="pitch">Pitch</string>
