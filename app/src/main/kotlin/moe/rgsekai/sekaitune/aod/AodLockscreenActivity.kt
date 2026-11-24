@@ -7,6 +7,7 @@
 
 package moe.rgsekai.sekaitune.aod
 
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -48,14 +49,16 @@ class AodLockscreenActivity : ComponentActivity() {
             ) {
                 isMusicServiceBound = true
                 if (service is MusicService.MusicBinder) {
-                    playerConnection =
-                        LinkPlayer.current()
-                            ?: PlayerConnection(
-                                this@AodLockscreenActivity,
-                                service,
-                                database,
-                                lifecycleScope,
-                            )
+                    if (playerConnection == null) {
+                        playerConnection =
+                            LinkPlayer.current()
+                                ?: PlayerConnection(
+                                    this@AodLockscreenActivity,
+                                    service,
+                                    database,
+                                    lifecycleScope,
+                                )
+                    }
                 }
             }
 
@@ -67,26 +70,21 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyLockscreenFlags()
+        hideSystemBars()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
-            )
-        }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        insetsController.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        insetsController.hide(WindowInsetsCompat.Type.systemBars())
-
-        playerConnection = LinkPlayer.current()
+        // Immediate zero-latency connection
+        val directBinder = MusicService.currentBinder
+        playerConnection =
+            LinkPlayer.current()
+                ?: directBinder?.let {
+                    PlayerConnection(
+                        this@AodLockscreenActivity,
+                        it,
+                        database,
+                        lifecycleScope,
+                    )
+                }
 
         bindService(
             Intent(this, MusicService::class.java),
@@ -121,8 +119,55 @@ class AodLockscreenActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        applyLockscreenFlags()
+        hideSystemBars()
+        (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(
+            MusicService.AOD_NOTIFICATION_ID,
+        )
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        applyLockscreenFlags()
+        hideSystemBars()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        applyLockscreenFlags()
+        hideSystemBars()
+    }
+
+    private fun applyLockscreenFlags() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+            )
+        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    private fun hideSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.cancel(
+            MusicService.AOD_NOTIFICATION_ID,
+        )
         if (isMusicServiceBound) {
             try {
                 unbindService(serviceConnection)

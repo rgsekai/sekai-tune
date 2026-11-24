@@ -404,7 +404,6 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:excludeFromRecents="true"
-            android:noHistory="true"
             android:taskAffinity="moe.rgsekai.sekaitune.aod"
             android:launchMode="singleInstance"
             android:theme="@style/Theme.SekaiTune.Aod" />

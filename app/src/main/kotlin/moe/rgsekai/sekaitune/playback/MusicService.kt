@@ -15,6 +15,7 @@ import moe.rgsekai.sekaitune.data.stats.ListeningRecorder
 import moe.rgsekai.sekaitune.constants.MediaSessionConstants
 import moe.rgsekai.sekaitune.webdav.WebDavAuth
 import android.app.ActivityManager
+import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -1156,6 +1157,8 @@ class MusicService :
         ColdStartTimer.addStage("MusicService super.onCreate Done")
         ensureScopesActive()
 
+        currentBinder = binder
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 ColdStartTimer.addStage("MusicService: Creating Notification Channels")
@@ -1173,6 +1176,19 @@ class MusicService :
                         getString(R.string.music_together),
                         NotificationManager.IMPORTANCE_DEFAULT,
                     ),
+                )
+                nm?.createNotificationChannel(
+                    NotificationChannel(
+                        AOD_CHANNEL_ID,
+                        getString(R.string.lockscreen_aod),
+                        NotificationManager.IMPORTANCE_HIGH,
+                    ).apply {
+                        description = getString(R.string.lockscreen_aod_desc)
+                        setSound(null, null)
+                        enableVibration(false)
+                        enableLights(false)
+                        lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    },
                 )
             }
         } catch (e: Exception) {
@@ -1506,6 +1522,7 @@ class MusicService :
             .map { it[LockscreenAodEnabledKey] ?: false }
             .distinctUntilChanged()
             .collectLatest(scope) { enabled ->
+                isLockscreenAodEnabled = enabled
                 if (enabled) {
                     registerScreenOffReceiver()
                 } else {
@@ -3269,24 +3286,83 @@ class MusicService :
         bluetoothReceiverRegistered = false
     }
 
+    private var isLockscreenAodEnabled = false
     private var screenOffReceiverRegistered = false
     private val screenOffReceiver =
         object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action != Intent.ACTION_SCREEN_OFF) return
-                scope.launch {
-                    val enabled = dataStore.data.first()[LockscreenAodEnabledKey] ?: false
-                    if (!enabled) return@launch
-                    val isPlaying = player.isPlaying || (player.playWhenReady && player.playbackState == Player.STATE_READY)
-                    if (isPlaying && player.currentMediaItem != null) {
-                        val aodIntent = Intent(this@MusicService, AodLockscreenActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        }
-                        startActivity(aodIntent)
-                    }
+                if (!isLockscreenAodEnabled) return
+                val isPlaying = player.isPlaying || player.playWhenReady
+                if (isPlaying && player.currentMediaItem != null) {
+                    launchAodLockscreen()
                 }
             }
         }
+
+    private fun launchAodLockscreen() {
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            @Suppress("DEPRECATION")
+            val wakeLock = pm?.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "SekaiTune:AodWakeLock",
+            )
+            wakeLock?.acquire(2500L)
+
+            val aodIntent = Intent(this, AodLockscreenActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                )
+            }
+
+            val options = ActivityOptions.makeBasic()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                options.setPendingIntentBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
+                )
+            }
+
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                AOD_NOTIFICATION_ID,
+                aodIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                options.toBundle(),
+            )
+
+            try {
+                pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
+            } catch (_: Exception) {
+                try {
+                    startActivity(aodIntent, options.toBundle())
+                } catch (_: Exception) {
+                }
+            }
+
+            val currentMeta = player.currentMetadata ?: currentMediaMetadata.value
+            val notif = NotificationCompat.Builder(this, AOD_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(currentMeta?.title ?: getString(R.string.lockscreen_aod))
+                .setContentText(currentMeta?.artists?.joinToString { it.name } ?: "")
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setFullScreenIntent(pendingIntent, true)
+                .setAutoCancel(true)
+                .setSilent(true)
+                .build()
+
+            (getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.notify(
+                AOD_NOTIFICATION_ID,
+                notif,
+            )
+        } catch (e: Exception) {
+            reportException(e)
+        }
+    }
 
     private fun registerScreenOffReceiver() {
         if (screenOffReceiverRegistered) return
@@ -9284,6 +9360,9 @@ class MusicService :
 
     override fun onDestroy() {
         super.onDestroy()
+        if (currentBinder === binder) {
+            currentBinder = null
+        }
         floatingLyrics?.stop()
         floatingLyrics = null
         discordPresence.update(null)
@@ -9694,6 +9773,11 @@ class MusicService :
         private const val INFINITE_QUEUE_MAX_BOOTSTRAP_PAGES = 3
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888
+        const val AOD_CHANNEL_ID = "aod_channel"
+        const val AOD_NOTIFICATION_ID = 899
+        @Volatile
+        var currentBinder: MusicBinder? = null
+            internal set
         private const val TOGETHER_NOTIFICATION_CHANNEL_ID = "together_room_events"
         private const val TOGETHER_PARTICIPANT_NOTIFICATION_ID = 891
         private const val TOGETHER_INACTIVITY_NOTIFICATION_ID = 892

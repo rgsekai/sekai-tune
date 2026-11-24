@@ -101,7 +101,7 @@ fun AodLockscreenScreen(
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekProgress by remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(mediaMetadata, isPlaying) {
+    LaunchedEffect(playerConnection, mediaMetadata, isPlaying) {
         val player = playerConnection?.player ?: return@LaunchedEffect
         while (isActive) {
             val dur = player.duration
