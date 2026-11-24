@@ -70,7 +70,7 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onCreate()")
+        AodLogger.log(this, "AodLockscreenActivity.onCreate()")
         applyLockscreenFlags()
         hideSystemBars()
 
@@ -97,7 +97,7 @@ class AodLockscreenActivity : ComponentActivity() {
             AodLockscreenScreen(
                 playerConnection = playerConnection,
                 onDismiss = {
-                    Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity onDismiss (swipe-up)")
+                    AodLogger.log(this@AodLockscreenActivity, "AodLockscreenActivity onDismiss (swipe-up)")
                     finish()
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                         overrideActivityTransition(
@@ -111,7 +111,7 @@ class AodLockscreenActivity : ComponentActivity() {
                     }
                 },
                 onSleep = {
-                    Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity onSleep (double-tap)")
+                    AodLogger.log(this@AodLockscreenActivity, "AodLockscreenActivity onSleep (double-tap)")
                     finish()
                 },
             )
@@ -120,25 +120,27 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onResume()")
+        AodLogger.log(this, "AodLockscreenActivity.onResume()")
         applyLockscreenFlags()
         hideSystemBars()
     }
 
     override fun onStop() {
         super.onStop()
-        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onStop()")
+        AodLogger.log(this, "AodLockscreenActivity.onStop()")
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        AodLogger.log(this, "AodLockscreenActivity.onNewIntent()")
         applyLockscreenFlags()
         hideSystemBars()
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        AodLogger.log(this, "AodLockscreenActivity.onAttachedToWindow()")
         applyLockscreenFlags()
         hideSystemBars()
     }
@@ -162,7 +164,7 @@ class AodLockscreenActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d("AodLockscreen", "[${System.currentTimeMillis()}] AodLockscreenActivity.onDestroy()")
+        AodLogger.log(this, "AodLockscreenActivity.onDestroy()")
         if (isMusicServiceBound) {
             try {
                 unbindService(serviceConnection)
